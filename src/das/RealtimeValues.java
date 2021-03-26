@@ -1,0 +1,583 @@
+package das;
+
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import com.mqtt.MqttWork;
+import com.mqtt.MqttWorker;
+import com.stream.Writable;
+import com.stream.collector.CollectorFuture;
+import com.stream.collector.MathCollector;
+import com.telnet.TelnetCodes;
+import org.influxdb.dto.Point;
+import util.database.Influx;
+import util.gis.Waypoints;
+import util.database.Database;
+import util.database.Insert;
+
+import org.tinylog.Logger;
+
+/**
+ * A storage class that holds: - The data processed by DataWorker.java - The
+ * current priority level for several values
+ * 
+ * @author Michiel T'Jampens
+ */
+public class RealtimeValues implements CollectorFuture {
+
+	protected IssueCollector issues;
+
+	protected static final String DEFAULT_TEXT_COLOR = TelnetCodes.TEXT_YELLOW;
+	protected int maxDevices = 2; // This is the maximum priority level allowed atm
+	protected static final String DECIMAL_SYMBOL = ",";
+
+	/* Formats */
+	protected static final DateTimeFormatter longFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+	protected static final DateTimeFormatter sqlFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+	protected static final DateTimeFormatter minuteFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+	protected static final DateTimeFormatter dayFormat = DateTimeFormatter.ofPattern("yyMMdd");
+
+	/* Other */
+	protected Waypoints waypoints = new Waypoints(); // Storage of the waypoints
+	protected Map<String, Integer> descriptorID = new HashMap<>();
+	protected ConcurrentHashMap<String, Double> rtvals = new ConcurrentHashMap<>();
+	protected ConcurrentHashMap<String, String> rttext = new ConcurrentHashMap<>();
+	protected HashMap<String, List<Writable>> rtvalRequest = new HashMap<>();
+	protected HashMap<String, ScheduledFuture<?>> calcRequest = new HashMap<>();
+
+	/* Databases */
+	protected HashMap<String, Database> dbs = new HashMap<>();
+	protected Database firstDB;
+
+	/* MQTT */
+	Map<String, MqttWorker> mqttWorkers = new HashMap<>();
+
+	/* Some status variables */
+	protected int procPerSec = 0;
+	protected int queryPer10s = 0;
+	protected int queryDBPer10s = 0;
+	protected int maxProcPerSec = 0;
+
+	protected String workPath = "";
+
+	/* Variables for during debug mode because no longer realtime */
+	protected long passed;
+
+	ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+	private final HashMap<String, MathCollector> mathCollectors = new HashMap<>();
+
+	Influx infuxdb;
+
+	/* **************************************  C O N S T R U C T O R **************************************************/
+	/**
+	 * Standard constructor requiring an IssueCollector
+	 * 
+	 * @param collector The IssueCollector
+	 */
+	public RealtimeValues(IssueCollector collector) {
+		this.issues = collector;
+	}
+
+	/**
+	 * Blank constructor
+	 */
+	public RealtimeValues() {
+
+	}
+
+	public void copySetup(RealtimeValues to) {
+		// Copy sqlites
+		dbs.forEach(to::addDB); // Copy the sqlites already made
+		// Copy waypoints
+		to.waypoints = waypoints;
+		// Copy mqtt
+		mqttWorkers.forEach(to::addMQTTworker);
+	}
+
+	public void addMQTTworker(String id, MqttWorker mqttWorker) {
+		this.mqttWorkers.put(id, mqttWorker);
+	}
+
+	/* **************************************************************************************************************/
+
+	protected void addDB(String id, Database db) {
+		if (dbs.isEmpty())
+			firstDB = db;
+		dbs.put(id, db);
+	}
+
+	/**
+	 * Add a query to the first database added
+	 * 
+	 * @param query The query to add
+	 */
+	public boolean writeQuery(String query) {
+		if (firstDB != null) {
+			firstDB.addQuery(query);
+			return true;
+		} else {
+			Logger.error("Trying to write query to a non-existing database");
+			return false;
+		}
+	}
+
+	/**
+	 * Add a query to the first database added
+	 * 
+	 * @param query The query to run in the form of an Insert object
+	 */
+	public boolean writeQuery(Insert query) {
+		return writeQuery(query.create());
+	}
+
+	/**
+	 * Add a qeury to the buffer of the database with reference id
+	 * 
+	 * @param id    The reference to the database
+	 * @param query The query to run in the form of an Insert object
+	 * @return True if ok
+	 */
+	public boolean writeQuery(String id, Insert query) {
+		return this.writeQuery(id, query.create());
+	}
+
+	/**
+	 * Add a qeury to the buffer of the database with reference id
+	 * 
+	 * @param id    The reference to the database
+	 * @param query The query to run
+	 * @return True if ok
+	 */
+	public boolean writeQuery(String id, String query) {
+		Database sqlite = dbs.get(id);
+		if (sqlite != null) {
+			sqlite.addQuery(query);
+			return true;
+		} else {
+			Logger.error("Trying to insert data in a non-existing database with id " + id);
+			return false;
+		}
+	}
+	public boolean provideRecord(String ids, String table, Object[] data) {
+		boolean wrote = false;
+		int result=0;
+		for ( String id : ids.split(",")) {
+			Database db = id.isBlank() ? firstDB : dbs.get(id);
+			result++;
+			if (db != null) {
+				if( db.doDirectInsert(table,data)==1)
+					result--;
+			} else {
+				Logger.error("Invalid Database id <" + id + ">");
+			}
+		}
+		return result==0;
+	}
+	/**
+	 * This tries to add an insert based on values found in the realtimevalues
+	 * hashmap
+	 * 
+	 * @param ids   The reference to the database or multiple delimited with ,
+	 * @param table The table in the database
+	 * @return True if ok
+	 */
+	public boolean writeRecord(String ids, String table, String macro) {
+		boolean wrote = false;
+		for ( String id : ids.split(",")) {
+			Database db = id.isBlank() ? firstDB : dbs.get(id);
+
+			if (db != null) {
+				wrote=db.buildInsert(table,rtvals, rttext, macro);
+			} else {
+				Logger.error("Invalid Database id <" + id + ">");
+			}
+		}
+		return wrote;
+	}
+	public boolean writeRecord(String ids, String table) {
+		return writeRecord(ids, table, "");
+	}
+
+	/**
+	 * This tries to add an insert based on values found in the realtimevalues
+	 * hashmap. This writes to the first/only defined database
+	 * 
+	 * @param table The table in the database
+	 * @return True if ok
+	 */
+	public boolean writeRecord(String table) {
+		if (firstDB != null) {
+			return firstDB.buildInsert(table,rtvals, rttext,"");
+		}
+		return false;
+	}
+	public boolean sendToMqtt(String id, String param) {
+		MqttWorker worker = mqttWorkers.get(id);
+		if (worker != null) {
+			double val = this.getRealtimeValue(param, -999);
+			if (val != -999) {
+				return worker.addWork(new MqttWork(param, val));
+			}
+		}
+		return false;
+	}
+
+	public boolean sendToMqtt(String id, String device, String param) {
+		MqttWorker worker = mqttWorkers.get(id);
+		if (worker != null) {
+			double val = this.getRealtimeValue(param, -999);
+			if (val != -999) {
+				return worker.addWork(new MqttWork(device, param, val));
+			}
+		}
+		return false;
+	}
+	/* ********************************** I N F L U X D B *********************************************************** */
+	public void setInfluxDB( Influx influxDB ){
+		this.infuxdb=influxDB;
+	}
+	public boolean sendToInflux( Point p){
+
+		if( infuxdb!=null) {
+			infuxdb.writePoint(p);
+			return true;
+		}
+		Logger.error("Failed to store point in Influx DB");
+		return false;
+	}
+	/* ************************************** * D E S C R I P T O R S *************************************************/
+	/**
+	 * Add a descriptor to the collection
+	 * 
+	 * @param id         The ID of the variable
+	 * @param descriptor The name of the variable
+	 */
+	public void addDescriptorID(int id, String descriptor) {
+		descriptorID.put(descriptor.toLowerCase(), id);
+	}
+
+	/**
+	 * Get the ID corresponding to the variable name
+	 * 
+	 * @param descriptor The name of the variable
+	 * @return The ID corresponding or null if not found
+	 */
+	public int getDescriptorID(String descriptor) {
+		return descriptorID.get(descriptor);
+	}
+
+	/* ************************** O T H E R *************************************************************
+	 */
+	/**
+	 * Alter the currently used IssueCollector
+	 * 
+	 * @param issues The replacing issue collector
+	 */
+	protected void setIssueCollector(IssueCollector issues) {
+		this.issues = issues;
+	}
+
+	/**
+	 * Debug method to check rtvals work
+	 * 
+	 * @param value The value to set debug to
+	 */
+	public void setDebugValue(int value) {
+		this.rtvals.put("debug", (double) value);
+	}
+
+	/* ***************************************************************************************************/
+	/**
+	 * Get the value of a parameter
+	 * 
+	 * @param parameter The parameter to get the value of
+	 * @param bad       The value to return of the parameter wasn't found
+	 * @return The value found or the bad value
+	 */
+	public double getRealtimeValue(String parameter, double bad) {
+
+		Double d = rtvals.get(parameter.toLowerCase());
+		if (d == null) {
+			Logger.error("No such parameter: " + parameter);
+			return bad;
+		}
+		if (Double.isNaN(d)) {
+			Logger.error("Parameter: " + parameter + " is NaN.");
+			return bad;
+		}
+		return d;
+	}
+
+	/**
+	 * Sets the value of a parameter (in a hashmap)
+	 * 
+	 * @param parameter The parameter name
+	 * @param value     The value of the parameter
+	 */
+	public void setRealtimeValue(String parameter, double value) {
+		final String param=parameter.toLowerCase();
+
+
+		if( param.isEmpty()) {
+			Logger.error("Empty param given");
+			return;
+		}
+		Logger.debug("Setting "+parameter+" to "+value);
+
+		rtvals.put(param, value);
+		if( !rtvalRequest.isEmpty()){
+			var res = rtvalRequest.get(param);
+			if( res != null)
+				res.forEach( wr -> wr.writeLine(param + " : " + value));
+		}
+	}
+
+	public void setRealtimeText(String parameter, String value) {
+		final String param=parameter.toLowerCase();
+
+		if( param.isEmpty()) {
+			Logger.error("Empty param given");
+			return;
+		}
+		Logger.debug("Setting "+parameter+" to "+value);
+
+		rttext.put(parameter, value);
+
+		if( !rtvalRequest.isEmpty()){
+			var res = rtvalRequest.get(param);
+			if( res != null)
+				res.forEach( wr -> wr.writeLine(param + " : " + value));
+		}
+	}
+
+	public String getRealtimeText(String parameter, String def) {
+		String result = rttext.get(parameter);
+		return result == null ? def : result;
+	}
+
+	/**
+	 * Get a listing of all the parameters-value pairs currently stored
+	 * 
+	 * @return Readable listing of the parameters
+	 */
+	public List<String> getRealtimePairs() {
+		ArrayList<String> params = new ArrayList<>();
+		rtvals.forEach((param, value) -> params.add(param + " : " + value));
+		Collections.sort(params);
+		return params;
+	}
+	public List<String> getRealtimeParameters() {
+		ArrayList<String> params = new ArrayList<>();
+		rtvals.forEach((param, value) -> params.add(param));
+		Collections.sort(params);
+		return params;
+	}
+	/**
+	 * Get a listing of double parameter : value pairs currently stored that meet the param
+	 * request
+	 * 
+	 * @return Readable listing of the parameters
+	 */
+	public String getFilteredRTVals(String param, String eol) {
+
+		Stream<Entry<String, Double>> stream = null;
+		if (param.endsWith("*") && param.startsWith("*")) {
+			stream = rtvals.entrySet().stream()
+					.filter(e -> e.getKey().contains(param.substring(1, param.length() - 1)));
+		} else if (param.endsWith("*")) {
+			stream = rtvals.entrySet().stream()
+					.filter(e -> e.getKey().startsWith(param.substring(0, param.length() - 1)));
+		} else if (param.startsWith("*")) {
+			stream = rtvals.entrySet().stream().filter(e -> e.getKey().endsWith(param.substring(1)));
+		} else if (param.isEmpty()) {
+			stream = rtvals.entrySet().stream();
+		} else {
+			stream = rtvals.entrySet().stream().filter(e -> e.getKey().equalsIgnoreCase(param));
+		}
+		return stream.sorted(Map.Entry.comparingByKey()).map(e -> e.getKey() + " : " + e.getValue()).collect(Collectors.joining(eol));
+	}
+	/**
+	 * Get a listing of text parameter : value pairs currently stored that meet the param
+	 * request
+	 * 
+	 * @return Readable listing of the parameters
+	 */
+	public String getFilteredRTTexts(String param, String eol) {
+		Stream<Entry<String, String>> stream = null;
+		if (param.endsWith("*") && param.startsWith("*")) {
+			stream = rttext.entrySet().stream()
+					.filter(e -> e.getKey().contains(param.substring(1, param.length() - 1)));
+		} else if (param.endsWith("*")) {
+			stream = rttext.entrySet().stream()
+					.filter(e -> e.getKey().startsWith(param.substring(0, param.length() - 1)));
+		} else if (param.startsWith("*")) {
+			stream = rttext.entrySet().stream().filter(e -> e.getKey().endsWith(param.substring(1)));
+		} else if (param.isEmpty()) {
+			stream = rttext.entrySet().stream();
+		} else {
+			stream = rttext.entrySet().stream().filter(e -> e.getKey().equalsIgnoreCase(param));
+		}
+		return stream.sorted(Map.Entry.comparingByKey()).map(e -> e.getKey() + " : " + e.getValue()).collect(Collectors.joining(eol));
+	}
+	/* ******************************************************************************************************/
+	/**
+	 * Get the stored waypoints
+	 * 
+	 * @return The stored waypoints
+	 */
+	public Waypoints getWaypoints() {
+		return waypoints;
+	}
+
+	/* ******************************************************************************************************/
+	/**
+	 * Get the current timestamp in db approved format, this should be overriden if
+	 * a gps is present
+	 * 
+	 * @return The timestamp in a sql valid format yyyy-MM-dd HH:mm:ss.SSS
+	 */
+	public synchronized String getTimeStamp() {
+		return LocalDateTime.now(ZoneOffset.UTC).format(longFormat);
+	}
+
+	/* ******************************************************************************************************/
+	/**
+	 * Get a predetermined combination/calculation of parameters
+	 * 
+	 * @param what The reference used for the calculation/forming
+	 * @return Result in string format
+	 */
+	public String getCalcValue(String what) {
+		switch (what) {
+			case "clock":
+				return getTimeStamp();
+			default:
+				return getExtraCalcValue(what);
+		}
+	}
+
+	/**
+	 * The list of extra calc options, to allow override to add some
+	 * 
+	 * @param what The reference used for the calculation/forming
+	 * @return Result in string format
+	 */
+	protected String getExtraCalcValue(String what) {
+		return "";
+	}
+
+	/* ******************************************************************************************************/
+	/**
+	 * Method to override that return the status
+	 * 
+	 * @param html Whether or not this to use html EOL
+	 * @return Status information
+	 */
+	public String getStatus(boolean html) {
+		return "";
+	}
+
+	public void removeRequest(Writable writable, String request) {
+		if (request.isEmpty()) {
+			rtvalRequest.forEach( (key,list) -> list.remove(writable));
+
+			calcRequest.forEach( (key,futur) ->
+			{
+				if( key.startsWith(writable.getID()+"_")){
+					futur.cancel(true);
+				}
+			});
+			if( calcRequest.entrySet().removeIf( pair ->  pair.getValue().isCancelled())){
+				Logger.info("Removed atleast a single element from calc requests");
+			}
+		}else{
+			String[] req = request.split(":");
+			switch( req[0]){
+				case "rtval":
+					if( rtvalRequest.containsKey(request) ){
+						rtvalRequest.get(request).remove(writable);
+					}
+					break;
+				case "calc":
+
+					break;
+			}
+		}
+	}
+
+	public boolean addRequest(Writable writable, String request) {
+		String[] req = request.split(":");
+		switch (req[0]) {
+			case "rtval":
+				var r = rtvalRequest.get(req[1]);
+				if( r == null) {
+					rtvalRequest.put(req[1], new ArrayList<>());
+					Logger.info("Created new request for: " + req[1]);
+				}else{
+					Logger.info("Appended existing request to: " + r + "," + req[1]);
+				}
+				if( !rtvalRequest.get(req[1]).contains(writable)) {
+					rtvalRequest.get(req[1]).add(writable);
+					return true;
+				}
+				break;
+			case "calc":
+				if( calcRequest.get(writable.getID()+"_"+request)==null) {
+					ScheduledFuture<?> f = scheduler.scheduleWithFixedDelay(new CalcRequest(writable, req[1]), 0, 1,
+							TimeUnit.SECONDS);
+					calcRequest.put(writable.getID() + "_" + request, f);
+					return true;
+				}
+				break;	
+			default:
+				Logger.warn("Requested unknown type: "+req[0]);
+				break;
+		}
+		return false;
+	}
+	/* **************************** MATH COLLECTOR ********************************************** */
+	public void addMathCollector( MathCollector mc ){
+		mc.addListener(this);
+		mathCollectors.put( mc.getID(),mc);
+	}
+	@Override
+	public void collectorFinished(String id, String message, Object result) {
+		String[] ids = id.split(":");
+		if(ids[0].equalsIgnoreCase("math")){
+			setRealtimeValue(message,(double)result);
+		}
+	}
+	/* ********************************************************************************************** */
+	public class CalcRequest implements Runnable{
+		String request;
+		Writable dt; 
+
+		public CalcRequest(Writable dt, String request){
+			this.request=request;
+			this.dt=dt;
+		}
+		@Override
+		public void run() {
+			dt.writeLine( getCalcValue(request) );
+
+			if( !dt.isConnectionValid()) {
+				Logger.info(dt.getID() + " -> Writable no longer valid, removing calc request");
+				calcRequest.get(dt).cancel(false);
+			}
+		}
+	}
+}
