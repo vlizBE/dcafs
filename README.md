@@ -1,4 +1,4 @@
-> Note: dcafs has been a while in development already (couple of years) but is new on github, so below and other documentation is being worked on/updated.
+> Note: dcafs has been a while in development for a couple of years but is new on github, so below and other documentation is being worked on/updated.
 > 
 # dcafs
 
