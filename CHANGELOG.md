@@ -6,7 +6,15 @@ Note: Version numbering: x.y.z
 From 0.5.0 onwards, this should be better documented...
 
 ## Work in progress
+### 0.8.2
+#### I2CWorker
+ * Added command to add a device (and generate empty script)
+ * Altered i2c:list to only show list of devices and commands
+ * Added i2c:cmds to get full list of commands (eg. include the read/write)
+#### Other
+ * mf:addblank now supports source containing a , (eg. to i2c:forward,id)
 
+## RELEASED
 ### 0.8.1  
 ####TaskManager  
  * Task(sets) with an id can now be started as a single command:
@@ -24,8 +32,6 @@ From 0.5.0 onwards, this should be better documented...
 * Sending empty string to telnet didn't work anymore (outofbounds)
 * CalcRequests now have an entry for each request from the same writable (instead of overwriting...)
 * Calc and rtval requests can no longer by duplicated (eg. asking twice the same won't give twice)
-
-## RELEASED
 
 ### 0.8.0 
 
