@@ -1055,7 +1055,11 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				if( getMath(cmds[1]).isPresent() )
 					return "Already math with that id";
 				cmds[1]=cmds[1].toLowerCase();
-				addMath(cmds[1],cmds.length==3?cmds[2]:"").writeToXML(XMLfab.withRoot(xmlPath, "das"));
+				StringJoiner src = new StringJoiner(",");
+				for( int a=2;a<cmds.length;a++){
+					src.add(cmds[a]);
+				}
+				addMath(cmds[1],src.toString()).writeToXML(XMLfab.withRoot(xmlPath, "das"));
 				return "Blank math with id "+cmds[1]+ " created.";
 			case "alter":
 				var mf = maths.get(cmds[1]);
@@ -1271,7 +1275,13 @@ public class StreamPool implements StreamListener, CollectorFuture {
 					return "Not enough arguments, needs to be fs:addblank,id<,src,>";
 				if( getFilter(cmds[1]).isPresent() )
 					return "Already filter with that id";
-				addFilter(cmds[1].toLowerCase(),cmds.length>2?cmds[2]:"","")
+
+				StringJoiner src = new StringJoiner(",");
+				for( int a=2;a<cmds.length;a++){
+					src.add(cmds[a]);
+				}
+
+				addFilter(cmds[1].toLowerCase(),src.toString(),"")
 						.writeToXML( XMLfab.withRoot(xmlPath, "das"),false );
 				return "Blank filter with id "+cmds[1]+ " created"+(cmds.length>2?", with source "+cmds[2]:"")+".";
 			case "addshort":
