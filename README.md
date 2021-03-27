@@ -4,7 +4,7 @@ dcafs
 A Java tool (or library) that takes care of all the nitty-gritty that needs to be done when a sensor generated data and you want to find that data in a database. Hence _data collect alter forward store_ this is in broad terms what it is capable of.
 
 
-# Main features
+## Main features
 * Collect data from TCP, UDP, MQTT, Websocket, serial/tty, I2C, SPI, email
 * Alter with string and math operations, or filter lines out
 * Forward back to origin, any other source, hosted tcp server or email eg. create a serial to tcp converter
