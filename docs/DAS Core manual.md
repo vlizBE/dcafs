@@ -1,4 +1,4 @@
-# DAS Core manual
+#Dcafs manual
 
 <div class="page"/>
 
@@ -30,7 +30,7 @@
 # Table of content
 
 1. Introduction
-    * [A. What is DAS Core](#whatisdas)  
+    * [A. What is Dcafs](#whatisdcafs)  
     * [B. The purpose of this manual](#purpose)
     
 1. As a library
@@ -96,7 +96,7 @@
 
 ## 1. Introduction
 
-### A. What is DAS <a name="whatisdas"></a>
+### A. What is Dcafs <a name="whatisdcafs"></a>
 
 Shortest description possible would be a tool that does all the nitty-gritty between generating data and finding it in 
 a database. 
@@ -144,7 +144,7 @@ Just like streams, forwards can work with labels.
 
 For more information on forwards, go here.
 
-#### Storing data in das
+#### Storing data in dcafs
 
 Now that data is in the preferred format it should be kept in memory.
 The main label responsible for this is generic. This allows for delimited data to be converted to an array of doubles
@@ -171,7 +171,7 @@ This was a brief overview of how data is received and stored in a database, but 
 Major features not mentioned:
 * telnet (user interface for commands that is also writable)
 * TaskManager (a scheduling engine using xml scripts)
-* Email (control das and can be a source/writable and used for alerts etc)
+* Email (control dcafs and can be a source/writable and used for alerts etc)
 * Collectors (a variant on forward)
 * Valmap (a variant on generic)
 * trans (a tcp server, that can act as a telnet client or a stream)
@@ -181,7 +181,7 @@ All of the above will slowly be introduced in the manual.
 
 ### B. The purpose of this guide <a name="purpose"></a>
 
-The goal is to explain how to use DAS either as a library, or a stand-alone application.
+The goal is to explain how to use dcafs either as a library, or a stand-alone application.
 
 When to use it as a stand-alone application:
  * The devices to interact with use a simple, straightforward protocol (not binary etc).
@@ -217,18 +217,18 @@ know how it works.
 #### Connect to the telnet interface
 * If you use the binaries it's recommended to use the .bat or .sh to start it in a console window. All the feedback/errors
   should appear in the logs but it's easier than refreshing those.
-* The last line in the console should be "Barebone boot finished!" if not using console, you know das has booted if a
+* The last line in the console should be "Barebone boot finished!" if not using console, you know dcafs has booted if a
   settings.xml file (and other folders) have been generated near the .jar.
 
 >Note: If this doesn't work, chances are Java wasn't installed properly.
 
 #### First steps
 * Open the created settings.xml (in the recommended notepad++ or any other xml syntax highlighting editor), the reason for
-  this is that you can follow what das generates. Furthermore, not everything is possible through the telnet interface (yet),
+  this is that you can follow what dcafs generates. Furthermore, not everything is possible through the telnet interface (yet),
   so at some point it will be necessary/quicker to alter that file.
 * Open Putty and set up a telnet connection to hostname localhost, port23 and connection type telnet.  
-  Save this as das_local.
-* Open two or three das_local sessions (while setting up, it's easier if there are two or more)
+  Save this as dcafs_local.
+* Open two or three dcafs_local sessions (while setting up, it's easier if there are two or more)
     * One session to issue commands
     * Once session to see the relevant help or command overview
     * Once session to see incoming data
@@ -249,7 +249,7 @@ A series of examples will be given that add functionality in each step.
   * Send 'ss:addserial,sensor,COM1:19200' to connect to it
 * Now the text 'Connected to COM1' should appear
 * Check the settings.xml to see how this was defined  
-* By default, das assumes that messages are terminated with \r\n (carriage return, line feed). If this is incorrect and it's
+* By default, dcafs assumes that messages are terminated with \r\n (carriage return, line feed). If this is incorrect and it's
   actually just the carriage return:  
   * Send 'ss:alter,sensor,eol:\r' or 'ss:alter,sensor,eol:cr' the reply should be 'Alteration applied' and the xml updated.
   * Alternatively, edit the xml and send 'ss:reload,sensor' to reload the xml settings.
@@ -263,7 +263,7 @@ A series of examples will be given that add functionality in each step.
     * [-1s] means there is not time set before the connection is considered idle
 * That's it! Oh, logging the data is done by default, see the raw folder.
 
-#### Store the data in das
+#### Store the data in dcafs
 For the sake of simplicity, we'll assume the data looks like this 12.5,56,1024\r\n. First number is temperature, 
 second humidity and third pressure. To store these, we'll make a generic.
 * Back in the telnet session
@@ -347,17 +347,17 @@ That's it for the quickstart examples. For more (extensive) examples see the 'us
 
 ### A. Preparation
 
-Create a new blank Maven project and add das as a dependency. 
+Create a new blank Maven project and add dcafs as a dependency. 
 ````xml
 <dependencies>
    <dependency>
-      <groupId>DAS</groupId>
-      <artifactId>DAScore</artifactId>
-      <version>0.8.0</version>
+      <groupId>vlizBE</groupId>
+      <artifactId>dcafs</artifactId>
+      <version>0.8.1</version>
    </dependency>
 </dependencies>
 ````
-Then create an empty java class, name it as you like. For the examples, we'll use DasTest.java.  
+Then create an empty java class, name it as you like. For the examples, we'll useDcafsTest.java.  
 Below is the recommended bare minimum:
 ```java
 package core;  
@@ -365,9 +365,9 @@ package core;
 import org.tinylog.Logger; // TinyLog for logging purposes
 import das.DAS;            
 
-public class DasTest{ 
+public class DcafsTest{ 
     
-    public DasTest() { // It also starts with {
+    public DcafsTest() { // It also starts with {
 
         DAS das = new DAS();	
         
@@ -386,7 +386,7 @@ public class DasTest{
 
     }
     public static void main(String[] args) { 
-       new DasTest(); 
+       new DcafsTest(); 
     }
 }
 ````
@@ -422,7 +422,7 @@ public class Worker extends BaseWorker { // The class Worker extends the functio
 }
 ````
 That's it for the extended BaseWorker. 
-To actually make DAS use it instead of the default one.
+To actually make dcafs use it instead of the default one.
 
 ```java
 package core;
@@ -430,7 +430,7 @@ package core;
 import org.tinylog.Logger; // TinyLog for logging purposes
 import das.DAS;
 
-public class DasTest{
+public class DcafsTest{
 
     public DasTest() { 
 
@@ -445,7 +445,7 @@ public class DasTest{
         Logger.info("Everything started up, waiting for things to happen...");
     }
     public static void main(String[] args) { 
-       new DasTest(); 
+       new DcafsTest(); 
     }
 }
 ```
@@ -491,9 +491,9 @@ package core;
 import org.tinylog.Logger; // TinyLog for logging purposes
 import das.DAS;
 
-public class DasTest {
+public class DcafsTest {
 
-    public DasTest() {
+    public DcafsTest() {
 
         DAS das = new DAS();
 
@@ -507,7 +507,7 @@ public class DasTest {
     }
 
     public static void main(String[] args) {
-        new DasTest();
+        new DcafsTest();
     }
 }
 ```
@@ -635,7 +635,7 @@ public String writeToStream(String stream, String data, String reply)
 
 
 ### Purpose
-Allow using DAS without writing java code or to be able to add a sensor at runtime.
+Allow using Dcafs without writing java code or to be able to add a sensor at runtime.
 
 ### Usage
 Everything is defined in the settings.xml and needs to be in the 'generics' tag. An example of the minimum
@@ -647,7 +647,7 @@ Everything is defined in the settings.xml and needs to be in the 'generics' tag.
 </generics>
 ```
 
-This tells das to process data with the label generic:sbe38 by converting the received data to a real/double and store it in a table called sbe38.
+This tells Dcafs to process data with the label generic:sbe38 by converting the received data to a real/double and store it in a table called sbe38.
 How to setup this [sqlite](##sqlitedb) and the [stream](#streampool) can be found in their respective part of the reference guide.
 
 The above is the minimum...
@@ -669,7 +669,7 @@ We want both in the same datatable and know that WIXDR is always received first.
 ```
 To use both, the label needs to be generic:meteo,wind
 
-This tells DAS:
+This tells Dcafs:
 * Check if the data starts with $WIXDR if so, use that generic.
     * Store the received data in the realtimevalues hashmap using aws_temperature etc
     * Do note write to the database (dbwrite="no"), just use the table info
@@ -851,7 +851,7 @@ This list:
 Like mentioned earlier it's possible to connect with a device and set it up via (another) PC. The permanent alternative is to add requests to the transserver node in the settings.xml.
 These look like this:
 ```xml
-<!-- Have DAS send current timestamp to the ADCP PC upon connecting -->
+<!-- Have Dcafs send current timestamp to the ADCP PC upon connecting -->
 <client address="192.168.1.2" title="ADCP-PC">
       <cmd>calc:clock</cmd>      
 </client>
@@ -861,7 +861,7 @@ These look like this:
 
 # 2. TaskManager <a name="taskmanager"></a>
 
-TaskManagers are used for all the scripted functionality in DAS. The language chosen for this is XML given that the syntax based on nodes corresponds well to the nature of the script.
+TaskManagers are used for all the scripted functionality in Dcafs. The language chosen for this is XML given that the syntax based on nodes corresponds well to the nature of the script.
 
 ### Glossary
 * task: a single action to execute, once or an (un)limited amount of times
@@ -1312,7 +1312,7 @@ ms:scratchpad,id,value -> Write the given value to the scratchpad of the given i
 
 ## A. BaseWorker <a name="baseworker"></a>
 
-This class receives about 99% all data arriving at DAS, this is given in the form of Datagram Object:
+This class receives about 99% all data arriving at Dcafs, this is given in the form of Datagram Object:
 * Raw data from Serial and TCP/UDP devices
 * Commands received through Telnet
 * Data received from I2C devices
@@ -1335,7 +1335,7 @@ import worker.Datagram;    // Needed for the methods
 public Worker extends BaseWorker{
 }
 ```
-To make sure DAS uses the extended version of this class, there are two options:
+To make sure Dcafs uses the extended version of this class, there are two options:
 
 ```java
 Worker worker = new Worker();  // Create an object of the extending class
