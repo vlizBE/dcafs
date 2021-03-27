@@ -5,43 +5,6 @@ Note: Version numbering: x.y.z
   -> z goes up for minor additions and bugfixes
 From 0.5.0 onwards, this should be better documented...
 
-### PLANNED in the (not so) near future
-**Features (aka things the user notices)**
-- restrict dasbot email commands based on user(group)
-- SQLiteDB: allow adding columns through xml (now nothing is done if a table exists)
-- SQLiteDB: don't generate db unless it's actually used
-
-**Issues**
-- Reloading a script doesn't restart the interval tasks?
-
-## Planned aka todo
-### 0.8.z
-- Forward: Add interface for TextForward (at 0.8.0 nothing can be done via command)
-- Database: Allow table creation on servers
-- TaskManager: allow the source of the start task(set) command to be a possible output (otherwise the previous point is 
-  less useful), no idea how yet.
-- Telnet: add shortcuts to xml, eg. predefined commands like ss:send,id,? -> id:?
-- I2C: 
-  - Get some info in the status overview
-  - Keep the bus available for other stuff
-  - Check if it can actually connect to multiple devices on the bus...  
-- MathForward/Generic: pass the decimal values to generic instead of the altered string?
-- Stream: be able to store result of tunnel/forward commands
-- Editor/forward/math: warn if no source is given
-- Figure out a way to give better feedback on a writeStream command
-
-### 0.y.z
-- Taskmanager: rewrite
-    * Reasons:
-      * No concurrency possible, only a single instance of a taskset can be active at any given time.
-      * Code isn't 'clean' and pretty much one big method that needs to consider a lot of edge cases.
-      * Hasn't seen any major alterations since the first write.
-      * Better integration with the rest? Now pretty standalone.
-   * Plans
-     * Maybe go the same way as the forward class? (using Functions etc)
-- IssueHandler: rewrite
-- Update dependencies
-
 ## Work in progress
 
 ### 0.8.1  
