@@ -66,4 +66,4 @@ Again in the background, the settings.xml will now look like this:
   </streams>
 </das>
 ````
-For the rest of the functionality, check the wiki or the manual in the docs folder.
+Sending 'help' in the telnet interface should provide enough information for the next recommended steps but for more indepth and extensive information, check the docs/wiki.
