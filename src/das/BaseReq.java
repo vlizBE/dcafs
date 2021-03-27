@@ -1211,11 +1211,14 @@ public class BaseReq {
 				StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
 				join.add("i2c:detect,<controller> -> Detect the devices connected to a certain controller")
 					.add("i2c:list -> List all registered devices and their commands")
+					.add("i2c:cmds -> List all registered devices and their commands including comms")
 					.add("i2c:reload -> Reload the command file(s)")
 					.add("i2c:forward,device -> Show the data received from the given device")
+					.add("i2c:adddevice,id,bus,address,script -> Add a device on bus at hex addres that uses script")
 					.add("i2c:<device>,<command> -> Send the given command to the given device");
 				return join.toString();
-			case "list": return das.getI2CDevices();
+			case "list": return das.getI2CDevices(false);
+			case "cmds": return das.getI2CDevices(true);
 			case "reload": return das.reloadI2CCommands();
 			case "forward": return das.addI2CDataRequest(cmd[1],wr)?"Added forward":"No such device";
 			case "listeners": return das.getI2CListeners();
@@ -1227,6 +1230,34 @@ public class BaseReq {
 				}else{
 					return "Incorrect number of variables: i2c:debug,on/off";
 				}
+			case "adddevice":
+				if( cmd.length != 5)
+					return "Incorrect number of variables: i2c:adddevice,id,bus,address,script";
+				if( das.getI2CWorker().isEmpty()) // if no worker yet, make it
+					das.addI2CWorker();
+				if( I2CWorker.addDeviceToXML(XMLfab.withRoot(das.getXMLdoc(),"das","settings"),
+						cmd[1], //id
+						Integer.parseInt(cmd[2]), //bus
+						cmd[3], //address in hex
+						cmd[4] //script
+						)) {
+					// Check if the script already exists, if not build it
+					var p = Paths.get("devices",cmd[4]+".xml");
+					if( !Files.exists(p)){
+						XMLfab.withRoot(p,"commandset").attr("script",cmd[4])
+								.addParent("command","An empty command to start with")
+									.attr("id","cmdname").attr("info","what this does")
+								.build();
+						das.getI2CWorker().ifPresent(
+								worker -> worker.readSettingsFromXML(das.getXMLdoc())
+						);
+						return "Device added, created blank script at "+p.toString();
+					}else{
+						return "Device added, using existing script";
+					}
+
+				}
+				return "Failed to add device to XML";
 			case "detect":
 				if( cmd.length == 2){
 					return I2CWorker.detectI2Cdevices( Integer.parseInt(cmd[1]) );
@@ -1498,6 +1529,7 @@ public class BaseReq {
 						.add("  dbm:addmysql,id,db name,ip:port,user:pass -> Adds a MSSQL server on given ip:port with user:pass")
 						.add("  dbm:addmariadb,id,db name,ip:port,user:pass -> Adds a MariaDB server on given ip:port with user:pass")
 						.add("  dbm:addsqlite,id,filename -> Creates an empty sqlite database, filename optional default db/id.sqlite")
+						.add("  dbm:addinfluxdb,id,db name,ip:port,user:pass -> Adds a Influxdb server on given ip:port with user:pass")
 					.add("").add(TelnetCodes.TEXT_GREEN+"Working with tables"+TelnetCodes.TEXT_YELLOW)
 						.add("  dbm:addtable,id,tablename,format (format eg. tirc timestamp(auto filled system time),int,real,char/text)")
 						.add("  dbm:tables,id -> Get info about the given id (tables etc)")

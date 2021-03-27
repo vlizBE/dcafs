@@ -29,11 +29,13 @@ public class ExtI2CDevice extends I2CDevice {
 		super(controller,address);
 		this.label = label;
 		this.script=script;
-		info = "L:"+label+" H:"+controller+":"+address;
+		info = "-> Label:"+label+" @"+address+ "on bus "+controller;
 		Logger.info("Connecting to controller:"+controller +" and address:"+address+" with label: "+label);
 	}
 	public String toString(){
-		return info;
+		return "@"+getController()+":0x"+String.format("%02x ", getAddress())
+				+" using script "+script
+				+(label.isEmpty()?"":" with label "+label);
 	}
 	public String getLabel(){
 		return label;

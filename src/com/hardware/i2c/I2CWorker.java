@@ -5,10 +5,7 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.StringJoiner;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
@@ -21,6 +18,7 @@ import com.diozero.api.RuntimeIOException;
 import com.hardware.i2c.I2CCommand.CommandStep;
 import com.stream.Writable;
 
+import com.telnet.TelnetCodes;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.tinylog.Logger;
@@ -29,6 +27,7 @@ import org.w3c.dom.Element;
 
 import util.math.MathUtils;
 import util.tools.Tools;
+import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
@@ -42,7 +41,7 @@ public class I2CWorker implements Runnable {
     private boolean debug = false;
     private boolean goOn=true;
 
-    private final HashMap<String,I2CCommand> commands = new HashMap<>();
+    private final LinkedHashMap<String,I2CCommand> commands = new LinkedHashMap<>();
 
     public I2CWorker(Document xml, BlockingQueue<Datagram> dQueue) {
         this.dQueue = dQueue;
@@ -81,14 +80,28 @@ public class I2CWorker implements Runnable {
 
     /**
      * Get a readable list of all the registered devices
-     * 
+     * @param full Add the complete listing of the commands and not just id/info
      * @return Comma separated list of registered devices
      */
-    public String getDeviceList() {
+    public String getDeviceList(boolean full) {
         StringJoiner join = new StringJoiner("\r\n");
-        devices.forEach((key, device) -> join.add(key).add(device.toString()));
-        join.add("\r\n-Stored Commands-");
-        commands.forEach( (key, cmd) -> join.add(key+" : "+cmd.getInfo()+" ("+cmd.bits+"bits)").add(cmd.toString("\t")));
+        devices.forEach((key, device) -> join.add(key+" -> "+device.toString()));
+        join.add("\r\n-Stored scripts-");
+        String last="";
+
+        for( var entry : commands.entrySet() ){
+            String[] split = entry.getKey().split(":");
+            var cmd = entry.getValue();
+            if( !last.equalsIgnoreCase(split[0])){
+                if( !last.isEmpty())
+                    join.add("");
+                join.add(TelnetCodes.TEXT_GREEN+split[0]+TelnetCodes.TEXT_YELLOW);
+                last = split[0];
+            }
+            join.add("\t"+split[1]+" -> "+cmd.getInfo()+" ("+cmd.bits+"bits)");
+            if( full)
+                join.add(cmd.toString("\t   "));
+        }
         return join.toString();
     }
     public boolean addTarget(String id, Writable wr){
@@ -167,6 +180,8 @@ public class I2CWorker implements Runnable {
 
         if (i2c != null) {                       
             Logger.info("Found settings for a I2C bus");
+            devices.values().forEach( dev -> dev.close());
+            devices.clear();
             for( Element i2c_bus : XMLtools.getChildElements( i2c, "bus") ){
                 int bus = XMLtools.getIntAttribute(i2c_bus, "controller", -1);
                 Logger.info("Reading devices on the I2C bus of controller "+bus);
@@ -191,6 +206,11 @@ public class I2CWorker implements Runnable {
             return "No settings found for I2C.";         
         }                            
         return reloadCommands();
+    }
+    public static boolean addDeviceToXML(XMLfab fab, String id, int bus, String address,String script){
+        return fab.digRoot("i2c").selectOrCreateParent("bus","controller","0")
+                .selectOrCreateParent("device","id",id).attr("address",address).attr("script",script)
+                .build() != null;
     }
     public String reloadCommands( ){
         List<Path> xmls;
@@ -509,10 +529,10 @@ public class I2CWorker implements Runnable {
 			} else {
 				try (I2CDevice device = new I2CDevice(controller, device_address)) {
 					if (device.probe( I2CDevice.ProbeMode.AUTO )) {
-						b.add( String.format("%02x ", device_address) );
+						b.add( "0x"+String.format("%02x ", device_address) );
 					}
 				} catch (DeviceBusyException e) {
-					b.add("Busy - "+String.format("%02x ", device_address));
+					b.add("Busy - 0x"+String.format("%02x ", device_address));
 				} catch( DeviceAlreadyOpenedException e){
 				    b.add("Controller already addressed by DAS, fix todo");
                 }

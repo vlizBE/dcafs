@@ -945,6 +945,9 @@ public class DAS implements DeadThreadListener {
      * Create the I2CWorker
      */
     public void addI2CWorker() {
+        if( i2cWorker!=null)
+            return;
+
         Logger.info("Adding I2CWorker.");
         if (SystemUtils.IS_OS_WINDOWS) {
             Logger.warn("No native I2C busses on windows... ignoring I2C");
@@ -957,17 +960,18 @@ public class DAS implements DeadThreadListener {
         return Optional.ofNullable(i2cWorker);
     }
 
-    public String getI2CDevices() {
+    public String getI2CDevices(boolean fullCmds) {
         if (i2cWorker == null)
             return "No I2CWorker active.";
 
-        return i2cWorker.getDeviceList();
+        return i2cWorker.getDeviceList(fullCmds);
     }
 
     public String reloadI2CCommands() {
-        if (i2cWorker == null)
+        if (i2cWorker == null) {
+            addI2CWorker();
             return "No I2CWorker active.";
-
+        }
         return i2cWorker.reloadCommands();
     }
 
