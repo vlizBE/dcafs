@@ -1,49 +1,95 @@
-> Note: dcafs has been a while in development for a couple of years but is new on github, so below and other documentation is being worked on/updated.
-> 
-# dcafs
+dcafs
+=========
 
-What's in an name? It's an acronym for _data collect alter forward store_ which is in broad terms what it actually does.
+A Java tool (or library) that takes care of all the nitty-gritty that needs to be done when a sensor generated data and you want to find that data in a database. Hence _data collect alter forward store_ this is in broad terms what it is capable of.
 
-To go into a bit more detail
 
-## Collect
+## Main features
+* Collect data from TCP, UDP, MQTT, Websocket, serial/tty, I2C, SPI, email
+* Alter with string and math operations, or filter lines out
+* Forward back to origin, any other source, hosted tcp server or email eg. create a serial to tcp converter
+* Store processed data in SQLite, MariaDB, MySQL, InfluxDB and MSSQL while raw is stored in timestamped .log files
+* XML based scheduling engine capabable of interacting with all connected sources and respond to realtime data
+* Single control pipeline that can be accessed by telnet, email or the earlier mentioned scheduling engine
+* Update itself via email (linux only for now)
 
-* Using [Netty](https://netty.io/) to allow to collect from TCP and UDP servers
-* Using [jSerialComm](https://fazecast.github.io/jSerialComm/) to collect from to serialports/tty.
-* Using [DioZero](https://github.com/mattjlewis/diozero) to collect from I2C and SPI chips.
-* Using [Eclipse Paho](https://www.eclipse.org/paho/) to collect from an MQTT broker
-* Using [Eclipse Tyrus](https://eclipse-ee4j.github.io/tyrus/) to collect from a Websocket server (still to integrate)
+## Installation
 
-Now that data has been collected, it needs to be altered to suit the next steps
+* Option one is cloning the hub, and run it/package it in your preffered IDE.
+* Option two is look at the most recent release and download that. There's no installer involved, just unpack the zip.
 
-## Alter
+## First steps
 
-* Apply edits to the ascii based data 
-  * Remove/replace/append characters
-  * Change the order of delimited values
-  * ...
-* Apply arithmetic operations
-  * Allows for addition, substraction, multiplication, division (and remainder), power following the rules
+Once running, and after opening a telnet connection to it, you'll be greeted with the following screen.
 
-## Forward
-* Either to a straight forward eg. data arriving on serialport is forwarded to a tcp port
-* Do a filtered forward eg. i don't want the GPGGA from the GPS but do want all the others
-* Combine multiple ports eg. make an nmea multiplexer
-* ...
+<img src="https://user-images.githubusercontent.com/60646590/112713982-65630380-8ed8-11eb-8987-109a2a066b66.png" width="500" height="300">
 
-## Store
-* All raw data is stored in log files using [Tinylog](https://tinylog.org/v2/)
-* SQLite is an option for a local filebased database
-* Supported database servers are : MariaDB, MySQL, influxDB and MSSQL
+In the background, a fresh settings.xml was generated.
+````xml
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<das>
+  <settings>
+    <mode>normal</mode>
+    <!-- Settings related to the telnet server -->
+    <telnet port="23" title="DAS">
+      <ignore/>
+    </telnet>
+  </settings>
+  <streams>
+    <!-- Defining the various streams that need to be read -->
+  </streams>
+</das>
+````
+Back in the telnet client, add a data source.
+* ss:addserial,serialsensor,COM1:19200,void  --> adds a serial connection to a sensor called serialsensor that uses 19200Bd
+* ss:addtcp,tcpsensor,localhost:4000,void  --> adds a tcp connection to a sensor called tcpsensor with a locally hosted tcp server
 
-## What else?
+Assuming the data has the default eol sequence, you'll receive the data in the window by typing
+* raw:serialsensor --> for the serial sensor
+* raw:tcpsensor --> for the tcp sensor
 
-All of the above is fairly standard for most Data Acquisition Software. What might set dcafs apart:
-* Written in Java, so works on windows and linux (not tested on mac) but no java knowledgde required (but can be used as a library) 
-* All setup, from connecting to a port to communicating with a I2C chip is defined in XML
-* There's no GUI, all communication happens through telnet (with Netty)
-* It comes with a scheduler that can connect to everything and issue commands just like telnet and respond to realtime data
-* It hosts a TCP server on which all the data is made available
-* If it's possible through telnet, it can be done via email
-* It can update itself via email (on linux)
-* ...
+Again in the background, the settings.xml will now look like this:
+````xml
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<das>
+  <settings>
+    <mode>normal</mode>
+    <!-- Settings related to the telnet server -->
+    <telnet port="23" title="DAS">
+      <ignore/>
+    </telnet>
+  </settings>
+  <streams>
+    <!-- Defining the various streams that need to be read -->
+    <stream id="serialsensor" type="serial">
+      <label>void</label>
+      <eol>crlf</eol>
+      <serialsettings>19200,8,1,none</serialsettings>
+      <port>COM1</port>
+    </stream>
+    <stream id="tcpsensor" type="tcp">
+      <label>void</label>
+      <eol>crlf</eol>
+      <address>localhost:4000</address>
+    </stream>
+  </streams>
+</das>
+````
+Sending 'help' in the telnet interface should provide enough information for the next recommended steps but for more indepth and extensive information, check the docs/wiki.
+
+# History
+
+Although this hub is new, the project isn't. The internal tool has been in semi-active development since 2012 and has since grown from just another piece of data acquision software to what it is today... 
+
+The project that started it all, and is still running is onboard [RV Simon Stevin](https://www.vliz.be/en/rv-simon-stevin), it:
+* collects data from about 20 sensors (serial,tcp,polled,freerunning ...)
+* Controls the calibration and verification process of scientific equipment by controlling pumps & solinoids on a scientist defined and editable schedule
+* Informs those interested if the ship leaves or returns to the dock
+* Monitor and control it via email
+
+The above is the biggest projects it's used for, some smaller ones:
+
+* The earlier mentioned 'calibration and verification process' is also used in a mobile setup build for [ICOS](http://icos-belgium.be/) and the has visited the RV James Cook.
+* A experimental setup for tracking Enhanced silicate weathering in which dcafs is running on multiple beaglebone that monitor salinity sensors and connects to a central database
+* Inside an ROV control container, storing environmnentals and altering datastreams for other software
+* At home, running on a Neo Pi air and reading a BME280 sensor, storing the data on a local InfluxDB and presenting it with Grafana
