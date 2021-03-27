@@ -9,7 +9,7 @@ A Java tool (or library) that takes care of all the nitty-gritty that needs to b
 * Alter with string and math operations, or filter lines out
 * Forward back to origin, any other source, hosted tcp server or email eg. create a serial to tcp converter
 * Store processed data in SQLite, MariaDB, MySQL, InfluxDB and MSSQL while raw is stored in timestamped .log files
-* XML based scheduling engine capabable of interacting with all connected sources and respons to realtime data
+* XML based scheduling engine capabable of interacting with all connected sources and respond to realtime data
 * Single control pipeline that can be accessed by telnet, email or the earlier mentioned scheduling engine
 * Update itself via email (linux only for now)
 
