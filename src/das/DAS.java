@@ -50,7 +50,7 @@ import org.tinylog.provider.ProviderRegistry;
 
 public class DAS implements DeadThreadListener {
 
-    private static final String version = "0.8.1";
+    private static final String version = "0.8.2";
 
     // Last date that changes were made
     String workPath = new File("").getAbsolutePath() + File.separator;

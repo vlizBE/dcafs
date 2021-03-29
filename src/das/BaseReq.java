@@ -1537,6 +1537,7 @@ public class BaseReq {
 					.add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW)
 						.add("  dbm:addserver,id -> Adds a blank database server node to xml")
 						.add("  dbm:alter,id,param:value -> Alter things like idle, flush and batch (still todo)")
+						.add("  dbm:alter,id,param:value -> Alter things like idle, flush and batch (still todo)")
 						.add("  dbm:reload,id -> (Re)loads the database with the given id fe. after changing the xml")
 						.add("  dbm:status -> Show the status of all managed database connections")
 						.add("  st -> Show the current status of the databases (among other things)");

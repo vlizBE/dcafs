@@ -106,6 +106,7 @@ public class DatabaseManager{
         StringJoiner join = new StringJoiner("\r\n", "", "\r\n");
         lites.forEach((id, db) -> join.add( id + " : " + db.toString() ));
         sqls.forEach((id, db)  -> join.add( id + " : " + db.toString() + (db.isValid(1)?"":" (NC)")));
+        influxes.forEach( (id,db) -> join.add( id+ " : " + db.toString() + (db.isValid(1)?"":" (NC)")));
         return join.toString();
     }
 
