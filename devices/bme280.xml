@@ -1,0 +1,150 @@
+<commandset script="bme280">
+
+	<!-- Read all the data/cal registers from the device -->
+	<command id="read_hum" info="Read the humidity registers." bits="16">
+		<read reg="0xFD" return="2"/>
+	</command>
+	<command id="read_temp" info="Read the temperature registers." bits="20">
+		<read reg="0xFA" return="3"/>
+		<!-- 0x7F 0xF5 0x00 so 0x00F57F -->
+	</command>
+	<command id="calc_temp" info="Read the temperature registers."  bits="16">
+		<read reg="0xFA" bits="20" return="3"/>
+		<read reg="0x88" msbfirst="false" return="2"/> <!-- T1: unsigned 16bit -->
+		<read reg="0x8A" msbfirst="false" signed="true" return="4"/> <!-- T2 to T3: signed 16bit -->
+	</command>
+	<command id="calc_hum" info="Read the humidity registers."  msbfirst="false">
+		<read reg="0xFD" msbfirst="true" bits="16" return="2"/>
+		<read reg="0xA1" bits="8"  signed="false"  return="1"/> <!-- H1: unsigned 8bit -->
+		<read reg="0xE1" bits="16" signed="true"   return="2"/> <!-- H2: signed 16bit  -->
+		<read reg="0xE3" bits="8"  signed="false"  return="1"/> <!-- H3: unsigned 8bit -->
+		<read reg="0xE4" msbfirst="true" bits="12" signed="true"  return="2"/> <!-- H4: signed 12bit  -->
+		<read reg="0xE5" bits="12" signed="true"   return="2"/> <!-- H5: humidity signed short, WRONG SHIFT-->
+		<read reg="0xE5" bits="8"  signed="true"   return="1"/>  <!-- H6: humidity signed char -->
+	</command>
+	<command id="calc_pressure" info="Read the pressure registers."  bits="16" msbfirst="false">
+		<read reg="0xF7" msbfirst="true" bits="20" return="3"/>
+		<read reg="0x8E" signed="false" return="2"/> <!-- P1: unsigned 16bit-->
+		<read reg="0x90" signed="true" return="16"/> <!-- P2 to P9: signed 16bit -->
+	</command>
+	<!--
+		double var1 = (adc/16384 - comp[0]/1024) * comp[1];
+        double var2 = (adc/131072 - (comp[0]/8192)) * (adc/131072.0 - comp[0]/8192) * comp[2];
+        t_fine = var1 + var2;
+        
+        double T = Tools.roundDouble((t_fine)/5120,2);
+		
+		x0 = i0/16384 
+		x1 = i1/1024
+		x2 = x0 - x1
+		x3 = x2 * i2
+		
+		x4 = i0/131072 - i1/8192
+		x4 *= x4
+		x5 = x4 * i3
+		x6 = x3 + x5
+		x7 = x6/5120
+	-->
+				
+
+	<command id="read_press" info="Read the pressure registers." bits="24">
+		<read reg="0xF7" return="3"/>
+	</command>
+	<command id="read_status" info="Read the status registers." bits="8">
+		<read reg="0xF3" return="1"/>
+	</command>
+	<command id="read_ctrl" info="Read the ctrl registers." bits="8">
+		<read reg="0xF2" return="1"/>
+		<read reg="0xF4" return="1"/>
+	</command>	
+	<command id="read_coeff" info="Read the calibration values from the ic" msbfirst="false" bits="16">
+		<!-- Temperature -->
+		<!-- 48750; -3992 ; 12800 -->
+		<read reg="0x88"  return="2"/> <!-- T1: unsigned 16bit -->
+		<read reg="0x8A"  signed="true" return="4"/> <!-- T2 to T3: signed 16bit -->
+		
+		<!-- Pressure -->
+		<!-- 16785 ; 32982 ; 53259 ; 56609 ; 51455 ; 63999 ; 44070 ; 2776 ; 48400 -->
+		<read reg="0x8E" signed="true" return="2"/> <!-- P1: signed 16bit-->
+		<read reg="0x90" signed="false" return="16"/> <!-- P2 to P9: unsigned 16bit -->
+		
+		<!-- Humidity -->
+		<!-- 75 ; -30463 ; 0 ; 242 ; 688 -->
+		<read reg="0xA1" bits="8"  signed="false" return="1"/> <!-- H1: unsigned 8bit -->
+		<read reg="0xE1" bits="16" signed="true"  return="2"/> <!-- H2: signed 16bit  -->
+		<read reg="0xE3" bits="8"  signed="false" return="1"/> <!-- H3: unsigned 8bit -->
+		<read reg="0xE4" bits="12" signed="true"  return="2"/> <!-- H4: signed 12bit  -->
+		<read reg="0xE5" bits="12" signed="true"  return="2"/> <!-- H5: humidity signed short, WRONG SHIFT-->		
+	</command>
+	
+	<!-- Mode changes -->
+	<!-- Recommended settings for specific situations -->
+	<command id="weather" info="Set weather recommends (1 sample/min, no filter, no oversampling)">
+		<write reg="0xF5" >0x00</write> <!-- standby dont care (forced mode), filter off, no spi 3w -->
+		<write reg="0xF2" >0x01</write> <!-- Humidity oversampling -->
+		<write reg="0xF4" >0x26</write> <!-- 001 001 10 -->
+	</command>
+	<command id="humidity" info="Set humidity recommends (1 sample/sec, no filter, no oversampling, no pressure)">
+		<write reg="0xF5" >0x00</write> <!-- standby dont care (forced mode), filter off, no spi 3w -->
+		<write reg="0xF2" >0x01</write> <!-- Humidity oversampling x1 -->
+		<write reg="0xF4" >0x22</write> <!-- temp x1, press x1, forced -->
+	</command>
+	<command id="indoornav" info="Set indoor nav recommends (normal mode, tstandby=0.5ms,pressure x16,temp x2, hum x1, filter 16)">
+		<write reg="0xF5" >0x10</write> <!-- standby 0.5ms, filter 16, no spi 3w -->
+		<write reg="0xF2" >0x01</write> <!-- Humidity oversampling x1 -->
+		<write reg="0xF4" >0x57</write> <!-- temp x2=010, press x16=101, normal = 11 -->
+	</command>
+	
+	<!-- General mode setting -->
+	<command id="readmode" info="Read mode register">
+		<read reg="0xF4" return="1"/>
+	</command>	
+	<command id="start" info="Start the sensors acc. at x1 oversampling" >
+		<write reg="0xF2" >0x01</write> <!-- -->
+		<write reg="0xF4" >0x27</write> <!-- oversampling x1 and active -> 0010 0111 -> 0x27 -->
+	</command>	
+	<command id="sleepmode" info="Go to sleep mode">
+		<alter reg="0xF4" operand="and">0xFC</alter> <!-- Default:0x00 xxxx xxxx AND 0xFD = xxxx xx 00 -->
+	</command>
+	<command id="reset" info="Reset the ic" >
+		<write reg="0xE0" >0xB6</write> <!-- -->		
+	</command>	
+</commandset>
+<!--
+0xF2 - ctrl hum
+							humidity oversampling
+		reserved[4:0]		osr_h[2:0]
+		0000 0				000 = skipped			
+							001 = oversampling x1
+							010 = oversampling x2
+							011 = oversampling x4
+							100 = oversampling x8
+							101 = oversampling x16
+
+		
+0xF4 - ctrl meas
+		osrs_t[2:0]					osrs_p[2:0]					mode[1:0]
+		temperaure oversampling		pressure oversampling		00 = sleep mode
+		000 = skipped				000 = skipped				01 = forced mode
+		001 = oversampling x1		001 = oversampling x1		10 = forced mode
+		010 = oversampling x2		010 = oversampling x2		11 = normal mode
+		011 = oversampling x4		011 = oversampling x4
+		100 = oversampling x8		100 = oversampling x8
+		101 = oversampling x16		101 = oversampling x16
+0xF5 - config
+	   t_sb[2:0] 			filter[2:0]				spi3w_en[0]
+	-> 000 = 0,5ms			000 = filter off		0 = spi 3wire disabled
+	-> 001 = 62.5ms			001 = 2					1 = spi 3wire enabled
+	-> 010 = 125ms			010 = 4
+	-> 011 = 250ms			011 = 8
+	-> 100 = 500ms			1xx = 16
+	-> 101 = 1000ms
+	-> 110 = 10ms
+	-> 111 = 20ms
+
+Temperatue ADC data
+0xFA = MSB
+0xFB = LSB
+0xFC = xLSB		
+	
+-->
