@@ -15,7 +15,7 @@ import org.tinylog.Logger;
 public class BufferCollector extends AbstractCollector {
     
     ArrayList<String> buffer = new ArrayList<>();       // a buffer to store the received data
-    int bufferSize;                                     // the maximum size of the buffer
+    int bufferSize=-1;                                     // the maximum size of the buffer
 
     public BufferCollector(String id, int buffersize ){
         super(id);
@@ -59,6 +59,7 @@ public class BufferCollector extends AbstractCollector {
     /* Implementation of the abstract methods */
     protected boolean addData( String data ){
         buffer.add(data);
+        Logger.info("Adding : "+data);
         if( buffer.size() > bufferSize && bufferSize !=-1){
             timeoutFuture.cancel(false); // stop the timeout timer
             timedOut();

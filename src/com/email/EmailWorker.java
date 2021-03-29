@@ -949,13 +949,18 @@ public class EmailWorker implements Runnable, CollectorFuture {
 			sendEmail(req.to, "Buffered response to "+req.about, String.join("<br>", req.getBuffer()));
 		}
 	}
-	public void test( DataRequest req ){
-		buffered.put( req.getID(),req);
-	}
-	public Writable test(){
-		DataRequest req = new DataRequest("admin","raw:title:A");
+
+	/**
+	 * Test if the BufferCollector construction wroks
+	 */
+	public void testCollector(){
+		Datagram d = new Datagram( "calc:clock", 1, "email");
+		DataRequest req = new DataRequest("admin","calc:clock");
 		buffered.put(req.getID(), req);
-		return req.getWritable();
+		d.setWritable(req.getWritable());
+		buffered.put(req.getID(), req);
+		d.setOriginID("admin");
+		dQueue.add( d );
 	}
 	public class DataRequest{
 		BufferCollector bwr;
