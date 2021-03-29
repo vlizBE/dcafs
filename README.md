@@ -15,7 +15,7 @@ A Java tool (or library) that takes care of all the nitty-gritty that needs to b
 
 ## Installation
 
-* Option one is cloning the hub, and run it/package it in your preffered IDE.
+* Option one is cloning the hub, and run it/package it in your preferred IDE.
 * Option two is look at the most recent release and download that. There's no installer involved, just unpack the zip.
 
 ## First steps
@@ -81,7 +81,7 @@ Sending 'help' in the telnet interface should provide enough information for the
 
 Although this hub is new, the project isn't. The internal tool has been in semi-active development since 2012 and has since grown from just another piece of data acquision software to what it is today... 
 
-The project that started it all, and is still running is onboard [RV Simon Stevin](https://www.vliz.be/en/rv-simon-stevin), it:
+The instance that started it all, and is still running is onboard [RV Simon Stevin](https://www.vliz.be/en/rv-simon-stevin), it:
 * collects data from about 20 sensors (serial,tcp,polled,freerunning ...)
 * Controls the calibration and verification process of scientific equipment by controlling pumps & solinoids on a scientist defined and editable schedule
 * Informs those interested if the ship leaves or returns to the dock
