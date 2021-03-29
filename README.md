@@ -79,7 +79,7 @@ Sending 'help' in the telnet interface should provide enough information for the
 
 # History
 
-Although this hub is new, the project isn't. As an internal tool it has been in semi-active development since 2012 and has since grown from just another piece of data acquision software to what it is today... 
+Although this git is new, the project isn't. As an internal tool it has been in semi-active development since 2012 and has since grown from just another piece of data acquision software to what it is today... 
 
 The instance that started it all, and is still running is onboard [RV Simon Stevin](https://www.vliz.be/en/rv-simon-stevin):
 * collects data from about 20 sensors (serial,tcp,polled,freerunning ...)
