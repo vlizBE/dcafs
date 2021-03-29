@@ -81,7 +81,7 @@ Sending 'help' in the telnet interface should provide enough information for the
 
 Although this git is new, the project isn't. As an internal tool it has been in semi-active development since 2012 and has since grown from just another piece of data acquision software to what it is today... 
 
-The instance that started it all, and is still running is onboard [RV Simon Stevin](https://www.vliz.be/en/rv-simon-stevin):
+The instance that started it all, and is still active onboard [RV Simon Stevin](https://www.vliz.be/en/rv-simon-stevin):
 * collects data from about 20 sensors (serial,tcp,polled,freerunning ...)
 * controls the calibration and verification process of scientific equipment for the [ICOS project](https://www.icos-belgium.be/)
 * sends out emails when the ships leaves or returns to the harbor
