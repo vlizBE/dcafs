@@ -1336,7 +1336,14 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				}
 				break;
 			case "title": case "id":
-				return getStream(search).map( bs -> bs.addTarget(writable) ).orElse(false);
+				if( !getStream(search).map( bs -> bs.addTarget(writable) ).orElse(false) ) {
+					var stream = streams.entrySet().stream().filter(set -> set.getKey().startsWith(search))
+							.map(set -> set.getValue()).findFirst();
+					if( !stream.isPresent() )
+						return false;
+					stream.get().addTarget(writable);
+				}
+				return true;
 			case "filter":
 				return getFilter(search).map( ff -> {ff.addTarget(writable);return true;} ).orElse(false);
 			case "math":

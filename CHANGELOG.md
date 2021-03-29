@@ -11,8 +11,13 @@ From 0.5.0 onwards, this should be better documented...
  * Added command to add a device (and generate empty script)
  * Altered i2c:list to only show list of devices and commands
  * Added i2c:cmds to get full list of commands (eg. include the read/write)
+#### Streampool
+ * raw:id:sensorid now loods for a 'startswith' match if exact match is missing
 #### Other
  * mf:addblank now supports source containing a , (eg. to i2c:forward,id)
+
+#### Bugfixes
+- Email started BufferCollector now collects one minute of data again
 
 ## RELEASED
 ### 0.8.1  
