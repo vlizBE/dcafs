@@ -632,6 +632,9 @@ public class BaseReq {
 		}
 	}
 	public String doCALC( String[] request, Writable wr, boolean html ){
+		if( request[1].equals("reqs")){
+			return rtvals.getRequestList("calc:reqs");
+		}
 		rtvals.addRequest(wr, "calc:"+request[1]);
 		return "Request added: calc:"+request[1];
 	}
@@ -646,6 +649,9 @@ public class BaseReq {
 		return "Unknown command: "+request[0]+":"+request[1];
 	}
 	public String doRTVAL( String[] request, Writable wr, boolean html ){
+		if( request[1].equals("reqs") )
+			return rtvals.getRequestList("rtval:reqs");
+
 		if( request[1].equals("?") )
 			return "rtval:x -> Get the realtimevalue x at 1Hz.";
 		try{

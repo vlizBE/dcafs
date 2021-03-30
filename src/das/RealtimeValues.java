@@ -3,11 +3,7 @@ package das;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -503,7 +499,20 @@ public class RealtimeValues implements CollectorFuture {
 		if( calcRequest.remove(writable)!=null)
 			Logger.info("Removed atleast a single element from calc requests");
 	}
-
+	public String getRequestList( String request ){
+		String[] req = request.split(":");
+		StringJoiner join = new StringJoiner("\r\n");
+		join.setEmptyValue("None yet");
+		switch (req[0]) {
+			case "rtval":
+				rtvalRequest.forEach((rq,list) -> join.add(rq +" -> "+list.size()+" requesters"));
+				break;
+			case "calc":
+				calcRequest.forEach((key,list)->join.add(key.getID()+" -> "+list.size()+" calc request(s)"));
+				break;
+		}
+		return join.toString();
+	}
 	public boolean addRequest(Writable writable, String request) {
 		String[] req = request.split(":");
 		switch (req[0]) {
