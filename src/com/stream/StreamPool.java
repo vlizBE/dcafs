@@ -1323,7 +1323,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 		}
 		String[] items = cmd.split(":");
 		String type = items.length==2?items[0]:"id";
-		String search = items.length==2?items[1]:items[0];
+		String search = items.length==2?items[1].toLowerCase():items[0].toLowerCase();
 
 		switch( type ){
 			case "label": case "ll":
