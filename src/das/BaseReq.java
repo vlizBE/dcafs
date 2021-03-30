@@ -1116,7 +1116,7 @@ public class BaseReq {
 		if( request[1].equals("?") )
 			return " -> Clear the datarequests";
 		if( wr != null ){
-			rtvals.removeRequest(wr, "");
+			rtvals.removeRequest(wr);
 			streampool.removeForwarding(wr);
 			das.getI2CWorker().ifPresent( i2c -> i2c.removeTarget(wr));
 		}

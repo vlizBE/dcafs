@@ -57,7 +57,7 @@ public class RealtimeValues implements CollectorFuture {
 	protected ConcurrentHashMap<String, Double> rtvals = new ConcurrentHashMap<>();
 	protected ConcurrentHashMap<String, String> rttext = new ConcurrentHashMap<>();
 	protected HashMap<String, List<Writable>> rtvalRequest = new HashMap<>();
-	protected HashMap<String, ScheduledFuture<?>> calcRequest = new HashMap<>();
+	protected HashMap<Writable, List<ScheduledFuture<?>>> calcRequest = new HashMap<>();
 
 	/* Databases */
 	protected HashMap<String, Database> dbs = new HashMap<>();
@@ -491,32 +491,17 @@ public class RealtimeValues implements CollectorFuture {
 		return "";
 	}
 
-	public void removeRequest(Writable writable, String request) {
-		if (request.isEmpty()) {
-			rtvalRequest.forEach( (key,list) -> list.remove(writable));
+	public void removeRequest(Writable writable ) {
 
-			calcRequest.forEach( (key,futur) ->
-			{
-				if( key.startsWith(writable.getID()+"_")){
-					futur.cancel(true);
-				}
-			});
-			if( calcRequest.entrySet().removeIf( pair ->  pair.getValue().isCancelled())){
-				Logger.info("Removed atleast a single element from calc requests");
+		rtvalRequest.forEach( (key,list) -> list.remove(writable));
+		calcRequest.forEach( (key,futures) ->
+		{
+			if( key==writable){
+				futures.forEach(f->f.cancel(true));
 			}
-		}else{
-			String[] req = request.split(":");
-			switch( req[0]){
-				case "rtval":
-					if( rtvalRequest.containsKey(request) ){
-						rtvalRequest.get(request).remove(writable);
-					}
-					break;
-				case "calc":
-
-					break;
-			}
-		}
+		});
+		if( calcRequest.remove(writable)!=null)
+			Logger.info("Removed atleast a single element from calc requests");
 	}
 
 	public boolean addRequest(Writable writable, String request) {
@@ -536,12 +521,11 @@ public class RealtimeValues implements CollectorFuture {
 				}
 				break;
 			case "calc":
-				if( calcRequest.get(writable.getID()+"_"+request)==null) {
-					ScheduledFuture<?> f = scheduler.scheduleWithFixedDelay(new CalcRequest(writable, req[1]), 0, 1,
-							TimeUnit.SECONDS);
-					calcRequest.put(writable.getID() + "_" + request, f);
-					return true;
+				if( calcRequest.get(writable)==null) {
+					calcRequest.put(writable, new ArrayList<ScheduledFuture<?>>());
 				}
+				calcRequest.get(writable).add(scheduler.scheduleWithFixedDelay(new CalcRequest(writable, req[1]), 0, 1,
+						TimeUnit.SECONDS));
 				break;	
 			default:
 				Logger.warn("Requested unknown type: "+req[0]);
@@ -576,7 +560,7 @@ public class RealtimeValues implements CollectorFuture {
 
 			if( !dt.isConnectionValid()) {
 				Logger.info(dt.getID() + " -> Writable no longer valid, removing calc request");
-				calcRequest.get(dt).cancel(false);
+				removeRequest(dt);
 			}
 		}
 	}
