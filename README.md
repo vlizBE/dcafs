@@ -1,14 +1,14 @@
 dcafs
 =========
 
-A Java tool (or library) that takes care of all the nitty-gritty that needs to be done when a sensor generated data and you want to find that data in a database. Hence _data collect alter forward store_ this is in broad terms what it is capable of.
+A Java tool (or can also be used as a library) that takes care of all the nitty-gritty that needs to be done when a sensor has generated data and you want to find that data in a database. Hence _data collect alter forward store_. This is in broad terms what it is capable of.
 
 
 ## Main features
 * Collect data from TCP, UDP, MQTT, Websocket, serial/tty, I2C, SPI, email
 * Alter with string and math operations, or filter lines out
-* Forward back to origin, any other source, hosted tcp server or email eg. create a serial to tcp converter
-* Store processed data in SQLite, MariaDB, MySQL, InfluxDB and MSSQL while raw is stored in timestamped .log files
+* Forward back to origin, to any other source, a hosted tcp server or email (eg. even create a serial to tcp converter)
+* Store processed data in SQLite, MariaDB, MySQL, InfluxDB and MSSQL (dcafs will create these for you!) while additionally raw can be kept in timestamped .log files
 * XML based scheduling engine capabable of interacting with all connected sources and respond to realtime data
 * Single control pipeline that can be accessed by telnet, email or the earlier mentioned scheduling engine
 * Update itself via email (linux only for now)
@@ -40,15 +40,15 @@ In the background, a fresh settings.xml was generated.
   </streams>
 </das>
 ````
-Back in the telnet client, add a data source.
+Back in the telnet client, add a data source:
 * ss:addserial,serialsensor,COM1:19200,void  --> adds a serial connection to a sensor called serialsensor that uses 19200Bd
 * ss:addtcp,tcpsensor,localhost:4000,void  --> adds a tcp connection to a sensor called tcpsensor with a locally hosted tcp server
 
-Assuming the data has the default eol sequence, you'll receive the data in the window by typing
+Assuming the data has the default eol sequence (check this by using: TODO), you'll receive the data in the window by typing
 * raw:serialsensor --> for the serial sensor
 * raw:tcpsensor --> for the tcp sensor
 
-Again in the background, the settings.xml will now look like this:
+Meanwhile, in the background, the settings.xml was updated to this:
 ````xml
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <das>
@@ -79,17 +79,17 @@ Sending 'help' in the telnet interface should provide enough information for the
 
 # History
 
-Although this git is new, the project isn't. As an internal tool it has been in semi-active development since 2012 and has since grown from just another piece of data acquision software to what it is today... 
+Although this git is new, the project isn't. It has been in semi-active development since 2012 as an internal tool and has since grown from just another piece of data acquision software to what it is today... 
 
-The instance that started it all, and is still active onboard [RV Simon Stevin](https://www.vliz.be/en/rv-simon-stevin):
+The instance that started it all 8 years ago (and is still very active onboard [RV Simon Stevin](https://www.vliz.be/en/rv-simon-stevin) ):
 * collects data from about 20 sensors (serial,tcp,polled,freerunning ...)
 * controls the calibration and verification process of scientific equipment for the [ICOS project](https://www.icos-belgium.be/)
-* sends out emails when the ships leaves or returns to the harbor
-* can be monitored from shore using emal
+* sends out emails when the ships leaves or returns to the harbour
+* can be monitored from shore using email
 
-The above is the biggest project it's used for, some smaller ones:
+The above is the biggest project it's used for, here some smaller ones:
 
 * The earlier mentioned 'calibration and verification process' is also used in a mobile setup build that has visited the RV James Cook.
-* Multiple beaglebones running dcafs logging salinity data for an experimental setup that tracks Enhanced silicate weathering
-* Inside an ROV control container, storing environmnentals and altering datastreams for other software
+* Multiple Beaglebones are running dcafs to log salinity data for an experimental setup that tracks Enhanced silicate weathering
+* Inside an ROV (remotely operated underwater vehicle) control container, storing environmnental data and altering datastreams to prepare for use in other software
 * At home, running on a Neo Pi air and reading a BME280 sensor, storing the data on a local InfluxDB and presenting it with Grafana
