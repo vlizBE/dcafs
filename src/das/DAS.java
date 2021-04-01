@@ -1175,7 +1175,7 @@ public class DAS implements DeadThreadListener {
                 }
             }
         }
-        if (!this.mqttWorkers.isEmpty()) {
+        if (!mqttWorkers.isEmpty()) {
             if (html) {
                 b.append("<br><b>MQTT</b><br>");
             } else {
@@ -1199,8 +1199,9 @@ public class DAS implements DeadThreadListener {
             if (html) {
                 b.append("<br><b>Databases</b><br>");
             } else {
-                b.append(TelnetCodes.TEXT_CYAN).append("\r\nDatabases\r\n").append(TelnetCodes.TEXT_YELLOW)
-                        .append(TelnetCodes.UNDERLINE_OFF);
+                b.append(TelnetCodes.TEXT_CYAN)
+                        .append("\r\nDatabases\r\n")
+                        .append(TelnetCodes.TEXT_YELLOW).append(TelnetCodes.UNDERLINE_OFF);
             }
             for( String l : dbManager.getStatus().split("\r\n") ){
                 if (l.endsWith("(NC)"))
