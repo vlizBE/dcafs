@@ -50,7 +50,7 @@ import org.tinylog.provider.ProviderRegistry;
 
 public class DAS implements DeadThreadListener {
 
-    private static final String version = "0.8.2";
+    private static final String version = "0.8.2c";
 
     // Last date that changes were made
     String workPath = new File("").getAbsolutePath() + File.separator;
@@ -1143,12 +1143,12 @@ public class DAS implements DeadThreadListener {
         StringBuilder b = new StringBuilder();
 
         if (html) {
-            b.append("<b><u>DAS Status at ").append(TimeTools.formatNow("HH:mm:ss")).append(".</b></u><br><br>");
+            b.append("<b><u>DCAFS Status at ").append(TimeTools.formatNow("HH:mm:ss")).append(".</b></u><br><br>");
         } else {
-            b.append(TEXT_GREEN).append("DAS Status at ").append(TimeTools.formatNow("HH:mm:ss")).append("\r\n\r\n")
+            b.append(TEXT_GREEN).append("DCAFS Status at ").append(TimeTools.formatNow("HH:mm:ss")).append("\r\n\r\n")
                     .append(UNDERLINE_OFF);
         }
-        b.append(TEXT_YELLOW).append("DAS Version: ").append(TEXT_GREEN).append(version).append("\r\n");
+        b.append(TEXT_YELLOW).append("DCAFS Version: ").append(TEXT_GREEN).append(version).append("\r\n");
         b.append(TEXT_YELLOW).append("Uptime: ").append(TEXT_GREEN).append(getUptime()).append("\r\n");
         b.append(TEXT_YELLOW).append("Current mode: ").append(debug ? TEXT_RED + "debug" : TEXT_GREEN + "normal").append("\r\n");
         b.append(TEXT_YELLOW).append("IP: ").append(TEXT_GREEN).append(Tools.getLocalIP());
