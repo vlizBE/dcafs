@@ -82,7 +82,11 @@ public class SQLiteDB extends SQLDB{
     public String toString(){
         String status = getPath() +" -> " +getRecordsCount()+"/"+maxQueries;
         if( rollUnit!=RollUnit.NONE){
-            status+= " ->  rollover in "+ TimeTools.convertPeriodtoString( rollOverFuture.getDelay(TimeUnit.SECONDS),TimeUnit.SECONDS );
+            if( rollOverFuture==null ){
+                status += " -> No proper rollover determined...";
+            }else {
+                status += " ->  rollover in " + TimeTools.convertPeriodtoString(rollOverFuture.getDelay(TimeUnit.SECONDS), TimeUnit.SECONDS);
+            }
         }
         status += isValid(1)?"":" (NC)";
         return status;
@@ -320,7 +324,7 @@ public class SQLiteDB extends SQLDB{
      * @param unit The unit for the rollover, options: MIN,HOUR,DAY,WEEK,MONTH,YEAR
      * @return This database
      */
-    public SQLiteDB setRollOver(  String dateFormat, int rollCount,RollUnit unit){
+    public SQLiteDB setRollOver( String dateFormat, int rollCount, RollUnit unit ){
 
         if(  unit == RollUnit.NONE )
             return this;
@@ -338,7 +342,7 @@ public class SQLiteDB extends SQLDB{
             rollOverFuture = scheduler.schedule(new DoRollOver(), next, TimeUnit.MILLISECONDS);
             Logger.info(id+" -> Next rollover in "+TimeTools.convertPeriodtoString(rollOverFuture.getDelay(TimeUnit.SECONDS),TimeUnit.SECONDS));
         }else{
-            Logger.error(id+" -> Bad rollover");
+            Logger.error(id+" -> Bad rollover for "+rollCount+" counts and unit "+unit);
         }
         return this;
     }
@@ -385,6 +389,7 @@ public class SQLiteDB extends SQLDB{
     private void updateRolloverTimestamp(){
         Logger.info(id+" -> Original date: "+ rolloverTimestamp.format(TimeTools.LONGDATE_FORMATTER));
         rolloverTimestamp = rolloverTimestamp.withSecond(0).withNano(0);
+
         if(rollUnit==RollUnit.MINUTE){
             int min = rollCount-rolloverTimestamp.getMinute()%rollCount; // So that 'every 5 min is at 0 5 10 15 etc
             rolloverTimestamp = rolloverTimestamp.plusMinutes(min==0?rollCount:min);//make sure it's not zero
@@ -397,8 +402,8 @@ public class SQLiteDB extends SQLDB{
                 if(rollUnit==RollUnit.DAY){
                     rolloverTimestamp = rolloverTimestamp.plusDays( rollCount);
                 }else{
-                    rolloverTimestamp = rolloverTimestamp.minusDays( rolloverTimestamp.getDayOfWeek().getValue()-1);
                     if(rollUnit==RollUnit.WEEK){
+                        rolloverTimestamp = rolloverTimestamp.minusDays(rolloverTimestamp.getDayOfWeek().getValue()-1);
                         rolloverTimestamp = rolloverTimestamp.plusWeeks(rollCount);
                     }else{
                         rolloverTimestamp = rolloverTimestamp.withDayOfMonth(1);

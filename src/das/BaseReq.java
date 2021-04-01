@@ -1140,7 +1140,6 @@ public class BaseReq {
 		}catch( java.lang.NullPointerException e){
 			Logger.error("Nullpointer Error status: "+e.getMessage()+" at "+e.getStackTrace().toString());
 		}
-		
 		return response;       	
 	}
 	
