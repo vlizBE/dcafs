@@ -59,7 +59,7 @@ public class BufferCollector extends AbstractCollector {
     /* Implementation of the abstract methods */
     protected boolean addData( String data ){
         buffer.add(data);
-        Logger.info("Adding : "+data);
+        Logger.debug("Adding : "+data);
         if( buffer.size() > bufferSize && bufferSize !=-1){
             timeoutFuture.cancel(false); // stop the timeout timer
             timedOut();

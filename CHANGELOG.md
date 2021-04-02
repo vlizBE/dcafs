@@ -13,11 +13,11 @@ From 0.5.0 onwards, this should be better documented...
  * Added i2c:cmds to get full list of commands (eg. include the read/write)
 
 #### Streampool
- * raw:id:sensorid now loods for a 'startswith' match if exact match is missing
+ * raw:id:sensorid now looks for a 'startswith' match if exact match is missing
  * Added calc:reqs and rtval:reqs to get a rough idea on the global requests made (reason, recent bug)
 
 #### Other
- * mf:addblank now supports source containing a , (eg. to i2c:forward,id)
+ * mf:addblank now supports source containing a ',' (eg. to i2c:forward,id)
 
 #### Bugfixes
 - Email started BufferCollector now collects one minute of data again
