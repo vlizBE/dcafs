@@ -32,7 +32,7 @@
 					<archive>
 						<manifest>
 							<addClasspath>true</addClasspath>
-							<classpathPrefix>dcaf_lib/</classpathPrefix>
+							<classpathPrefix>DAS_lib/</classpathPrefix>
 							<mainClass>das.DAS</mainClass>
 						</manifest>
 						<manifestEntries>

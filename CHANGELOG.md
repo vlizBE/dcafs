@@ -6,7 +6,7 @@ Note: Version numbering: x.y.z
 From 0.5.0 onwards, this should be better documented...
 
 ## Work in progress
-### 0.8.2
+### 0.8.2d
 #### I2CWorker
  * Added command to add a device (and generate empty script)
  * Altered i2c:list to only show list of devices and commands
@@ -23,6 +23,7 @@ From 0.5.0 onwards, this should be better documented...
 - Email started BufferCollector now collects one minute of data again
 - Multiple 'calc:' requests for the same thing across multiple telnet sessions weren't allowed anymore. Caused by a
 previous change that should have fixed removing them.
+- Database rollover screwed up in the beginning of a month due to weekly rollover
 
 ## RELEASED
 ### 0.8.1  
