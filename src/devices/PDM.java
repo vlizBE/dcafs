@@ -70,7 +70,7 @@ public class PDM {
         pdmDB.addTableIfNotExists("PDM_titles") 
                 .addText("Label").isNotNull()
                 .addText("title").isNotNull();      
-        if( !pdmDB.createContent(true))
+        if( !pdmDB.createContent(true).isEmpty())
             Logger.error("Failed to create the PDM database");
     }
     public void readSettingsFromXML( Document xml ){

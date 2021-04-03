@@ -295,7 +295,7 @@ public class SQLiteDB extends SQLDB{
 
         /* Create the content */
         db.getCurrentTables(false);
-        db.createContent(false);
+        db.lastError=db.createContent(false);
         return db;
     }
 
@@ -467,7 +467,7 @@ public class SQLiteDB extends SQLDB{
 
             updateFileName(rolloverTimestamp);
             updateRolloverTimestamp();
-            if( !createContent(true) ){
+            if( !createContent(true).isEmpty() ){
                 Logger.error(id+" -> Failed to create the database");
             }
 

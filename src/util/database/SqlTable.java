@@ -39,11 +39,22 @@ public class SqlTable {
 
     PrepStatement defaultPrep;
     HashMap<String,PrepStatement> preps = new HashMap<>();
+    String lastError="";
+
     private boolean readFromDatabase=false;
 
     public SqlTable(String name) {
         this.name = name;
         preps.put("", new PrepStatement());
+    }
+    public void setLastError(String error ){
+        this.lastError=error;
+    }
+    public String getLastError( boolean clear ){
+        String t = lastError;
+        if( clear)
+            lastError= "";
+        return t;
     }
     public static Optional<SqlTable> fromXML(Element tbl) {
         String tableName = tbl.getAttribute("name");

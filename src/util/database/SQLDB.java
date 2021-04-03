@@ -297,17 +297,16 @@ public class SQLDB extends Database{
     /**
      * Actually create all the tables
      * @param keepConnection True if the connection should be kept open afterwards
-     * @return True if OK
+     * @return Empty string if all ok, otherwise errormessaae
      */
-    public boolean createContent(boolean keepConnection){
+    public String createContent(boolean keepConnection){
 
         boolean connected=false;
         if( con==null || !isValid(2) ){
             connected=true;
             if (!connect(false) )
-                return false;
+                return "No connection to "+id;
         }
-
         if( isValid(5) ){
                 // Create the tables
                 tables.values().forEach(x -> {
@@ -321,6 +320,7 @@ public class SQLDB extends Database{
                         } catch (SQLException e) {
                             Logger.error(id+" -> Failed to create table with: "+x.create() );
                             Logger.error(e.getMessage());
+                            x.setLastError(e.getMessage()+" when creating "+x.name+" for "+id);
                         }
                     }else{
                         Logger.info(id+" -> Not creating "+x.getName()+" because already read from database...");
@@ -345,13 +345,15 @@ public class SQLDB extends Database{
                     con.close();
                     state=STATE.IDLE;
                 }
-                return true;
+                StringJoiner errors = new StringJoiner("\r\n");
+                tables.values().stream().filter(x-> !x.lastError.isEmpty()).forEach( x -> errors.add(x.getLastError(true)));
+                return errors.toString();
             } catch (SQLException e) {
                 Logger.error(e);
-                return false;
+                return e.getMessage();
             }
         }
-        return false;
+        return "No valid connection";
     }
     /**
      * Write a select query and then retrieve the content of a single column from it base on the (case insensitive) name
@@ -479,7 +481,7 @@ public class SQLDB extends Database{
         });
 
         db.getCurrentTables(false);
-        db.createContent(true);
+        db.lastError = db.createContent(true);
         return db;
     }
 

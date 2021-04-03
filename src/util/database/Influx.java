@@ -195,8 +195,8 @@ public class Influx extends Database{
     }
 
     @Override
-    public boolean createContent(boolean keepConnection) {
-        return false;
+    public String createContent(boolean keepConnection) {
+        return "Not supported";
     }
 
     @Override

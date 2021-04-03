@@ -33,6 +33,7 @@ public abstract class Database {
 
     protected boolean tablesRetrieved = false;
     protected boolean connecting = false;
+    protected String lastError="";
 
     /* ************************************************************************************************* */
 
@@ -53,7 +54,11 @@ public abstract class Database {
     public String getID() {
         return id;
     }
-
+    public String getLastError(){
+        String l = lastError;
+        lastError="";
+        return l;
+    }
     protected boolean readBatchSetup(Element set){
         if( set != null ){
             String age = XMLtools.getStringAttribute( set, "flushtime", "30s");	    // How many check before data is flushed (if not reached batch size)
@@ -80,7 +85,7 @@ public abstract class Database {
     public abstract void writeToXml(XMLfab fab);
 
     public abstract boolean getCurrentTables(boolean clear);
-    public abstract boolean createContent(boolean keepConnection);
+    public abstract String createContent(boolean keepConnection);
     public abstract String getTableInfo(String eol);
     public abstract boolean buildGenericFromTable( XMLfab fab, String tableName, String genID, String delim);
 
