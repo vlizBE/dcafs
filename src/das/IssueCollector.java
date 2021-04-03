@@ -94,19 +94,16 @@ public class IssueCollector {
     public SQLiteDB getAlarmsDB(){
         return alarms.getSQLite();
     }
-    public void setAlarmsDB(SQLiteDB db){
-        alarms.setSQLite(db);
-    }
-    /**********************************************************************************************************/
-    /********************************* S Q L ******************************************************************/
-    /**********************************************************************************************************/
+    /** ******************************** S Q L ***************************************************************** */
     public SQLiteDB createSQLiteDB(){
 
-        sqlite = getAlarmsDB(); 
-        sqlite.addTableIfNotExists("ErrorLog").addText("ID").addText("Start").addText("End");
-        sqlite.addTableIfNotExists("ErrorList").addText("ID").isPrimaryKey().addText("Message");
-        sqlite.createContent(false);
-        return sqlite;
+        if( getAlarmsDB().getTable("ErrorLog").isEmpty() )
+            getAlarmsDB().addTableIfNotExists("ErrorLog").addText("ID").addText("Start").addText("End");
+        if( getAlarmsDB().getTable("ErrorList").isEmpty() )
+            getAlarmsDB().addTableIfNotExists("ErrorList").addText("ID").isPrimaryKey().addText("Message");
+
+        getAlarmsDB().createContent(false);
+        return getAlarmsDB();
     }
     public SQLiteDB getSQLiteDB(){
         if( sqlite==null )
