@@ -1301,6 +1301,6 @@ public class DAS implements DeadThreadListener {
         }
         das.startAll();   
 
-        Logger.info("Barebone boot finished!");
+        Logger.info("Dcafs boot finished!");
     }
 }

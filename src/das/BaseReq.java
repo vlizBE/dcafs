@@ -914,9 +914,9 @@ public class BaseReq {
 			case "getlogs":
 				if( emailWorker == null )
 					return "Failed to send logs to admin, no worker.";
-				emailWorker.sendEmail( "admin","Statuslog","File attached", workPath+"logs"+File.separator+"info.log", false );
-				emailWorker.sendEmail( "admin","Errorlog","File attached", workPath+"logs"+File.separator+"errors_"+TimeTools.formatNow("yyMMdd")+".log", false );
-				return "Sending logs (info,errors to admin...";
+				emailWorker.sendEmail( "admin","Statuslog","File attached (probably)", workPath+"logs"+File.separator+"info.log", false );
+				emailWorker.sendEmail( "admin","Errorlog","File attached (probably)", workPath+"logs"+File.separator+"errors_"+TimeTools.formatUTCNow("yyMMdd")+".log", false );
+				return "Sending logs (info,errors) to admin...";
 			case "sms":
 				das.sendSMS("admin", "Test");
 				return "Trying to send SMS\r\n";
@@ -1556,6 +1556,7 @@ public class BaseReq {
 					return "Added blank database server node to the settings.xml";
 			case "addmysql":
 				var mysql = SQLDB.asMYSQL(address,dbName,user,pass);
+				mysql.setID(id);
 				if( mysql.connect(false) ){
 					mysql.getCurrentTables(false);
 					mysql.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"das","settings","databases"));
@@ -1566,6 +1567,7 @@ public class BaseReq {
 				}
 			case "addmssql":
 				var mssql = SQLDB.asMSSQL(address,dbName,user,pass);
+				mssql.setID(id);
 				if( mssql.connect(false) ){
 					mssql.getCurrentTables(false);
 					mssql.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"das","settings","databases"));
@@ -1575,7 +1577,10 @@ public class BaseReq {
 					return "Failed to connect to database.";
 				}
 			case "addmariadb":
+				if( cmds.length<5)
+					return "Not enough arguments: dbm:addmariadb,id,db name,ip:port,user:pass";
 				var mariadb = SQLDB.asMARIADB(address,dbName,user,pass);
+				mariadb.setID(id);
 				if( mariadb.connect(false) ){
 					mariadb.getCurrentTables(false);
 					mariadb.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"das","settings","databases"));
@@ -1606,10 +1611,10 @@ public class BaseReq {
 				}
 			case "addtable":
 				if( cmds.length < 4 )
-					return "Not enough arguments, needs to be dbm:dbId,tableName,format";
+					return "Not enough arguments, needs to be dbm:addtable,dbId,tableName,format";
 				if( DatabaseManager.addBlankTableToXML( das.getXMLdoc(), cmds[1], cmds[2], cmds[3] ) )
 					return "Added a partially setup table to "+cmds[1]+" in the settings.xml, edit it to set column names etc";
-				return "No such database found or not an sqlite.";
+				return "No such database found or influxDB.";
 			case "fetch": 
 				if( cmds.length < 2 )
 					return "Not enough arguments, needs to be dbm:fetch,dbId";
@@ -1630,7 +1635,7 @@ public class BaseReq {
 				return db.getTableInfo(html?"<br":"\r\n");
 			case "alter":
 				return "Not yet implemented";
-			case "status":
+			case "status": case "list":
 				return das.getDatabaseManager().getStatus();
 			case "store":
 				if( cmds.length < 3 )

@@ -538,7 +538,7 @@ public class EmailWorker implements Runnable, CollectorFuture {
 								if( Files.notExists( path ) ){ // If the attachment doesn't exist
 									email.attachment="";
 									message.setContent(email.content, "text/html"); 
-									message.setSubject(subject+" [ATTACHMENT MISSING!]"); // Notify the receiver that is should have had an attachment
+									message.setSubject(subject+" [attachment not found!]"); // Notify the receiver that is should have had an attachment
 								}else if( Files.size(path) > doZipFromSizeMB * megaByte ) { // If the attachment is larger than the zip limit
 									FileTools.zipFile( path ); // zip it
 									attach += ".zip"; // rename attachment
