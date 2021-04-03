@@ -294,6 +294,7 @@ public class SQLiteDB extends SQLDB{
         });
 
         /* Create the content */
+        db.getCurrentTables(false);
         db.createContent(false);
         return db;
     }

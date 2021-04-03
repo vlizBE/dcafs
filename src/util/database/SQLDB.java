@@ -22,7 +22,7 @@ public class SQLDB extends Database{
 
     private String tableRequest = "";
     private String columnRequest = "";
-
+    private String dbName="";
     protected HashMap<String, SqlTable> tables = new HashMap<>(); // Map of the tables
     protected ArrayList<String> views = new ArrayList<>();
     protected ArrayList<String> simpleQueries = new ArrayList<>();
@@ -38,38 +38,45 @@ public class SQLDB extends Database{
     ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);;
     /**
      * Prepare connection to one of the supported databases
-     *
-     * @param irl The irl for this connection
+     * @param type The type of database
+     * @param address The address for this connection (port is optional)
      * @param user A user with sufficient rights
      * @param pass The pass for the user
      */
-    public SQLDB( String irl, String user, String pass ) {
-        this.irl=irl;
-        if( irl.startsWith("jdbc:sqlserver")){
-            type=DBTYPE.MSSQL;
-            tableRequest="SELECT * FROM information_schema.tables";
-        }else if( irl.contains("jdbc:mariadb") ){
-            type=DBTYPE.MARIADB;
-            tableRequest="SHOW FULL TABLES;";
-            columnRequest="SHOW COLUMNS FROM ";
-        }else if( irl.contains("jdbc:mysql") ){
-            type=DBTYPE.MYSQL;
-            tableRequest="SHOW FULL TABLES;";
-            columnRequest="SHOW COLUMNS FROM ";
-        }
+    public SQLDB( DBTYPE type, String address, String dbName, String user, String pass ) {
+        this.type=type;
         this.user=user;
         this.pass=pass;
+        this.dbName=dbName;
+
+        switch( type ){
+            case MYSQL:
+                irl="jdbc:mysql://" + address + (address.contains(":")?"/":":3306/") + dbName;
+                tableRequest="SHOW FULL TABLES;";
+                columnRequest="SHOW COLUMNS FROM ";
+                break;
+            case MSSQL:
+                irl = "jdbc:sqlserver://" + address + (dbName.isBlank() ? "" : ";database=" + dbName);
+                tableRequest="SELECT * FROM information_schema.tables";
+                break;
+            case MARIADB:
+                irl="jdbc:mariadb://" + address + (address.contains(":")?"/":":3306/") + dbName;
+                tableRequest="SHOW FULL TABLES;";
+                columnRequest="SHOW COLUMNS FROM ";
+                break;
+        }
+
     }
     public SQLDB(){}
     /* **************************************************************************************************/
     public static SQLDB asMSSQL( String address,String dbName, String user, String pass ){
-        return new SQLDB( "jdbc:sqlserver://" + address + (dbName.isBlank() ? "" : ";database=" + dbName) ,user,pass );
+        return new SQLDB( DBTYPE.MSSQL,address,dbName,user,pass );
     }
     public static SQLDB asMARIADB( String address,String dbName, String user, String pass ){
-    	return new SQLDB( "jdbc:mariadb://" + address + (address.contains(":")?"/":":3306/") + dbName,user,pass);
+    	return new SQLDB( DBTYPE.MARIADB,address,dbName,user,pass );
     }
-    public static SQLDB asMYSQL( String address, String dbName, String user, String pass ){        
-        return new SQLDB( "jdbc:mysql://" + address + (address.contains(":")?"/":":3306/") + dbName,user,pass);
+    public static SQLDB asMYSQL( String address, String dbName, String user, String pass ){
+        return new SQLDB( DBTYPE.MYSQL,address,dbName,user,pass);
     }
     /* **************************************************************************************************/
     public String toString(){
@@ -226,13 +233,13 @@ public class SQLDB extends Database{
                     while (rs.next()) {               
                         String tableName = rs.getString(1);
                         String tableType=rs.getString(2);
-                        if( tableType.equalsIgnoreCase("base table") && !tableName.startsWith("sym_") && tables.get(tableName)==null){ // ignore symmetricsDS tables and don't overwrite
-                            SqlTable table = tables.get(tableName);
-                            if( tables.get(tableName) == null ){
-                                table = new SqlTable(tableName);
-                                tables.put(tableName, table);
-                            }      
-                            table.toggleReadFromDB();
+                        if( tableType.equalsIgnoreCase("base table") && !tableName.startsWith("sym_") ){ // ignore symmetricsDS tables and don't overwrite
+                            SqlTable table = tables.get(tableName); // look for it in the stored tables
+                            if( table == null ){ // if not found, it's new
+                                table = new SqlTable(tableName); // so create it
+                                tables.put(tableName, table); //and add it to the hashmap
+                            }
+                            table.toggleReadFromDB(); // either way, it's already present in the database
                             Logger.info("Found: "+tableName+" -> "+tableType);
                         }                        
                     }
@@ -302,12 +309,11 @@ public class SQLDB extends Database{
         }
 
         if( isValid(5) ){
-            try( Statement stmt = con.createStatement() ){
                 // Create the tables
                 tables.values().forEach(x -> {
                     Logger.info(id+" -> Checking to create "+x.getName()+" read from?"+x.isReadFromDB());
                     if( !x.isReadFromDB() ){
-                        try {
+                        try( Statement stmt = con.createStatement() ){
                             stmt.execute( x.create() );
                             if( tables.get(x.getName())!=null && x.hasIfNotExists() ){
                                 Logger.warn(id+" -> Already a table with the name "+x.getName()+" nothing done because 'IF NOT EXISTS'.");
@@ -323,15 +329,13 @@ public class SQLDB extends Database{
                 // Create the views
                 views.forEach(
                         x -> {
-                            try {
+                            try( Statement stmt = con.createStatement() ){
                                 stmt.execute( x );
                             } catch (SQLException e) {
                                 Logger.error(e.getMessage());
                             }
                         });
-            }catch( SQLException e ){
-                Logger.error(e);
-            }
+
             try {
                 if( !con.getAutoCommit())
                     con.commit();
@@ -456,9 +460,9 @@ public class SQLDB extends Database{
         SQLDB db;
         String type = dbe.getAttribute("type");								    	// Set the database type:mssql,mysql or mariadb
         switch( type.toLowerCase() ){
-            case "mssql": db = SQLDB.asMSSQL(address, dbname, user, pass); break;            
-            case "mysql": db = SQLDB.asMYSQL(address, dbname, user, pass); break;            
-            case "mariadb": db = SQLDB.asMARIADB(address, dbname, user, pass); break;   
+            case "mssql": db = SQLDB.asMSSQL(address, dbname, user, pass); break;
+            case "mysql": db = SQLDB.asMYSQL(address, dbname, user, pass); break;
+            case "mariadb": db = SQLDB.asMARIADB(address, dbname, user, pass); break;
             default:
                 Logger.error("Invalid database type: "+type);
                 return null;         
@@ -473,6 +477,9 @@ public class SQLDB extends Database{
         XMLtools.getChildElements(dbe,"table").stream().forEach( x -> {
             SqlTable.fromXML(x).ifPresent( table -> db.tables.put(table.name,table));
         });
+
+        db.getCurrentTables(false);
+        db.createContent(true);
         return db;
     }
 
@@ -490,7 +497,7 @@ public class SQLDB extends Database{
             idle = TimeTools.convertPeriodtoString(maxAge, TimeUnit.SECONDS);
 
         fab.selectOrCreateParent("server","id", id.isEmpty()?"remote":id).attr("type",type.toString().toLowerCase())
-                .alterChild("db","name").attr("user",user).attr("pass",pass)
+                .alterChild("db",dbName).attr("user",user).attr("pass",pass)
                 .alterChild("setup").attr("idletime",idle).attr("flushtime",flush).attr("batchsize",maxQueries)
                 .alterChild("address",address);
 
