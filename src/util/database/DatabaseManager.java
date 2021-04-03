@@ -180,8 +180,13 @@ public class DatabaseManager{
         var opt = XMLfab.getRootChildren(xml, "das",XML_PARENT_TAG,"sqlite")
                 .filter( db -> db.getAttribute("id").equals(id) )
                 .findFirst();
-        if( opt.isEmpty())
-            return false;
+        if( opt.isEmpty()){
+            opt = XMLfab.getRootChildren(xml, "das",XML_PARENT_TAG,"server")
+                    .filter( db -> db.getAttribute("id").equals(id) && !db.getAttribute("type").startsWith("influx") )
+                    .findFirst();
+            if( opt.isEmpty())
+                return false;
+        }
         SqlTable.addBlankToXML( xml,opt.get(),table,format );
         XMLtools.updateXML(xml);
         return true;
