@@ -263,11 +263,12 @@ public class BaseReq {
 			split[1]=question.substring(question.indexOf(":")+1);
 		}else{
 			split[0]=question;
-		}	
-		String find = split[0].toLowerCase().replaceAll("[0-9]+", "_");
+		}
+		split[0]=split[0].toLowerCase();
+		String find = split[0].replaceAll("[0-9]+", "_");
 		
 		if( find.equals("i_c") || find.length() > 3 ) // Otherwise adding integrated circuits with their name is impossible
-			find = split[0].toLowerCase();
+			find = split[0];
 			
 		find = find.isBlank() ? "nothing" : find;
 		
@@ -286,7 +287,7 @@ public class BaseReq {
 			 }
 		}
 		if( m == null || (m!= null && result.startsWith(UNKNOWN_CMD)) ){
-			var tm = das.taskManagers.get(find);
+			var tm = das.taskManagers.get(split[0]);
 			if( tm != null){
 				if( split[1].equals("?")||split[1].equals("list")){
 					return tm.getTaskSetListing(html ? "<br>" : "\r\n")+tm.getTaskListing(html ? "<br>" : "\r\n");
@@ -1550,7 +1551,12 @@ public class BaseReq {
 			case "reload": 
 				if( cmds.length<2)
 					return "No id given";
-				return das.reloadDatabase(cmds[1])?"Database reloaded":"No such database found";
+				var dbr = das.reloadDatabase(cmds[1]);
+				if( dbr!=null){
+					String error = dbr.getLastError();
+					return error.isEmpty()?"Database reloaded":error;
+				}
+				return "No such database found";
 			case "addserver":
 					DatabaseManager.addBlankServerToXML( das.getXMLdoc(), "mysql", cmds.length>=2?cmds[1]:"" );
 					return "Added blank database server node to the settings.xml";
