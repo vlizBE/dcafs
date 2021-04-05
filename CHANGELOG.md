@@ -6,7 +6,7 @@ Note: Version numbering: x.y.z
 From 0.5.0 onwards, this should be better documented...
 
 ## Work in progress
-### 0.8.2d
+### 0.8.2e
 #### I2CWorker
  * Added command to add a device (and generate empty script)
  * Altered i2c:list to only show list of devices and commands
@@ -18,12 +18,16 @@ From 0.5.0 onwards, this should be better documented...
 
 #### Other
  * mf:addblank now supports source containing a ',' (eg. to i2c:forward,id)
+ * Database tables are now also generated serverside
+ * dbm:reload,id now gives error feedback if any
+ * rtvals listing is now split according to prefix if any...
 
 #### Bugfixes
 - Email started BufferCollector now collects one minute of data again
 - Multiple 'calc:' requests for the same thing across multiple telnet sessions weren't allowed anymore. Caused by a
 previous change that should have fixed removing them.
 - Database rollover screwed up in the beginning of a month due to weekly rollover
+- Database no longer gets default 'remote' name when it already has a table
 
 ## RELEASED
 ### 0.8.1  

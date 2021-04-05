@@ -404,6 +404,30 @@ public class RealtimeValues implements CollectorFuture {
 		} else {
 			stream = rtvals.entrySet().stream().filter(e -> e.getKey().equalsIgnoreCase(param));
 		}
+		// Stream contains all of it...
+		if( param.equalsIgnoreCase("")) {
+			var sorted = stream.sorted(Map.Entry.comparingByKey()).map(e -> e.getKey() + " : " + e.getValue()).collect(Collectors.toList());
+			StringJoiner join = new StringJoiner(eol);
+			String header = "";
+			for (var line : sorted) {
+				var split = line.split("_");
+				if (split.length == 2) {
+					if (header.isEmpty() || !header.equalsIgnoreCase(split[0])) {
+						if( !header.isEmpty())
+							join.add("<<"+eol); // empty lines between groups
+						header = split[0];
+
+						join.add(">> " + header );
+					}
+					join.add("  "+split[1]);
+				} else {
+					if( !header.isEmpty())
+						join.add("<<"+eol);
+					join.add(line);
+				}
+			}
+			return join.toString();
+		}
 		return stream.sorted(Map.Entry.comparingByKey()).map(e -> e.getKey() + " : " + e.getValue()).collect(Collectors.joining(eol));
 	}
 	/**
