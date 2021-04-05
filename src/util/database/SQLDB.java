@@ -396,10 +396,17 @@ public class SQLDB extends Database{
         if (!hasRecords())
             firstPrepStamp = Instant.now().toEpochMilli();
 
+        if( getTable(table).isEmpty() ){
+            Logger.error(id+" -> No such table "+table);
+            return false;
+        }
+
         if (getTable(table).map(t -> t.buildInsert(rtvals, rttext, macro)).orElse(false)) {
             if(tables.values().stream().mapToInt(SqlTable::getRecordCount).sum() > maxQueries)
                 flushPrepared();
             return true;
+        }else{
+            Logger.error(id+" -> Build insert failed for "+table);
         }
         return false;
     }
