@@ -15,6 +15,7 @@ From 0.5.0 onwards, this should be better documented...
 #### Streampool
  * raw:id:sensorid now looks for a 'startswith' match if exact match is missing
  * Added calc:reqs and rtval:reqs to get a rough idea on the global requests made (reason, recent bug)
+ * ff:reload now reloads all filters (previously only ff:reload,id was possible)
 
 #### Other
  * mf:addblank now supports source containing a ',' (eg. to i2c:forward,id)

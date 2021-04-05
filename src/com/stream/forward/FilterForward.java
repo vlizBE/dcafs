@@ -148,7 +148,6 @@ public class FilterForward extends AbstractForward {
                 addRule(type,filter.getTextContent());
             }
         }
-
         return true;
     }
     public void reload(){

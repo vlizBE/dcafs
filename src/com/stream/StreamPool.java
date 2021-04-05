@@ -1180,11 +1180,12 @@ public class StreamPool implements StreamListener, CollectorFuture {
 	public Optional<FilterForward> getFilter(String id ){
 		return Optional.ofNullable( filters.get(id));
 	}
-	public void readFiltersFromXML( List<Element> filters ){
+	public void readFiltersFromXML( List<Element> filterEles ){
 		Logger.info("Reading filterforwards from xml");
-		for( Element ele : filters ){
+		filters.clear();
+		for( Element ele : filterEles ){
 			FilterForward ff = new FilterForward( ele,dQueue );
-			this.filters.put(ff.getID().replace("filter:", ""), ff);
+			filters.put(ff.getID().replace("filter:", ""), ff);
 		}
 	}
 	public String replyToFilterCmd( String cmd, Writable wr, boolean html ){
@@ -1214,6 +1215,8 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				join.add( "  ff:addrule,id,rule:value -> Add a rule to the given filter");
 
 				join.add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW);
+				join.add( "  ff:reload,id -> Reload the filter with the given id");
+				join.add( "  ff:reload -> Clear the list and reload all the filters");
 				join.add( "  ff:remove,id -> Remove the filter with the given id");
 				join.add( "  ff:list or fs -> Get a list of all the currently existing filters.");
 				join.add( "  ff:delrule,id,index -> Remove a rule from the filter based on the index given in fs:list");
@@ -1301,14 +1304,16 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				getFilter(cmds[1]).ifPresent( f -> f.addTarget(wr) );
 				return "Temp filter with id "+cmds[1]+ " created"+(cmds.length>2?", with source"+cmds[2]:"")+".";
 			case "reload":
-				if( cmds.length != 2)
-					return "Bad amount of arguments, should be filters:reload,id";
-					Optional<Element> x = XMLfab.withRoot(xmlPath, "das","filters").getChild("filter", "id", cmds[1]);
-					if( x.isPresent()){
-						getFilter(cmds[1]).ifPresent( f -> f.readFromXML(x.get()));
-					}else{
-						return "No such filter, "+cmds[1];
+				if( cmds.length == 2) {
+					Optional<Element> x = XMLfab.withRoot(xmlPath, "das", "filters").getChild("filter", "id", cmds[1]);
+					if (x.isPresent()) {
+						getFilter(cmds[1]).ifPresent(f -> f.readFromXML(x.get()));
+					} else {
+						return "No such filter, " + cmds[1];
 					}
+				}else{ //reload all
+					readFiltersFromXML(XMLfab.withRoot(xmlPath, "das", "filters").getChildren("filter"));
+				}
 				return "Filter reloaded.";
 			default: return "No such command";
 		}
