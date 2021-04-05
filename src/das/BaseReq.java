@@ -289,8 +289,9 @@ public class BaseReq {
 		if( m == null || (m!= null && result.startsWith(UNKNOWN_CMD)) ){
 			var tm = das.taskManagers.get(split[0]);
 			if( tm != null){
+				var nl = html ? "<br>" : "\r\n";
 				if( split[1].equals("?")||split[1].equals("list")){
-					return tm.getTaskSetListing(html ? "<br>" : "\r\n")+tm.getTaskListing(html ? "<br>" : "\r\n");
+					return tm.getTaskSetListing(nl)+nl+tm.getTaskListing(nl);
 				}else{
 					if( tm.hasTaskset(split[1])){
 						return tm.startTaskset(split[1]);

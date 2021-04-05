@@ -22,6 +22,7 @@ From 0.5.0 onwards, this should be better documented...
  * Database tables are now also generated serverside
  * dbm:reload,id now gives error feedback if any
  * rtvals listing is now split according to prefix if any...
+ * scriptid:list now gives a better listing 
 
 #### Bugfixes
 - Email started BufferCollector now collects one minute of data again
@@ -29,6 +30,7 @@ From 0.5.0 onwards, this should be better documented...
 previous change that should have fixed removing them.
 - Database rollover screwed up in the beginning of a month due to weekly rollover
 - Database no longer gets default 'remote' name when it already has a table
+- script to command now allows numbers in the name/id
 
 ## RELEASED
 ### 0.8.1  
