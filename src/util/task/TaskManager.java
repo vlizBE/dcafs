@@ -23,6 +23,7 @@ import com.email.EmailWork;
 import com.stream.StreamPool;
 import com.stream.collector.CollectorFuture;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -982,14 +983,26 @@ public class TaskManager implements CollectorFuture {
 		if( tasks.isEmpty() )
 			return "Task list empty."+newline;
 			
-		StringBuilder b = new StringBuilder();
-		int a=0;
+		StringJoiner b = new StringJoiner(newline,"-Runnable Tasks-"+newline,newline+newline);
+		StringJoiner intr = new StringJoiner(newline,"-Interval Tasks-"+newline,newline+newline);
+		StringJoiner clk = new StringJoiner(newline,"-Clock Tasks-"+newline,newline+newline);
+		StringJoiner other = new StringJoiner(newline,"-Other Tasks-"+newline,newline+newline);
+
 		Collections.sort(tasks);
 		for( Task task : tasks){
-			b.append(a).append(" : ").append(task.toString()).append(newline);
-			a++;
+			if(NumberUtils.isParsable(task.id) ){//Meaning the id is a randomly given number
+				if( task.triggerType==TRIGGERTYPE.CLOCK ) {
+					clk.add( task.toString() );
+				}else if( task.triggerType==TRIGGERTYPE.INTERVAL ) {
+					intr.add( task.toString() );
+				}else{
+					other.add(task.toString());
+				}
+			}else{
+				b.add(task.id + " -> " + task.toString());
+			}
 		}
-		return b.toString();
+		return b.toString()+clk.toString()+intr.toString()+other.toString();
 	}
 	/**
 	 * Get a listing of all the managed tasksets
