@@ -904,6 +904,7 @@ public class BaseReq {
 			case "?":
 				StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
 				join.add("admin:getlogs -> Get the latest logfiles")
+					.add("admin:gettasklog -> Get the taskmananger log")
 					.add("admin:sms -> Send a test SMS to the admin number")
 					.add("admin:haw -> Stop all workers")
 					.add("admin:clock -> Get the current timestamp")
@@ -919,6 +920,25 @@ public class BaseReq {
 				emailWorker.sendEmail( "admin","Statuslog","File attached (probably)", workPath+"logs"+File.separator+"info.log", false );
 				emailWorker.sendEmail( "admin","Errorlog","File attached (probably)", workPath+"logs"+File.separator+"errors_"+TimeTools.formatUTCNow("yyMMdd")+".log", false );
 				return "Sending logs (info,errors) to admin...";
+			case "gettasklog":
+				if( emailWorker == null )
+					return "Failed to send logs to admin, no worker.";
+				emailWorker.sendEmail( "admin","Taskmanager.log","File attached (probably)", workPath+"logs"+File.separator+"taskmanager.log", false );
+				return "Trying to send taskmanager log";
+			case "getlastraw":
+				Path it = Paths.get("raw",TimeTools.formatUTCNow("yyyy-MM"));
+				try {
+					var last = Files.list(it).filter( f -> !Files.isDirectory(f)).max( Comparator.comparingLong( f -> f.toFile().lastModified()));
+					if( last.isPresent() ){
+						emailWorker.sendEmail( "admin","Taskmanager.log","File attached (probably)", last.get().toString(), false );
+						return "Tried sending "+last.get().toString();
+					}else{
+						return "File not found";
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+					return "Something went wrong trying to get the file";
+				}
 			case "sms":
 				das.sendSMS("admin", "Test");
 				return "Trying to send SMS\r\n";

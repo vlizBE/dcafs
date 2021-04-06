@@ -6,7 +6,7 @@ Note: Version numbering: x.y.z
 From 0.5.0 onwards, this should be better documented...
 
 ## Work in progress
-### 0.8.2e
+### 0.8.2
 #### I2CWorker
  * Added command to add a device (and generate empty script)
  * Altered i2c:list to only show list of devices and commands
@@ -17,12 +17,17 @@ From 0.5.0 onwards, this should be better documented...
  * Added calc:reqs and rtval:reqs to get a rough idea on the global requests made (reason, recent bug)
  * ff:reload now reloads all filters (previously only ff:reload,id was possible)
 
+#### BaseReq
+* dbm:reload,id now gives error feedback if any
+* scriptid:list now gives a better listing
+* added admin:gettasklog, this sends the taskmanager log
+* added admin:getlastraw, this sends the latest raw file
+
 #### Other
  * mf:addblank now supports source containing a ',' (eg. to i2c:forward,id)
  * Database tables are now also generated serverside
- * dbm:reload,id now gives error feedback if any
  * rtvals listing is now split according to prefix if any...
- * scriptid:list now gives a better listing 
+ 
 
 #### Bugfixes
 - Email started BufferCollector now collects one minute of data again
