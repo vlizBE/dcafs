@@ -399,19 +399,19 @@ public class RealtimeValues implements CollectorFuture {
 					.filter(e -> e.getKey().startsWith(param.substring(0, param.length() - 1)));
 		} else if (param.startsWith("*")) {
 			stream = rtvals.entrySet().stream().filter(e -> e.getKey().endsWith(param.substring(1)));
-		} else if (param.isEmpty()) {
+		} else if (param.isEmpty() || param.equalsIgnoreCase("groups")) {
 			stream = rtvals.entrySet().stream();
 		} else {
 			stream = rtvals.entrySet().stream().filter(e -> e.getKey().equalsIgnoreCase(param));
 		}
 		// Stream contains all of it...
-		if( param.equalsIgnoreCase("")) {
+		if( param.equalsIgnoreCase("groups")) {
 			var sorted = stream.sorted(Map.Entry.comparingByKey()).map(e -> e.getKey() + " : " + e.getValue()).collect(Collectors.toList());
 			StringJoiner join = new StringJoiner(eol);
 			String header = "";
 			for (var line : sorted) {
 				var split = line.split("_");
-				if (split.length == 2) {
+				if (split.length >= 2) {
 					if (header.isEmpty() || !header.equalsIgnoreCase(split[0])) {
 						if( !header.isEmpty())
 							join.add("<<"+eol); // empty lines between groups
@@ -419,10 +419,12 @@ public class RealtimeValues implements CollectorFuture {
 
 						join.add(">> " + header );
 					}
-					join.add("  "+split[1]);
+					join.add(" -> "+line.substring(line.indexOf("_"+1)));
 				} else {
-					if( !header.isEmpty())
-						join.add("<<"+eol);
+					if( !header.isEmpty()) {
+						join.add("<<" + eol);
+						header="";
+					}
 					join.add(line);
 				}
 			}
