@@ -1441,6 +1441,8 @@ public class TaskManager implements CollectorFuture {
 			Logger.tag(TINY_TAG).error("Reply send failed (tasksetid_streamid) -> "+id);
 			// somehow cancel the taskset?
 			runFailure(tasksets.get(id.substring(0,id.indexOf("_"))),"confirmfailed");
+		}else{
+			Logger.tag(TINY_TAG).info("["+ this.id +"] Collector '"+id+"' finished fine");
 		}
 		if(streampool!=null){
 			streampool.removeConfirm(id);

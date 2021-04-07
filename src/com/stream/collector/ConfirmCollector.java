@@ -57,6 +57,8 @@ public class ConfirmCollector extends AbstractCollector {
         if( confirms.size()==1){
             logInfo(id+" -> Sending '"+confirms.get(0).msg+"'");
             confirms.get(0).doAttempt();
+        }else{
+            logInfo(id+" -> Added '"+message+"' with reply '"+reply+"' to the queue");
         }
     }
 
@@ -101,7 +103,7 @@ public class ConfirmCollector extends AbstractCollector {
         if( confirms.isEmpty())
             return false;
 
-        Logger.info("Checking if this is the reply: "+msg);
+        Logger.info("Comparing '"+confirms.get(0).reply+"' to received '"+msg+"'");
         
         if( msg.equalsIgnoreCase(confirms.get(0).reply)){ // matches
             var con = confirms.remove(0);
@@ -113,7 +115,7 @@ public class ConfirmCollector extends AbstractCollector {
                 if( timeoutFuture!=null) {
                     timeoutFuture.cancel(true);
                 }else{
-                    logInfo("Timeoutfuture is null...?");
+                    logInfo("Timeout future is null...?");
                 }
                 listeners.forEach( l -> l.collectorFinished("confirm:"+id,"confirm",true));
             }
@@ -174,9 +176,10 @@ public class ConfirmCollector extends AbstractCollector {
             if( timeoutFuture != null )
                 timeoutFuture.cancel(true);
 
-            if( maxAttempts <= attempts )
+            if( maxAttempts <= attempts ) {
+                Logger.info(id+ " -> All attempts done ("+attempts+"), giving up.");
                 return false;
-
+            }
             target.writeLine(msg);
             withTimeOut(timeoutSeconds+"s",scheduler);
             
