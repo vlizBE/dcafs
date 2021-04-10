@@ -6,6 +6,17 @@ Note: Version numbering: x.y.z
 From 0.5.0 onwards, this should be better documented...
 
 ## Work in progress
+
+### 0.8.3
+- Updated dependencies
+- Added @rand6,@rand20 and @rand100 to task fill in
+
+#### Bugfixes
+- sleep command was always using rtc0, now it can be selected
+- Influx.java was using the wrong dependency for String operations
+- trans:store,x removed wrong nodes on adding history
+
+## RELEASED
 ### 0.8.2
 #### I2CWorker
  * Added command to add a device (and generate empty script)
@@ -28,7 +39,6 @@ From 0.5.0 onwards, this should be better documented...
  * Database tables are now also generated serverside
  * rtvals listing is now split according to prefix if any...
  
-
 #### Bugfixes
 - Email started BufferCollector now collects one minute of data again
 - Multiple 'calc:' requests for the same thing across multiple telnet sessions weren't allowed anymore. Caused by a
@@ -37,7 +47,6 @@ previous change that should have fixed removing them.
 - Database no longer gets default 'remote' name when it already has a table
 - script to command now allows numbers in the name/id
 
-## RELEASED
 ### 0.8.1  
 ####TaskManager  
  * Task(sets) with an id can now be started as a single command:
