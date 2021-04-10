@@ -566,6 +566,7 @@ public class BaseReq {
 				if( Files.notExists(p) ){
 					return "No such file: "+p.toString();
 				}
+
 				emailWorker.sendEmail(spl[2], "Requested file: "+spl[1], "Nothing to say", p.toString(),false);
 				return "Tried sending "+spl[1]+" to "+spl[2];
 			case "setup":
@@ -1385,8 +1386,8 @@ public class BaseReq {
 	}
 	
 	public String doSLEEP( String[] request, Writable wr, boolean html ){
-		if( request[1].equals("?")){
-			return "sleep:<time> -> Let the processor sleep for time fe. sleep:5m";
+		if( request[1].equals("?") || request[1].split(",").length!=2 ){
+			return "sleep:rtc,<time> -> Let the processor sleep for some time using an rtc fe. sleep:1,5m sleep 5min based on rtc1";
 		}
 		String os = System.getProperty("os.name").toLowerCase();
 		if( !os.startsWith("linux")){
@@ -1394,14 +1395,14 @@ public class BaseReq {
 		}
 		
 		int seconds = 90;
-		if( !request[1].isEmpty() ){
-			seconds = TimeTools.parsePeriodStringToSeconds(request[1]);
-		}
+		String[] cmd = request[1].split(",");
+		seconds = TimeTools.parsePeriodStringToSeconds(cmd[1]);
+
 		
 		try {
 			StringJoiner tempScript = new StringJoiner( "; ");
-			tempScript.add("echo 0 > /sys/class/rtc/rtc0/wakealarm");
-			tempScript.add("echo +"+seconds+" > /sys/class/rtc/rtc0/wakealarm");
+			tempScript.add("echo 0 > /sys/class/rtc/rtc"+cmd[0]+"/wakealarm");
+			tempScript.add("echo +"+seconds+" > /sys/class/rtc/rtc"+cmd[0]+"/wakealarm");
 			tempScript.add("echo mem > /sys/power/state");
 
 			ProcessBuilder pb = new ProcessBuilder("bash","-c", tempScript.toString());
