@@ -649,7 +649,7 @@ public class TaskManager implements CollectorFuture {
 				Logger.tag(TINY_TAG).debug("[" + id + "] Requirements met, executing task with " + task.value);
 
 			String response = "";
-			String header = "DAS Message"; // Standard email header, might get overriden
+			String header = "DCAFS Message"; // Standard email header, might get overriden
 			String fill = task.value; // The value of the task might need adjustments
 
 			if (task.value.startsWith("taskset:") || task.value.startsWith("task:")) { // Incase the task starts a taskset
@@ -750,16 +750,17 @@ public class TaskManager implements CollectorFuture {
 								ok=streampool.writeWithReply(this, task.getTaskset(), task.stream, task.value, task.reply);
 							}else{
 								if( task.writable == null ){
-									var res =streampool.writeToStream(task.stream, task.value, task.reply);
+									var res =streampool.writeToStream(task.stream, fill, task.reply);
 									if( res.isEmpty() ) {
 										ok = false;
 									}else{
-										task.value=res;
+										if( !task.value.contains("@"))
+											task.value=res;
 										ok = true;
 									}
 									streampool.getWritable(task.stream).ifPresent( task::setWritable );
 								}else{
-									ok=task.writable.writeLine( task.value );
+									ok=task.writable.writeLine( fill );
 								}
 							}
 						}
@@ -1066,7 +1067,10 @@ public class TaskManager implements CollectorFuture {
     	line = line.replace("@utcstamp", TimeTools.formatUTCNow("dd/MM/YY HH:mm:ss"));
 		line = line.replace("@utcdate", TimeTools.formatUTCNow("yyMMdd"));
     	line = line.replace("@localstamp", TimeTools.formatNow("dd/MM/YY HH:mm:ss"));
-		line = line.replace("@utcsync", TimeTools.formatNow("'DT'yyMMddHHmmssu"));				
+		line = line.replace("@utcsync", TimeTools.formatNow("'DT'yyMMddHHmmssu"));
+		line = line.replace("@rand6", ""+(int)Math.rint(1+Math.random()*5));
+		line = line.replace("@rand20", ""+(int)Math.rint(1+Math.random()*19));
+		line = line.replace("@rand100", ""+(int)Math.rint(1+Math.random()*99));
 
 		String[] ipmac = line.split("@");
 		for( int a=1;a<ipmac.length;a++){
@@ -1079,7 +1083,7 @@ public class TaskManager implements CollectorFuture {
 				result = Tools.getIP(ipmac[a].substring(5),false);
 			}
 			if( result.isBlank() ){
-				Logger.tag("TASKS").error("Coulnd't find result for "+ipmac[a]);
+				Logger.tag("TASKS").error("Couldn't find result for "+ipmac[a]);
 			}else{
 				line = line.replace(ipmac[a],result);
 			}
