@@ -850,18 +850,19 @@ public class StreamPool implements StreamListener, CollectorFuture {
 					return "No such stream: "+cmds[2];
 				}
 			case "addtcp":
-				if( cmds.length < 4 ) // Make sure we got the correct amount of arguments
-					return "Bad amount of arguments, need 4 (addtcp,title,ip:port,label)";
+				if( cmds.length < 3 ) // Make sure we got the correct amount of arguments
+					return "Bad amount of arguments, need atleast 3 ss:addtcp,title,ip:port(,label)";
 
 				if( streams.get(cmds[1].toLowerCase()) != null )// Make sure we don't overwrite an existing connection
 					return "Connection exists with that title ("+cmds[1]+") not creating it";
 
+				String label = cmds.length==3?"void":"";
 				if( cmds.length>4)
-					cmds[3]=request.substring( request.indexOf(","+cmds[3])+1);
+					label=request.substring( request.indexOf(","+cmds[3])+1);
 
 				cmds[1]=cmds[1].toLowerCase();
 
-				TcpStream tcp = new TcpStream( cmds[1], cmds[2], dQueue, cmds[3], 1 );
+				TcpStream tcp = new TcpStream( cmds[1], cmds[2], dQueue, label, 1 );
 				tcp.addListener(this);
 				tcp.setEventLoopGroup(group);
 				tcp.setBootstrap(bootstrapTCP);
@@ -908,16 +909,17 @@ public class StreamPool implements StreamListener, CollectorFuture {
 
 				break;
 			case "addserial":
-				if( cmds.length < 4 ) // Make sure we got the correct amount of arguments
-					return "Bad amount of arguments, need 4 (addserial,title,portname:baudrate,label)";
+				if( cmds.length < 3 ) // Make sure we got the correct amount of arguments
+					return "Bad amount of arguments, need atleast 3 ss:addserial,title,portname:baudrate(,label)";
 
 				cmds[1]=cmds[1].toLowerCase();
 
 				if( streams.get(cmds[1].toLowerCase()) != null )// Make sure we don't overwrite an existing connection
 					return "Connection exists with that title ("+cmds[1]+") not creating it";
 
+				String serLabel = cmds.length==3?"void":"";
 				if( cmds.length>4)
-					cmds[3]=request.substring( request.indexOf(","+cmds[3])+1);
+					serLabel=request.substring( request.indexOf(","+cmds[3])+1);
 
 				String[] portAndBaud = cmds[2].split(":");
 				String port = portAndBaud[0];
@@ -926,7 +928,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				if( !SerialStream.portExists(port) && !port.contains("ttyGS"))
 					return "No such port on this system. Options: "+ SerialStream.portList();
 				
-				SerialStream serial = new SerialStream( port, dQueue, cmds[3], 1);
+				SerialStream serial = new SerialStream( port, dQueue, serLabel, 1);
 				serial.alterSerialSettings(baud+",8,1,none");
 
 				serial.setID(cmds[1]);
@@ -937,9 +939,9 @@ public class StreamPool implements StreamListener, CollectorFuture {
 
 				return serial.connect()?"Connected to "+port:"Failed to connect to "+port;	
 			case "addlocal":
-				if( cmds.length != 4 ) // Make sure we got the correct amount of arguments
-					return "Bad amount of arguments, need 4 (addlocal,id,label,source)";
-				LocalStream local = new LocalStream( cmds[1],cmds[2],cmds[3],dQueue);
+				if( cmds.length != 3 ) // Make sure we got the correct amount of arguments
+					return "Bad amount of arguments, need 3 (addlocal,id,label,source)";
+				LocalStream local = new LocalStream( cmds[1],cmds[2],cmds.length==4?cmds[3]:"",dQueue);
 				local.addListener(this);
 				streams.put( cmds[1].toLowerCase(), local);
 				addStreamToXML(cmds[1],true);
