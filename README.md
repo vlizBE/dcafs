@@ -15,7 +15,7 @@ A Java tool (or can also be used as a library) that takes care of all the nitty-
 
 ## Installation
 
-* Option one is cloning the hub, and run it/package it in your preferred IDE.
+* Option one is cloning the repo, and run it/package it in your preferred IDE.
 * Option two is look at the most recent release and download that. There's no installer involved, just unpack the zip.
 
 ## First steps
