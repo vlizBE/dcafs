@@ -557,7 +557,7 @@ public class BaseReq {
 					.add( "retrieve:setup,<email/ref> -> Request the current settings.xml through email");
 				return join.toString();
 			case "script":case "scripts":
-				if( spl.length <2 )
+				if( spl.length < 3 )
 					return "Not enough arguments retrieve:type,filename,email in "+request[0]+":"+request[1];
 				if( !spl[1].endsWith(".xml"))
 					spl[1] += ".xml";		
