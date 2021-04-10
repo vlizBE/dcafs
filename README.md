@@ -41,8 +41,8 @@ In the background, a fresh settings.xml was generated.
 </das>
 ````
 Back in the telnet client, add a data source:
-* ss:addserial,serialsensor,COM1:19200,void  --> adds a serial connection to a sensor called serialsensor that uses 19200Bd
-* ss:addtcp,tcpsensor,localhost:4000,void  --> adds a tcp connection to a sensor called tcpsensor with a locally hosted tcp server
+* `ss:addserial,serialsensor,COM1:19200`  --> adds a serial connection to a sensor called serialsensor that uses 19200Bd
+* `ss:addtcp,tcpsensor,localhost:4000`  --> adds a tcp connection to a sensor called tcpsensor with a locally hosted tcp server
 
 Assuming the data has the default eol sequence (check this by using: TODO), you'll receive the data in the window by typing
 * raw:serialsensor --> for the serial sensor
