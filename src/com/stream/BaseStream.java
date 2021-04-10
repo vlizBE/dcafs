@@ -121,8 +121,11 @@ public abstract class BaseStream {
 
         var list = fab.getChildren("");
 
-        fab.alterChild("label", label);
-        
+        if( !label.equalsIgnoreCase("void")) {
+            fab.alterChild("label", label);
+        }else{
+            fab.removeChild(label);
+        }
         if( list.stream().anyMatch( x -> x.getNodeName().equalsIgnoreCase("ttl") ) ){
             if( readerIdleSeconds ==-1){
                 fab.removeChild("ttl");
