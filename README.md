@@ -73,7 +73,9 @@ Meanwhile, in the background, the settings.xml was updated to this:
   </streams>
 </das>
 ````
-Sending 'help' in the telnet interface should provide enough information for the next recommended steps but for more indepth and extensive information, check the docs/wiki.
+Sending 'help' in the telnet interface should provide enough information for the next recommended steps but for more indepth and extensive information, check the docs/wiki.   
+
+Oh, and the command `sd` shuts it down.
 
 # History
 
