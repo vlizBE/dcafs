@@ -1,6 +1,6 @@
 package util.database;
 
-import org.eclipse.paho.client.mqttv3.util.Strings;
+import org.apache.commons.lang3.StringUtils;
 import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDBFactory;
 import org.influxdb.dto.Point;
@@ -28,7 +28,7 @@ public class Influx extends Database{
         this.user=user;
         this.pass=pass;
         irl=address;
-        if(Strings.countMatches(irl,":")==0){ // IPv4
+        if(StringUtils.countMatches(irl,":")==0){ // IPv4
             irl += ":8086";
         }
         this.dbname=dbname;
@@ -48,7 +48,7 @@ public class Influx extends Database{
         String pass = XMLtools.getStringAttribute(dbTag, "pass", "");          // The password for the earlier defined username
         String dbname = dbTag.getTextContent();                                                // The name of the database
         String irl = XMLtools.getChildValueByTag(dbe, "address", "");            // Set the address of the server on which the DB runs (either hostname or IP)
-        if(Strings.countMatches(irl,":")==0){
+        if(StringUtils.countMatches(irl,":")==0){
             irl += ":8086";
         }
         var db = new Influx(irl,dbname,user,pass);
