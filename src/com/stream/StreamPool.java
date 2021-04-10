@@ -965,9 +965,10 @@ public class StreamPool implements StreamListener, CollectorFuture {
 		getStream(title.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.WAKEUP));
 	}
 	@Override
-	public void notifyActive( String title ) {
+	public boolean notifyActive(String title ) {
 		String device = title.replace(" ", "").toLowerCase(); // Remove spaces
 		issues.reportIssue(device+".conidle", "TTL passed for "+title, false);
+		return true;
 	}
 	@Override
 	public void notifyOpened( String title ) {
