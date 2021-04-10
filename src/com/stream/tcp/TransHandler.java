@@ -71,13 +71,14 @@ public class TransHandler extends SimpleChannelInboundHandler<byte[]> implements
 			Logger.error( "Channel.remoteAddress is null in channelActive method");
 		}
 
-		if( listener != null )
-			listener.notifyActive(getID());
-		
 		if( channel != null ){    	  // If the channel is valid, add a future listener
 			
 			channel.flush();
-			channel.writeAndFlush("Hello?\r\n".getBytes());
+
+			if( listener != null ) {
+				if(!listener.notifyActive(getID()))
+					channel.writeAndFlush("Hello?\r\n".getBytes());
+			}
 
            	ChannelFuture closeFuture = channel.closeFuture();           
            	closeFuture.addListener((ChannelFutureListener) future -> {
@@ -131,8 +132,8 @@ public class TransHandler extends SimpleChannelInboundHandler<byte[]> implements
 				}
 				switch( msg ){
 					case "id?": 	writeLine("id is "+id);		break;
-					case "label?":  writeLine("label is "+id);	break;
-					default: Logger.warn("Unknown message "+msg+" for "+id); break;
+					case "label?":  writeLine("label is "+label);	break;
+					default: Logger.warn("Unknown message "+msg+" from "+id); break;
 				}								 
 			}else{
 				history.add(msg);
