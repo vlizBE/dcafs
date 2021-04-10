@@ -256,7 +256,7 @@ public class TcpServer implements StreamListener {
 	 */
 	public void storeHandler( TransHandler handler, Writable wr ){
 		XMLfab fab = XMLfab.withRoot(xmlPath, "settings", XML_PARENT_TAG);
-		if( fab.hasChild("default", "id", handler.getID() ) ){
+		if( fab.selectParent("default", "id", handler.getID() ).isPresent() ){
 			fab.clearChildren();
 		}else{
 			fab.addChild("default").attr("address",handler.getIP()).attr("id",handler.getID()).down();
@@ -265,9 +265,9 @@ public class TcpServer implements StreamListener {
 			fab.addChild("cmd",h);
 		}
 		if( fab.build() != null ){
-			wr.writeLine("Stored!");
+			wr.writeLine(handler.getID()+" Stored!");
 		}else{
-			wr.writeLine("Storing failed");
+			wr.writeLine("Storing "+handler.getID()+" failed");
 		}
 	}
 
@@ -308,9 +308,13 @@ public class TcpServer implements StreamListener {
 						"trans:defaults -> List of all the defaults\r\n"+
 						"trans:reload -> Reload the xml settings.\r\n";
 			case "store":
-				return getHandler(cmd[1]).map( h -> {
-						storeHandler(h,wr);
-						return cmd[1]+"  stored";}).orElse("No such client: "+cmd[1]);		
+				var hOpt = getHandler(cmd[1]);
+				if( hOpt.isEmpty() )
+					return "Invalid id";
+				var handler = hOpt.get();
+				handler.setID(cmd.length==3?cmd[2]:handler.getID());
+				storeHandler(handler,wr);
+				return "";
 			case "add":
 				return getHandler(cmd[1]).map( h -> {
 					StringJoiner join = new StringJoiner(",");
