@@ -45,8 +45,8 @@ Back in the telnet client, add a data source:
 * `ss:addtcp,tcpsensor,localhost:4000`  --> adds a tcp connection to a sensor called tcpsensor with a locally hosted tcp server
 
 Assuming the data has the default eol sequence (check this by using: TODO), you'll receive the data in the window by typing
-* raw:serialsensor --> for the serial sensor
-* raw:tcpsensor --> for the tcp sensor
+* `raw:serialsensor` --> for the serial sensor
+* `raw:tcpsensor` --> for the tcp sensor
 
 Meanwhile, in the background, the settings.xml was updated to this:
 ````xml
@@ -62,13 +62,11 @@ Meanwhile, in the background, the settings.xml was updated to this:
   <streams>
     <!-- Defining the various streams that need to be read -->
     <stream id="serialsensor" type="serial">
-      <label>void</label>
       <eol>crlf</eol>
       <serialsettings>19200,8,1,none</serialsettings>
       <port>COM1</port>
     </stream>
     <stream id="tcpsensor" type="tcp">
-      <label>void</label>
       <eol>crlf</eol>
       <address>localhost:4000</address>
     </stream>
