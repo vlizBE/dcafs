@@ -194,7 +194,7 @@ public class TcpServer implements StreamListener {
 	}
 
 	@Override
-	public void notifyActive(String title) {
+	public boolean notifyActive(String title) {
 		Logger.info(title+" is active");
 		for( TransHandler th : clients ){
 			if( th.getID().equalsIgnoreCase(title) ){
@@ -205,10 +205,13 @@ public class TcpServer implements StreamListener {
 						th.setID(td.id);
 					}
 				}
+				th.writeLine("Welcome back "+th.getID()+"!");
+				return true;
 			}else{
 				Logger.info("No matching ID "+title+" vs "+th.getID() );
 			}
 		}
+		return false;
 	}
 
 	@Override
