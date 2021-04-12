@@ -15,7 +15,7 @@ A Java tool (or can also be used as a library) that takes care of all the nitty-
 
 ## Installation
 
-* Option one is cloning the hub, and run it/package it in your preferred IDE.
+* Option one is cloning the repo, and run it/package it in your preferred IDE.
 * Option two is look at the most recent release and download that. There's no installer involved, just unpack the zip.
 
 ## First steps
@@ -41,12 +41,12 @@ In the background, a fresh settings.xml was generated.
 </das>
 ````
 Back in the telnet client, add a data source:
-* ss:addserial,serialsensor,COM1:19200,void  --> adds a serial connection to a sensor called serialsensor that uses 19200Bd
-* ss:addtcp,tcpsensor,localhost:4000,void  --> adds a tcp connection to a sensor called tcpsensor with a locally hosted tcp server
+* `ss:addserial,serialsensor,COM1:19200`  --> adds a serial connection to a sensor called serialsensor that uses 19200Bd
+* `ss:addtcp,tcpsensor,localhost:4000`  --> adds a tcp connection to a sensor called tcpsensor with a locally hosted tcp server
 
 Assuming the data has the default eol sequence (check this by using: TODO), you'll receive the data in the window by typing
-* raw:serialsensor --> for the serial sensor
-* raw:tcpsensor --> for the tcp sensor
+* `raw:serialsensor` --> for the serial sensor
+* `raw:tcpsensor` --> for the tcp sensor
 
 Meanwhile, in the background, the settings.xml was updated to this:
 ````xml
@@ -62,20 +62,20 @@ Meanwhile, in the background, the settings.xml was updated to this:
   <streams>
     <!-- Defining the various streams that need to be read -->
     <stream id="serialsensor" type="serial">
-      <label>void</label>
       <eol>crlf</eol>
       <serialsettings>19200,8,1,none</serialsettings>
       <port>COM1</port>
     </stream>
     <stream id="tcpsensor" type="tcp">
-      <label>void</label>
       <eol>crlf</eol>
       <address>localhost:4000</address>
     </stream>
   </streams>
 </das>
 ````
-Sending 'help' in the telnet interface should provide enough information for the next recommended steps but for more indepth and extensive information, check the docs/wiki.
+Sending 'help' in the telnet interface should provide enough information for the next recommended steps but for more indepth and extensive information, check the docs/wiki.   
+
+Oh, and the command `sd` shuts it down.
 
 # History
 
