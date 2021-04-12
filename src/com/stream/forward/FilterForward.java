@@ -173,6 +173,8 @@ public class FilterForward extends AbstractForward {
             case "contain":  addContains(value);   break;
             case "c_start":  addCharAt(Tools.parseInt(values[0], -1), values[1].charAt(0) );      break;
             case "c_end":    addCharFromEnd(Tools.parseInt(values[0], -1), values[1].charAt(0) ); break;
+            case "minlength": addMinimumLength(Tools.parseInt(value,-1)); break;
+            case "maxlength": addMaximumLength(Tools.parseInt(value,-1)); break;
             default: 
                 Logger.error(id+" -> Unknown type chosen "+type);
                 return -1;
@@ -231,11 +233,13 @@ public class FilterForward extends AbstractForward {
         rules.add( p -> p.endsWith(with) );
     }
     public void addCharAt( int index, char c ){
-        rules.add( p -> p.charAt(index)==c );
+        rules.add( p -> index < p.length() && p.charAt(index)==c);
     }
     public void addCharFromEnd( int index, char c ){
-        rules.add( p -> p.charAt(p.length()-index-1)==c );
+        rules.add( p -> p.length() > index && p.charAt(p.length()-index-1)==c );
     }
+    public void addMinimumLength( int length ){ rules.add( p -> p.length() >= length); }
+    public void addMaximumLength( int length ){ rules.add( p -> p.length() <= length); }
 
     @Override
     public boolean writeLine(String data) {
