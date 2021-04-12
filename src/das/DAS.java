@@ -30,6 +30,7 @@ import org.influxdb.InfluxDB;
 import org.influxdb.dto.Point;
 import util.database.*;
 import util.gis.Waypoints;
+import util.task.TaskFab;
 import util.task.TaskManager;
 import util.xml.XMLtools;
 import util.tools.TimeTools;
@@ -50,7 +51,7 @@ import org.tinylog.provider.ProviderRegistry;
 
 public class DAS implements DeadThreadListener {
 
-    private static final String version = "0.8.2c";
+    private static final String version = "0.8.3";
 
     // Last date that changes were made
     String workPath = new File("").getAbsolutePath() + File.separator;
@@ -779,16 +780,16 @@ public class DAS implements DeadThreadListener {
         }
         return db;
     }
-    public boolean addSQLDB(String id, SQLDB db) {
+    public Optional<SQLDB> addSQLDB(String id, SQLDB db) {
         if( db !=null && !id.isEmpty() ){
             dbManager.addSQLDB(id, db);
             rtvals.addDB(id, db);
-            return true;
+            return Optional.of(db);
         }else{
             Logger.error("Tried to add a null database or empty id (id:"+id+")");
         }
 
-        return false;
+        return Optional.empty();
     }
     public boolean addInfluxDB(String id, Influx db) {
         if( db !=null && !id.isEmpty() ){
@@ -801,27 +802,22 @@ public class DAS implements DeadThreadListener {
 
         return false;
     }
-    public SQLiteDB getSQLiteDB(String id) {
-        return dbManager.getSQLiteDB(id);
-    }
-
     public DatabaseManager getDatabaseManager() {
         return dbManager;
     }
-    public boolean reloadDatabase( String id ){        
+    public Database reloadDatabase( String id ){
         Element root = XMLtools.getFirstElementByTag(getXMLdoc(), "databases");
         
         Optional<Element> sqlite = XMLtools.getChildElements(root, "sqlite").stream()
                         .filter( db -> db.getAttribute("id").equals(id)).findFirst();
-        if( sqlite.isPresent() ){
-            addSQLiteDB(SQLiteDB.readFromXML(sqlite.get()));
-            return true;
-        }               
-                
-        Optional<Element> sqldbs = XMLtools.getChildElements(root, "server").stream()
-                        .filter( db -> db.getAttribute("id").equals(id)).findFirst();   
 
-        return sqldbs.map( db -> addSQLDB(id, SQLDB.readFromXML(db))).orElse(false);
+        if( sqlite.isPresent() )
+            return addSQLiteDB(SQLiteDB.readFromXML(sqlite.get()));
+
+        return XMLtools.getChildElements(root, "server").stream()
+                        .filter( db -> db.getAttribute("id").equals(id))
+                        .findFirst()
+                        .map( db -> addSQLDB(id, SQLDB.readFromXML(db)).get()).orElse(null);
 
     }
     private void readDatabasesFromXML() {

@@ -201,7 +201,7 @@ public class SQLDB extends Database{
     }
     public String getTableInfo(String eol){
 
-        StringJoiner j = new StringJoiner(eol,"Info about "+id,"");
+        StringJoiner j = new StringJoiner(eol,"Info about "+id+eol,"");
         j.setEmptyValue("No tables stored.");
         tables.values().forEach( table -> j.add(table.getInfo()));
         return j.toString();

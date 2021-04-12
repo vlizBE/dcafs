@@ -10,6 +10,8 @@ From 0.5.0 onwards, this should be better documented...
 ### 0.8.3
 - Updated dependencies
 - Added @rand6,@rand20 and @rand100 to task fill in
+- ss:addtcp and ss:addserial no longer require a label defined
+- Trans now allows editing id during store command
 
 #### Bugfixes
 - sleep command was always using rtc0, now it can be selected

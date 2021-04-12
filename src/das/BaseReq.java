@@ -852,9 +852,9 @@ public class BaseReq {
 						.add("   -> For udp, tcp and serial, use streams:? or ss:? for relevant commands")
 						.add("   -> For MQTT, use mqtt:? for relevant commands")
 						.add("   -> For I2C/SPI check the manual and then use i2c:?");
-					join.add(TelnetCodes.TEXT_GREEN+"2) Look at incoming data"+TelnetCodes.TEXT_YELLOW)
-						.add("   -> raw:id:stream -> Show the data received at the stream with the given id eg. raw:id:gps")
-						.add("   -> raw:label:stream -> Show the data received at the streams with the given label")
+					join.add(TelnetCodes.TEXT_GREEN+"2) Look at received data"+TelnetCodes.TEXT_YELLOW)
+						.add("   -> raw:streamid -> Show the data received at the stream with the given id eg. raw:gps")
+						.add("   -> raw:label:streamlabel -> Show the data received at the streams with the given label")
 						.add("   -> mqtt:forward,id -> Show the data received from the mqtt broker with the given id")
 						.add("   -> mqtt:forward,id -> Show the data received from the mqtt broker with the given id")
 						.add("   -> i2c:forward,id -> Show the data received from the i2c device with the given id");
