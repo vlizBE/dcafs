@@ -83,6 +83,11 @@ public class TcpStream extends BaseStream implements Writable{
     }
 
     @Override
+    public void setLabel(String label) {
+        this.label=label;
+        handler.label=label;
+    }
+    @Override
     public boolean connect() {
         ChannelFuture f;
         Logger.info("Trying to connect to tcp stream");
@@ -218,4 +223,6 @@ public class TcpStream extends BaseStream implements Writable{
     public Writable getWritable(){
         return this;
     }
+
+
 }
