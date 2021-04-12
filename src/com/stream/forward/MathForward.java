@@ -102,14 +102,6 @@ public class MathForward extends AbstractForward {
             delimiter = deli;
         }
     }
-
-    /**
-     * Change the label
-     * @param label The new label
-     */
-    public void setLabel(String label){
-        this.label=label;
-    }
     /**
      * Set the value of this objects scratchpad, this can then be used in an op when referring to o0
      * @param value The new value for the scratchpad

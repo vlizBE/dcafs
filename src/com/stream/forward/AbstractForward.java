@@ -119,7 +119,14 @@ public abstract class AbstractForward implements Writable {
 
         return join.toString();
     }
-
+    /**
+     * Change the label
+     * @param label The new label
+     */
+    public void setLabel(String label){
+        this.label=label;
+        valid = !label.isEmpty(); // A label counts as a valid target
+    }
     /* *********************** Abstract Methods ***********************************/
     /**
      * This is called when data is received through the writable
