@@ -292,16 +292,19 @@ public class Generic {
      * Returns the info about this generic
      */
     public String toString(){
-        StringJoiner join = new StringJoiner("");
+        StringJoiner join = new StringJoiner("",id+" -> ","");
         if( !dbid.isEmpty() ){
-            join.add(id+" -> Store in "+dbid+"(db):(table)"+table );
+            join.add("Store in "+dbid+"(db):(table)"+table+" " );
         }else if (!influxID.isEmpty() ){
-            join.add(id+" -> Store in InfluxDB "+influxID+":"+table);
+            join.add("Store in InfluxDB "+influxID+":"+table+" ");
         }else if( !table.isEmpty()){
-            join.add(id+" -> Store for "+table+"(table)");
+            join.add("Store for "+table+"(table) ");
+        }else{
+
         }
-        join.add(" has delimiter '"+delimiter+"'"+(startsWith.isBlank()?"":"and starts with '"+startsWith+"'\r\n") );
-        
+        join.add("has delimiter '"+delimiter+"'"+(startsWith.isBlank()?"":"and starts with '"+startsWith+"'") );
+        join.add("\r\n");
+
         if( !filters.isEmpty() ){
             for( Filter filter:filters){
                 join.add("> "+filter.toString()+"\r\n");
