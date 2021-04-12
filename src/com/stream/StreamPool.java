@@ -1245,6 +1245,8 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				join.add("contain -> Which text the message should contain");
 				join.add("c_start -> Which character should be found on position c from the start (0=first)");
 				join.add("c_end   -> Which character should be found on position c from the end (0=last)");
+				join.add("minlength -> The minimum length the message should be");
+				join.add("maxlength -> The maximum length the message can be");
 				return join.toString();
 			case "remove":
 				if( cmds.length < 2 )
@@ -1306,6 +1308,32 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				getFilter(cmds[1]).ifPresent( f -> f.addTarget(wr) );
 				getFilter(cmds[1]).ifPresent( f -> f.addTarget(wr) );
 				return "Temp filter with id "+cmds[1]+ " created"+(cmds.length>2?", with source"+cmds[2]:"")+".";
+			case "alter":
+				var ff = filters.get(cmds[1]);
+				if( cmds.length < 3)
+					return "Bad amount of arguments, should be ff:alter,id,param:value";
+				if( ff == null )
+					return "No such filterforward: "+cmds[1];
+
+				if( !cmds[2].contains(":"))
+					return "No proper param:value pair";
+
+				String param = cmds[2].substring(0,cmds[2].indexOf(":"));
+
+				String value = cmd.substring(cmd.indexOf(param+":")+param.length()+1);
+
+				XMLfab fab = XMLfab.withRoot(xml,"filters"); // get a fab pointing to the maths node
+
+				if( fab.selectParent("filter","id",cmds[1]).isEmpty() )
+					return "No such filter node '"+cmds[1]+"'";
+
+				switch( param ){
+					case "label":
+						ff.setLabel(value);
+						fab.attr("label",value);
+						return fab.build()!=null?"Label changed":"Label change failed";
+					default:return "No valid alter target: "+param;
+				}
 			case "reload":
 				if( cmds.length == 2) {
 					Optional<Element> x = XMLfab.withRoot(xmlPath, "das", "filters").getChild("filter", "id", cmds[1]);
