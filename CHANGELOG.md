@@ -12,11 +12,17 @@ From 0.5.0 onwards, this should be better documented...
 - Added @rand6,@rand20 and @rand100 to task fill in
 - ss:addtcp and ss:addserial no longer require a label defined
 - Trans now allows editing id during store command
+- Added dbm:addrollover to add rollover to an sqlite
+
+#### Forwards  
+- Added min length and max length filters to filterforward
+- Added ff:alter command to alter the label (nothing else yet)
 
 #### Bugfixes
 - sleep command was always using rtc0, now it can be selected
 - Influx.java was using the wrong dependency for String operations
 - trans:store,x removed wrong nodes on adding history
+- timestamp column is now really a timestamp column on database servers (used to be text by default)
 
 ## RELEASED
 ### 0.8.2
