@@ -133,9 +133,9 @@ public class StreamPool implements StreamListener, CollectorFuture {
 		for( BaseStream stream : streams.values() ){
 			long ttl = Instant.now().toEpochMilli() - stream.getLastTimestamp();
 			if( !stream.isConnectionValid() ){
-				join.add("NC");
+				join.add("NC ");
 			}else if (ttl > stream.readerIdleSeconds *1000 && stream.readerIdleSeconds != -1) {
-				join.add("!!");
+				join.add("!! ");
 			}
 
 			join.add(stream.getInfo()).add("\t");
