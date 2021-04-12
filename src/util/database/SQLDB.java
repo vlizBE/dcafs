@@ -297,7 +297,7 @@ public class SQLDB extends Database{
     /**
      * Actually create all the tables
      * @param keepConnection True if the connection should be kept open afterwards
-     * @return Empty string if all ok, otherwise errormessaae
+     * @return Empty string if all ok, otherwise error message
      */
     public String createContent(boolean keepConnection){
 
@@ -484,7 +484,11 @@ public class SQLDB extends Database{
 
         /* Tables */
         XMLtools.getChildElements(dbe,"table").stream().forEach( x -> {
-            SqlTable.fromXML(x).ifPresent( table -> db.tables.put(table.name,table));
+            SqlTable.fromXML(x).ifPresent( table ->
+            {
+                table.toggleServer();
+                db.tables.put(table.name,table);
+            });
         });
 
         db.getCurrentTables(false);

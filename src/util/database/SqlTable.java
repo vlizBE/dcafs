@@ -32,7 +32,7 @@ public class SqlTable {
 
     ArrayList<Column> columns = new ArrayList<>();
     boolean ifnotexists = false;
-
+    boolean server = false;
 
     ArrayList<Object[]> data = new ArrayList<>(); // The data for the default insert statement
     String prepStatement = "";  // The default insert statement
@@ -46,6 +46,9 @@ public class SqlTable {
     public SqlTable(String name) {
         this.name = name;
         preps.put("", new PrepStatement());
+    }
+    public void toggleServer(){
+        server=true;
     }
     public void setLastError(String error ){
         this.lastError=error;
@@ -662,7 +665,7 @@ public class SqlTable {
          */
         public String toString(){ 
             
-            if( type == COLUMN_TYPE.TIMESTAMP )
+            if( type == COLUMN_TYPE.TIMESTAMP && !server ) // Timestamp should be timestamp on a server
                 return title+" TEXT" + (unique?" UNIQUE":"") + (notnull?" NOT NULL":"")+(primary?" PRIMARY KEY":"");
             if( type == COLUMN_TYPE.EPOCH )
                 return title+" REAL" + (unique?" UNIQUE":"") + (notnull?" NOT NULL":"")+(primary?" PRIMARY KEY":"");
