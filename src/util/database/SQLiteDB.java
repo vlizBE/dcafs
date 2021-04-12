@@ -347,13 +347,28 @@ public class SQLiteDB extends SQLDB{
         }
         return this;
     }
-
+    public SQLiteDB setRollOver( String dateFormat, int rollCount, String unit ){
+         RollUnit rollUnit=null;
+            switch(unit){
+                case "minute":case "min": rollUnit=RollUnit.MINUTE; break;
+                case "hour": rollUnit=RollUnit.HOUR; break;
+                case "day": rollUnit=RollUnit.DAY; break;
+                case "week": rollUnit=RollUnit.WEEK; break;
+                case "month": rollUnit=RollUnit.MONTH; break;
+                case "year": rollUnit=RollUnit.YEAR; break;
+        }
+        return setRollOver(dateFormat,rollCount,rollUnit);
+    }
     /**
      * Cancel the next rollover events
      */
     public void cancelRollOver(){
         if( rollOverFuture!=null)
             rollOverFuture.cancel(true);
+    }
+    public void forceRollover(){
+        rollOverFuture.cancel(true);
+        scheduler.submit(new DoRollOver());
     }
     /**
      * Update the filename of the database currently used

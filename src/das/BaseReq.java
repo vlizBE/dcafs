@@ -1564,6 +1564,7 @@ public class BaseReq {
 						.add("  dbm:fetch,id -> Read the tables from the database directly, not overwriting stored ones.")
 					.add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW)
 						.add("  dbm:addserver,id -> Adds a blank database server node to xml")
+						.add("  dbm:addrollover,id,count,unit,pattern -> Add rollover to a SQLite database")
 						.add("  dbm:alter,id,param:value -> Alter things like idle, flush and batch (still todo)")
 						.add("  dbm:alter,id,param:value -> Alter things like idle, flush and batch (still todo)")
 						.add("  dbm:reload,id -> (Re)loads the database with the given id fe. after changing the xml")
@@ -1628,6 +1629,16 @@ public class BaseReq {
 				}else{
 					return "Failed to create SQLite";
 				}
+			case "addrollover":
+				if( cmds.length < 5 )
+					return "Not enough arguments, needs to be dbm:addrollover,dbId,count,unit,pattern";
+				var s= das.getDatabaseManager().getSQLiteDB(cmds[1]);
+				if( s == null)
+					return cmds[1] +" is not an SQLite";
+				s.setRollOver(cmds[4],NumberUtils.createInteger(cmds[2]),cmds[3]);
+				s.writeToXml(XMLfab.withRoot(das.getXMLdoc(),"das","settings","databases"));
+				s.forceRollover();
+				return "Rollover added";
 			case "addinfluxdb": case "addinflux":
 				var influx = new Influx(address,dbName,user,pass);
 				if( influx.connect(false)){
