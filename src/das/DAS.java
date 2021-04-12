@@ -26,11 +26,8 @@ import com.telnet.TelnetCodes;
 import com.telnet.TelnetServer;
 import com.stream.tcp.TcpServer;
 
-import org.influxdb.InfluxDB;
-import org.influxdb.dto.Point;
 import util.database.*;
 import util.gis.Waypoints;
-import util.task.TaskFab;
 import util.task.TaskManager;
 import util.xml.XMLtools;
 import util.tools.TimeTools;
