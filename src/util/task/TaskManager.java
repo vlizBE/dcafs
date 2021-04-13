@@ -338,7 +338,7 @@ public class TaskManager implements CollectorFuture {
 		for (Task task : this.tasks) {
 			if (task.getID().equals(id)) {
 				Logger.tag(TINY_TAG).info("[" + this.id + "] Task with id " + id + " started.");
-				return this.doTask(task);
+				return startTask(task);//doTask(task);
 			}
 		}
 		Logger.tag(TINY_TAG).info("[" + this.id + "] Task with id '" + id + "' not found.");
@@ -1393,9 +1393,9 @@ public class TaskManager implements CollectorFuture {
 			case "run":		
 				if( parts.length==2){
 					if( parts[1].startsWith("task:")){
-						return this.startTask(parts[1].substring(5))?"Task started":"Failed to start task";
+						return startTask(parts[1].substring(5))?"Task started":"Failed to start task";
 					}else{
-						return this.startTaskset(parts[1]);
+						return startTaskset(parts[1]);
 					}
 
 				}else{
