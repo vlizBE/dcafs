@@ -290,7 +290,7 @@ public class SQLiteDB extends SQLDB{
 
         /* Tables */
         XMLtools.getChildElements(dbe,"table").stream().forEach( x -> {
-            SqlTable.fromXML(x).ifPresent( table -> db.tables.put(table.name,table));
+            SqlTable.readFromXml(x).ifPresent(table -> db.tables.put(table.name,table));
         });
 
         /* Create the content */

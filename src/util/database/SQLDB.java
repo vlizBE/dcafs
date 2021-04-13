@@ -16,8 +16,6 @@ import util.tools.TimeTools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 
-import javax.swing.text.html.Option;
-
 public class SQLDB extends Database{
 
     private String tableRequest = "";
@@ -484,7 +482,7 @@ public class SQLDB extends Database{
 
         /* Tables */
         XMLtools.getChildElements(dbe,"table").stream().forEach( x -> {
-            SqlTable.fromXML(x).ifPresent( table ->
+            SqlTable.readFromXml(x).ifPresent(table ->
             {
                 table.toggleServer();
                 db.tables.put(table.name,table);
