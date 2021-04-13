@@ -59,7 +59,7 @@ public class SqlTable {
             lastError= "";
         return t;
     }
-    public static Optional<SqlTable> fromXML(Element tbl) {
+    public static Optional<SqlTable> readFromXml(Element tbl) {
         String tableName = tbl.getAttribute("name");
         SqlTable table = SqlTable.withName(tableName);
         boolean ok = true;
@@ -71,7 +71,7 @@ public class SqlTable {
                     ok = false;
                     break;
                 }
-                String alias = node.getAttribute("alias").toLowerCase();
+                String alias = XMLtools.getStringAttribute(node,"alias","");
 
                 switch (node.getNodeName()) {
                     case "real":
@@ -678,11 +678,11 @@ public class SqlTable {
         tab.setAttribute("name", table);
         for( char c : format.toCharArray() ){
             switch(c){
-                case 't': XMLtools.createChildTextElement(xml, tab, "timestamp","columnname").setAttribute("alias", ""); break;
-                case 'r': XMLtools.createChildTextElement(xml, tab, "real","columnname").setAttribute("alias", ""); break;
-                case 'i': XMLtools.createChildTextElement(xml, tab, "integer","columnname").setAttribute("alias", ""); break;
-                case 'c': XMLtools.createChildTextElement(xml, tab, "text","columnname").setAttribute("alias", ""); break;
-                case 'm': XMLtools.createChildTextElement(xml, tab, "epochmillis","columnname").setAttribute("alias", ""); break;
+                case 't': XMLtools.createChildTextElement(xml, tab, "timestamp","columnname"); break;
+                case 'r': XMLtools.createChildTextElement(xml, tab, "real","columnname"); break;
+                case 'i': XMLtools.createChildTextElement(xml, tab, "integer","columnname"); break;
+                case 'c': XMLtools.createChildTextElement(xml, tab, "text","columnname"); break;
+                case 'm': XMLtools.createChildTextElement(xml, tab, "epochmillis","columnname"); break;
             }
         }
     }
@@ -693,7 +693,7 @@ public class SqlTable {
             if( !col.alias.isEmpty() && !col.alias.equalsIgnoreCase(name+"_"+col.title)) {
                 fab.attr("alias", col.alias);
             }else{
-                fab.attr("alias", "");
+                fab.removeAttr("alias");
             }
             if( !col.defString.isEmpty())
                 fab.attr("def",col.defString);
