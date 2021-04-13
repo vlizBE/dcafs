@@ -81,7 +81,7 @@ public class FilterForward extends AbstractForward {
         if( sources.size()==1 ){
             fab.attr("src",sources.get(0));
         }else{
-            fab.clearContent();
+            fab.content("");
             fab.removeAttr("src"); // making sure there aren't any leftovers
             fab.comment("Sources go here");
             sources.forEach( src -> fab.addChild("source", src) );
@@ -89,7 +89,7 @@ public class FilterForward extends AbstractForward {
         if( rules.size()<=1 && sources.size()==1){
             fab.attr("type",rulesString.get(0)[1]).content(rulesString.get(0)[2]);
         }else{
-            fab.clearContent();
+            fab.content("");
             fab.removeAttr("type");
             fab.comment("Rules go here, use ff:rules to know the types");
             rulesString.forEach( rule -> fab.addChild("rule",rule[2]).attr("type",rule[1]) );
