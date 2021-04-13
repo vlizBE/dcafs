@@ -124,7 +124,14 @@ public class Tools {
             return error;
         }
     }
-
+    public static boolean parseBool( String value, boolean error){
+        value=value.toLowerCase();
+        if( value.equals("yes")||value.equals("true")||value.equals("1"))
+            return true;
+        if( value.equals("no")||value.equals("false")||value.equals("0"))
+            return false;
+        return error;
+    }
     public static int toUnsigned(byte b) {
         int a = b;
         return a < 0 ? a + 256 : a;
