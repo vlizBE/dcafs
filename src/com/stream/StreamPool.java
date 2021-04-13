@@ -1239,15 +1239,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				filters.values().forEach( f -> join.add(f.toString()).add("") );
 				return join.toString();
 			case "rules":
-				join.add("start   -> Which text the message should start with" );
-				join.add("nostart -> Which text the message can't start with");
-				join.add("end     -> Which text the message should end with");
-				join.add("contain -> Which text the message should contain");
-				join.add("c_start -> Which character should be found on position c from the start (0=first)");
-				join.add("c_end   -> Which character should be found on position c from the end (0=last)");
-				join.add("minlength -> The minimum length the message should be");
-				join.add("maxlength -> The maximum length the message can be");
-				return join.toString();
+				return FilterForward.getRulesInfo(html?"<br>":"\r\n");
 			case "remove":
 				if( cmds.length < 2 )
 					return "Not enough arguments: fs:remove,id";
@@ -1258,9 +1250,12 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				if( cmds.length < 3)
 					return "Bad amount of arguments, should be filters:addrule,id,type:value";					
 				String step = cmds.length==4?cmds[2]+","+cmds[3]:cmds[2]; // step might contain a ,
-				Logger.info("Filter exists?"+getFilter(cmds[1]).isPresent());
-				switch( getFilter(cmds[1].toLowerCase()).map( f -> f.addRule(step) ).orElse(0) ){
-					case 1:  return "Rule added to "+cmds[1];
+				var fOpt = getFilter(cmds[1].toLowerCase());
+				Logger.info("Filter exists?"+fOpt.isPresent());
+				switch( fOpt.map( f -> f.addRule(step) ).orElse(0) ){
+					case 1:
+						fOpt.get().writeToXML(XMLfab.withRoot(xmlPath, "das"));
+						return "Rule added to "+cmds[1];
 					case 0:  return "Failed to add rule, no such filter called "+cmds[1];
 					case -1: return "Unknown type in "+step+", try fs:types for a list";
 					case -2: return "Bad rule syntax, should be type:value";
@@ -1290,7 +1285,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				}
 
 				addFilter(cmds[1].toLowerCase(),src.toString(),"")
-						.writeToXML( XMLfab.withRoot(xmlPath, "das"),false );
+						.writeToXML( XMLfab.withRoot(xmlPath, "das") );
 				return "Blank filter with id "+cmds[1]+ " created"+(cmds.length>2?", with source "+cmds[2]:"")+".";
 			case "addshort":
 				if( cmds.length<4)
@@ -1298,7 +1293,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				if( getFilter(cmds[1]).isPresent() )
 					return "Already filter with that id";
 				addFilter(cmds[1].toLowerCase(),cmds[2],cmds[3])
-						.writeToXML( XMLfab.withRoot(xmlPath, "das"),true );
+						.writeToXML( XMLfab.withRoot(xmlPath, "das") );
 				return "Filter with id "+cmds[1]+ " created, with source "+cmds[2]+" and rule "+cmds[3];
 			case "addtemp":
 				if( getFilter(cmds[1]).isPresent() ){
