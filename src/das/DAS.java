@@ -38,7 +38,7 @@ import java.util.concurrent.*;
 
 public class DAS implements DeadThreadListener {
 
-    private static final String version = "0.8.3_N3";
+    private static final String version = "0.8.3_N4";
 
     // Last date that changes were made
     String workPath = new File("").getAbsolutePath() + File.separator;
