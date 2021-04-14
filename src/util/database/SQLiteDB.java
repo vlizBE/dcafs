@@ -174,8 +174,11 @@ public class SQLiteDB extends SQLDB{
                 try {                                        
                     while (rs.next()) {                        
                         String tableName = rs.getString(1);
-                        if( tables.get(tableName)==null) //don't overwrite
-                            tables.put(tableName, new SqlTable(tableName));
+                        if( tables.get(tableName)==null) {//don't overwrite
+                            var t= new SqlTable(tableName);
+                            tables.put(tableName, t);
+                        }
+                        tables.get(tableName).toggleReadFromDB();;
                     }
                 } catch (SQLException e) {
                     Logger.error( getID() + " -> Error during table read: "+e.getErrorCode());
@@ -186,8 +189,8 @@ public class SQLiteDB extends SQLDB{
             Logger.error(e);
         }     
         for( SqlTable table : tables.values() ){
-            if( table.hasColumns() ){// Don't overwrite existing info
-                Logger.info( getID() + " -> The table "+table.getName()+" has already been setup, not adding the columns");
+            if( table.isReadFromDB() ){// Don't overwrite existing info
+                Logger.debug( getID() + " -> The table "+table.getName()+" has already been setup, not adding the columns");
                 continue;
             }
 
@@ -402,7 +405,7 @@ public class SQLiteDB extends SQLDB{
      * Alter the rollover timestamp to the next rollover moment
      */
     private void updateRolloverTimestamp(){
-        Logger.info(id+" -> Original date: "+ rolloverTimestamp.format(TimeTools.LONGDATE_FORMATTER));
+        Logger.debug(id+" -> Original date: "+ rolloverTimestamp.format(TimeTools.LONGDATE_FORMATTER));
         rolloverTimestamp = rolloverTimestamp.withSecond(0).withNano(0);
 
         if(rollUnit==RollUnit.MINUTE){
@@ -434,7 +437,7 @@ public class SQLiteDB extends SQLDB{
                 }
             }
         }
-        Logger.info(id+" -> Next rollover date: "+ rolloverTimestamp.format(TimeTools.LONGDATE_FORMATTER));
+        Logger.debug(id+" -> Next rollover date: "+ rolloverTimestamp.format(TimeTools.LONGDATE_FORMATTER));
     }
 
     /**
