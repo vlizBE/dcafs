@@ -435,7 +435,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 			}else{
 				xmlPath= Path.of( uri.getRawPath().substring(1).replace("%20", " ") );
 			}
-			Logger.info("Set XMLPath to "+this.xmlPath.toAbsolutePath().toString() );
+			Logger.debug("Set XMLPath to "+this.xmlPath.toAbsolutePath().toString() );
 		} catch ( URISyntaxException | InvalidPathException | NullPointerException e) {			
 			Logger.error(e);
 		}

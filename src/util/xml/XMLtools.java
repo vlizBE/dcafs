@@ -113,7 +113,7 @@ public class XMLtools {
 			Logger.error(e);
 			return false;
 		}
-		Logger.info("Written XML: "+xmlFile.toString());
+		Logger.debug("Written XML: "+xmlFile.toString());
 		return true;
 	}
 	/**
@@ -178,7 +178,7 @@ public class XMLtools {
 				return (Element) nNode;
 			}
 		}
-		Logger.warn("No such tag? " + tag);
+		Logger.debug("No such tag? " + tag);
 		return null;
 	}
 	/**

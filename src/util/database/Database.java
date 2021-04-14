@@ -66,10 +66,10 @@ public abstract class Database {
             String idle = XMLtools.getStringAttribute( set, "idletime", "5m");        // How many seconds before the connection is considered idle (and closed)
             idleTime = TimeTools.parsePeriodStringToSeconds(idle);
             maxQueries = XMLtools.getIntAttribute( set, "batchsize", 30);		// Minimum amount of queries before a flush unless checks till flush is reached
-            Logger.info( id+" -> Idle:"+idleTime+"s Flush:"+maxAge+"s maxQ:"+maxQueries);
+            Logger.debug( id+" -> Idle:"+idleTime+"s Flush:"+maxAge+"s maxQ:"+maxQueries);
             return true;
         }else{
-            Logger.info( id+" -> No changes requested to default flush/idle values ");
+            Logger.debug( id+" -> No changes requested to default flush/idle values ");
             return false;
         }
     }

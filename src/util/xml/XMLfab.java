@@ -144,9 +144,9 @@ public class XMLfab {
         Element ele = XMLtools.getFirstChildByTag(root, tag);
         if( ele == null ){
             root = (Element)root.appendChild( xmlDoc.createElement(tag) );    
-            Logger.info("Creating element with tag: "+tag);
+            Logger.debug("Creating element with tag: "+tag);
         }else{
-            Logger.info("Using found element with tag: "+tag);
+            Logger.debug("Using found element with tag: "+tag);
             root = ele;            
         }
         last = root;
