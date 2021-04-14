@@ -9,11 +9,19 @@ From 0.5.0 onwards, this should be better documented...
 
 #### N4 adds (get moved to list below on new nightly)
 
+#### Databases
 - When tables are read from xml, table name and columnname are trimmed
 - It's assumed that if there's a autofill timestamp column it's the first one
-- added gens:fromdb,dbid to generate all generics at once (if new)  
+- Tables are no longer written to the xml if present in db on first connect
+- Added command to write a table in memory to xml dbm:tablexml
+
+#### Other
+- Removed the sqlite from the taskmanager, wasn't used anyway
+- Removed the default sqlite from Issuecollector, need to actually assign one
+- added gens:fromdb,dbid to generate all generics at once (if new)
 - setRealtimevalue retains case
-* BugFixes
+
+#### BugFixes
   * tables read from a server weren't marked as such
   *
 
