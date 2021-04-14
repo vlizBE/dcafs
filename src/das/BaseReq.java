@@ -662,18 +662,18 @@ public class BaseReq {
 				StringJoiner b = new StringJoiner(html?"<br>":"\r\n");
 				b.setEmptyValue("No options yet.");
 				b.add("");
-				for( String rt : rtvals.getRealtimePairs() )
+				for( String rt : rtvals.getRealtimeValuePairs() )
 					b.add(rt);
 
 				return "RTval options:"+b.toString();
 			}
 			if( request[1].endsWith("*")){
 				request[1] = StringUtils.removeEnd(request[1],"*");
-				rtvals.getRealtimeParameters().stream().filter(x -> x.startsWith(request[1]))
+				rtvals.getRealtimeValueParameters().stream().filter(x -> x.startsWith(request[1]))
 						.forEach( param -> rtvals.addRequest(wr,"rtval:"+param));
 			}else if( request[1].startsWith("*")){
 				request[1] = request[1].substring(1);
-				rtvals.getRealtimeParameters().stream().filter(x -> x.startsWith(request[1]))
+				rtvals.getRealtimeValueParameters().stream().filter(x -> x.startsWith(request[1]))
 						.forEach( param -> rtvals.addRequest(wr,"rtval:"+param));
 			}else{
 				rtvals.addRequest(wr, "rtval:"+request[1]);
@@ -684,7 +684,39 @@ public class BaseReq {
 			return "Null pointer...";
 		}
 	}
+	public String doRTTEXT( String[] request, Writable wr, boolean html ){
+		if( request[1].equals("reqs") )
+			return rtvals.getRequestList("rttext:reqs");
 
+		if( request[1].equals("?") )
+			return "rttext:x -> Get the realtime text x";
+		try{
+			if( request[1].equals("") ){
+				StringJoiner b = new StringJoiner(html?"<br>":"\r\n");
+				b.setEmptyValue("No options yet.");
+				b.add("");
+				for( String rt : rtvals.getRealtimeTextPairs() )
+					b.add(rt);
+
+				return "RTtext options: "+b.toString();
+			}
+			if( request[1].endsWith("*")){
+				request[1] = StringUtils.removeEnd(request[1],"*");
+				rtvals.getRealtimeTextParameters().stream().filter(x -> x.startsWith(request[1]))
+						.forEach( param -> rtvals.addRequest(wr,"rttext:"+param));
+			}else if( request[1].startsWith("*")){
+				request[1] = request[1].substring(1);
+				rtvals.getRealtimeTextParameters().stream().filter(x -> x.startsWith(request[1]))
+						.forEach( param -> rtvals.addRequest(wr,"rttext:"+param));
+			}else{
+				rtvals.addRequest(wr, "rttext:"+request[1]);
+			}
+			return "Request added";
+		}catch(NullPointerException e){
+			Logger.error(e);
+			return "Null pointer...";
+		}
+	}
 	/**
 	 * Execute commands associated with the @see StreamPool
 	 * 
@@ -1437,7 +1469,8 @@ public class BaseReq {
 					.add("  gens:addblank,id,format -> Create a blank generic with the given id and format")
 					.add("      Options that are concatenated to form the format:")
 					.add("       r = a real number" )
-					.add("		 i = an integer number")
+					.add("       i = an integer number")
+					.add("       t = a piece of text")
 					.add("       m = macro, this value can be used as part as the rtval")
 					.add("       s = skip, this won't show up in the xml but will increase the index counter")
 					.add("       eg. 1234,temp,19.2,hum,55 ( with 1234 = serial number")

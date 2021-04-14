@@ -53,6 +53,7 @@ public class RealtimeValues implements CollectorFuture {
 	protected ConcurrentHashMap<String, Double> rtvals = new ConcurrentHashMap<>();
 	protected ConcurrentHashMap<String, String> rttext = new ConcurrentHashMap<>();
 	protected HashMap<String, List<Writable>> rtvalRequest = new HashMap<>();
+	protected HashMap<String, List<Writable>> rttextRequest = new HashMap<>();
 	protected HashMap<Writable, List<ScheduledFuture<?>>> calcRequest = new HashMap<>();
 
 	/* Databases */
@@ -370,15 +371,27 @@ public class RealtimeValues implements CollectorFuture {
 	 * 
 	 * @return Readable listing of the parameters
 	 */
-	public List<String> getRealtimePairs() {
+	public List<String> getRealtimeValuePairs() {
 		ArrayList<String> params = new ArrayList<>();
 		rtvals.forEach((param, value) -> params.add(param + " : " + value));
 		Collections.sort(params);
 		return params;
 	}
-	public List<String> getRealtimeParameters() {
+	public List<String> getRealtimeTextPairs() {
+		ArrayList<String> params = new ArrayList<>();
+		rttext.forEach((param, value) -> params.add(param + " : " + value));
+		Collections.sort(params);
+		return params;
+	}
+	public List<String> getRealtimeValueParameters() {
 		ArrayList<String> params = new ArrayList<>();
 		rtvals.forEach((param, value) -> params.add(param));
+		Collections.sort(params);
+		return params;
+	}
+	public List<String> getRealtimeTextParameters() {
+		ArrayList<String> params = new ArrayList<>();
+		rttext.forEach((param, value) -> params.add(param));
 		Collections.sort(params);
 		return params;
 	}
@@ -516,6 +529,7 @@ public class RealtimeValues implements CollectorFuture {
 	public void removeRequest(Writable writable ) {
 
 		rtvalRequest.forEach( (key,list) -> list.remove(writable));
+		rttextRequest.forEach( (key,list) -> list.remove(writable));
 		calcRequest.forEach( (key,futures) ->
 		{
 			if( key==writable){
@@ -532,6 +546,9 @@ public class RealtimeValues implements CollectorFuture {
 		switch (req[0]) {
 			case "rtval":
 				rtvalRequest.forEach((rq,list) -> join.add(rq +" -> "+list.size()+" requesters"));
+				break;
+			case "rttext":
+				rttextRequest.forEach((rq,list) -> join.add(rq +" -> "+list.size()+" requesters"));
 				break;
 			case "calc":
 				calcRequest.forEach((key,list)->join.add(key.getID()+" -> "+list.size()+" calc request(s)"));
@@ -561,7 +578,20 @@ public class RealtimeValues implements CollectorFuture {
 				}
 				calcRequest.get(writable).add(scheduler.scheduleWithFixedDelay(new CalcRequest(writable, req[1]), 0, 1,
 						TimeUnit.SECONDS));
-				break;	
+				break;
+			case "rttext":
+				var t = rttextRequest.get(req[1]);
+				if( t == null) {
+					rttextRequest.put(req[1], new ArrayList<>());
+					Logger.info("Created new request for: " + req[1]);
+				}else{
+					Logger.info("Appended existing request to: " + t + "," + req[1]);
+				}
+				if( !rttextRequest.get(req[1]).contains(writable)) {
+					rttextRequest.get(req[1]).add(writable);
+					return true;
+				}
+				break;
 			default:
 				Logger.warn("Requested unknown type: "+req[0]);
 				break;
