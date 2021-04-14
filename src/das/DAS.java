@@ -117,10 +117,10 @@ public class DAS implements DeadThreadListener {
                 }
             }
 
-            issues = new IssueCollector(workPath, false);
-            taskManagers.put("alarms",issues.alarms); // Make that manager available through general interface
+            issues = new IssueCollector();
 
-            dbManager.addSQLiteDB("das", issues.createSQLiteDB());
+            if( issues.hasAlarms())
+                taskManagers.put("alarms",issues.alarms); // Make that manager available through general interface
 
             rtvals = new RealtimeValues(issues);
             readDatabasesFromXML();
@@ -128,13 +128,9 @@ public class DAS implements DeadThreadListener {
             baseReq = new BaseReq(rtvals, issues);
             baseReq.setSQLitesManager(dbManager);
 
-            issues.setBaseReq(baseReq);
-
             /* TransServer */
             if (TcpServer.inXML(xml)) {
                 this.addTransServer();
-            } else {
-                Logger.info("No TransServer in the settings.xml");
             }
             /* Base Worker */
             addBaseWorker();
@@ -410,9 +406,8 @@ public class DAS implements DeadThreadListener {
      * @return The created TaskManager
      */
     public TaskManager addTaskManager(String id, Path path) {
+
         TaskManager tm = new TaskManager(id, rtvals, baseReq);
-        if (!dbManager.hasDB("das"))
-            dbManager.addSQLiteDB("das", tm.getSQLite());
         tm.setXMLPath(path);
 
         Logger.info("Reading scripts for " + id + " at " + path.toString());
@@ -549,11 +544,9 @@ public class DAS implements DeadThreadListener {
      * Adds the streampool
      */
     public void addStreamPool() {
-        Logger.info("Adding Streampool");
 
         streampool = new StreamPool(dQueue, issues, nettyGroup);
         baseReq.setStreamPool(streampool);
-        issues.setStreamPool(streampool);
 
         if (debug) {
             Logger.info("Connecting to streams once because in debug.");
@@ -674,7 +667,6 @@ public class DAS implements DeadThreadListener {
         emailWorker = new EmailWorker(xml, dQueue);
         emailWorker.setEventListener(this);
         baseReq.setEmailWorker(emailWorker);
-        issues.addEmailQueue(emailWorker.getQueue());
     }
 
     public BlockingQueue<EmailWork> getEmailQueue() {
@@ -732,7 +724,6 @@ public class DAS implements DeadThreadListener {
         Logger.info("Adding DigiWorker");
         this.digiWorker = new DigiWorker(xml);
         this.digiWorker.setEventListener(this);
-        issues.addSMSQueue(digiWorker.getQueue());
     }
 
     public BlockingQueue<String[]> getSMSQueue() {
@@ -859,19 +850,8 @@ public class DAS implements DeadThreadListener {
             return;
         }
         this.issues = alter;
-        this.issues.setWorkPath(this.workPath);
-
-        if (digiWorker != null) {
-            this.issues.addSMSQueue(digiWorker.getQueue());
-        }
-        if (emailWorker != null) {
-            this.issues.addEmailQueue(emailWorker.getQueue());
-        }
-        if (!useMainDB)
-            dbManager.addSQLiteDB("issues", issues.getSQLiteDB());
 
         if (streampool != null) {
-            this.issues.setStreamPool(streampool);
             streampool.setIssueCollector(issues);
         } else {
             Logger.error("No valid streampool");
@@ -905,7 +885,6 @@ public class DAS implements DeadThreadListener {
             baseReq.setStreamPool(streampool);
         for (TaskManager tm : taskManagers.values())
             tm.setBaseReq(baseReq);
-        issues.setBaseReq(baseReq);
     }
 
     /* ***************************************  T E L N E T S E R V E R ******************************************/
@@ -1056,10 +1035,6 @@ public class DAS implements DeadThreadListener {
      */
     public void startAll() {
 
-        Logger.info("Loading the alarms for the IssueCollector...");
-        issues.loadAlarms();
-
-        Logger.info("Doing the method mapping for the BaseReq implementation...");
         this.baseReq.getMethodMapping();
 
         if (this.dataWorker != null) {
@@ -1099,7 +1074,7 @@ public class DAS implements DeadThreadListener {
         for (TaskManager tm : this.taskManagers.values())
             tm.reloadTasks();
 
-        Logger.info("Finished");
+        Logger.debug("Finished");
     }
 
     public void haltWorkers() {
