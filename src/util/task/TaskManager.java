@@ -9,8 +9,6 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import util.database.SQLiteDB;
-import util.database.SQLiteDB.RollUnit;
 import util.task.Task.*;
 import util.tools.FileTools;
 import util.tools.TimeTools;
@@ -18,7 +16,6 @@ import util.tools.Tools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 
-import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -47,8 +44,6 @@ public class TaskManager implements CollectorFuture {
 	BaseReq baseReq; // Source to get the data from nexus
 	String id;
 
-	SQLiteDB sqlite;
-
 	static final String TINY_TAG = "TASK";
 
 	enum RUNTYPE {
@@ -67,21 +62,10 @@ public class TaskManager implements CollectorFuture {
 		this.baseReq =baseReq;
 		this.rtvals = rtvals;
 		this.id = id;
-		prepareSQLite();
 	}
 	public TaskManager(String id, Path xml ){
 		this(id,null,null);
 		this.xmlPath=xml;
-	}
-	private void prepareSQLite(){
-		sqlite = SQLiteDB.createDB( "das", Path.of( workPath,"db","DAS_") );
-		sqlite.setRollOver("yyMM", 1, RollUnit.MONTH);
-		sqlite.addTableIfNotExists("TasksetLog")
-				.addTimestamp("Timestamp")
-				.addText("Manager")
-				.addText("Taskset")
-				.addInteger("Done");
-		sqlite.createContent(false);
 	}
 	public void setId(String id) {
 		this.id = id;
@@ -113,12 +97,6 @@ public class TaskManager implements CollectorFuture {
 		this.smsQueue = smsQueue;
 	}
 
-	public SQLiteDB getSQLite(){
-		return sqlite;
-	}
-	public void setSQLite(SQLiteDB sqlite) {
-		this.sqlite=sqlite;
-	}
 	/**
 	 * Add the Streampool to the TaskManager if it needs to interact with
 	 * streams/channels
@@ -900,12 +878,7 @@ public class TaskManager implements CollectorFuture {
 		}
 		if( task.value.startsWith("taskset:") || task.value.startsWith("task:")) {
 			String shortName = task.value.split(":")[1];
-			if( sqlite != null ){
-				sqlite.doDirectInsert("TasksetLog", id, null, executed?1:0 );
-				//sqlite.addInsert( Insert.into("TasksetLog").addTimestamp().addText(title).addText(shortName).addNumber(executed?1:0).create());				
-			}else{
-				FileTools.appendToTxtFile(workPath+"logs"+File.separator+"tasks.csv", TimeTools.formatLongUTCNow()+";"+ TimeTools.formatLongNow()+";"+shortName+";"+executed+"\r\n");
-			}
+			Logger.tag(TINY_TAG).info( "["+ id +"] "+shortName+" -> "+executed+"\r\n");
 		}
 		
 		if( task.skipExecutions > 0)
