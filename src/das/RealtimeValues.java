@@ -1,18 +1,5 @@
 package das;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import com.mqtt.MqttWork;
 import com.mqtt.MqttWorker;
 import com.stream.Writable;
@@ -20,12 +7,20 @@ import com.stream.collector.CollectorFuture;
 import com.stream.collector.MathCollector;
 import com.telnet.TelnetCodes;
 import org.influxdb.dto.Point;
-import util.database.Influx;
-import util.gis.Waypoints;
-import util.database.Database;
-import util.database.Insert;
-
 import org.tinylog.Logger;
+import util.database.Database;
+import util.database.Influx;
+import util.database.Insert;
+import util.gis.Waypoints;
+
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * A storage class that holds: - The data processed by DataWorker.java - The

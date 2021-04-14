@@ -1,7 +1,6 @@
 package devices;
 
 import org.apache.commons.lang3.ArrayUtils;
-
 import util.math.MathUtils;
 
 public class DPS5020 {

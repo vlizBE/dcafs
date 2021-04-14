@@ -3,7 +3,7 @@
  */
 package com.email;
 
-import java.nio.file.Paths;
+import java.nio.file.Path;
 
 public class EmailWork {
 	String toRaw;				  	  // The destination without conversion between reference and email address
@@ -68,7 +68,7 @@ public class EmailWork {
 	 * @return The filename of the attachment
 	 */
 	public String getAttachmentName(){
-		return Paths.get(attachment).getFileName().toString();
+		return Path.of(attachment).getFileName().toString();
 	}
 	/**
 	 * Add one to the count if email send attempts

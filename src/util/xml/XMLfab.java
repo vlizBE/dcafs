@@ -1,15 +1,15 @@
 package util.xml;
 
+import org.tinylog.Logger;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
-
-import org.tinylog.Logger;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 
 public class XMLfab {
     Element root;           // The highest element to which parents are added

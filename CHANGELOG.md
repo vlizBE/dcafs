@@ -7,7 +7,17 @@ From 0.5.0 onwards, this should be better documented...
 
 ## Work in progress
 
-### 0.8.3
+#### N3 adds (get moved to list below on new nightly)
+- Added nmea:yes/no as a possible filterforward rule, checks if it has a proper *hh
+- Table no longer contains a default empty alias
+- gens:addblank was missing info on how to add text (t)  
+- added rttext:x equivalent of rtval:x  
+- Bugfix: ff:addrule wasn't working as it should nor was the xmlread/write on for start type
+- Bugfix: starting a task directly called the wrong method doTask instead of startTask
+ in that case the interval etc tasks aren't run properly
+- Bugfix: the gen:addblank format f made a text node instead of filler
+
+#### 0.8.3 
 - Updated dependencies
 - Added @rand6,@rand20 and @rand100 to task fill in
 - ss:addtcp and ss:addserial no longer require a label defined

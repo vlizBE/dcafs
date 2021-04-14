@@ -1,46 +1,43 @@
 package com.stream;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.file.InvalidPathException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
+import com.stream.collector.CollectorFuture;
+import com.stream.collector.ConfirmCollector;
+import com.stream.forward.FilterForward;
+import com.stream.forward.MathForward;
 import com.stream.forward.TextForward;
 import com.stream.serialport.ModbusStream;
 import com.stream.serialport.MultiStream;
 import com.stream.serialport.SerialStream;
-import com.stream.collector.ConfirmCollector;
-import com.stream.forward.FilterForward;
-import com.stream.forward.MathForward;
-import com.stream.collector.CollectorFuture;
 import com.stream.tcp.TcpStream;
 import com.stream.udp.UdpServer;
 import com.stream.udp.UdpStream;
-
 import com.telnet.TelnetCodes;
+import das.IssueCollector;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-
-import das.IssueCollector;
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import util.xml.XMLfab;
 import util.tools.TimeTools;
 import util.tools.Tools;
+import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The class holds all the information required about a datasource to acquire
@@ -68,7 +65,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 
 	LinkedHashMap<String,BaseStream> streams = new LinkedHashMap<>();
 
-	Path xmlPath = Paths.get("settings.xml"); // Path to the xml file
+	Path xmlPath = Path.of("settings.xml"); // Path to the xml file
 	Document xml;		   // The settings xml
 	boolean debug = false; // Whether or not in debug mode, gives more feedback
 
@@ -434,9 +431,9 @@ public class StreamPool implements StreamListener, CollectorFuture {
 			uri = new URI( xml.getDocumentURI() );
 			String os = System.getProperty("os.name").toLowerCase();
 			if( os.startsWith("linux")){		
-				xmlPath= Paths.get( uri.getRawPath().replace("%20", " ") );
+				xmlPath= Path.of( uri.getRawPath().replace("%20", " ") );
 			}else{
-				xmlPath= Paths.get( uri.getRawPath().substring(1).replace("%20", " ") );
+				xmlPath= Path.of( uri.getRawPath().substring(1).replace("%20", " ") );
 			}
 			Logger.info("Set XMLPath to "+this.xmlPath.toAbsolutePath().toString() );
 		} catch ( URISyntaxException | InvalidPathException | NullPointerException e) {			

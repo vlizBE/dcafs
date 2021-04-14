@@ -1,25 +1,19 @@
 package com.stream.tcp;
 
+import com.stream.StreamListener;
+import com.stream.Writable;
+import io.netty.channel.*;
+import io.netty.handler.codec.TooLongFrameException;
+import io.netty.handler.timeout.IdleState;
+import io.netty.handler.timeout.IdleStateEvent;
+import org.tinylog.Logger;
+import worker.Datagram;
+
 import java.net.InetSocketAddress;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
-
-import com.stream.StreamListener;
-import com.stream.Writable;
-
-import org.tinylog.Logger;
-
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.handler.codec.TooLongFrameException;
-import io.netty.handler.timeout.IdleState;
-import io.netty.handler.timeout.IdleStateEvent;
-import worker.Datagram;
 
 public class TcpHandler extends SimpleChannelInboundHandler<byte[]>{
 

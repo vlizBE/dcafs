@@ -1,18 +1,10 @@
 package com.stream.tcp;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
-
 import com.stream.BaseStream;
 import com.stream.Writable;
-
-import io.netty.buffer.Unpooled;
-import org.tinylog.Logger;
-import org.w3c.dom.Element;
-
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -25,11 +17,17 @@ import io.netty.handler.codec.bytes.ByteArrayDecoder;
 import io.netty.handler.codec.bytes.ByteArrayEncoder;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.concurrent.FutureListener;
+import org.tinylog.Logger;
+import org.w3c.dom.Element;
 import util.tools.TimeTools;
-import util.xml.XMLfab;
 import util.tools.Tools;
+import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
+
+import java.net.InetSocketAddress;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 public class TcpStream extends BaseStream implements Writable{
 

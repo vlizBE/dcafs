@@ -1,22 +1,20 @@
 package devices;
 
-import java.nio.file.Paths;
+import org.tinylog.Logger;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import util.database.SQLiteDB;
+import util.database.SQLiteDB.RollUnit;
+import util.gis.Positioning;
+import util.tools.TimeTools;
+import util.tools.Tools;
+import util.xml.XMLtools;
+
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-
-import util.database.SQLiteDB;
-import util.database.SQLiteDB.RollUnit;
-import util.gis.Positioning;
-import util.tools.Tools;
-import util.tools.TimeTools;
-import util.xml.XMLtools;
-
-import org.tinylog.Logger;
 
 public class GAPS {
 	
@@ -39,7 +37,7 @@ public class GAPS {
 		this.addTables();
 	}
 	public GAPS( Document xml ){
-		this( xml, new SQLiteDB("gaps",Paths.get("db","GAPS_"), "yyyy-MM-dd", 1, RollUnit.DAY) );
+		this( xml, new SQLiteDB("gaps", Path.of("db","GAPS_"), "yyyy-MM-dd", 1, RollUnit.DAY) );
 	}
 	public void setDebug(){
 		debug = true;

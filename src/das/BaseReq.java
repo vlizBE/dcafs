@@ -1,5 +1,30 @@
 package das;
 
+import com.email.EmailWorker;
+import com.fazecast.jSerialComm.SerialPort;
+import com.hardware.i2c.I2CWorker;
+import com.stream.StreamPool;
+import com.stream.Writable;
+import com.stream.forward.FilterForward;
+import com.stream.tcp.TcpServer;
+import com.telnet.TelnetCodes;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
+import org.tinylog.Logger;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import util.database.*;
+import util.gis.GisTools;
+import util.math.MathUtils;
+import util.task.TaskManager;
+import util.tools.FileTools;
+import util.tools.TimeTools;
+import util.tools.Tools;
+import util.xml.XMLfab;
+import util.xml.XMLtools;
+import worker.Datagram;
+import worker.Generic;
+
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -8,37 +33,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-
-import com.email.EmailWorker;
-import com.fazecast.jSerialComm.SerialPort;
-import com.hardware.i2c.I2CWorker;
-import com.stream.Writable;
-import com.stream.StreamPool;
-import com.stream.forward.FilterForward;
-import com.stream.tcp.TcpServer;
-
-import com.telnet.TelnetCodes;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.math.NumberUtils;
-import org.tinylog.Logger;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-
-import util.database.*;
-import util.xml.XMLfab;
-import util.gis.GisTools;
-import util.math.MathUtils;
-import util.task.TaskManager;
-import util.tools.FileTools;
-import util.tools.Tools;
-import util.xml.XMLtools;
-import worker.Datagram;
-import worker.Generic;
-import util.tools.TimeTools;
 
 /**
  * Handles a server-side channel.
@@ -429,14 +426,14 @@ public class BaseReq {
 				String yesterday = "raw"+File.separator+"zipped"+File.separator+TimeTools.formatNow( "yyyy-MM", -1)+File.separator+TimeTools.formatNow( "yyyy-MM-dd", -1)+"_RAW_x.log.zip";
 				int cnt=0;
 				String path = yesterday.replace("x", ""+cnt);
-				boolean ok = Files.exists( Paths.get(path) );
+				boolean ok = Files.exists( Path.of(path) );
 				
 				while(ok){					
-					String md5 = MathUtils.calculateMD5( Paths.get(path) );
+					String md5 = MathUtils.calculateMD5( Path.of(path) );
 					b.append(path).append("\t").append(md5).append("\r\n");
 					cnt++;
 					path = yesterday.replace("x", ""+cnt);
-					ok = Files.exists( Paths.get(path) );
+					ok = Files.exists( Path.of(path) );
 				}
 				return b.toString();
 			case "?":
@@ -472,9 +469,9 @@ public class BaseReq {
 				return join.toString();			
 			case "das":
 				Logger.info("Trying to update DAS...");
-				p = Paths.get("DAS.jar");
-				to = Paths.get("DAS_" + TimeTools.formatNow("yyMMdd_HHmm") + ".jar");
-				refr = Paths.get("attachments"+File.separator+"DAS.jar");
+				p = Path.of("DAS.jar");
+				to = Path.of("DAS_" + TimeTools.formatNow("yyMMdd_HHmm") + ".jar");
+				refr = Path.of("attachments"+File.separator+"DAS.jar");
 				try {
 					if( !Files.exists(p) ){
 						return "Didn't find an active DAS.jar?";
@@ -494,9 +491,9 @@ public class BaseReq {
 			case "script"://fe. update:script,tasks.xml
 				if( !spl[1].endsWith(".xml"))
 					spl[1] += ".xml";
-				p = Paths.get("scripts",spl[1]);
-				to = Paths.get("scripts",spl[1].replace(".xml", "")+"_" + TimeTools.formatUTCNow("yyMMdd_HHmm") + ".xml");
-				refr = Paths.get("attachments",spl[1]);
+				p = Path.of("scripts",spl[1]);
+				to = Path.of("scripts",spl[1].replace(".xml", "")+"_" + TimeTools.formatUTCNow("yyMMdd_HHmm") + ".xml");
+				refr = Path.of("attachments",spl[1]);
 				try {
 					if( Files.exists(p) && Files.exists(refr) ){
 						Files.copy(p, to );	// Make a backup if it doesn't exist yet
@@ -513,9 +510,9 @@ public class BaseReq {
 				}
 				break;
 			case "setup":
-				p = Paths.get("settings.xml");
-				to = Paths.get( "settings"+"_" + TimeTools.formatNow("yyMMdd_HHmm") + ".xml");
-				refr = Paths.get("attachments"+File.separator+"settings.xml");
+				p = Path.of("settings.xml");
+				to = Path.of( "settings"+"_" + TimeTools.formatNow("yyMMdd_HHmm") + ".xml");
+				refr = Path.of("attachments"+File.separator+"settings.xml");
 				try {
 					if( Files.exists(p) && Files.exists(refr) ){
 						Files.copy(p, to );	// Make a backup if it doesn't exist yet
@@ -562,7 +559,7 @@ public class BaseReq {
 				if( !spl[1].endsWith(".xml"))
 					spl[1] += ".xml";		
 
-				Path p = Paths.get("scripts",spl[1]);
+				Path p = Path.of("scripts",spl[1]);
 				if( Files.notExists(p) ){
 					return "No such file: "+p.toString();
 				}
@@ -571,7 +568,7 @@ public class BaseReq {
 				return "Tried sending "+spl[1]+" to "+spl[2];
 			case "setup":
 			case "settings":
-				Path set = Paths.get("settings.xml");
+				Path set = Path.of("settings.xml");
 				if( Files.notExists(set) ){
 					return "No such file: "+set.toString();
 				}
@@ -959,7 +956,7 @@ public class BaseReq {
 				emailWorker.sendEmail( "admin","Taskmanager.log","File attached (probably)", workPath+"logs"+File.separator+"taskmanager.log", false );
 				return "Trying to send taskmanager log";
 			case "getlastraw":
-				Path it = Paths.get("raw",TimeTools.formatUTCNow("yyyy-MM"));
+				Path it = Path.of("raw",TimeTools.formatUTCNow("yyyy-MM"));
 				try {
 					var last = Files.list(it).filter( f -> !Files.isDirectory(f)).max( Comparator.comparingLong( f -> f.toFile().lastModified()));
 					if( last.isPresent() ){
@@ -1077,7 +1074,7 @@ public class BaseReq {
 
 					// Add to the settings xml
 					try {
-						Files.createDirectories(Paths.get("scripts"));
+						Files.createDirectories(Path.of("scripts"));
 					} catch (IOException e) {
 						Logger.error(e);
 					}
@@ -1086,7 +1083,7 @@ public class BaseReq {
 					tmFab.build();
 
 					// Create an empty file
-					XMLfab.withRoot(Paths.get("scripts",cmd[1]+".xml"), "tasklist")
+					XMLfab.withRoot(Path.of("scripts",cmd[1]+".xml"), "tasklist")
 						.comment("Any id is case insensitive")
 						.comment("Reload the script using tm:reload,"+cmd[1])
 						.comment("If something is considered default, it can be omitted")
@@ -1110,7 +1107,7 @@ public class BaseReq {
 						.build();
 
 				// Add it to das		
-				das.addTaskManager(cmd[1], Paths.get("scripts",cmd[1]+".xml"));
+				das.addTaskManager(cmd[1], Path.of("scripts",cmd[1]+".xml"));
 				
 				return "Tasks script created, use tm:reload,"+cmd[1]+" to run it.";
 			case "reload":
@@ -1302,7 +1299,7 @@ public class BaseReq {
 						cmd[4] //script
 						)) {
 					// Check if the script already exists, if not build it
-					var p = Paths.get("devices",cmd[4]+".xml");
+					var p = Path.of("devices",cmd[4]+".xml");
 					if( !Files.exists(p)){
 						XMLfab.withRoot(p,"commandset").attr("script",cmd[4])
 								.addParent("command","An empty command to start with")
@@ -1465,7 +1462,7 @@ public class BaseReq {
 				join.add(TelnetCodes.TEXT_BLUE+"Notes"+TelnetCodes.TEXT_YELLOW)
 					.add("  - ...");
 				join.add("").add(TelnetCodes.TEXT_GREEN+"Create a Generic"+TelnetCodes.TEXT_YELLOW)
-					.add("  generics:fromtable,dbid,dbtable,gen id[,delimiter] -> Create a generic according to a table, delim is optional, def is ','")
+					.add("  gens:fromtable,dbid,dbtable,gen id[,delimiter] -> Create a generic according to a table, delim is optional, def is ','")
 					.add("  gens:addblank,id,format -> Create a blank generic with the given id and format")
 					.add("      Options that are concatenated to form the format:")
 					.add("       r = a real number" )
@@ -1478,8 +1475,8 @@ public class BaseReq {
 					.add("           -> msrsi -> macro,skip,real,skip,integer");
 				join.add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW);
 				join.add("  gens:? -> Show this info")
-					.add("  generics:reload -> Reloads all generics")
-					.add("  generics:list -> Lists all generics");
+					.add("  gens:reload -> Reloads all generics")
+					.add("  gens:list -> Lists all generics");
 
 				return join.toString();
 			case "reload": 
@@ -1535,13 +1532,13 @@ public class BaseReq {
 							process = pb.start();
 							process.waitFor();
 							// zip it?
-							if( Files.exists(Paths.get(cmds[2]))){
-								if(FileTools.zipFile(Paths.get(cmds[2]))==null) {
+							if( Files.exists(Path.of(cmds[2]))){
+								if(FileTools.zipFile(Path.of(cmds[2]))==null) {
 									Logger.error("Dump of "+cmds[1]+" created, but zip failed");
 									return "Dump created, failed zipping.";
 								}
 								// Delete the original file
-								Files.deleteIfExists(Paths.get(cmds[2]));
+								Files.deleteIfExists(Path.of(cmds[2]));
 							}else{
 								Logger.error("Dump of "+cmds[1]+" failed.");
 								return "No file created...";
@@ -1655,7 +1652,7 @@ public class BaseReq {
 			case "addsqlite":
 				if( !dbName.contains(File.separator))
 					dbName = "db"+File.separator+(dbName.isEmpty()?id:dbName)+".sqlite";
-				var sqlite = SQLiteDB.createDB(id,Paths.get(dbName));
+				var sqlite = SQLiteDB.createDB(id,Path.of(dbName));
 				if( sqlite.connect(false) ){
 					das.getDatabaseManager().addSQLiteDB(id,sqlite);
 					sqlite.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"das","settings","databases") );

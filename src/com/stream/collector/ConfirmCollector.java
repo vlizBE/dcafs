@@ -1,12 +1,11 @@
 package com.stream.collector;
 
+import com.stream.Writable;
+import org.tinylog.Logger;
+
 import java.util.ArrayList;
 import java.util.StringJoiner;
 import java.util.concurrent.ScheduledExecutorService;
-
-import com.stream.Writable;
-
-import org.tinylog.Logger;
 
 /**
  * The purpose of this class is to handle sending data to a stream and wait for a specific

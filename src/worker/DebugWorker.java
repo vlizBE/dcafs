@@ -1,5 +1,12 @@
 package worker;
 
+import org.tinylog.Logger;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import util.database.DatabaseManager;
+import util.tools.TimeTools;
+import util.xml.XMLtools;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -9,20 +16,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.concurrent.BlockingQueue;
-
-import org.tinylog.Logger;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-
-import util.database.DatabaseManager;
-import util.tools.TimeTools;
-import util.xml.XMLtools;
 
 /**
  * This is a worker that simulates receiving data from devices. In order to do
@@ -77,7 +75,7 @@ public class DebugWorker implements Runnable {
 
 		Element dbg = XMLtools.getFirstElementByTag(xml, "debug");
 
-		this.filesPath = Paths.get(XMLtools.getChildValueByTag(dbg, "inputfile", "")); // Raw files folder
+		this.filesPath = Path.of(XMLtools.getChildValueByTag(dbg, "inputfile", "")); // Raw files folder
 		this.logRaw = XMLtools.getChildValueByTag(dbg, "rawlog", "no").equals("yes"); // Send WS messages or not
 		Logger.info("Path to search:" + filesPath.toString());
 		this.sleep = XMLtools.getChildValueByTag(dbg, "realtime", "no").equals("yes"); // Work at realtime or as fast as
@@ -157,9 +155,9 @@ public class DebugWorker implements Runnable {
 
 		} else {
 			Logger.info("Single file debug");
-			if (Files.exists(Paths.get("raw" + File.separator + filesPath))) {
-				Logger.info( "Path: " + Paths.get("raw" + File.separator + filesPath).normalize());
-				logs.add(Paths.get("raw" + File.separator + filesPath).normalize());
+			if (Files.exists(Path.of("raw" + File.separator + filesPath))) {
+				Logger.info( "Path: " + Path.of("raw" + File.separator + filesPath).normalize());
+				logs.add(Path.of("raw" + File.separator + filesPath).normalize());
 			} else {
 				Logger.info("File doesn't exist: " + filesPath.toString());
 			}

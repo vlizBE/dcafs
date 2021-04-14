@@ -1,50 +1,40 @@
 package das;
 
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
 import com.email.EmailWork;
 import com.email.EmailWorker;
-
 import com.hardware.i2c.I2CWorker;
 import com.mqtt.MqttWorker;
 import com.sms.DigiWorker;
 import com.stream.StreamPool;
 import com.stream.Writable;
 import com.stream.collector.MathCollector;
+import com.stream.tcp.TcpServer;
 import com.telnet.TelnetCodes;
 import com.telnet.TelnetServer;
-import com.stream.tcp.TcpServer;
-
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import org.apache.commons.lang3.SystemUtils;
+import org.tinylog.Logger;
+import org.tinylog.provider.ProviderRegistry;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import util.DeadThreadListener;
 import util.database.*;
 import util.gis.Waypoints;
 import util.task.TaskManager;
-import util.xml.XMLtools;
 import util.tools.TimeTools;
 import util.tools.Tools;
-import util.DeadThreadListener;
 import util.xml.XMLfab;
+import util.xml.XMLtools;
 import worker.*;
 
-import org.apache.commons.lang3.SystemUtils;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-
-import org.tinylog.Logger;
-import org.tinylog.provider.ProviderRegistry;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.concurrent.*;
 
 public class DAS implements DeadThreadListener {
 
@@ -52,7 +42,7 @@ public class DAS implements DeadThreadListener {
 
     // Last date that changes were made
     String workPath = new File("").getAbsolutePath() + File.separator;
-    Path settingsFile = Paths.get("settings.xml");
+    Path settingsFile = Path.of("settings.xml");
     private Document xml;
 
     LocalDateTime bootup = LocalDateTime.now(); // Store timestamp at boot up to calculate uptime
@@ -441,10 +431,12 @@ public class DAS implements DeadThreadListener {
     public void loadTaskManagersFromXML(Document xml) {
         for(Element e: XMLtools.getAllElementsByTag(xml, "taskmanager") ){
             Logger.info("Found reference to TaskManager in xml.");
-            Path p = Paths.get(e.getTextContent());
+            Path p = Path.of(e.getTextContent());
+
             if (Files.exists(p)) {
-                this.addTaskManager(e.getAttribute("id"), Paths.get(e.getTextContent()));
+                this.addTaskManager(e.getAttribute("id"), p);
             } else {
+
                 Logger.error("No such task xml: " + p.toString());
             }
         }
@@ -543,7 +535,7 @@ public class DAS implements DeadThreadListener {
                 }
             }
 
-            this.addTaskManager(id.replace(".xml", ""), Paths.get("scripts", id));
+            this.addTaskManager(id.replace(".xml", ""), Path.of("scripts", id));
             return "No TaskManager associated with the script, creating one.";
         }
         TaskManager tm = taskManagers.get(id);

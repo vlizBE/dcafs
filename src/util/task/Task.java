@@ -1,7 +1,14 @@
 package util.task;
 
+import com.stream.Writable;
+import org.apache.commons.lang3.tuple.Pair;
+import org.tinylog.Logger;
+import org.w3c.dom.Element;
+import util.tools.TimeTools;
+import util.tools.Tools;
+import util.xml.XMLtools;
+
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -9,12 +16,6 @@ import java.util.ArrayList;
 import java.util.Random;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import com.stream.Writable;
-import org.apache.commons.lang3.tuple.Pair;
-import org.tinylog.Logger;
-import org.w3c.dom.Element;
-import util.tools.*;
-import util.xml.XMLtools;
 
 public class Task implements Comparable<Task>{
 
@@ -299,7 +300,7 @@ public class Task implements Comparable<Task>{
 			switch( o[0].toLowerCase() ){
 				case "file":
 					out = OUTPUT.FILE;
-					this.outputFile = Paths.get(o[1]);	
+					this.outputFile = Path.of(o[1]);	
 					break;
 				case "email": out = OUTPUT.EMAIL; break;
 				case "sms": out = OUTPUT.SMS; break;

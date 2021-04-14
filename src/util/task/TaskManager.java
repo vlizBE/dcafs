@@ -1,48 +1,34 @@
 package util.task;
 
+import com.email.EmailWork;
+import com.stream.StreamPool;
+import com.stream.collector.CollectorFuture;
+import das.BaseReq;
+import das.RealtimeValues;
+import org.apache.commons.lang3.math.NumberUtils;
+import org.tinylog.Logger;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import util.database.SQLiteDB;
+import util.database.SQLiteDB.RollUnit;
+import util.task.Task.*;
+import util.tools.FileTools;
+import util.tools.TimeTools;
+import util.tools.Tools;
+import util.xml.XMLfab;
+import util.xml.XMLtools;
+
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.StringJoiner;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-import com.email.EmailWork;
-import com.stream.StreamPool;
-import com.stream.collector.CollectorFuture;
-
-import org.apache.commons.lang3.math.NumberUtils;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-
-import das.BaseReq;
-import das.RealtimeValues;
-import util.tools.*;
-import util.database.SQLiteDB;
-import util.database.SQLiteDB.RollUnit;
-import util.task.Task.LINKTYPE;
-import util.task.Task.MATHTYPE;
-import util.task.Task.OUTPUT;
-import util.task.Task.REQTYPE;
-import util.task.Task.TRIGGERTYPE;
-import util.task.Task.VERIFYTYPE;
-import util.task.Task.Verify;
-
-import org.tinylog.Logger;
-import util.xml.XMLfab;
-import util.xml.XMLtools;
 
 public class TaskManager implements CollectorFuture {
 
@@ -88,7 +74,7 @@ public class TaskManager implements CollectorFuture {
 		this.xmlPath=xml;
 	}
 	private void prepareSQLite(){
-		sqlite = SQLiteDB.createDB( "das", Paths.get( workPath,"db","DAS_") );
+		sqlite = SQLiteDB.createDB( "das", Path.of( workPath,"db","DAS_") );
 		sqlite.setRollOver("yyMM", 1, RollUnit.MONTH);
 		sqlite.addTableIfNotExists("TasksetLog")
 				.addTimestamp("Timestamp")

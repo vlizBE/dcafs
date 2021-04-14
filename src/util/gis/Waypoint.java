@@ -1,18 +1,17 @@
 package util.gis;
 
+import org.tinylog.Logger;
+import util.math.MathUtils;
+import util.tools.FileTools;
+import util.tools.TimeTools;
+import util.tools.Tools;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
-
-import org.tinylog.Logger;
-
-import util.math.MathUtils;
-import util.tools.FileTools;
-import util.tools.TimeTools;
-import util.tools.Tools;
 
 public class Waypoint implements Comparable<Waypoint>{
 	

@@ -1,11 +1,9 @@
 package com.stream.tcp;
 
+import com.stream.StreamListener;
+import com.stream.Writable;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -13,25 +11,18 @@ import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.bytes.ByteArrayDecoder;
 import io.netty.handler.codec.bytes.ByteArrayEncoder;
+import org.tinylog.Logger;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import util.tools.Tools;
+import util.xml.XMLfab;
+import util.xml.XMLtools;
+import worker.Datagram;
 
 import java.nio.file.Path;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-
-import util.xml.XMLfab;
-import util.tools.*;
-
-import util.xml.XMLtools;
-import worker.Datagram;
-
-import com.stream.StreamListener;
-import com.stream.Writable;
-
-import org.tinylog.Logger;
 
 public class TcpServer implements StreamListener {
 

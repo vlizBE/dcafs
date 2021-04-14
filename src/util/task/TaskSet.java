@@ -1,12 +1,11 @@
 package util.task;
 
+import org.tinylog.Logger;
+import util.task.TaskManager.RUNTYPE;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
-import org.tinylog.Logger;
-
-import util.task.TaskManager.RUNTYPE;
 
 public class TaskSet {
 		

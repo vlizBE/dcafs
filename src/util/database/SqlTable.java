@@ -1,26 +1,17 @@
 package util.database;
 
-import java.sql.PreparedStatement;
-import java.sql.Statement;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.StringJoiner;
-import java.util.concurrent.ConcurrentMap;
-
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-
-import util.xml.XMLfab;
 import util.tools.TimeTools;
+import util.xml.XMLfab;
 import util.xml.XMLtools;
 
-import javax.swing.text.html.Option;
+import java.sql.PreparedStatement;
+import java.sql.Statement;
+import java.time.Instant;
+import java.util.*;
+import java.util.concurrent.ConcurrentMap;
 
 public class SqlTable {
 

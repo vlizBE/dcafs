@@ -1,9 +1,14 @@
 package util.database;
 
+import org.tinylog.Logger;
+import org.w3c.dom.Element;
+import util.tools.TimeTools;
+import util.xml.XMLfab;
+import util.xml.XMLtools;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -15,13 +20,6 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-
-import org.tinylog.Logger;
-import org.w3c.dom.Element;
-
-import util.tools.TimeTools;
-import util.xml.XMLfab;
-import util.xml.XMLtools;
 
 public class SQLiteDB extends SQLDB{
 
@@ -252,7 +250,7 @@ public class SQLiteDB extends SQLDB{
             return null;
 
         String id = XMLtools.getStringAttribute(dbe,"id","");
-        SQLiteDB db = SQLiteDB.createDB(id,Paths.get(dbe.getAttribute("path")));
+        SQLiteDB db = SQLiteDB.createDB(id,Path.of(dbe.getAttribute("path")));
         
         /* RollOver */
         Element roll = XMLtools.getFirstChildByTag(dbe, "rollover");

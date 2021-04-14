@@ -1,14 +1,14 @@
 package util.database;
 
-import java.util.*;
-import java.util.concurrent.*;
-
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
-
 import util.tools.TimeTools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentMap;
 
 public abstract class Database {
 

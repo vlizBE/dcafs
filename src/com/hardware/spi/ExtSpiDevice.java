@@ -1,17 +1,15 @@
 package com.hardware.spi;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-
 import com.diozero.api.SpiClockMode;
 import com.diozero.api.SpiDevice;
-
 import org.apache.commons.lang3.tuple.Pair;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
-
 import util.tools.Tools;
 import util.xml.XMLtools;
+
+import java.util.ArrayList;
+import java.util.Arrays;
 
 public class ExtSpiDevice extends SpiDevice{
 

@@ -1,5 +1,14 @@
 package worker;
 
+import com.stream.Writable;
+import das.BaseReq;
+import das.RealtimeValues;
+import org.tinylog.Logger;
+import util.DeadThreadListener;
+import util.math.MathUtils;
+import util.tools.TimeTools;
+import util.tools.Tools;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.time.Instant;
@@ -9,17 +18,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import com.stream.Writable;
-
-import das.BaseReq;
-import das.RealtimeValues;
-import util.math.MathUtils;
-import util.tools.Tools;
-import util.DeadThreadListener;
-import util.tools.TimeTools;
-
-import org.tinylog.Logger;
 /**
  * This class retrieves @see worker.Datagram s from a @see BlockingQueue. 
  * Next the content of @see Datagram is investigated and processed. 

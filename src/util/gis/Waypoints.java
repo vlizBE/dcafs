@@ -1,19 +1,17 @@
 package util.gis;
 
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.StringJoiner;
-
+import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-
 import util.gis.Waypoint.Travel;
 import util.tools.Tools;
 import util.xml.XMLtools;
 
-import org.tinylog.Logger;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.StringJoiner;
 
 public class Waypoints {
 
@@ -159,7 +157,7 @@ public class Waypoints {
         String file = xml.getDocumentURI();
 		file=file.replace("file:/", "");
 		file=file.replace("%20", " ");
-        return XMLtools.writeXML(Paths.get(file) , xml);//overwrite the file
+        return XMLtools.writeXML(Path.of(file) , xml);//overwrite the file
         
     }
     /************************************************************************************/

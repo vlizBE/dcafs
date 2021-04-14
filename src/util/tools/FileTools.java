@@ -1,25 +1,14 @@
 package util.tools;
 
-import java.io.BufferedWriter;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import org.tinylog.Logger;
+
+import java.io.*;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
+import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,8 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-
-import org.tinylog.Logger;
 
 public class FileTools {
 
@@ -43,7 +30,7 @@ public class FileTools {
      * @return True if all was successful
      */
     public static synchronized boolean appendToTxtFile( String file, String text ) {
-    	return appendToTxtFile( Paths.get(file),text);
+    	return appendToTxtFile( Path.of(file),text);
     }
     /**
      * Method that opens a file (or creates it and needed directories) and appends the data to it
@@ -74,7 +61,7 @@ public class FileTools {
      */
     public static String readTxtFileToString(String path) {        
         try {
-            return Files.readString(Paths.get(path));        
+            return Files.readString(Path.of(path));        
         } catch (IOException e) {
             Logger.error(e);
             return null;
@@ -87,7 +74,7 @@ public class FileTools {
      * @return Whether or not the process succeeded
      */
     public static boolean readTxtFile( ArrayList<String> content, String path) {
-        return readTxtFile(content, Paths.get(path));
+        return readTxtFile(content, Path.of(path));
     }   
 /**
      * Reads a file and puts the contents in an ArrayList, 1 line is one item
@@ -117,7 +104,7 @@ public class FileTools {
         if( start<0 || amount<0 )
             return read;
              
-        try( var lines = Files.lines(Paths.get(path) )) {    
+        try( var lines = Files.lines(Path.of(path) )) {    
             lines.skip(start-1)
                  .limit(start+amount-1)
                  .forEach( read::add );
@@ -198,8 +185,8 @@ public class FileTools {
             zos.closeEntry();
             Logger.info("Created ZIP: "+filePath.getFileName()+".zip");
             if(filePath.getParent()!=null)
-                return Paths.get( filePath.getParent().toString(),filePath.getFileName()+".zip").toAbsolutePath();
-            return Paths.get( filePath.getFileName()+".zip").toAbsolutePath();
+                return Path.of( filePath.getParent().toString(),filePath.getFileName()+".zip").toAbsolutePath();
+            return Path.of( filePath.getFileName()+".zip").toAbsolutePath();
         } catch (FileNotFoundException ex) {
             Logger.error("The file %s does not exist", filePath);
             return null;
@@ -221,7 +208,7 @@ public class FileTools {
      */
     private static FileSystem createZipFileSystem(String zipFilename, boolean create) throws IOException {
         // convert the filename to a URI
-        final Path path = Paths.get(zipFilename);
+        final Path path = Path.of(zipFilename);
         final URI uri = URI.create("jar:file:" + path.toUri().getPath().replace(" ","%20"));
 
         final Map<String, String> env = new HashMap<>();
@@ -240,7 +227,7 @@ public class FileTools {
      */
     public static void unzipFile(String zipFilename, String destDirname)  throws IOException{
     
-        final Path destDir = Paths.get(destDirname);
+        final Path destDir = Path.of(destDirname);
         //if the destination doesn't exist, create it
         if(Files.notExists(destDir)){
            Files.createDirectories(destDir);
@@ -253,7 +240,7 @@ public class FileTools {
             Files.walkFileTree(root, new SimpleFileVisitor<>() {
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                    final Path destFile = Paths.get(destDir.toString(),
+                    final Path destFile = Path.of(destDir.toString(),
                             file.toString());
                     Files.copy(file, destFile, StandardCopyOption.REPLACE_EXISTING);
                     return FileVisitResult.CONTINUE;
@@ -261,7 +248,7 @@ public class FileTools {
 
                 @Override
                 public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                    final Path dirToCreate = Paths.get(destDir.toString(), dir.toString());
+                    final Path dirToCreate = Path.of(destDir.toString(), dir.toString());
                     if (Files.notExists(dirToCreate)) {
                         Files.createDirectory(dirToCreate);
                     }

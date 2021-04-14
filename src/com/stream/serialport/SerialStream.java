@@ -1,20 +1,19 @@
 package com.stream.serialport;
 
+import com.fazecast.jSerialComm.*;
+import com.stream.BaseStream;
+import com.stream.Writable;
+import org.tinylog.Logger;
+import org.w3c.dom.Element;
+import util.tools.Tools;
+import util.xml.XMLfab;
+import util.xml.XMLtools;
+import worker.Datagram;
+
 import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
-
-import com.fazecast.jSerialComm.*;
-import com.stream.Writable;
-import com.stream.BaseStream;
-
-import util.xml.XMLfab;
-import util.tools.Tools;
-import util.xml.XMLtools;
-import worker.Datagram;
-import org.tinylog.Logger;
-import org.w3c.dom.Element;
 
 /**
  * Variant of the StreamHandler class that is

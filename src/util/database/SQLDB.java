@@ -1,5 +1,11 @@
 package util.database;
 
+import org.tinylog.Logger;
+import org.w3c.dom.Element;
+import util.tools.TimeTools;
+import util.xml.XMLfab;
+import util.xml.XMLtools;
+
 import java.sql.*;
 import java.time.Instant;
 import java.util.*;
@@ -8,13 +14,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
-
-import org.tinylog.Logger;
-import org.w3c.dom.Element;
-
-import util.tools.TimeTools;
-import util.xml.XMLfab;
-import util.xml.XMLtools;
 
 public class SQLDB extends Database{
 

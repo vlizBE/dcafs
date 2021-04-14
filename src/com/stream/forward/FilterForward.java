@@ -1,20 +1,19 @@
 package com.stream.forward;
 
+import org.apache.commons.lang3.StringUtils;
+import org.tinylog.Logger;
+import org.w3c.dom.Element;
+import util.math.MathUtils;
+import util.tools.Tools;
+import util.xml.XMLfab;
+import util.xml.XMLtools;
+import worker.Datagram;
+
 import java.util.ArrayList;
 import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-
-import org.apache.commons.lang3.StringUtils;
-import org.tinylog.Logger;
-import org.w3c.dom.Element;
-
-import util.math.MathUtils;
-import util.xml.XMLfab;
-import util.tools.Tools;
-import util.xml.XMLtools;
-import worker.Datagram;
 
 public class FilterForward extends AbstractForward {
 

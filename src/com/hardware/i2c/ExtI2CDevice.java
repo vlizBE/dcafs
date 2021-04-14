@@ -1,13 +1,12 @@
 package com.hardware.i2c;
 
+import com.diozero.api.I2CDevice;
+import com.stream.Writable;
+import org.tinylog.Logger;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
-
-import com.diozero.api.I2CDevice;
-import com.stream.Writable;
-
-import org.tinylog.Logger;
 
 /**
  * Extension for the I2CDevice class that adds das relevant functionality

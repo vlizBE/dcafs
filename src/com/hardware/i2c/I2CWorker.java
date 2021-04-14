@@ -1,35 +1,32 @@
 package com.hardware.i2c;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import com.diozero.api.DeviceAlreadyOpenedException;
 import com.diozero.api.DeviceBusyException;
 import com.diozero.api.I2CDevice;
 import com.diozero.api.RuntimeIOException;
 import com.hardware.i2c.I2CCommand.CommandStep;
 import com.stream.Writable;
-
 import com.telnet.TelnetCodes;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-
 import util.math.MathUtils;
 import util.tools.Tools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class I2CWorker implements Runnable {
 
@@ -214,7 +211,7 @@ public class I2CWorker implements Runnable {
     }
     public String reloadCommands( ){
         List<Path> xmls;
-        try (Stream<Path> files = Files.list(Paths.get("devices"))){
+        try (Stream<Path> files = Files.list(Path.of("devices"))){
             xmls = files.filter(p -> p.toString().endsWith(".xml")).collect(Collectors.toList());
         }catch (IOException e) {            
             Logger.error("Something went wrong trying to read the commandset files");

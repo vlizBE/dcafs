@@ -1,15 +1,14 @@
 package util.gis;
 
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import util.tools.Tools;
+import util.xml.XMLtools;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-
-import util.tools.Tools;
-import util.xml.XMLtools;
 
 public class GisTools {
 

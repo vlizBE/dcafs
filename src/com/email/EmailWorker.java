@@ -1,56 +1,28 @@
 package com.email;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.Instant;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.StringJoiner;
-import java.util.concurrent.*;
-
-import javax.activation.CommandMap;
-import javax.activation.DataHandler;
-import javax.activation.DataSource;
-import javax.activation.FileDataSource;
-import javax.activation.MailcapCommandMap;
-import javax.mail.BodyPart;
-import javax.mail.Flags;
-import javax.mail.Folder;
-import javax.mail.Message;
-import javax.mail.MessagingException;
-import javax.mail.Multipart;
-import javax.mail.Part;
-import javax.mail.PasswordAuthentication;
-import javax.mail.Session;
-import javax.mail.Store;
-import javax.mail.Transport;
-import javax.mail.internet.AddressException;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeBodyPart;
-import javax.mail.internet.MimeMessage;
-import javax.mail.internet.MimeMultipart;
-import javax.mail.search.FlagTerm;
-
 import com.stream.Writable;
 import com.stream.collector.BufferCollector;
 import com.stream.collector.CollectorFuture;
-
+import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-
 import util.DeadThreadListener;
-import util.xml.XMLfab;
 import util.tools.FileTools;
-import util.xml.XMLtools;
 import util.tools.TimeTools;
-
-import org.tinylog.Logger;
-
+import util.xml.XMLfab;
+import util.xml.XMLtools;
 import worker.Datagram;
+
+import javax.activation.*;
+import javax.mail.*;
+import javax.mail.internet.*;
+import javax.mail.search.FlagTerm;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.*;
+import java.util.concurrent.*;
 
 public class EmailWorker implements Runnable, CollectorFuture {
 
@@ -534,7 +506,7 @@ public class EmailWorker implements Runnable, CollectorFuture {
 			            	}														
 
 							try{
-								Path path = Paths.get(attach);
+								Path path = Path.of(attach);
 								if( Files.notExists( path ) ){ // If the attachment doesn't exist
 									email.attachment="";
 									message.setContent(email.content, "text/html"); 
@@ -543,7 +515,7 @@ public class EmailWorker implements Runnable, CollectorFuture {
 									FileTools.zipFile( path ); // zip it
 									attach += ".zip"; // rename attachment
 									Logger.info( "File zipped because of size larger than "+doZipFromSizeMB+"MB. Zipped size:"+Files.size(path)/megaByte+"MB");
-									path = Paths.get( attach );// Changed the file to archive, zo replace file
+									path = Path.of( attach );// Changed the file to archive, zo replace file
 									if( Files.size(path)  > maxSizeMB * megaByte ) { // If the zip file it to large to send, maybe figure out way to split?
 										email.attachment="";
 										message.setContent(email.content, "text/html");
@@ -582,7 +554,7 @@ public class EmailWorker implements Runnable, CollectorFuture {
 				            messageBodyPart = new MimeBodyPart();
 				            DataSource source = new FileDataSource(attach);
 				            messageBodyPart.setDataHandler( new DataHandler(source) );
-				            messageBodyPart.setFileName( Paths.get(attach).getFileName().toString() );
+				            messageBodyPart.setFileName( Path.of(attach).getFileName().toString() );
 				            multipart.addBodyPart(messageBodyPart);
 				            
 				            message.setContent(multipart );
@@ -595,7 +567,7 @@ public class EmailWorker implements Runnable, CollectorFuture {
 			         
 			            if( attach.endsWith(".zip")) { // If a zip was made, remove it afterwards
 			            	try {
-								Files.deleteIfExists(Paths.get(attach));
+								Files.deleteIfExists(Path.of(attach));
 							} catch (IOException e) {
 								Logger.error(e);
 							}
@@ -603,7 +575,7 @@ public class EmailWorker implements Runnable, CollectorFuture {
 			            
 		            	if( email.deleteOnSend() ){ 
 		            		try {
-								Files.deleteIfExists(Paths.get(email.attachment));
+								Files.deleteIfExists(Path.of(email.attachment));
 							} catch (IOException e) {
 								Logger.error(e);
 							}
@@ -819,7 +791,7 @@ public class EmailWorker implements Runnable, CollectorFuture {
 
 										if ( part != null && Part.ATTACHMENT.equalsIgnoreCase( part.getDisposition() )) {
 											Logger.info("Attachment found:"+part.getFileName());
-											Path p = Paths.get("attachments",part.getFileName());
+											Path p = Path.of("attachments",part.getFileName());
 											Files.createDirectories(p.getParent());
 
 											part.saveFile(p.toFile());

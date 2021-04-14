@@ -15,8 +15,6 @@
  */
 package com.telnet;
 
-import java.util.concurrent.BlockingQueue;
-
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
@@ -26,10 +24,10 @@ import io.netty.handler.codec.bytes.ByteArrayDecoder;
 import io.netty.handler.codec.bytes.ByteArrayEncoder;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.timeout.ReadTimeoutHandler;
-
+import org.tinylog.Logger;
 import worker.Datagram;
 
-import org.tinylog.Logger;
+import java.util.concurrent.BlockingQueue;
 /**
  * Creates a newly configured {@link ChannelPipeline} for a new channel.
  */

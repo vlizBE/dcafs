@@ -1,11 +1,10 @@
 package util.xml;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
+import org.apache.commons.lang3.SystemUtils;
+import org.tinylog.Logger;
+import org.w3c.dom.*;
+import org.xml.sax.SAXException;
+import util.tools.Tools;
 
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
@@ -21,17 +20,13 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-
-import org.w3c.dom.DOMException;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
-import org.apache.commons.lang3.SystemUtils;
-
-import org.tinylog.Logger;
-import util.tools.Tools;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 public class XMLtools {
 
@@ -135,7 +130,7 @@ public class XMLtools {
 			file=file.replace("file:/", "");
 		}
 		file=file.replace("%20", " ");
-		return XMLtools.writeXML( Paths.get(file) , xmlDoc );//overwrite the file
+		return XMLtools.writeXML( Path.of(file) , xmlDoc );//overwrite the file
 	}
 	/**
 	 * Reload the given xmlDoc based on the internal URI
@@ -154,7 +149,7 @@ public class XMLtools {
 			file=file.replace("file:/", "");
 		}
 		file=file.replace("%20", " ");
-		return XMLtools.readXML(Paths.get(file));		
+		return XMLtools.readXML(Path.of(file));		
 	}
 	/* *********************************  S E A R C H I N G *******************************************************/
 	/**

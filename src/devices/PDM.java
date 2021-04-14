@@ -1,23 +1,20 @@
 package devices;
 
-import java.nio.file.Paths;
-import java.time.LocalDateTime;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
 import com.stream.Writable;
 import com.stream.collector.ConfirmCollector;
-
+import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-
 import util.database.SQLiteDB;
 import util.database.SQLiteDB.RollUnit;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLtools;
-import org.tinylog.Logger;
+
+import java.time.LocalDateTime;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class PDM {
 
@@ -44,7 +41,7 @@ public class PDM {
     ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     
     public PDM( Writable pdm ){        
-        this(pdm,new SQLiteDB( "pdm",Paths.get("db","PDM_"),"yyyy-MM-dd",1,RollUnit.DAY));
+        this(pdm,new SQLiteDB( "pdm",Path.of("db","PDM_"),"yyyy-MM-dd",1,RollUnit.DAY));
     }
     public PDM( Writable pdm, SQLiteDB db ){        
         this.pdmLink = pdm;  

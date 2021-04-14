@@ -1,22 +1,15 @@
 package util.tools;
 
+import org.tinylog.Logger;
+
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.util.Enumeration;
 import java.util.StringJoiner;
 import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
-
-import org.tinylog.Logger;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 
 /**
  * A collection of various often used small methods that do a variety of usefull

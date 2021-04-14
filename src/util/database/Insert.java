@@ -1,9 +1,9 @@
 package util.database;
 
+import util.tools.TimeTools;
+
 import java.time.Instant;
 import java.util.StringJoiner;
-
-import util.tools.TimeTools;
 
 public class Insert {
     

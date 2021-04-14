@@ -1,10 +1,10 @@
 package com.stream.collector;
 
+import org.tinylog.Logger;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
-
-import org.tinylog.Logger;
 
 /**
  * The purpose of this class is to provide an endpoint to collect the data from a stream.

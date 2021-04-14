@@ -1,9 +1,9 @@
 package util.math;
 
+import util.tools.Tools;
+
 import java.math.BigDecimal;
 import java.util.TimeZone;
-
-import util.tools.Tools;
 
 public class Calculations {
 

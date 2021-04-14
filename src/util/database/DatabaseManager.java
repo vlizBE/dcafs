@@ -1,22 +1,16 @@
 package util.database;
 
-import java.sql.BatchUpdateException;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.ExecutorService;
+import org.tinylog.Logger;
+import org.w3c.dom.Document;
+import util.xml.XMLfab;
+import util.xml.XMLtools;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.StringJoiner;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-import org.tinylog.Logger;
-import org.w3c.dom.Document;
-
-import util.xml.XMLfab;
-import util.database.SQLiteDB.RollUnit;
-import util.xml.XMLtools;
 
 public class DatabaseManager{
     

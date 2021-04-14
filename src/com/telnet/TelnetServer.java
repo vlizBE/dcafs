@@ -1,19 +1,19 @@
 package com.telnet;
 
-import java.util.concurrent.BlockingQueue;
-
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import util.xml.XMLfab;
-import util.xml.XMLtools;
-import worker.Datagram;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import util.xml.XMLfab;
+import util.xml.XMLtools;
+import worker.Datagram;
+
+import java.util.concurrent.BlockingQueue;
 
 /**
  * Simplistic telnet server.

@@ -1,16 +1,14 @@
 package com.stream.serialport;
 
-import java.time.Instant;
-import java.util.concurrent.BlockingQueue;
-
 import org.apache.commons.lang3.ArrayUtils;
-
+import org.tinylog.Logger;
+import org.w3c.dom.Element;
 import util.math.MathUtils;
 import util.tools.Tools;
 import worker.Datagram;
 
-import org.tinylog.Logger;
-import org.w3c.dom.Element;
+import java.time.Instant;
+import java.util.concurrent.BlockingQueue;
 
 public class ModbusStream extends SerialStream{
 

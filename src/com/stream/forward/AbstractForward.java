@@ -1,16 +1,15 @@
 package com.stream.forward;
 
+import com.stream.Writable;
+import org.tinylog.Logger;
+import org.w3c.dom.Element;
+import util.xml.XMLfab;
+import worker.Datagram;
+
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
-
-import com.stream.Writable;
-import org.tinylog.Logger;
-import org.w3c.dom.Element;
-
-import util.xml.XMLfab;
-import worker.Datagram;
 
 /**
  * Abstract class to create a 'Forward'.

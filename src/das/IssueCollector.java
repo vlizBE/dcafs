@@ -1,28 +1,26 @@
 package das;
 
+import com.email.EmailWork;
+import com.stream.StreamPool;
+import org.tinylog.Logger;
+import util.database.SQLiteDB;
+import util.task.TaskManager;
+import util.tools.TimeTools;
+
 import java.io.File;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.StringJoiner;
 import java.util.Map.Entry;
+import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-import com.email.EmailWork;
-import com.stream.StreamPool;
-
-import org.tinylog.Logger;
-
-import util.tools.TimeTools;
-import util.database.SQLiteDB;
-import util.task.TaskManager;
 
 public class IssueCollector {
 
@@ -45,7 +43,7 @@ public class IssueCollector {
     
     public enum ALARM_TYPE {SMS,EMAIL}
 
-    TaskManager alarms = new TaskManager("alarms",Paths.get("scripts" , "alarms.xml"));    
+    TaskManager alarms = new TaskManager("alarms", Path.of("scripts" , "alarms.xml"));
     boolean alarmsLoaded = false;
 
     public IssueCollector( boolean loadAlarms ){       
@@ -64,7 +62,7 @@ public class IssueCollector {
         if( parent.isBlank() )
             return;
         alarms.setWorkPath( parent );
-        alarms.setXMLPath(  Paths.get( parent+"scripts" + File.separator + "alarms.xml") );   
+        alarms.setXMLPath(  Path.of( parent+"scripts" + File.separator + "alarms.xml") );   
     }
     public void setBaseReq( BaseReq source ){
         alarms.setBaseReq(source);

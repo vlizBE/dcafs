@@ -1,13 +1,12 @@
 package util.gis;
 
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-
+import org.tinylog.Logger;
 import util.math.MathUtils;
 import util.tools.Tools;
 
-import org.tinylog.Logger;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Positioning {
 

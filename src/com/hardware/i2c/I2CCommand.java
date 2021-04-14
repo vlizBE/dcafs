@@ -1,10 +1,10 @@
 package com.hardware.i2c;
 
+import util.tools.Tools;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
-
-import util.tools.Tools;
 
 /**
  * Storage class for a command.
