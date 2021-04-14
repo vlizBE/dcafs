@@ -51,12 +51,12 @@ public class SqlTable {
         return t;
     }
     public static Optional<SqlTable> readFromXml(Element tbl) {
-        String tableName = tbl.getAttribute("name");
+        String tableName = tbl.getAttribute("name").trim();
         SqlTable table = SqlTable.withName(tableName);
         boolean ok = true;
         for (Element node : XMLtools.getChildElements(tbl)) {
             if (node != null) {
-                String val = node.getTextContent();
+                String val = node.getTextContent().trim();
                 if (val.equals(".")) {
                     Logger.error("Column still without a name! " + tableName);
                     ok = false;
