@@ -574,7 +574,7 @@ public class SqlTable {
             Object val = null;
             try{
                 if( col.type==COLUMN_TYPE.TIMESTAMP ){
-                    record[index]=TimeTools.formatLongUTCNow();
+                    record[index] = index==0?TimeTools.formatLongUTCNow():rttext.get(ref);
                     continue;
                 }else if( col.type == COLUMN_TYPE.EPOCH){
                     record[index]=Instant.now().toEpochMilli();
@@ -596,7 +596,6 @@ public class SqlTable {
             }catch( NullPointerException e ){
                 Logger.error("Null pointer when looking for "+ref + " type:"+col.type);
             }
-
 
             if( val == null ){
                 if( col.hasDefault ){
@@ -727,6 +726,10 @@ public class SqlTable {
                 case INTEGER: fab.addChild("integer",macro?col.alias:col.title).attr("index",index++);break;
                 case REAL:    fab.addChild("real",macro?col.alias:col.title).attr("index",index++);break;
                 case TEXT:    fab.addChild("text",macro?col.alias:col.title).attr("index",index++);break;
+                case TIMESTAMP:
+                    if( index !=0)
+                        fab.addChild("timestamp",macro?col.alias:col.title).attr("index",index++);
+                    break;
                 default:
                     break;
             }
