@@ -8,6 +8,7 @@ import util.task.TaskManager;
 import util.tools.TimeTools;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -33,8 +34,7 @@ public class IssueCollector {
     /* Notify */
 	BlockingQueue<EmailWork> emailQueue;
 	BlockingQueue<String[]> smsQueue;
-    
-    SQLiteDB sqlite;
+
     BlockingQueue<String> sqlQueue;
 
 	static String longDate = "yyyy-MM-dd HH:mm:ss.SSS";
@@ -43,68 +43,16 @@ public class IssueCollector {
     
     public enum ALARM_TYPE {SMS,EMAIL}
 
-    TaskManager alarms = new TaskManager("alarms", Path.of("scripts" , "alarms.xml"));
-    boolean alarmsLoaded = false;
+    TaskManager alarms;
 
-    public IssueCollector( boolean loadAlarms ){       
-        this("",loadAlarms);
-    }    
-    public IssueCollector( String basePath, boolean loadAlarms ){
+    public boolean hasAlarms(){
+        return alarms!=null;
+    }
+    public void setAlarmsTaskManager( TaskManager tm){
+        alarms=tm;
         alarms.disableStartOnLoad(); // Don't start the tasks without an actual alarm
-        if( !basePath.isEmpty())
-            this.setWorkPath(basePath);
-
-        if( loadAlarms )
-            alarms.reloadTasks();
     }
 
-    public void setWorkPath( String parent ){
-        if( parent.isBlank() )
-            return;
-        alarms.setWorkPath( parent );
-        alarms.setXMLPath(  Path.of( parent+"scripts" + File.separator + "alarms.xml") );   
-    }
-    public void setBaseReq( BaseReq source ){
-        alarms.setBaseReq(source);
-    }
-    public void loadAlarms(){
-        alarms.reloadTasks();
-    }
-    
-    public void addEmailQueue( BlockingQueue<EmailWork> emailQueue ){
-        alarms.setEmailQueue(emailQueue);
-    }
-    public void addSMSQueue( BlockingQueue<String[]> smsQueue ){
-        alarms.setSMSQueue(smsQueue);
-    }
-    public void setStreamPool( StreamPool streampool ){
-        alarms.setStreamPool(streampool);
-    }
-    public TaskManager getAlarmsManager(){
-        return alarms;
-    }
-    public SQLiteDB getAlarmsDB(){
-        return alarms.getSQLite();
-    }
-    /** ******************************** S Q L ***************************************************************** */
-    public SQLiteDB createSQLiteDB(){
-
-        if( getAlarmsDB().getTable("ErrorLog").isEmpty() )
-            getAlarmsDB().addTableIfNotExists("ErrorLog").addText("ID").addText("Start").addText("End");
-        if( getAlarmsDB().getTable("ErrorList").isEmpty() )
-            getAlarmsDB().addTableIfNotExists("ErrorList").addText("ID").isPrimaryKey().addText("Message");
-
-        getAlarmsDB().createContent(false);
-        return getAlarmsDB();
-    }
-    public SQLiteDB getSQLiteDB(){
-        if( sqlite==null )
-            createSQLiteDB();
-        return sqlite;
-    }
-    public void disableSQLite(){
-        sqlite = null;
-    }
     /* **********************************************************************************************************/
     /**
      * Check whether the issue is currently active or nor
@@ -244,12 +192,6 @@ public class IssueCollector {
 
         Logger.warn( "Error Resolved: "+id+" -> "+message+"\t [cnt:"+cnt+"]");
 
-        if( sqlite != null ){
-            sqlite.doDirectInsert("ErrorLog", id,longFormat.format(issue.getStart()),longFormat.format(issue.getEnd()));            
-            if( cnt > 1 ){
-                sqlite.doDirectInsert("ErrorList", id, issue.getMessage());
-            }
-        }
         return true;
     }
     /* Needs to be overridden to be instance specifick */
@@ -259,13 +201,8 @@ public class IssueCollector {
     public void clearOldOccurences( long seconds ){
         Logger.info("Not override'n clearOldOccurences");
     }
-    /***********************************************************************************************************/
-    /*************************************** S Q L I T E *******************************************************/
-    /***********************************************************************************************************/
 
-    /***********************************************************************************************************/
-    /************************************** R E Q D A T A ******************************************************/
-    /***********************************************************************************************************/
+    /* ************************************* R E Q D A T A ******************************************************/
     /**
      * Pose a request to the collector 
      * 
