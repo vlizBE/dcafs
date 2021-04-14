@@ -1463,6 +1463,7 @@ public class BaseReq {
 					.add("  - ...");
 				join.add("").add(TelnetCodes.TEXT_GREEN+"Create a Generic"+TelnetCodes.TEXT_YELLOW)
 					.add("  gens:fromtable,dbid,dbtable,gen id[,delimiter] -> Create a generic according to a table, delim is optional, def is ','")
+					.add("  gens:fromdb,dbid,delimiter -> Create a generic with chosen delimiter for each table if there's no such generic yet")
 					.add("  gens:addblank,id,format -> Create a blank generic with the given id and format")
 					.add("      Options that are concatenated to form the format:")
 					.add("       r = a real number" )
@@ -1492,6 +1493,18 @@ public class BaseReq {
 					return "Generic written";
 				}else{
 					return "Failed to write to xml";
+				}
+			case "fromdb":
+				if(cmd.length < 3 )
+					return "To few parameters, gens:fromdb,dbid,delimiter";
+				var dbs = das.getDatabase(cmd[1]);
+				if( dbs ==null)
+					return "No such database found "+cmd[1];
+
+				if( dbs.buildGenericFromTables(XMLfab.withRoot(das.getXMLdoc(), "das","generics"),false,cmd.length>2?cmd[2]:",") >0 ){
+					return "Generic(s) written";
+				}else{
+					return "No generics written";
 				}
 			case "addblank":
 				if( cmd.length < 3 )

@@ -88,6 +88,7 @@ public abstract class Database {
     public abstract String createContent(boolean keepConnection);
     public abstract String getTableInfo(String eol);
     public abstract boolean buildGenericFromTable( XMLfab fab, String tableName, String genID, String delim);
+    public abstract int buildGenericFromTables( XMLfab fab,boolean overwrite, String delim);
 
     public abstract int doDirectInsert(String table, Object... values);
 

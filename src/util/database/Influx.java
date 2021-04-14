@@ -212,6 +212,11 @@ public class Influx extends Database{
         return false;
     }
 
+    @Override
+    public int buildGenericFromTables(XMLfab fab, boolean overwrite, String delim) {
+        return 0;
+    }
+
     private class Measurement{
         String name;
         ArrayList<Field> fields =new ArrayList<>();

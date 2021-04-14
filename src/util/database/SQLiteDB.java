@@ -159,6 +159,7 @@ public class SQLiteDB extends SQLDB{
     /**
      * Check which tables currently exist in the database and add them to this object
      */
+    @Override
     public boolean getCurrentTables( boolean clear){
 
         if( !connect(false))

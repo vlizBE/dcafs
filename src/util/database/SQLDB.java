@@ -210,6 +210,28 @@ public class SQLDB extends Database{
         }
         return false;
     }
+
+    @Override
+    public int buildGenericFromTables(XMLfab fab, boolean overwrite, String delim) {
+        var ele = fab.getChildren("generic");
+        int cnt=0;
+        for( var table : tables.values()){
+            boolean found=false;
+            for( var gen : ele ){
+                if( gen.hasAttribute("dbid") && gen.getAttribute("dbid").equals(id) ){
+                    if( gen.hasAttribute("table") && gen.getAttribute("table").equals(table.name) ){
+                        found=true;
+                    }
+                }
+            }
+            if( !found ){
+                table.buildGeneric(fab,id,table.name,delim);
+                fab.up();
+                cnt++;
+            }
+        }
+        return cnt;
+    }
     /**
      * Check which tables are currently in the database and add them to this object
      * @param clear Clear the stored databases first
@@ -236,6 +258,7 @@ public class SQLDB extends Database{
                                 table = new SqlTable(tableName); // so create it
                                 tables.put(tableName, table); //and add it to the hashmap
                             }
+                            table.toggleServer();
                             table.toggleReadFromDB(); // either way, it's already present in the database
                             Logger.info("Found: "+tableName+" -> "+tableType);
                         }                        
@@ -272,8 +295,10 @@ public class SQLDB extends Database{
                                 table.addText(name);
                             }else if( colType.equalsIgnoreCase("double") || colType.equalsIgnoreCase("decimal") || colType.equalsIgnoreCase("float")|| colType.equalsIgnoreCase("real")){
                                 table.addReal(name);
-                            }else if( colType.contains("int") || colType.contains("bit") || colType.contains("boolean")){
+                            }else if( colType.contains("int") || colType.contains("bit") || colType.contains("boolean")) {
                                 table.addInteger(name);
+                            }else if(colType.equalsIgnoreCase("timestamp") ){
+                                table.addTimestamp(name);
                             }else{
                                 Logger.info(id+" -> Found unknown column type in "+table.getName()+": "+name+" -> "+colType);
                             }                            
