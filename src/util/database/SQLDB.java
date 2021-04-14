@@ -260,7 +260,7 @@ public class SQLDB extends Database{
                             }
                             table.toggleServer();
                             table.toggleReadFromDB(); // either way, it's already present in the database
-                            Logger.info("Found: "+tableName+" -> "+tableType);
+                            Logger.debug("Found: "+tableName+" -> "+tableType);
                         }                        
                     }
                 } catch (SQLException e) {
@@ -275,7 +275,7 @@ public class SQLDB extends Database{
         // Get the column information....
         for( SqlTable table :tables.values() ){
             if( table.hasColumns() ){// Don't overwrite existing info
-                Logger.info(id+" -> The table "+table.getName()+" has already been setup, not adding the columns");
+                Logger.debug(id+" -> The table "+table.getName()+" has already been setup, not adding the columns");
                 continue;
             }
             try( Statement stmt = con.createStatement() ){
@@ -332,7 +332,7 @@ public class SQLDB extends Database{
         if( isValid(5) ){
                 // Create the tables
                 tables.values().forEach(x -> {
-                    Logger.info(id+" -> Checking to create "+x.getName()+" read from?"+x.isReadFromDB());
+                    Logger.debug(id+" -> Checking to create "+x.getName()+" read from?"+x.isReadFromDB());
                     if( !x.isReadFromDB() ){
                         try( Statement stmt = con.createStatement() ){
                             stmt.execute( x.create() );
@@ -345,7 +345,7 @@ public class SQLDB extends Database{
                             x.setLastError(e.getMessage()+" when creating "+x.name+" for "+id);
                         }
                     }else{
-                        Logger.info(id+" -> Not creating "+x.getName()+" because already read from database...");
+                        Logger.debug(id+" -> Not creating "+x.getName()+" because already read from database...");
                     }
                 });
                 // Create the views
@@ -536,12 +536,21 @@ public class SQLDB extends Database{
                 .alterChild("setup").attr("idletime",idle).attr("flushtime",flush).attr("batchsize",maxQueries)
                 .alterChild("address",address);
 
-
-        // Tables?
-        for( var table : tables.values() ){
-            table.writeToXml(fab,false);
-        }
         fab.build();
+    }
+    public int writeTableToXml( XMLfab fab, String tablename ){
+        int cnt=0;
+        for( var table : tables.values() ){
+            if( table.name.equalsIgnoreCase(tablename) || tablename.equals("*")) {
+                if( !fab.hasChild("table","name",table.name)){
+                    table.writeToXml( fab, false);
+                    cnt++;
+                }
+            }
+        }
+        if( cnt!=0)
+            fab.build();
+        return cnt;
     }
     /**
      *

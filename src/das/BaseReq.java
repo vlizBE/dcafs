@@ -1604,6 +1604,7 @@ public class BaseReq {
 						.add("  dbm:addinfluxdb,id,db name,ip:port,user:pass -> Adds a Influxdb server on given ip:port with user:pass")
 					.add("").add(TelnetCodes.TEXT_GREEN+"Working with tables"+TelnetCodes.TEXT_YELLOW)
 						.add("  dbm:addtable,id,tablename,format (format eg. tirc timestamp(auto filled system time),int,real,char/text)")
+						.add("  dbm:tablexml,id,tablename -> Write the table in memory to the xml file, use * as tablename for all")
 						.add("  dbm:tables,id -> Get info about the given id (tables etc)")
 						.add("  dbm:fetch,id -> Read the tables from the database directly, not overwriting stored ones.")
 					.add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW)
@@ -1673,6 +1674,26 @@ public class BaseReq {
 				}else{
 					return "Failed to create SQLite";
 				}
+			case "tablexml":
+				if( cmds.length<3)
+					return "Not enough arguments: dbm:tablexml,dbid,tablename";
+				var dbOpt = das.getDatabase(cmds[1]);
+				if( dbOpt == null)
+					return "No such database "+cmds[1];
+				// Select the correct server node
+				var fab = XMLfab.withRoot(das.getXMLdoc(),"das","settings","databases");
+				if( fab.selectParent("server","id",cmds[1]).isEmpty())
+					fab.selectParent("sqlite","id",cmds[1]);
+				if( fab.hasChild("table","name",cmds[2]))
+					return "Already present in xml, not adding";
+
+				if( dbOpt instanceof SQLDB){
+					int rs= ((SQLDB) dbOpt).writeTableToXml(fab,cmds[2]);
+					return rs==0?"None added":"Added "+rs+" tables to xml";
+				}else{
+					return "Not a valid database target (it's an influx?)";
+				}
+
 			case "addrollover":
 				if( cmds.length < 5 )
 					return "Not enough arguments, needs to be dbm:addrollover,dbId,count,unit,pattern";
