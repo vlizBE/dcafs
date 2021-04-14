@@ -350,7 +350,7 @@ public class Generic {
                     generic.addInteger(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), ent.getTextContent(),
                             XMLtools.getStringAttribute(ent, "mqtt", ""));
                     break;
-                case "text":
+                case "text": case "timestamp":
                     generic.addText(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), ent.getTextContent());
                     break;
                 case "filler":
