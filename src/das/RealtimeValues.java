@@ -317,18 +317,17 @@ public class RealtimeValues implements CollectorFuture {
 	/**
 	 * Sets the value of a parameter (in a hashmap)
 	 * 
-	 * @param parameter The parameter name
+	 * @param param The parameter name
 	 * @param value     The value of the parameter
 	 */
-	public void setRealtimeValue(String parameter, double value) {
-		final String param=parameter.toLowerCase();
-
+	public void setRealtimeValue(String param, double value) {
+		//final String param=parameter.toLowerCase();
 
 		if( param.isEmpty()) {
 			Logger.error("Empty param given");
 			return;
 		}
-		Logger.debug("Setting "+parameter+" to "+value);
+		Logger.debug("Setting "+param+" to "+value);
 
 		rtvals.put(param, value);
 		if( !rtvalRequest.isEmpty()){
