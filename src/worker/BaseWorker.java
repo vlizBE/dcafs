@@ -18,6 +18,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+
 /**
  * This class retrieves @see worker.Datagram s from a @see BlockingQueue. 
  * Next the content of @see Datagram is investigated and processed. 
@@ -200,7 +202,7 @@ public class BaseWorker implements Runnable {
 	 */
 	@Override
 	public void run() {
-		Logger.info("Data Worker Started");
+		Logger.info("BaseWorker Started");
 		goOn = true;
 		long time=0;
 		waitingSince=0;
@@ -459,20 +461,22 @@ public class BaseWorker implements Runnable {
 				Logger.warn( genericIDs + " -> Ignoring blank line" );
 				return;
 			}
+
 			for( String genericID : genericIDs.split(",") ){
-				Generic gen = generics.get(genericID);
-				if( gen != null && mes.startsWith(gen.startsWith)){
-					Object[] data = gen.apply( mes, rtvals);
-					if( !gen.getTable().isEmpty() && gen.writesInDB() ){
-						if( gen.isTableMatch()){
-							rtvals.provideRecord( gen.getDBID(), gen.getTable(), data );
-						}else{
-							rtvals.writeRecord( gen.getDBID(), gen.getTable(), gen.macro );
-						}						
-					}
-				}else{
-					if( gen==null){
-						Logger.error("Generic requested but unknown id: "+genericID+ " -> Message: "+d.getMessage());
+				for( var gen : getGenerics(genericID)) {
+					if ( mes.startsWith(gen.startsWith) ) {
+						Object[] data = gen.apply(mes, rtvals);
+						if (!gen.getTable().isEmpty() && gen.writesInDB()) {
+							if (gen.isTableMatch()) {
+								rtvals.provideRecord(gen.getDBID(), gen.getTable(), data);
+							} else {
+								rtvals.writeRecord(gen.getDBID(), gen.getTable(), gen.macro);
+							}
+						}
+					} else {
+						if (gen == null) {
+							Logger.error("Generic requested but unknown id: " + genericID + " -> Message: " + d.getMessage());
+						}
 					}
 				}
 			}
@@ -480,6 +484,9 @@ public class BaseWorker implements Runnable {
 		}catch( ArrayIndexOutOfBoundsException l ){
 			Logger.error("Generic requested ("+d.label+") but no valid id given.");
 		}
+	}
+	private List<Generic> getGenerics( String id ){
+		return generics.entrySet().stream().filter( set -> set.getKey().equalsIgnoreCase(id) || set.getKey().matches(id)).map( x -> x.getValue()).collect(Collectors.toList());
 	}
 	public void doWRITABLE( Datagram d ){
 
