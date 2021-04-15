@@ -375,7 +375,7 @@ public class Generic {
             switch(f){
                 case 'm': fab.addChild("macro").attr(INDEX_STRING,cnt); break;
                 case 'r': fab.addChild("real",".").attr(INDEX_STRING,cnt); break;
-                case 'i': fab.addChild("integer",".").attr(INDEX_STRING,cnt); break;
+                case 'i': fab.addChild("int",".").attr(INDEX_STRING,cnt); break;
                 case 't': fab.addChild("text",".").attr(INDEX_STRING,cnt); break;
                 case 'f': fab.addChild("filler",".").attr(INDEX_STRING,cnt); break; //filler
                 case 'g': fab.addChild("tag",".").attr(INDEX_STRING,cnt); break;
