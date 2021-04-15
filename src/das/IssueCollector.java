@@ -138,8 +138,10 @@ public class IssueCollector {
         }else{
             issues.put(id, new Issue(message, dt));
         }
-        alarms.startTask(id+":start");
-        alarms.startTaskset(id+":start");
+        if( alarms!=null) {
+            alarms.startTask(id + ":start");
+            alarms.startTaskset(id + ":start");
+        }
         
         int cnt = getIssueTriggerCount(id);
         if( cnt < 10 || (cnt<100&&cnt%10==0) || (cnt > 100 && cnt%50==0) ){ // Show warning every time if first 10 times, every 10 times till 100 every 50 times afterwards
@@ -177,11 +179,11 @@ public class IssueCollector {
             message = issue.message;
 
         issue.deActivate(dt);
-
-        alarms.startTask( id + ":stop" );
-        alarms.startTaskset( id + ":stop" );
-        alarms.cancelTask( id + ":start" );
-        
+        if( alarms!=null) {
+            alarms.startTask(id + ":stop");
+            alarms.startTaskset(id + ":stop");
+            alarms.cancelTask(id + ":start");
+        }
         Resolved r = resolveds.get(id);
 
         if( r != null ){
@@ -217,7 +219,9 @@ public class IssueCollector {
             case "list":case "listing":case "print":case "":
                 return getIssueOverview(html);
             case "alarms": return this.getAlarmOverview(html?"<br>":"\r\n");
-            case "reloadalarms":                 
+            case "reloadalarms":
+                if( alarms ==null)
+                    return "No alarms yet";
                 return this.alarms.reloadTasks()?"Reload succesful":"Failed to reload, check for syntax issues";
             case "report": return this.getDailyReport( html, false );
             case "resolved": return this.getIssues(false, html);
@@ -254,6 +258,8 @@ public class IssueCollector {
 		return (html?"<br>":"\r\n") + (b.length()==0?"No issues":b.toString());
     }
     private String getAlarmOverview(String newline){
+        if( alarms == null)
+            return "No alarms yet";
         return alarms.getTaskSetListing(newline)+newline+alarms.getTaskListing(newline)+newline+alarms.getStatesListing();
     }
     private String getIssues( boolean active, boolean html ){
