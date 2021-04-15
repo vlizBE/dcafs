@@ -177,7 +177,7 @@ public class MathForward extends AbstractForward {
         XMLtools.getChildElements(math, "op")
                     .forEach( ops -> addOperation(
                             Integer.parseInt(ops.getAttribute("index")),
-                            fromStrintoOPTYPE(XMLtools.getStringAttribute(ops,"type","complex")),
+                            fromStringToOPTYPE(XMLtools.getStringAttribute(ops,"type","complex")),
                             XMLtools.getStringAttribute(ops,"cmd",""),
                             ops.getTextContent()) );
 
@@ -190,7 +190,7 @@ public class MathForward extends AbstractForward {
     /**
      * Add an operation to this object
      * @param index Which index in the received array should the result be written to
-     * @param type Which kind of operation, for now only
+     * @param type Which kind of operation, for now only COMPLEX, SCALE
      * @param cmd Send the result as part of a command
      * @param expression The expression to use
      * @return True if it was added
@@ -200,23 +200,26 @@ public class MathForward extends AbstractForward {
             Logger.error(id + " -> Bad index given " + index);
             return false;
         }
-        if( !cmd.isEmpty() ) {// this counts as a target, so enable it
-            valid = true;
-            this.doCmd =true;
-        }
+
+        Operation op;
         switch( type ){
               case COMPLEX:
-                  var op = new Operation( expression, new MathFab(expression.replace(",",".")),index);
-                  op.cmd = cmd;
-                  ops.add(op);
-                break;
+                    op = new Operation( expression, new MathFab(expression.replace(",",".")),index);
+                    break;
             case SCALE: // round a number half up with the amount of digits specified
-                var op2 = new Operation( expression, MathUtils.decodeBigDecimals("i"+index,expression,"scale",0),index);
-                op2.cmd = cmd;
-                ops.add(op2);
-                break;
-            default: break;
+                    op = new Operation( expression, MathUtils.decodeBigDecimals("i"+index,expression,"scale",0),index);
+                    break;
+            default:
+                return false;
         }
+        op.cmd = cmd;
+        ops.add(op);
+
+        if( !cmd.isEmpty() ) {// this counts as a target, so enable it
+            valid = true;
+            doCmd = true;
+        }
+
         rulesString.add(new String[]{type.toString().toLowerCase(),""+index,expression});
         if( xmlOk )
             writeToXML( XMLfab.withRoot(xml, "das"));
@@ -227,7 +230,7 @@ public class MathForward extends AbstractForward {
      * Convert a string version of OP_TYPE to the enum
      * @return The resulting enum value
      */
-    private OP_TYPE fromStrintoOPTYPE(String optype) {
+    private OP_TYPE fromStringToOPTYPE(String optype) {
         switch(optype){
             case "complex": return OP_TYPE.COMPLEX;
             case "scale": return OP_TYPE.SCALE;
