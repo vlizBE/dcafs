@@ -216,7 +216,12 @@ public class Influx extends Database{
     public int buildGenericFromTables(XMLfab fab, boolean overwrite, String delim) {
         return 0;
     }
-
+    public String toString(){
+        return "INFluxDB@"+ getTitle()+" -> Buffer managed by lib";
+    }
+    public String getTitle(){
+        return irl.substring(irl.lastIndexOf("=")+1);
+    }
     private class Measurement{
         String name;
         ArrayList<Field> fields =new ArrayList<>();
