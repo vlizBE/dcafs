@@ -853,8 +853,11 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				if( streams.get(cmds[1].toLowerCase()) != null )// Make sure we don't overwrite an existing connection
 					return "Connection exists with that title ("+cmds[1]+") not creating it";
 
+				if( !cmds[2].contains(":") )
+					return "No port number specified";
+
 				String label = cmds.length==3?"void":"";
-				if( cmds.length>4)
+				if( cmds.length>=4)
 					label=request.substring( request.indexOf(","+cmds[3])+1);
 
 				cmds[1]=cmds[1].toLowerCase();
@@ -899,7 +902,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				if( streams.get(cmds[1].toLowerCase()) != null )// Make sure we don't overwrite an existing connection
 					return "Connection exists with that title ("+cmds[1]+") not creating it";
 
-				if( cmds.length>4)
+				if( cmds.length>=4)
 					cmds[3]=request.substring( request.indexOf(","+cmds[3])+1);
 
 				UdpServer udpserver = new UdpServer(cmds[1],Integer.parseInt(cmds[2]),dQueue,cmds[3]);
@@ -915,7 +918,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 					return "Connection exists with that title ("+cmds[1]+") not creating it";
 
 				String serLabel = cmds.length==3?"void":"";
-				if( cmds.length>4)
+				if( cmds.length>=4)
 					serLabel=request.substring( request.indexOf(","+cmds[3])+1);
 
 				String[] portAndBaud = cmds[2].split(":");
