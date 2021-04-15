@@ -20,9 +20,8 @@ public class Waypoints {
     static final String XML_TAG = "waypoints";
     static final String XML_TRAVEL = "travel";
     static final String XML_CHILD_TAG = "waypoint";
-    /************************************************************************************/
-    /**************************** C O N S T R U C T O R *********************************/
-    /************************************************************************************/
+
+    /* *************************** C O N S T R U C T O R *********************************/
     public Waypoints(){
 
     }
@@ -32,9 +31,8 @@ public class Waypoints {
     public void setXML( Document xml ){
         this.xml=xml;
     }
-    /************************************************************************************/
-    /******************************* A D D I N G ****************************************/
-    /************************************************************************************/
+
+    /* ****************************** A D D I N G ****************************************/
     /**
      * Adding a waypoint to the list
      * @param wp The waypoint to add
@@ -160,9 +158,8 @@ public class Waypoints {
         return XMLtools.writeXML(Path.of(file) , xml);//overwrite the file
         
     }
-    /************************************************************************************/
-    /********************************* G E T ********************************************/
-    /************************************************************************************/
+    /* ******************************** G E T ********************************************/
+
     /**
      * Get the waypoint with the given name
      * @param name The name to look for
@@ -189,9 +186,8 @@ public class Waypoints {
     public List<Waypoint> items(){
         return wps;
     }
-    /************************************************************************************/
-    /******************************* R E M O V E ****************************************/
-    /************************************************************************************/
+    /* ****************************** R E M O V E ****************************************/
+
     /**
      * Remove the waypoint with the given name
      * @param name The name of the waypoint to remove
@@ -211,10 +207,8 @@ public class Waypoints {
      */
     public void clearTempWaypoints(){
         wps.removeIf( Waypoint::isTemp );  		
-    } 
-    /************************************************************************************/
-    /********************************* I N F O ******************************************/
-    /************************************************************************************/
+    }
+    /* ******************************** I N F O ******************************************/
     /**
      * Get the amount of waypoints
      * @return The size of the list containing the waypoints
@@ -285,9 +279,8 @@ public class Waypoints {
 		}
 		return wayp;
     }
-    /*****************************************************************************************************/
-    /*****************************************************************************************************/
-    /*****************************************************************************************************/
+    /* ****************************************************************************************************/
+    /* ****************************************************************************************************/
     /**
      * Reply to requests made
      * @param req The request
@@ -302,12 +295,13 @@ public class Waypoints {
 		switch( cmd[0] ){
             case "?":
                     StringJoiner b = new StringJoiner(html?"<br>":"\r\n");
-                    b.add( "<title>:print or wpts:list or wpts:listing -> Get a listing of all waypoints with travel.")
-                    .add( "<title>:states -> Get a listing  of the state of each waypoint.")
-                    .add( "<title>:reload -> Reloads the waypoints from the settings file.")
-                    .add( "<title>:remove,<name> -> Remove a waypoint with a specific name")
-                    .add( "<title>:new,<name,<lat>,<lon>,<range> -> Create a new waypoint with the name and coords lat and lon in decimal degrees")
-                    .add( "<title>:travel,<waypoint>,<minbearing>,<maxbearing>,<name> -> Add travel to a waypoint.");
+                    b.add( "wpts:print or wpts:list or wpts:listing -> Get a listing of all waypoints with travel.")
+                    .add( "wpts:states -> Get a listing  of the state of each waypoint.")
+                    .add( "wpts:reload -> Reloads the waypoints from the settings file.")
+                    .add( "wpts:remove,<name> -> Remove a waypoint with a specific name")
+                    .add( "wpts:new,<id,<lat>,<lon>,<range> -> Create a new waypoint with the name and coords lat and lon in decimal degrees")
+                    .add( "wpts:update,id,lat,lon -> Update the waypoint coords lat and lon in decimal degrees")
+                    .add( "wpts:travel,<waypoint>,<minbearing>,<maxbearing>,<name> -> Add travel to a waypoint.");
                     return b.toString();
 			case "print": case "list": case "listing": return getSimpleListing(html?"<br>":"\r\n");
             case "states": return getListing(false, sog );
@@ -340,6 +334,15 @@ public class Waypoints {
                 
                 addWaypoint( lat, lon, range, name);
                 return "Added waypoint called "+cmd[3]+ " lat:"+lat+"°\tlon:"+lon+"°\tRange:"+range+"m";
+            case "update":
+                if( cmd.length < 4)
+                    return "Not enough parameters given wpts:update,id,lat,lon";
+                var wpOpt = getWaypoint(cmd[1]);
+                if( wpOpt.isPresent()) {
+                    wpOpt.get().updatePosition(Tools.parseDouble(cmd[2], -999), Tools.parseDouble(cmd[3], -999));
+                    return "Updated "+cmd[1];
+                }
+                return "No such waypoint";
             case "remove":
                 if( removeWaypoint( cmd[1]) ) {
                     return "Waypoint removed";
@@ -355,11 +358,9 @@ public class Waypoints {
                     return "Incorrect amount of parameters";
                 double minBearing = Tools.parseDouble(cmd[2], 0);
                 double maxBearing = Tools.parseDouble(cmd[3], 360);
-                String dir = cmd[4];
-                String travelname = cmd[5];
                 
-                way.addTravel(travelname, dir, minBearing, maxBearing);
-                return "Added travel "+travelname+" to "+ cmd[1];
+                way.get().addTravel(cmd[5], cmd[4], minBearing, maxBearing);
+                return "Added travel "+cmd[5]+" to "+ cmd[1];
             default:
                 return "Unknown waypoints command";
         }
