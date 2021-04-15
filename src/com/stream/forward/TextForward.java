@@ -90,6 +90,7 @@ public class TextForward extends AbstractForward{
                         String content = edit.getTextContent();
                         String from = XMLtools.getStringAttribute(edit,"from",",");
                         String find = XMLtools.getStringAttribute(edit,"find","");
+                        String leftover = XMLtools.getStringAttribute(edit,"leftover","append");
 
                         int index = XMLtools.getIntAttribute(edit,"index",-1);
 
@@ -103,7 +104,7 @@ public class TextForward extends AbstractForward{
                         }
                         switch(edit.getAttribute("type")){
                             case "resplit":
-                                addResplit(deli,content);
+                                addResplit(deli,content,leftover.equalsIgnoreCase("append"));
                                 Logger.info(id+" -> Added resplit edit on delimiter "+deli+" with formula "+content);
                                 break;
                             case "redate":
@@ -237,7 +238,7 @@ public class TextForward extends AbstractForward{
      * @param delimiter The string to split the data with
      * @param resplit The format of the new string, using i0 etc to get original values
      */
-    public void addResplit( String delimiter, String resplit){
+    public void addResplit( String delimiter, String resplit, boolean append){
 
         rulesString.add( new String[]{"","resplit","deli:"+delimiter+" ->"+resplit} );
 
@@ -275,7 +276,7 @@ public class TextForward extends AbstractForward{
                 join.add(split[indexes[a]]).add(fill[a]);
                 split[indexes[a]]=null;
             }
-            if( indexes.length!=split.length){
+            if( indexes.length!=split.length && append){
                 StringJoiner rest = new StringJoiner(delimiter,delimiter,"");
                 for( int a=0;a<split.length;a++){
                     if( split[a]!=null)
