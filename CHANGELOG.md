@@ -6,36 +6,42 @@ Note: Version numbering: x.y.z
 From 0.5.0 onwards, this should be better documented...
 
 ## Work in progress
+#### Todo
+- influx db is not in the status window
 
-#### N4 adds (get moved to list below on new nightly)
-
-#### Databases
-- When tables are read from xml, table name and columnname are trimmed
-- It's assumed that if there's a autofill timestamp column it's the first one
-- Tables are no longer written to the xml if present in db on first connect
-- Added command to write a table in memory to xml dbm:tablexml
+#### N5 adds (get moved to list below on new nightly)
 
 #### Other
-- Removed the sqlite from the taskmanager, wasn't used anyway
-- Removed the default sqlite from Issuecollector, need to actually assign one
-- added gens:fromdb,dbid to generate all generics at once (if new)
-- setRealtimevalue retains case
+- TextForward resplit now actually does something with leftover
+- Influx should now appear in the list from st etc
+- Removed the sources inside devices, didn't belong  in the repo
+- Path to settings.xml no longer relative but based on the .jar location
 
 #### BugFixes
-  * tables read from a server weren't marked as such
-  *
 
-#### 0.8.3 
+
+#### 0.8.3 N1-4
 - Updated dependencies
 - Added @rand6,@rand20 and @rand100 to task fill in
 - ss:addtcp and ss:addserial no longer require a label defined
 - Trans now allows editing id during store command
-- gens:addblank was missing info on how to add text (t)
 - added rttext:x equivalent of rtval:x
+- Removed the sqlite from the taskmanager, wasn't used anyway
+- Removed the default sqlite from Issuecollector, need to actually assign one
+- setRealtimevalue retains case
+
+#### Generics
+- added gens:fromdb,dbid to generate all generics at once (if new)
+- gens:addblank was missing info on how to add text (t)
+- generics label is now case sensitive but accepts regex
 
 #### Databases
 - Added dbm:addrollover to add rollover to an sqlite
 - Table no longer contains a default empty alias
+- When tables are read from xml, table name and columnname are trimmed
+- It's assumed that if there's a autofill timestamp column it's the first one
+- Tables are no longer written to the xml if present in db on first connect
+- Added command to write a table in memory to xml dbm:tablexml
 
 #### Forwards  
 - Added min length and max length filters to filterforward
@@ -50,8 +56,11 @@ From 0.5.0 onwards, this should be better documented...
 - the gen:addblank format f made a text node instead of filler
 - starting a task directly called the wrong method doTask instead of startTask
   in that case the interval etc tasks aren't run properly
-- ff:addrule wasn't working as it should nor was the xmlread/write on for start type
-  
+- ff:addrule wasn't working as it should nor was the xmlread/write on for start type 
+- tables read from a server weren't marked as such
+- index of label read from commands wasn't correct
+- removed default alarms taskmanager but didn't check if one was made later
+
 ## RELEASED
 ### 0.8.2
 #### I2CWorker
