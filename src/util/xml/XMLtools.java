@@ -23,6 +23,10 @@ import javax.xml.xpath.XPathFactory;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -122,15 +126,7 @@ public class XMLtools {
 	 * @return True if succesful
 	 */
 	public static boolean updateXML( Document xmlDoc ){
-		String file = xmlDoc.getDocumentURI();
-		
-		if( SystemUtils.IS_OS_LINUX) {
-			file=file.replace("file:", "");
-		}else{
-			file=file.replace("file:/", "");
-		}
-		file=file.replace("%20", " ");
-		return XMLtools.writeXML( Path.of(file) , xmlDoc );//overwrite the file
+		return XMLtools.writeXML( getDocPath(xmlDoc), xmlDoc );//overwrite the file
 	}
 	/**
 	 * Reload the given xmlDoc based on the internal URI
@@ -138,18 +134,34 @@ public class XMLtools {
 	 * @return The reloaded document
 	 */
 	public static Document reloadXML( Document xmlDoc ){
-		String file = xmlDoc.getDocumentURI();
-		if( file == null) {
+		if( xmlDoc.getDocumentURI() == null) {
 			Logger.error("The give xmldoc doesn't contain a valid uri");
 			return null;
 		}
-		if( SystemUtils.IS_OS_LINUX) {
-			file=file.replace("file:", "");
-		}else{
-			file=file.replace("file:/", "");
+		return XMLtools.readXML(getDocPath(xmlDoc));
+	}
+
+	/**
+	 * Get the parent path of this xml document
+	 * @param xmlDoc
+	 * @return
+	 */
+	public static Path getXMLparent(Document xmlDoc){
+		if( xmlDoc.getDocumentURI() == null) {
+			Logger.error("The give xmldoc doesn't contain a valid uri");
+			return Path.of("");
 		}
-		file=file.replace("%20", " ");
-		return XMLtools.readXML(Path.of(file));		
+		return getDocPath(xmlDoc).getParent();
+	}
+	private static Path getDocPath(Document xmlDoc){
+		try {
+			return Path.of(new URL(xmlDoc.getDocumentURI()).toURI());
+		} catch (URISyntaxException e) {
+			Logger.error(e);
+		} catch (MalformedURLException e) {
+			Logger.error(e);
+		}
+		return null;
 	}
 	/* *********************************  S E A R C H I N G *******************************************************/
 	/**
