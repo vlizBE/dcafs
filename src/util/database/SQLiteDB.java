@@ -249,12 +249,16 @@ public class SQLiteDB extends SQLDB{
      * @param dbe The element with the setup info
      * @return true if successful
      */
-    public static SQLiteDB readFromXML( Element dbe ){
+    public static SQLiteDB readFromXML( Element dbe, String workPath ){
         if( dbe == null )
             return null;
 
         String id = XMLtools.getStringAttribute(dbe,"id","");
-        SQLiteDB db = SQLiteDB.createDB(id,Path.of(dbe.getAttribute("path")));
+        var p = Path.of(dbe.getAttribute("path"));
+        if( !p.isAbsolute() ){
+            p = Path.of(workPath).resolve(p);
+        }
+        SQLiteDB db = SQLiteDB.createDB(id,p);
         
         /* RollOver */
         Element roll = XMLtools.getFirstChildByTag(dbe, "rollover");

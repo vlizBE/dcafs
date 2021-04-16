@@ -437,12 +437,13 @@ public class DAS implements DeadThreadListener {
     public void loadTaskManagersFromXML(Document xml) {
         for(Element e: XMLtools.getAllElementsByTag(xml, "taskmanager") ){
             Logger.info("Found reference to TaskManager in xml.");
-            Path p = Path.of(workPath).resolve(e.getTextContent());
+            var p = Path.of(e.getTextContent());
+            if( !p.isAbsolute())
+                p = Path.of(workPath).resolve(p);
 
             if (Files.exists(p)) {
-                this.addTaskManager(e.getAttribute("id"), p);
+                addTaskManager(e.getAttribute("id"), p);
             } else {
-
                 Logger.error("No such task xml: " + p.toString());
             }
         }
@@ -803,7 +804,7 @@ public class DAS implements DeadThreadListener {
                         .filter( db -> db.getAttribute("id").equals(id)).findFirst();
 
         if( sqlite.isPresent() )
-            return addSQLiteDB(SQLiteDB.readFromXML(sqlite.get()));
+            return addSQLiteDB(SQLiteDB.readFromXML(sqlite.get(),workPath));
 
         return XMLtools.getChildElements(root, "server").stream()
                         .filter( db -> db.getAttribute("id").equals(id))
@@ -815,7 +816,7 @@ public class DAS implements DeadThreadListener {
         Element root = XMLtools.getFirstElementByTag(xml, "databases");
         XMLtools.getChildElements(root, "sqlite").stream()
                     .filter( db -> !db.getAttribute("id").isEmpty() ) // Can't do anything without id
-                    .forEach( db -> addSQLiteDB( SQLiteDB.readFromXML(db) ) );
+                    .forEach( db -> addSQLiteDB( SQLiteDB.readFromXML(db,workPath) ) );
         
         XMLtools.getChildElements(root, "server").stream()
             .filter( db -> !db.getAttribute("id").isEmpty() && !db.getAttribute("type").isEmpty() ) // Can't do anything without id/type

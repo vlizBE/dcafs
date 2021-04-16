@@ -300,7 +300,7 @@ public class Task implements Comparable<Task>{
 			switch( o[0].toLowerCase() ){
 				case "file":
 					out = OUTPUT.FILE;
-					this.outputFile = Path.of(o[1]);	
+					outputFile = Path.of(o[1]);
 					break;
 				case "email": out = OUTPUT.EMAIL; break;
 				case "sms": out = OUTPUT.SMS; break;
@@ -551,7 +551,7 @@ public class Task implements Comparable<Task>{
 				suffix = " after "+TimeTools.convertPeriodtoString(startDelay, unit);
 				break;
 			case INTERVAL:
-				suffix = " every "+ TimeTools.convertPeriodtoString(interval, unit) + (startDelay==0?".":" after initital delay "+TimeTools.convertPeriodtoString(startDelay, unit));
+				suffix = " every "+ TimeTools.convertPeriodtoString(interval, unit) + (startDelay==0?".":" after initial delay "+TimeTools.convertPeriodtoString(startDelay, unit));
 				break;
 			case KEYWORD:
 				suffix = " if "+keyword;

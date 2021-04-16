@@ -664,7 +664,11 @@ public class TaskManager implements CollectorFuture {
 
 				switch (task.out) {
 					case FILE: // Write the response to the specified file
-						FileTools.appendToTxtFile(task.outputFile.toString(), response);
+						if( task.outputFile.isAbsolute()) {
+							FileTools.appendToTxtFile(task.outputFile.toString(), response);
+						}else{
+							FileTools.appendToTxtFile(xmlPath.getParent().resolve(task.outputFile).toString(), response);
+						}
 						break;
 					case SMS: // Send the response in an SMS
 						if (smsQueue == null) {
