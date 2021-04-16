@@ -31,6 +31,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -57,12 +58,13 @@ public class BaseReq {
 
 	Map<String, Method> methodMapping = new HashMap<>();
 	String name = "";
-	protected String workPath = "";
 	private int qState = 0;
 	private Element tempElement;
 	private XMLfab fab;
 	private int tempInt=0;
 	Document xml;
+
+	protected String workPath=Path.of("").toString();
 
 	static final String UNKNOWN_CMD = "unknown command";
 	/* ******************************  C O N S T R U C T O R *********************************************************/
@@ -73,6 +75,17 @@ public class BaseReq {
 	public BaseReq(RealtimeValues rtvals){
 		this.rtvals = rtvals;
 		this.name = this.getClass().getName().split("\\.")[1];
+
+		try {
+			Path p = Path.of(getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
+			if( !p.toString().endsWith(".jar") ){ //meaning not from jar
+				p=p.getParent();
+			}
+			workPath = p.getParent().toString();
+		} catch (URISyntaxException e) {
+			Logger.error(e);
+		}
+		Logger.info("BaseReq started with workpath: "+workPath);
 	}
 	/**
 	 * Constructor requiring a link to the @see RealtimeValues for runtime values and @see IssueCollector to notify problems
@@ -426,14 +439,14 @@ public class BaseReq {
 				String yesterday = "raw"+File.separator+"zipped"+File.separator+TimeTools.formatNow( "yyyy-MM", -1)+File.separator+TimeTools.formatNow( "yyyy-MM-dd", -1)+"_RAW_x.log.zip";
 				int cnt=0;
 				String path = yesterday.replace("x", ""+cnt);
-				boolean ok = Files.exists( Path.of(path) );
+				boolean ok = Files.exists( Path.of(workPath,path) );
 				
 				while(ok){					
-					String md5 = MathUtils.calculateMD5( Path.of(path) );
+					String md5 = MathUtils.calculateMD5( Path.of(workPath,path) );
 					b.append(path).append("\t").append(md5).append("\r\n");
 					cnt++;
 					path = yesterday.replace("x", ""+cnt);
-					ok = Files.exists( Path.of(path) );
+					ok = Files.exists( Path.of(workPath,path) );
 				}
 				return b.toString();
 			case "?":
@@ -468,32 +481,13 @@ public class BaseReq {
 					.add( "update:settings -> Try to update the settings.xml");
 				return join.toString();			
 			case "das":
-				Logger.info("Trying to update DAS...");
-				p = Path.of("DAS.jar");
-				to = Path.of("DAS_" + TimeTools.formatNow("yyMMdd_HHmm") + ".jar");
-				refr = Path.of("attachments"+File.separator+"DAS.jar");
-				try {
-					if( !Files.exists(p) ){
-						return "Didn't find an active DAS.jar?";
-					}
-					if( Files.exists(refr) ){
-						Files.copy(p, to );	// Make a backup if it doesn't exist yet
-						Logger.info("Made a backup copy...");
-					}else{
-						Logger.warn("Didn't find the needed files: ");
-						return "Didn't find the attachment.";
-					}
-				} catch (IOException e) {
-					e.printStackTrace();
-					return "Something went wrong: "+e.getMessage();
-				}
-				break;
+				return "todo";
 			case "script"://fe. update:script,tasks.xml
 				if( !spl[1].endsWith(".xml"))
 					spl[1] += ".xml";
-				p = Path.of("scripts",spl[1]);
-				to = Path.of("scripts",spl[1].replace(".xml", "")+"_" + TimeTools.formatUTCNow("yyMMdd_HHmm") + ".xml");
-				refr = Path.of("attachments",spl[1]);
+				p = Path.of(workPath,"scripts",spl[1]);
+				to = Path.of(workPath,"scripts",spl[1].replace(".xml", "")+"_" + TimeTools.formatUTCNow("yyMMdd_HHmm") + ".xml");
+				refr = Path.of(workPath,"attachments",spl[1]);
 				try {
 					if( Files.exists(p) && Files.exists(refr) ){
 						Files.copy(p, to );	// Make a backup if it doesn't exist yet
@@ -510,10 +504,13 @@ public class BaseReq {
 				}
 				break;
 			case "setup":
-				p = Path.of("settings.xml");
-				to = Path.of( "settings"+"_" + TimeTools.formatNow("yyMMdd_HHmm") + ".xml");
-				refr = Path.of("attachments"+File.separator+"settings.xml");
+				p = Path.of(workPath,"settings.xml");
+
+				to = Path.of( workPath,"settings"+"_" + TimeTools.formatNow("yyMMdd_HHmm") + ".xml");
+				refr = Path.of( workPath,"attachments"+File.separator+"settings.xml");
 				try {
+
+
 					if( Files.exists(p) && Files.exists(refr) ){
 						Files.copy(p, to );	// Make a backup if it doesn't exist yet
 						Files.copy(refr, p , StandardCopyOption.REPLACE_EXISTING );// Overwrite
@@ -559,7 +556,7 @@ public class BaseReq {
 				if( !spl[1].endsWith(".xml"))
 					spl[1] += ".xml";		
 
-				Path p = Path.of("scripts",spl[1]);
+				Path p = Path.of(workPath,"scripts",spl[1]);
 				if( Files.notExists(p) ){
 					return "No such file: "+p.toString();
 				}
@@ -568,7 +565,7 @@ public class BaseReq {
 				return "Tried sending "+spl[1]+" to "+spl[2];
 			case "setup":
 			case "settings":
-				Path set = Path.of("settings.xml");
+				Path set = Path.of(workPath,"settings.xml");
 				if( Files.notExists(set) ){
 					return "No such file: "+set.toString();
 				}
@@ -956,7 +953,7 @@ public class BaseReq {
 				emailWorker.sendEmail( "admin","Taskmanager.log","File attached (probably)", workPath+"logs"+File.separator+"taskmanager.log", false );
 				return "Trying to send taskmanager log";
 			case "getlastraw":
-				Path it = Path.of("raw",TimeTools.formatUTCNow("yyyy-MM"));
+				Path it = Path.of(workPath,"raw",TimeTools.formatUTCNow("yyyy-MM"));
 				try {
 					var last = Files.list(it).filter( f -> !Files.isDirectory(f)).max( Comparator.comparingLong( f -> f.toFile().lastModified()));
 					if( last.isPresent() ){
@@ -1074,7 +1071,7 @@ public class BaseReq {
 
 					// Add to the settings xml
 					try {
-						Files.createDirectories(Path.of("scripts"));
+						Files.createDirectories(Path.of(workPath,"scripts"));
 					} catch (IOException e) {
 						Logger.error(e);
 					}
@@ -1083,7 +1080,7 @@ public class BaseReq {
 					tmFab.build();
 
 					// Create an empty file
-					XMLfab.withRoot(Path.of("scripts",cmd[1]+".xml"), "tasklist")
+					XMLfab.withRoot(Path.of(workPath,"scripts",cmd[1]+".xml"), "tasklist")
 						.comment("Any id is case insensitive")
 						.comment("Reload the script using tm:reload,"+cmd[1])
 						.comment("If something is considered default, it can be omitted")
@@ -1107,7 +1104,7 @@ public class BaseReq {
 						.build();
 
 				// Add it to das		
-				das.addTaskManager(cmd[1], Path.of("scripts",cmd[1]+".xml"));
+				das.addTaskManager(cmd[1], Path.of(workPath,"scripts",cmd[1]+".xml"));
 				
 				return "Tasks script created, use tm:reload,"+cmd[1]+" to run it.";
 			case "reload":
@@ -1299,7 +1296,7 @@ public class BaseReq {
 						cmd[4] //script
 						)) {
 					// Check if the script already exists, if not build it
-					var p = Path.of("devices",cmd[4]+".xml");
+					var p = Path.of(workPath,"devices",cmd[4]+".xml");
 					if( !Files.exists(p)){
 						XMLfab.withRoot(p,"commandset").attr("script",cmd[4])
 								.addParent("command","An empty command to start with")
@@ -1545,13 +1542,13 @@ public class BaseReq {
 							process = pb.start();
 							process.waitFor();
 							// zip it?
-							if( Files.exists(Path.of(cmds[2]))){
-								if(FileTools.zipFile(Path.of(cmds[2]))==null) {
+							if( Files.exists(Path.of(workPath,cmds[2]))){
+								if(FileTools.zipFile(Path.of(workPath,cmds[2]))==null) {
 									Logger.error("Dump of "+cmds[1]+" created, but zip failed");
 									return "Dump created, failed zipping.";
 								}
 								// Delete the original file
-								Files.deleteIfExists(Path.of(cmds[2]));
+								Files.deleteIfExists(Path.of(workPath,cmds[2]));
 							}else{
 								Logger.error("Dump of "+cmds[1]+" failed.");
 								return "No file created...";
@@ -1666,7 +1663,7 @@ public class BaseReq {
 			case "addsqlite":
 				if( !dbName.contains(File.separator))
 					dbName = "db"+File.separator+(dbName.isEmpty()?id:dbName)+".sqlite";
-				var sqlite = SQLiteDB.createDB(id,Path.of(dbName));
+				var sqlite = SQLiteDB.createDB(id,Path.of(workPath,dbName));
 				if( sqlite.connect(false) ){
 					das.getDatabaseManager().addSQLiteDB(id,sqlite);
 					sqlite.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"das","settings","databases") );

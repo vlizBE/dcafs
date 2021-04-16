@@ -29,6 +29,7 @@ import util.xml.XMLtools;
 import worker.*;
 
 import java.io.File;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -38,11 +39,12 @@ import java.util.concurrent.*;
 
 public class DAS implements DeadThreadListener {
 
-    private static final String version = "0.8.3_N4";
+    private static final String version = "0.8.3_N5";
 
     // Last date that changes were made
-    String workPath = new File("").getAbsolutePath() + File.separator;
     Path settingsFile = Path.of("settings.xml");
+    String workPath=Path.of("").toString();
+
     private Document xml;
 
     LocalDateTime bootup = LocalDateTime.now(); // Store timestamp at boot up to calculate uptime
@@ -89,7 +91,16 @@ public class DAS implements DeadThreadListener {
 
     public DAS() {
 
-        Logger.info("Working directory: " + workPath);
+        try {
+            Path p = Path.of(getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
+            if( !p.toString().endsWith(".jar") ){ //meaning from ide
+                p=p.getParent();
+            }
+            workPath = p.getParent().toString();
+            settingsFile = Path.of(workPath,"settings.xml");
+        } catch (URISyntaxException e) {
+            Logger.error(e);
+        }
 
         if (Files.notExists(settingsFile)) {
             Logger.warn("No Settings.xml file found, creating new one. Searched path: "
@@ -426,7 +437,7 @@ public class DAS implements DeadThreadListener {
     public void loadTaskManagersFromXML(Document xml) {
         for(Element e: XMLtools.getAllElementsByTag(xml, "taskmanager") ){
             Logger.info("Found reference to TaskManager in xml.");
-            Path p = Path.of(e.getTextContent());
+            Path p = Path.of(workPath).resolve(e.getTextContent());
 
             if (Files.exists(p)) {
                 this.addTaskManager(e.getAttribute("id"), p);
@@ -530,13 +541,13 @@ public class DAS implements DeadThreadListener {
                 }
             }
 
-            this.addTaskManager(id.replace(".xml", ""), Path.of("scripts", id));
+            this.addTaskManager(id.replace(".xml", ""), Path.of(workPath,"scripts", id));
             return "No TaskManager associated with the script, creating one.";
         }
         TaskManager tm = taskManagers.get(id);
         if (tm == null)
             return "Unknown manager.";
-        return tm.reloadTasks() ? "Tasks loaded succesfully." : "Tasks loading failed.";
+        return tm.reloadTasks() ? "Tasks loaded successfully." : "Tasks loading failed.";
     }
 
     /* ******************************************  S T R E A M P O O L ***********************************************/
@@ -1253,6 +1264,8 @@ public class DAS implements DeadThreadListener {
         }
     }
     public static void main(String[] args) {
+
+
 
         DAS das = new DAS();
 

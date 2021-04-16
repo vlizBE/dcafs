@@ -428,15 +428,9 @@ public class StreamPool implements StreamListener, CollectorFuture {
 		URI uri;
 		
 		try {
-			uri = new URI( xml.getDocumentURI() );
-			String os = System.getProperty("os.name").toLowerCase();
-			if( os.startsWith("linux")){		
-				xmlPath= Path.of( uri.getRawPath().replace("%20", " ") );
-			}else{
-				xmlPath= Path.of( uri.getRawPath().substring(1).replace("%20", " ") );
-			}
-			Logger.debug("Set XMLPath to "+this.xmlPath.toAbsolutePath().toString() );
-		} catch ( URISyntaxException | InvalidPathException | NullPointerException e) {			
+			xmlPath = XMLtools.getXMLparent(xml).resolve("settings.xml");
+			Logger.debug("Set XMLPath to "+xmlPath.toAbsolutePath().toString() );
+		} catch ( InvalidPathException | NullPointerException e) {
 			Logger.error(e);
 		}
 

@@ -75,7 +75,7 @@ public class DebugWorker implements Runnable {
 
 		Element dbg = XMLtools.getFirstElementByTag(xml, "debug");
 
-		this.filesPath = Path.of(XMLtools.getChildValueByTag(dbg, "inputfile", "")); // Raw files folder
+		this.filesPath = XMLtools.getXMLparent(xml).resolve(XMLtools.getChildValueByTag(dbg, "inputfile", "")); // Raw files folder
 		this.logRaw = XMLtools.getChildValueByTag(dbg, "rawlog", "no").equals("yes"); // Send WS messages or not
 		Logger.info("Path to search:" + filesPath.toString());
 		this.sleep = XMLtools.getChildValueByTag(dbg, "realtime", "no").equals("yes"); // Work at realtime or as fast as
@@ -155,9 +155,9 @@ public class DebugWorker implements Runnable {
 
 		} else {
 			Logger.info("Single file debug");
-			if (Files.exists(Path.of("raw" + File.separator + filesPath))) {
-				Logger.info( "Path: " + Path.of("raw" + File.separator + filesPath).normalize());
-				logs.add(Path.of("raw" + File.separator + filesPath).normalize());
+			if (Files.exists(filesPath)) {
+				Logger.info( "Path: " + filesPath.normalize());
+				logs.add(filesPath.normalize());
 			} else {
 				Logger.info("File doesn't exist: " + filesPath.toString());
 			}
