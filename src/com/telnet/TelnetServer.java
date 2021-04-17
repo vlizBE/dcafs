@@ -59,8 +59,8 @@ public class TelnetServer {
         Element settings = XMLtools.getFirstElementByTag( xml, XML_PARENT_TAG );
         if( settings != null ){
             port = XMLtools.getIntAttribute(settings, "port", 23 );
-            title = XMLtools.getStringAttribute( settings, "title", "DAS" );  
-            ignore = XMLtools.getChildValueByTag( settings, "ignore", "" ); 
+            title = XMLtools.getStringAttribute( settings, "title", "DCAFS" );
+            ignore = XMLtools.getChildValueByTag( settings, "ignore", "" );
             return true;
         }
         addBlankTelnetToXML(xml);
@@ -68,8 +68,7 @@ public class TelnetServer {
     }
     public static boolean addBlankTelnetToXML( Document xmlDoc ){
         return XMLfab.withRoot(xmlDoc, "settings")                
-                        .addParent(XML_PARENT_TAG,"Settings related to the telnet server").attr("title","DAS").attr("port",23)
-                            .addChild("ignore")
+                        .addParent(XML_PARENT_TAG,"Settings related to the telnet server").attr("title","DCAFS").attr("port",23)
                             .build() !=null;
     }
     public void run(){
