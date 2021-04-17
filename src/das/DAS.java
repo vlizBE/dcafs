@@ -1173,7 +1173,7 @@ public class DAS implements DeadThreadListener {
         } catch (java.lang.NullPointerException e) {
             Logger.error("Error reading buffers " + e.getMessage());
         }
-        if (dbManager.hasDatabases()) {
+
             if (html) {
                 b.append("<br><b>Databases</b><br>");
             } else {
@@ -1181,11 +1181,14 @@ public class DAS implements DeadThreadListener {
                         .append("\r\nDatabases\r\n")
                         .append(TelnetCodes.TEXT_YELLOW).append(TelnetCodes.UNDERLINE_OFF);
             }
+        if (dbManager.hasDatabases()) {
             for( String l : dbManager.getStatus().split("\r\n") ){
                 if (l.endsWith("(NC)"))
                     l = TEXT_NB + l + TEXT_BRIGHT;
-                b.append(l).append("\r\n");
+                b.append(l.replace(workPath+File.separator,"")).append("\r\n");
             }
+        }else{
+            b.append("None yet\r\n");
         }
         return b.toString().replace("false", TEXT_RED + "false" + TEXT_GREEN);
     }
