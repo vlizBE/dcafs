@@ -224,15 +224,15 @@ public class DebugWorker implements Runnable {
 		long calStart = -1;
 		long start = System.currentTimeMillis();
 		int full = 0;
-		
-		Logger.info("Started processing it...");
+		int maxQueries = Math.max(dbm.getTotalMaxCount()*5,5000);
+		Logger.info("Started processing it... (with "+maxQueries+" query buffer limit)");
 		while (goOn) {
 			if (sc.hasNext()) {
 				if (dQueue.size() > 2500 ) {
 					full++;
 					while (dQueue.size() > 500);
 				}
-				if( dbm.getTotalQueryCount() > 500){
+				if( dbm.getTotalQueryCount() > maxQueries){
 					full++;
 
 					try {
@@ -240,12 +240,9 @@ public class DebugWorker implements Runnable {
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
-
 				}
 				String r = sc.nextLine();
 				readLines++;
-				if( readLines%10000==0)
-					Logger.info("Read lines: "+readLines);
 				String[] line = r.split("\t");
 				
 				switch( srcType ){
@@ -256,7 +253,7 @@ public class DebugWorker implements Runnable {
 						line[0] = line[0].replace("[", ""); // remove the [
 						line[0] = line[0].replace("]", "");// and remove the ]
 
-						LocalDateTime dt = TimeTools.parseDateTime(line[0], "yyyy-MM-dd HH:mm:ss.SSS");
+					//	LocalDateTime dt = TimeTools.parseDateTime(line[0], "yyyy-MM-dd HH:mm:ss.SSS");
 
 						try {
 							int prio = Integer.parseInt(line[1]);
@@ -268,7 +265,7 @@ public class DebugWorker implements Runnable {
 							Datagram d = new Datagram(line[3], prio, labid[0], 0);
 							d.setOriginID( labid.length==2?labid[1]:"");
 							d.raw = line[3].getBytes();
-							d.setTimestamp(dt.toInstant(ZoneOffset.UTC).toEpochMilli());
+							//d.setTimestamp(dt.toInstant(ZoneOffset.UTC).toEpochMilli());
 							//Logger.info("Adding to queue: "+d.getMessage());
 							dQueue.add(d);
 
