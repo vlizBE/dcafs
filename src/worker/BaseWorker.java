@@ -381,7 +381,13 @@ public class BaseWorker implements Runnable {
 	}
 
 	/* ******************************* D E F A U L T   S T U F F *****************************************/
-
+	public void doSYSTEM( Datagram d ){
+		if( reqData==null){
+			Logger.error("Tried to issue a system command ("+d.getMessage()+") without defined BaseReq");
+			return;
+		}
+		createResponse( d.getMessage(), d.getWritable() );
+	}
 	public void doTELNET( Datagram d ){
 		Writable dt = d.getWritable();
 		if( !d.getMessage().equals("status")){
@@ -406,8 +412,8 @@ public class BaseWorker implements Runnable {
 		}
 	}
 	public void doEMAIL( Datagram d ) {
-		Logger.info( "Executing email command ["+d.getMessage()+"], origin: " + d.getOriginID() );
 		if( reqData!=null) {
+			Logger.info( "Executing email command ["+d.getMessage()+"], origin: " + d.getOriginID() );
     		reqData.emailResponse( d );
 		}else {
 			Logger.error( "ReqData null?");
@@ -417,15 +423,6 @@ public class BaseWorker implements Runnable {
 		Logger.info("TEST received:"+d.getMessage()+" from "+d.getOriginID());
 	}
 
-	public void doSYSTEM( Datagram d ){
-		if( reqData==null){
-			Logger.error("Tried to issue a system command ("+d.getMessage()+") without defined BaseReq");
-			return;
-		}
-		
-		Writable dt = d.getWritable();
-		createResponse( d.getMessage(), dt );
-	}
 	public void doVOID( Datagram d ){
 		// This is a label so that nothing is done with the data
 	}
@@ -452,33 +449,34 @@ public class BaseWorker implements Runnable {
 			Logger.error("Generic requested ("+d.label+") but no valid id given.");
 		}
 	}
-	public void doGENERIC( Datagram d ){
+	public synchronized void doGENERIC( Datagram d ){
 
 		try{
-			String genericIDs = d.label.split(":")[1];
 			String mes = d.getMessage();
 			if( mes.isBlank() ){
-				Logger.warn( genericIDs + " -> Ignoring blank line" );
+				Logger.warn( d.getOriginID() + " -> Ignoring blank line" );
 				return;
 			}
-
-			for( String genericID : genericIDs.split(",") ){
-				for( var gen : getGenerics(genericID)) {
-					if ( mes.startsWith(gen.startsWith) ) {
-						Object[] data = gen.apply(mes, rtvals);
-						if (!gen.getTable().isEmpty() && gen.writesInDB()) {
-							if (gen.isTableMatch()) {
-								rtvals.provideRecord(gen.getDBID(), gen.getTable(), data);
+			var genericIDs = d.label.split(":")[1].split(",");
+			for( String genericID : genericIDs ){
+				getGenerics(genericID).stream().forEach(
+						gen -> {
+							if ( mes.startsWith(gen.getStartsWith()) ) {
+								Object[] data = gen.apply(mes, rtvals);
+								if (!gen.getTable().isEmpty() && gen.writesInDB()) {
+									if (gen.isTableMatch()) {
+										rtvals.provideRecord( gen.getDBID(), gen.getTable(), data);
+									} else {
+										rtvals.writeRecord( gen.getDBID(), gen.getTable(), gen.macro);
+									}
+								}
 							} else {
-								rtvals.writeRecord(gen.getDBID(), gen.getTable(), gen.macro);
+								if (gen == null) {
+									Logger.error("Generic requested but unknown id: " + genericID + " -> Message: " + d.getMessage());
+								}
 							}
 						}
-					} else {
-						if (gen == null) {
-							Logger.error("Generic requested but unknown id: " + genericID + " -> Message: " + d.getMessage());
-						}
-					}
-				}
+				);
 			}
 			
 		}catch( ArrayIndexOutOfBoundsException l ){
@@ -488,9 +486,7 @@ public class BaseWorker implements Runnable {
 	private List<Generic> getGenerics( String id ){
 		return generics.entrySet().stream().filter( set -> set.getKey().equalsIgnoreCase(id) || set.getKey().matches(id)).map( x -> x.getValue()).collect(Collectors.toList());
 	}
-	public void doWRITABLE( Datagram d ){
 
-	}
 	public void doFILTER( Datagram d ){
 		String[] filter = d.label.split(":");
 

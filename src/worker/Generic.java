@@ -15,7 +15,9 @@ import java.util.ArrayList;
 import java.util.StringJoiner;
 
 public class Generic {
-    
+
+
+
     enum DATATYPE{REAL,INTEGER,TEXT,FILLER,TAG}
 
     enum FILTERTYPE{REPLACE_ALL,REPLACE_FIRST}
@@ -24,13 +26,13 @@ public class Generic {
     ArrayList<Filter> filters = new ArrayList<>();
     String delimiter="";
     String id;
-    String dbid="";
-    String table="";
-    String startsWith="";
-    String mqttID="";
+    private String[] dbid;
+    private String table="";
+    private String startsWith="";
+    private String mqttID="";
 
-    String influxID="";
-    String influxMeasurement="";
+    private String influxID="";
+    private String influxMeasurement="";
 
     boolean dbWrite = true;
     int maxIndex=-1;
@@ -137,7 +139,7 @@ public class Generic {
      * @return This object
      */
     public Generic storeInDB( String id, String table ){
-        this.dbid=id;
+        dbid=id.split(",");
         this.table=table;
         return this;
     }
@@ -172,8 +174,11 @@ public class Generic {
         }
         return this;
     }
-    public String getDBID(){
+    public String[] getDBID(){
         return dbid;
+    }
+    public String getStartsWith() {
+        return startsWith;
     }
     public String getTable(){
         return table;
@@ -290,7 +295,7 @@ public class Generic {
      */
     public String toString(){
         StringJoiner join = new StringJoiner("",id+" -> ","");
-        if( !dbid.isEmpty() ){
+        if( dbid!=null ){
             join.add("Store in "+dbid+"(db):(table)"+table+" " );
         }else if (!influxID.isEmpty() ){
             join.add("Store in InfluxDB "+influxID+":"+table+" ");

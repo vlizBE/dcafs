@@ -164,10 +164,10 @@ public class RealtimeValues implements CollectorFuture {
 			return false;
 		}
 	}
-	public boolean provideRecord(String ids, String table, Object[] data) {
+	public boolean provideRecord(String[] ids, String table, Object[] data) {
 		boolean wrote = false;
 		int result=0;
-		for ( String id : ids.split(",")) {
+		for ( String id : ids ) {
 			Database db = id.isBlank() ? firstDB : dbs.get(id);
 			result++;
 			if (db != null) {
@@ -187,9 +187,9 @@ public class RealtimeValues implements CollectorFuture {
 	 * @param table The table in the database
 	 * @return True if ok
 	 */
-	public boolean writeRecord(String ids, String table, String macro) {
+	public boolean writeRecord(String[] ids, String table, String macro) {
 		boolean wrote = false;
-		for ( String id : ids.split(",")) {
+		for ( String id : ids) {
 			Database db = id.isBlank() ? firstDB : dbs.get(id);
 
 			if (db != null) {
@@ -200,7 +200,7 @@ public class RealtimeValues implements CollectorFuture {
 		}
 		return wrote;
 	}
-	public boolean writeRecord(String ids, String table) {
+	public boolean writeRecord(String[] ids, String table) {
 		return writeRecord(ids, table, "");
 	}
 
