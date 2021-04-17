@@ -1,5 +1,6 @@
 dcafs
 =========
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)  
 
 A Java tool (or can also be used as a library) that takes care of all the nitty-gritty that needs to be done when a sensor has generated data and you want to find that data in a database. Hence _data collect alter forward store_. This is in broad terms what it is capable of.
 
@@ -14,10 +15,28 @@ A Java tool (or can also be used as a library) that takes care of all the nitty-
 * Update itself via email (linux only for now)
 
 ## Installation
+* Make sure you have atleast java11 installed 
+* Either download the most recent (pre)release [here](https://github.com/vlizBE/dcafs/releases)
+  * Unpack to the working folder  
+* Or clone the repo
+  * copy the resulting dcafs*.jar and lib folder to a working dir
 
-* Option one is cloning the repo, and run it/package it in your preferred IDE.
-* Option two is look at the most recent release and download that. There's no installer involved, just unpack the zip.
-
+## Running it
+### Windows
+* If you have java11+ installed properly, just doubleclick the dcafs*.jar
+  * If extra folders and a settings.xml appear, this worked
+* If java 11+ isn't installed properly...
+   
+### Linux
+* In a terminal
+  * Go to the folder containing the .jar
+  * sudo java -jar dcafs-*.jar  (sudo is required to be able to open the telnet port)
+  * To make this survive closing the terminal, use [tmux](https://linuxize.com/post/getting-started-with-tmux/) to start it
+* As a service:
+  * If going the repo route, first copy past the install_as_service.sh file to the same folder as the dcafs*.jar 
+  * chmod +x install_as_service.sh file
+  * ./install_as_service.sh
+  
 ## First steps
 
 Once running, and after opening a telnet connection to it, you'll be greeted with the following screen.
@@ -31,9 +50,7 @@ In the background, a fresh settings.xml was generated.
   <settings>
     <mode>normal</mode>
     <!-- Settings related to the telnet server -->
-    <telnet port="23" title="DAS">
-      <ignore/>
-    </telnet>
+    <telnet port="23" title="dCafs"/>
   </settings>
   <streams>
     <!-- Defining the various streams that need to be read -->
@@ -55,9 +72,7 @@ Meanwhile, in the background, the settings.xml was updated to this:
   <settings>
     <mode>normal</mode>
     <!-- Settings related to the telnet server -->
-    <telnet port="23" title="DAS">
-      <ignore/>
-    </telnet>
+   <telnet port="23" title="dCafs"/>
   </settings>
   <streams>
     <!-- Defining the various streams that need to be read -->
