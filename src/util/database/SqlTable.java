@@ -531,10 +531,10 @@ public class SqlTable {
         clearRecords( "",count);  
     }
     public int doInsert(String id, Object[] values){
-        return getPrep(id).map( p -> p.getData().add(values)?1:0).orElse(-1);
+        return getPrep(id).map( p -> p.addData(values)?1:0).orElse(-1);
     }
     public int doInsert(Object[] values){
-        return getPrep("").map( p -> p.getData().add(values)?1:0).orElse(-1);
+        return getPrep("").map( p -> p.addData(values)?1:0).orElse(-1);
     }
     /**
      * Use the given rtvals to fill in the create statement, alias/title must match elements
