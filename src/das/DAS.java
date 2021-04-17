@@ -91,16 +91,22 @@ public class DAS implements DeadThreadListener {
 
     public DAS() {
 
+
         try {
             Path p = Path.of(getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
-            if( !p.toString().endsWith(".jar") ){ //meaning from ide
-                p=p.getParent();
+            if (!p.toString().endsWith(".jar")) { //meaning from ide
+                p = p.getParent();
             }
             workPath = p.getParent().toString();
-            settingsFile = Path.of(workPath,"settings.xml");
+
+            if( workPath.matches(".*[lib]")) { // Meaning used as a lib
+                workPath = Path.of(workPath).getParent().toString();
+            }
+            settingsFile = Path.of(workPath, "settings.xml");
         } catch (URISyntaxException e) {
             Logger.error(e);
         }
+
 
         if (Files.notExists(settingsFile)) {
             Logger.warn("No Settings.xml file found, creating new one. Searched path: "
@@ -136,7 +142,7 @@ public class DAS implements DeadThreadListener {
             rtvals = new RealtimeValues(issues);
             readDatabasesFromXML();
 
-            baseReq = new BaseReq(rtvals, issues);
+            baseReq = new BaseReq(rtvals, issues, workPath);
             baseReq.setSQLitesManager(dbManager);
 
             /* TransServer */
@@ -1265,8 +1271,6 @@ public class DAS implements DeadThreadListener {
         }
     }
     public static void main(String[] args) {
-
-
 
         DAS das = new DAS();
 

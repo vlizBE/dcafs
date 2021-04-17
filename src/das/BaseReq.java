@@ -72,19 +72,11 @@ public class BaseReq {
 	 * Constructor requiring a link to the @see RealtimeValues for runtime values
 	 * @param rtvals The current RealtimeValues
 	 */
-	public BaseReq(RealtimeValues rtvals){
+	public BaseReq(RealtimeValues rtvals, String workPath){
 		this.rtvals = rtvals;
 		this.name = this.getClass().getName().split("\\.")[1];
+		this.workPath=workPath;
 
-		try {
-			Path p = Path.of(getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
-			if( !p.toString().endsWith(".jar") ){ //meaning not from jar
-				p=p.getParent();
-			}
-			workPath = p.getParent().toString();
-		} catch (URISyntaxException e) {
-			Logger.error(e);
-		}
 		Logger.info("BaseReq started with workpath: "+workPath);
 	}
 	/**
@@ -92,8 +84,8 @@ public class BaseReq {
 	 * @param rtvals The current RealtimeValues
 	 * @param issues The collector for the issues created by the BaseReq
 	 */
-	public BaseReq(RealtimeValues rtvals, IssueCollector issues) {
-		this(rtvals);
+	public BaseReq(RealtimeValues rtvals, IssueCollector issues, String workPath) {
+		this(rtvals,workPath);
 		this.issues = issues;
 	}
 	/* ****************************  S E T U P - C H E C K U P: Adding different parts from DAS  *********************/
