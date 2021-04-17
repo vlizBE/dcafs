@@ -8,6 +8,7 @@ From 0.5.0 onwards, this should be better documented...
 ## Work in progress
 #### Todo
 - influx db is not in the status window
+- db connect in separate thread
 
 #### N5 adds (get moved to list below on new nightly)
 
@@ -15,7 +16,8 @@ From 0.5.0 onwards, this should be better documented...
 - TextForward resplit now actually does something with leftover
 - Influx should now appear in the list from st etc
 - Removed the sources inside devices, didn't belong  in the repo
-- Path to settings.xml no longer relative but based on the .jar location
+- Path to settings.xml etc no longer relative but based on the .jar location
+  * takes in account if used as lib (if inside a folder .*[lib])
 
 #### BugFixes
 
