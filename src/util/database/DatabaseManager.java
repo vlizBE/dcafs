@@ -87,7 +87,7 @@ public class DatabaseManager{
         return sqls.get(id);
     }
     public boolean hasDatabases() {
-        return !lites.isEmpty() || !sqls.isEmpty();
+        return !lites.isEmpty() || !sqls.isEmpty() || !influxes.isEmpty();
     }
     /* ****************************************************************************************************************/
     /**
