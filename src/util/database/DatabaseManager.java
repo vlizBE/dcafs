@@ -138,6 +138,23 @@ public class DatabaseManager{
         }
     }
 
+    /**
+     * Get the sum of all the max buffersizes
+     * @return Sum of buffermaxes
+     */
+    public int getTotalMaxCount(){
+        int total=0;
+        for( var db : lites.values())
+            total+=db.maxQueries;
+        for( var db : sqls.values())
+            total+=db.maxQueries;
+        return total;
+    }
+
+    /**
+     * Get the total amount of queries in memory
+     * @return Buffered query count
+     */
     public int getTotalQueryCount(){
         int total=0;
         for( var db : lites.values())
