@@ -228,7 +228,7 @@ public class Generic {
         }
         Object[] data = new Object[entries.size()];
 
-        var pb = Point.measurement(influxMeasurement);
+        var pb = influxMeasurement.isEmpty()?null:Point.measurement(influxMeasurement);
 
         for( int a=0;a<entries.size();a++ ){
             Entry entry = entries.get(a);
@@ -265,7 +265,7 @@ public class Generic {
                             }
                             break;
                 }
-                if( !influxID.isEmpty() ){
+                if( !influxID.isEmpty() && pb!=null ){
                    switch (entry.type ){
                        case INTEGER:  pb.addField(entry.title,(int)data[a]); break;
                        case REAL: pb.addField(entry.title,(double)data[a]); break;
