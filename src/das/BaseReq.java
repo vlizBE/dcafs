@@ -23,6 +23,7 @@ import util.tools.Tools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
+import worker.DebugWorker;
 import worker.Generic;
 
 import java.io.File;
@@ -924,6 +925,7 @@ public class BaseReq {
 				StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
 				join.add("admin:getlogs -> Get the latest logfiles")
 					.add("admin:gettasklog -> Get the taskmananger log")
+					.add("admin:adddebugnode -> Adds a debug node with default values")
 					.add("admin:sms -> Send a test SMS to the admin number")
 					.add("admin:haw -> Stop all workers")
 					.add("admin:clock -> Get the current timestamp")
@@ -958,6 +960,9 @@ public class BaseReq {
 					e.printStackTrace();
 					return "Something went wrong trying to get the file";
 				}
+			case "adddebugnode":
+				DebugWorker.addBlank(XMLfab.withRoot(das.getXMLdoc(),"das","settings"));
+				return "Tried to add node";
 			case "sms":
 				das.sendSMS("admin", "Test");
 				return "Trying to send SMS\r\n";
@@ -1733,7 +1738,7 @@ public class BaseReq {
 			case "store":
 				if( cmds.length < 3 )
 					return "Not enough arguments, needs to be dbm:store,dbId,tableid";
-				if( rtvals.writeRecord(cmds[1],cmds[2]) )
+				if( rtvals.writeRecord(cmds[1].split(","),cmds[2]) )
 					return "Wrote record";
 				return "Failed to write record";
 			default:

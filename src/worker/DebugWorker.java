@@ -5,6 +5,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import util.database.DatabaseManager;
 import util.tools.TimeTools;
+import util.xml.XMLfab;
 import util.xml.XMLtools;
 
 import java.io.File;
@@ -71,6 +72,15 @@ public class DebugWorker implements Runnable {
 		return XMLtools.getFirstElementByTag(xml, "debug") != null;
 	}
 
+	public static void addBlank( XMLfab fab){
+		fab.alterChild("debug").down()
+				.addChild("inputfile","rework")
+				.addChild("rawlog","no")
+				.addChild("sourcetype","raw")
+				.addChild("dbwrite","no")
+				.addChild("emails","no")
+				.build();
+	}
 	public void readSettingsFromXML(Document xml) {
 
 		Element dbg = XMLtools.getFirstElementByTag(xml, "debug");
@@ -117,10 +127,6 @@ public class DebugWorker implements Runnable {
 
 	public boolean doEmails() {
 		return debugEmails;
-	}
-
-	public boolean doWebsocket() {
-		return debugWS;
 	}
 
 	public void findFiles() {
