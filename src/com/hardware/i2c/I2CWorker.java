@@ -39,9 +39,11 @@ public class I2CWorker implements Runnable {
     private boolean goOn=true;
 
     private final LinkedHashMap<String,I2CCommand> commands = new LinkedHashMap<>();
+    Path scriptsPath=Path.of("devices");
 
     public I2CWorker(Document xml, BlockingQueue<Datagram> dQueue) {
         this.dQueue = dQueue;
+        scriptsPath = XMLtools.getXMLparent(xml).resolve("devices");
         this.readSettingsFromXML(xml);
     }
     public boolean setDebug( boolean debug ){
@@ -211,12 +213,14 @@ public class I2CWorker implements Runnable {
     }
     public String reloadCommands( ){
         List<Path> xmls;
-        try (Stream<Path> files = Files.list(Path.of("devices"))){
+        try (Stream<Path> files = Files.list(scriptsPath)){
             xmls = files.filter(p -> p.toString().endsWith(".xml")).collect(Collectors.toList());
         }catch (IOException e) {            
             Logger.error("Something went wrong trying to read the commandset files");
             return "Failed to read files in devices folder";
-        }        
+        }
+        Logger.info("Reading I2C scripts from: "+scriptsPath);
+
         commands.clear();
         for( Path p : xmls ){
 
