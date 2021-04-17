@@ -50,9 +50,7 @@ In the background, a fresh settings.xml was generated.
   <settings>
     <mode>normal</mode>
     <!-- Settings related to the telnet server -->
-    <telnet port="23" title="DAS">
-      <ignore/>
-    </telnet>
+    <telnet port="23" title="dCafs"/>
   </settings>
   <streams>
     <!-- Defining the various streams that need to be read -->
@@ -74,9 +72,7 @@ Meanwhile, in the background, the settings.xml was updated to this:
   <settings>
     <mode>normal</mode>
     <!-- Settings related to the telnet server -->
-    <telnet port="23" title="DAS">
-      <ignore/>
-    </telnet>
+   <telnet port="23" title="dCafs"/>
   </settings>
   <streams>
     <!-- Defining the various streams that need to be read -->
