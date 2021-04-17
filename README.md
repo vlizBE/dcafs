@@ -36,6 +36,10 @@ A Java tool (or can also be used as a library) that takes care of all the nitty-
   * If going the repo route, first copy past the install_as_service.sh file to the same folder as the dcafs*.jar 
   * chmod +x install_as_service.sh file
   * ./install_as_service.sh
+    * Restarting the service: sudo systemctl restart dcafs
+    * Get the status: sudo systemctl status dcafs
+    * Read the full log: sudo journalctl -u dcafs.service
+    * Follow the console: sudo journalctl -u dcafs.service -f
   
 ## First steps
 
