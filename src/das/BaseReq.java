@@ -194,6 +194,7 @@ public class BaseReq {
 	}
 	
 	public void emailResponse( Datagram d ) {
+		Logger.info( "Executing email command ["+d.getMessage()+"], origin: " + d.getOriginID() );
 		emailResponse( d, "Bot Reply" );
 	}
 

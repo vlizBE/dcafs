@@ -14,9 +14,7 @@ import java.lang.reflect.Method;
 import java.time.Instant;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -26,7 +24,7 @@ import java.util.stream.Collectors;
  *
  * @author Michiel TJampens @vliz
  */
-public class BaseWorker implements Runnable {
+public class BaseWorker implements Runnable{
 	   
 	Map<String, Method> nmeaMetMap = null;
 	Map<String, Method> regMetMap = null;
@@ -51,6 +49,8 @@ public class BaseWorker implements Runnable {
 
 	protected DeadThreadListener listener;
 
+	ExecutorService executor = Executors.newFixedThreadPool(Math.min(3,Runtime.getRuntime().availableProcessors())); //
+
 	public enum FAILreason { // Used by the nmea processing to return the result
 		NONE, PRIORITY, LENGTH, SYNTAX, INVALID, TODO, IGNORED, DISABLED, EMPTY
 	}
@@ -64,6 +64,7 @@ public class BaseWorker implements Runnable {
 	public BaseWorker( BlockingQueue<Datagram> dQueue ) {
 		this();
 		this.dQueue = dQueue;
+		Logger.info("Using "+Runtime.getRuntime().availableProcessors()+" threads");
 	}
 	/**
 	 * Constructor to use its own queue
@@ -197,154 +198,178 @@ public class BaseWorker implements Runnable {
 	    }
 	}
 	/* *******************************************************************************************/
+	@Override
+	public void run() {
+
+		if( this.reqData==null){
+			Logger.error("Not starting without proper BaseReq");
+			return;
+		}
+		while(goOn){
+			try {
+				Datagram d = dQueue.take();
+
+				if( d==null ){
+					Logger.error("Invalid datagram received");
+					continue;
+				}
+				if(d.label==null) {
+					Logger.error("Invalid label received along with message :"+d.getMessage());
+					continue;
+				}
+				d.label=d.label.toLowerCase();
+
+				if( d.label.startsWith("generic:")) {
+					executor.submit(new ProcessGeneric(d));
+				}else if( d.label.startsWith("nmea")){
+					executor.submit( new ProcessNMEA(d) );
+				}else{
+					switch(d.label)
+					{
+						case "system": executor.submit( () -> reqData.createResponse( d.getMessage(), d.getWritable(), false ) ); break;
+						case "test": executor.submit( ()-> Logger.info(d.originID+"|"+d.label+" -> "+d.getMessage())); break;
+						case "email": executor.submit( ()-> reqData.emailResponse( d ) );
+						case "void": break;
+						default: executor.submit( new ProcessDatagram(d) ); break;
+					}
+				}
+				int proc = procCount.get();
+				if( proc >= 100000){
+					procCount.set(0);
+					long millis = Instant.now().toEpochMilli() - procTime;
+					procTime = Instant.now().toEpochMilli();
+					Logger.info("Processed "+(proc/1000)+"k lines in "+TimeTools.convertPeriodtoString(millis,TimeUnit.MILLISECONDS));
+
+				}
+			} catch (InterruptedException e) {
+				Logger.error(e);
+			}
+		}
+	}
 	/**
 	 * The main processing method for this class
 	 */
-	@Override
-	public void run() {
-		Logger.info("BaseWorker Started");
-		goOn = true;
-		long time=0;
-		waitingSince=0;
-		Datagram d = null;
-		try {
-			while (goOn) { // Continuously repeat the following code, unless
-						   // anything makes goOn false. This provides a clean way of interrupting the thread
-				waitingSince = Instant.now().toEpochMilli();
-			
-				d = dQueue.take(); // Request a Datagram from the queue, blocks until one is received	
-				time -= Instant.now().toEpochMilli()-waitingSince;
-				if( printData )
-					Logger.debug("REC: "+d.label+" -> "+d.getMessage());
-				if( debugMode ){
-					if( procCount.get()==1){
-						time = Instant.now().toEpochMilli();
-					}else if( procCount.get() == 100000){
-						Logger.info("Processed 100k in "+(Instant.now().toEpochMilli()-time)+"ms");
-						time = System.currentTimeMillis();
-						procCount.set(1);
-					}
-				}
-				if( d.label==null ){
-					Logger.error( "Bad datagram received, invalid label! "+d.getMessage()+" title:"+d.getOriginID());
-					continue;
-				}
-				if( d.label.equals("nmea")){
-					boolean ok = MathUtils.doNMEAChecksum(d.getMessage());
-					if (ok) {// Either checksum was ok or test was skipped
-						String[] split = d.getMessage().substring(0,d.getMessage().length()-3).split(",");// remove the checksum and split the nmea string in its components
-						FAILreason fail = FAILreason.IGNORED;
-						
-					    	try {
-					    		String nmea = split[0].substring(3).toLowerCase();
-					    		if( nmeaMetMap.get(nmea) != null ){
-									/* Keep track of method usage *********************************************/
-									Long[] times = lastUsage.get(nmea);
-									if( times == null){
-										times = new Long[2];
-										times[1]=Instant.now().toEpochMilli();
-									}
-									times[0]=times[1];
-									times[1]=Instant.now().toEpochMilli();
-									
-									lastUsage.put(nmea,times);
-									/* *************************************************************************/
-					    			fail = (FAILreason) nmeaMetMap.get(nmea).invoke(this,split,d.priority);
-					    		}else{
-					    			Logger.error( "Can't process the message: "+d.getMessage());					    			
-					    		}
-							} catch (IllegalAccessException | IllegalArgumentException e) {
-								Logger.error( "Something wrong in the processing method for: " + d.getMessage()+" -> "+e.getMessage() );
-							} catch( java.lang.NullPointerException np){
-								Logger.error( "Nullpointer when processing: " + d.getMessage() );
-							}catch (InvocationTargetException e) {
-								Throwable originalException = e.getTargetException();
-								Logger.error( "'"+originalException+"' at "+originalException.getStackTrace()[0].toString()+" when processing: "+d.getMessage());
-							}
-																
-						switch (fail) {
-							case NONE: break; // Most common result
-							case SYNTAX:// The process failed because of a syntax error, eg. the string doesn't contain the right amount of parts															
-								Logger.warn( "Bad NMEA String Syntax: "+d.getMessage() );
-								break;
-							case LENGTH:// The string was longer or shorter then expected
-								Logger.warn( "Bad NMEA String Length: "+d.getMessage() + " (length:"+split.length+") from "+d.getOriginID());
-								break;
-							case PRIORITY:
-								/* The datagram didn't have the right priority to use it (highest priority = 1, 
-								   if no messages of 1 are received  it becomes 2 etc)
-								   Logger.debug("SKIPPED (priority): " +  d.getMessage())*/
-								break;
-							case INVALID:
-								Logger.warn( "Invalid NMEA String: "+d.getMessage(), true);
-								break;
-							case TODO:// A NMEA string was received that hasn't got
-										// any processing code yet.
-										Logger.warn( "TODO: "+ d.priority+"\t"+ d.getMessage()+"\t From:"+d.getOriginID());
-								break;
-							case IGNORED: // For some reason the string was ignored
-							case DISABLED:
-							case EMPTY: // Nothing to report
-							break;
+	private class ProcessNMEA implements Runnable {
+		Datagram d;
+
+		public ProcessNMEA(Datagram d ){
+			this.d=d;
+		}
+		public void run() {
+
+			if ( MathUtils.doNMEAChecksum(d.getMessage()) ) {// Either checksum was ok or test was skipped
+				String[] split = d.getMessage().substring(0,d.getMessage().length()-3).split(",");// remove the checksum and split the nmea string in its components
+				FAILreason fail = FAILreason.IGNORED;
+
+				try {
+					String nmea = split[0].substring(3).toLowerCase();
+					if( nmeaMetMap.get(nmea) != null ){
+						/* Keep track of method usage *********************************************/
+						Long[] times = lastUsage.get(nmea);
+						if( times == null){
+							times = new Long[2];
+							times[1]=Instant.now().toEpochMilli();
 						}
-					} else {
-						if( d.getMessage().length() > 250 )
-							d.setMessage(d.getMessage().substring(0,250));
-						Logger.warn( "NMEA message from "+d.getOriginID() +" failed checksum "+d.getMessage().replace("\r","<cr>").replace("\n","<lf>") );
-					}
-				}else{
-					String what = d.label.toLowerCase().split(":")[0];
-					/* Keep track of method usage *********************************************/
-					Long[] times = lastUsage.get(what);
-					if( times == null){
-						times = new Long[2];
+						times[0]=times[1];
 						times[1]=Instant.now().toEpochMilli();
-					}
-					times[0]=times[1];
-					times[1]=Instant.now().toEpochMilli();
-					lastUsage.put(what,times);
-					/* *************************************************************************/
-					Method m = regMetMap.get( what );
-					if( m != null ){
-						try {
-							m.invoke( this,d );
-							if( debugMode )
-								Logger.debug("Processing:"+d.getMessage()+" for "+d.label+" from "+d.getOriginID());
-						} catch (IllegalAccessException | IllegalArgumentException e) {
-							Logger.warn( "Invoke Failed:'" + d.label + "'>" + d.getMessage() + "<");
-							Logger.error(e);
-						}catch (InvocationTargetException e) {
-							Throwable originalException = e.getTargetException();
-							Logger.error( "'"+originalException+"' at "+originalException.getStackTrace()[0].toString()+" when processing: "+d.getMessage());
-						}			
+
+						lastUsage.put(nmea,times);
+						/* *************************************************************************/
+						fail = (FAILreason) nmeaMetMap.get(nmea).invoke(BaseWorker.this,split,d.priority);
 					}else{
-						Logger.warn( "Not defined:" +d.getOriginID() +"|"+ d.label + " >" + d.getMessage() + "< raw: "+Tools.fromBytesToHexString(d.raw));
+						Logger.error( "Can't process the message: "+d.getMessage());
 					}
+				} catch (IllegalAccessException | IllegalArgumentException e) {
+					Logger.error( "Something wrong in the processing method for: " + d.getMessage()+" -> "+e.getMessage() );
+				} catch( java.lang.NullPointerException np){
+					Logger.error( "Nullpointer when processing: " + d.getMessage() );
+				}catch (InvocationTargetException e) {
+					Throwable originalException = e.getTargetException();
+					Logger.error( "'"+originalException+"' at "+originalException.getStackTrace()[0].toString()+" when processing: "+d.getMessage());
+				}
+
+				switch (fail) {
+					case NONE: break; // Most common result
+					case SYNTAX:// The process failed because of a syntax error, eg. the string doesn't contain the right amount of parts
+						Logger.warn( "Bad NMEA String Syntax: "+d.getMessage() );
+						break;
+					case LENGTH:// The string was longer or shorter then expected
+						Logger.warn( "Bad NMEA String Length: "+d.getMessage() + " (length:"+split.length+") from "+d.getOriginID());
+						break;
+					case PRIORITY:
+									/* The datagram didn't have the right priority to use it (highest priority = 1,
+									   if no messages of 1 are received  it becomes 2 etc)
+									   Logger.debug("SKIPPED (priority): " +  d.getMessage())*/
+						break;
+					case INVALID:
+						Logger.warn( "Invalid NMEA String: "+d.getMessage(), true);
+						break;
+					case TODO:// A NMEA string was received that hasn't got
+						// any processing code yet.
+						Logger.warn( "TODO: "+ d.priority+"\t"+ d.getMessage()+"\t From:"+d.getOriginID());
+						break;
+					case IGNORED: // For some reason the string was ignored
+					case DISABLED:
+					case EMPTY: // Nothing to report
+						break;
+				}
+			} else {
+				if( d.getMessage().length() > 250 )
+					d.setMessage(d.getMessage().substring(0,250));
+				Logger.warn( "NMEA message from "+d.getOriginID() +" failed checksum "+d.getMessage().replace("\r","<cr>").replace("\n","<lf>") );
+			}
+			procCount.incrementAndGet();
+		}
+	}
+	private class ProcessDatagram implements Runnable {
+		Datagram d;
+
+		public ProcessDatagram(Datagram d) {
+			this.d = d;
+		}
+		public void run() {
+			try {
+				String what = d.label.toLowerCase().split(":")[0];
+				/* Keep track of method usage *********************************************/
+				Long[] times = lastUsage.get(what);
+				if (times == null) {
+					times = new Long[2];
+					times[1] = Instant.now().toEpochMilli();
+				}
+				times[0] = times[1];
+				times[1] = Instant.now().toEpochMilli();
+				lastUsage.put(what, times);
+				/* *************************************************************************/
+				Method m = regMetMap.get(what);
+				if (m != null) {
+					try {
+						m.invoke(BaseWorker.this, d);
+						if (debugMode)
+							Logger.debug("Processing:" + d.getMessage() + " for " + d.label + " from " + d.getOriginID());
+					} catch (IllegalAccessException | IllegalArgumentException e) {
+						Logger.warn("Invoke Failed:'" + d.label + "'>" + d.getMessage() + "<");
+						Logger.error(e);
+					} catch (InvocationTargetException e) {
+						Throwable originalException = e.getTargetException();
+						Logger.error("'" + originalException + "' at " + originalException.getStackTrace()[0].toString() + " when processing: " + d.getMessage());
+					} catch( Exception e ){
+						Logger.error(e);
+					}
+				} else {
+					Logger.warn("Not defined:" + d.getOriginID() + "|" + d.label + " >" + d.getMessage() + "< raw: " + Tools.fromBytesToHexString(d.raw));
 				}
 				// Debug information
 				procCount.incrementAndGet();
+			} catch (java.lang.ArrayIndexOutOfBoundsException f) {
+				Logger.error("Interrupted because out ArrayIndexOut" + f.toString() + " while processing: " + d.getMessage() + " Label: " + d.label);
 			}
-			Logger.error( "Worker stopped!"); // notify that for some reason the worker stopped working
-		} catch (InterruptedException ex) {		
-			Logger.error( "Main worker thread interrupted while processing: "+d.getMessage()+ " Label: "+d.label);
-			Logger.error( ex );
-			// Restore interrupted state...
-			Thread.currentThread().interrupt();
-		} catch( java.lang.ArrayIndexOutOfBoundsException f){
-			Logger.error( "Main worker thread interrupted because out ArrayIndexOut"+f.toString() +" while processing: "+d.getMessage()+ " Label: "+d.label);			
-		} finally{
-			if( listener != null)
-				listener.notifyCancelled("BaseWorker");
 		}
-	} 
-	 public String createResponse(String question, Writable trans){
-    	if( reqData==null)
-    		return "No response, DataReq still null";
-    	return reqData.createResponse( question, trans, false );
-    }
+	 }
+
 	public void setDebugging( boolean deb ){
 		this.debugMode=deb;
 	}
+
 	public synchronized int getProcCount(int seconds) {
 		double a = procCount.get();
 		long passed = (Instant.now().toEpochMilli()-procTime)/1000; //seconds since last check
@@ -358,6 +383,7 @@ public class BaseWorker implements Runnable {
 	protected long dataAge(){
 		return (Instant.now().toEpochMilli() - waitingSince)/1000;
 	}
+
 	public String getMethodCallAge(String newline){
 		StringJoiner b = new StringJoiner(newline);
 		ArrayList<String> items = new ArrayList<>();
@@ -381,13 +407,7 @@ public class BaseWorker implements Runnable {
 	}
 
 	/* ******************************* D E F A U L T   S T U F F *****************************************/
-	public void doSYSTEM( Datagram d ){
-		if( reqData==null){
-			Logger.error("Tried to issue a system command ("+d.getMessage()+") without defined BaseReq");
-			return;
-		}
-		createResponse( d.getMessage(), d.getWritable() );
-	}
+
 	public void doTELNET( Datagram d ){
 		Writable dt = d.getWritable();
 		if( !d.getMessage().equals("status")){
@@ -399,7 +419,7 @@ public class BaseWorker implements Runnable {
 			if( !d.getMessage().isBlank() )
 				Logger.info( "Executing telnet command ["+d.getMessage()+"]"+from);
 		}
-		String response = createResponse( d.getMessage(), dt );
+		String response = reqData.createResponse( d.getMessage(), dt, false );
 		String[] split = d.label.split(":");
 		if( dt != null){
 			if( !d.silent ){
@@ -410,22 +430,9 @@ public class BaseWorker implements Runnable {
 			Logger.info(response); 
 			Logger.info( (split.length>=2?"<"+split[1]:"")+">" );
 		}
-	}
-	public void doEMAIL( Datagram d ) {
-		if( reqData!=null) {
-			Logger.info( "Executing email command ["+d.getMessage()+"], origin: " + d.getOriginID() );
-    		reqData.emailResponse( d );
-		}else {
-			Logger.error( "ReqData null?");
-		}
-	}
-	public void doTEST( Datagram d ){
-		Logger.info("TEST received:"+d.getMessage()+" from "+d.getOriginID());
+		procCount.incrementAndGet();
 	}
 
-	public void doVOID( Datagram d ){
-		// This is a label so that nothing is done with the data
-	}
 	public void doVALMAP( Datagram d ){
 		try{
 			String valmapIDs = d.label.split(":")[1];
@@ -448,39 +455,47 @@ public class BaseWorker implements Runnable {
 		}catch( ArrayIndexOutOfBoundsException l ){
 			Logger.error("Generic requested ("+d.label+") but no valid id given.");
 		}
+		procCount.incrementAndGet();
 	}
-	public synchronized void doGENERIC( Datagram d ){
+	public class ProcessGeneric implements Runnable{
+		Datagram d;
 
-		try{
-			String mes = d.getMessage();
-			if( mes.isBlank() ){
-				Logger.warn( d.getOriginID() + " -> Ignoring blank line" );
-				return;
-			}
-			var genericIDs = d.label.split(":")[1].split(",");
-			for( String genericID : genericIDs ){
-				getGenerics(genericID).stream().forEach(
-						gen -> {
-							if ( mes.startsWith(gen.getStartsWith()) ) {
-								Object[] data = gen.apply(mes, rtvals);
-								if (!gen.getTable().isEmpty() && gen.writesInDB()) {
-									if (gen.isTableMatch()) {
-										rtvals.provideRecord( gen.getDBID(), gen.getTable(), data);
-									} else {
-										rtvals.writeRecord( gen.getDBID(), gen.getTable(), gen.macro);
+		public ProcessGeneric(Datagram d){
+			this.d=d;
+		}
+		public void run(){
+			try{
+				String mes = d.getMessage();
+				if( mes.isBlank() ){
+					Logger.warn( d.getOriginID() + " -> Ignoring blank line" );
+					return;
+				}
+
+				var genericIDs = d.label.split(":")[1].split(",");
+				for( String genericID : genericIDs ){
+					getGenerics(genericID).stream().forEach(
+							gen -> {
+								if ( mes.startsWith(gen.getStartsWith()) ) {
+									Object[] data = gen.apply(mes, rtvals);
+									if (!gen.getTable().isEmpty() && gen.writesInDB()) {
+										if (gen.isTableMatch()) {
+											rtvals.provideRecord( gen.getDBID(), gen.getTable(), data);
+										} else {
+											rtvals.writeRecord( gen.getDBID(), gen.getTable(), gen.macro);
+										}
+									}
+								} else {
+									if (gen == null) {
+										Logger.error("Generic requested but unknown id: " + genericID + " -> Message: " + d.getMessage());
 									}
 								}
-							} else {
-								if (gen == null) {
-									Logger.error("Generic requested but unknown id: " + genericID + " -> Message: " + d.getMessage());
-								}
 							}
-						}
-				);
+					);
+				}
+			}catch( ArrayIndexOutOfBoundsException l ){
+				Logger.error("Generic requested ("+d.label+") but no valid id given.");
 			}
-			
-		}catch( ArrayIndexOutOfBoundsException l ){
-			Logger.error("Generic requested ("+d.label+") but no valid id given.");
+			procCount.incrementAndGet();
 		}
 	}
 	private List<Generic> getGenerics( String id ){
@@ -502,5 +517,6 @@ public class BaseWorker implements Runnable {
 				}
 			}
 		}
+		procCount.incrementAndGet();
 	}
 }
