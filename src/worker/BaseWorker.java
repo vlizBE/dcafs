@@ -64,7 +64,7 @@ public class BaseWorker implements Runnable{
 	public BaseWorker( BlockingQueue<Datagram> dQueue ) {
 		this();
 		this.dQueue = dQueue;
-		Logger.info("Using "+Runtime.getRuntime().availableProcessors()+" threads");
+		Logger.info("Using "+Math.min(3,Runtime.getRuntime().availableProcessors())+" threads");
 	}
 	/**
 	 * Constructor to use its own queue
