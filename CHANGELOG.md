@@ -5,32 +5,28 @@ Note: Version numbering: x.y.z
   -> z goes up for minor additions and bugfixes
 From 0.5.0 onwards, this should be better documented...
 
-## Work in progress
+## Work in progress 0.8.4
+- version bump because of baseworker redo
+
 #### Todo
 - influx db is not in the status window
 - db connect in separate thread
 
 #### N5 adds (get moved to list below on new nightly)
 
-#### Other
-- TextForward resplit now actually does something with leftover
-- Influx should now appear in the list from st etc
-- Removed the sources inside devices, didn't belong  in the repo
-- Path to settings.xml etc no longer relative but based on the .jar location
-  * takes in account if used as lib (if inside a folder .*[lib])
 
 #### BugFixes
 
+## RELEASED
+#### 0.8.3
 
-#### 0.8.3 N1-4
-- Updated dependencies
-- Added @rand6,@rand20 and @rand100 to task fill in
-- ss:addtcp and ss:addserial no longer require a label defined
-- Trans now allows editing id during store command
-- added rttext:x equivalent of rtval:x
+#### Taskmanager
 - Removed the sqlite from the taskmanager, wasn't used anyway
-- Removed the default sqlite from Issuecollector, need to actually assign one
-- setRealtimevalue retains case
+- Added @rand6,@rand20 and @rand100 to task fill in
+
+#### Streampool
+- added rttext:x equivalent of rtval:x
+- ss:addtcp and ss:addserial no longer require a label defined
 
 #### Generics
 - added gens:fromdb,dbid to generate all generics at once (if new)
@@ -49,10 +45,21 @@ From 0.5.0 onwards, this should be better documented...
 - Added min length and max length filters to filterforward
 - Added ff:alter command to alter the label (nothing else yet)
 - Added nmea:yes/no as a possible filterforward rule, checks if it has a proper *hh
+- TextForward resplit now actually does something with leftover
 
+#### Other
+- Updated dependencies
+- Removed the sources inside devices, didn't belong  in the repo
+- Trans now allows editing id during store command
+- Removed the default sqlite from Issuecollector, need to actually assign one
+- setRealtimevalue retains case
+- Path to settings.xml etc no longer relative but based on the .jar location
+  * takes in account if used as lib (if inside a folder .*[lib])
+  
 #### Bugfixes
 - sleep command was always using rtc0, now it can be selected
 - Influx.java was using the wrong dependency for String operations
+- Influx should now appear in the list from st etc
 - trans:store,x removed wrong nodes on adding history
 - timestamp column is now really a timestamp column on database servers (used to be text by default)
 - the gen:addblank format f made a text node instead of filler
@@ -63,7 +70,6 @@ From 0.5.0 onwards, this should be better documented...
 - index of label read from commands wasn't correct
 - removed default alarms taskmanager but didn't check if one was made later
 
-## RELEASED
 ### 0.8.2
 #### I2CWorker
  * Added command to add a device (and generate empty script)
