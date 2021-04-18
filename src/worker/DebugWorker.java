@@ -8,9 +8,7 @@ import util.tools.TimeTools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
@@ -46,7 +44,7 @@ public class DebugWorker implements Runnable {
 	private SourceType srcType = SourceType.RAW;
 	private final ArrayList<String[]> data = new ArrayList<>(); // buffer to hold the data read from the file
 
-	Scanner sc;
+	BufferedReader br;
 	Path filesPath;
 
 	boolean debugWS = false;
@@ -215,7 +213,9 @@ public class DebugWorker implements Runnable {
 		}
 		Logger.info("Reading: " + logs.get(0).toString());
 		try {
-			sc = new Scanner(logs.remove(0).toFile(), StandardCharsets.UTF_8);
+			//sc = new Scanner(logs.remove(0).toFile(), StandardCharsets.UTF_8);
+			br = new BufferedReader(
+					new InputStreamReader(new FileInputStream(logs.remove(0).toFile()), StandardCharsets.UTF_8));
 		} catch (IOException e) {
 			Logger.error(e);
 			return;
@@ -226,8 +226,15 @@ public class DebugWorker implements Runnable {
 		int full = 0;
 		int maxQueries = Math.max(dbm.getTotalMaxCount()*5,5000);
 		Logger.info("Started processing it... (with "+maxQueries+" query buffer limit)");
+
 		while (goOn) {
-			if (sc.hasNext()) {
+			String r=null;
+			try {
+				r=br.readLine();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			if (r!=null) {
 				if (dQueue.size() > 2500 ) {
 					full++;
 					while (dQueue.size() > 500);
@@ -241,7 +248,7 @@ public class DebugWorker implements Runnable {
 						e.printStackTrace();
 					}
 				}
-				String r = sc.nextLine();
+
 				readLines++;
 				String[] line = r.split("\t");
 				
@@ -263,7 +270,7 @@ public class DebugWorker implements Runnable {
 							if( !this.label.isEmpty())
 								labid[0]=this.label;
 							Datagram d = new Datagram(line[3], prio, labid[0], 0);
-							d.setOriginID( labid.length==2?labid[1]:"");
+							d.setOriginID( labid.length==2?labid[1]:"debugworker");
 							d.raw = line[3].getBytes();
 							//d.setTimestamp(dt.toInstant(ZoneOffset.UTC).toEpochMilli());
 							//Logger.info("Adding to queue: "+d.getMessage());
@@ -298,21 +305,22 @@ public class DebugWorker implements Runnable {
 				}
 			} else {
 				Logger.info("End of file reached");
-				sc.close();
-				if ( logs.isEmpty()) {
-					goOn=false;
-					break;
-				}
 				try {
+					br.close();
+					if ( logs.isEmpty()) {
+						goOn=false;
+						break;
+					}
 					Logger.info("Reading: " + logs.get(0).toString());
 					if (loop) { // loop so add the first file to the end
 						Path p = logs.get(0);
 						logs.add(p);
 					}
-					sc = new Scanner(logs.remove(0).toFile());
-				} catch (FileNotFoundException e) {
-					goOn = false;
-					Logger.error("Error Reading Raw, Stopping!");
+					br = new BufferedReader(
+							new InputStreamReader(new FileInputStream(logs.remove(0).toFile()), StandardCharsets.UTF_8));
+				} catch (IOException e) {
+					Logger.error(e);
+					return;
 				}
 			}
 		}
