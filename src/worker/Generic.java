@@ -1,6 +1,7 @@
 package worker;
 
 import das.RealtimeValues;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.influxdb.dto.Point;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
@@ -246,13 +247,13 @@ public class Generic {
             try{
                 double val;
                 switch( entry.type ){
-                    case INTEGER:      
-                            val=Tools.parseDouble(split[entry.index],-999);
-                            data[a]=(int)val;
+                    case INTEGER:
+                            val=NumberUtils.toInt(split[entry.index],-999);
+                            data[a]=val;
                             rtvals.setRealtimeValue( ref, val ); 
                             break;  
-                    case REAL:                                
-                            val=Tools.parseDouble(split[entry.index],-999);
+                    case REAL:
+                            val = NumberUtils.toDouble(split[entry.index],-999);
                             data[a]=val;
                             rtvals.setRealtimeValue( ref, val ); 
                             break;                
