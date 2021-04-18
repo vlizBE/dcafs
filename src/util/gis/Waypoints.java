@@ -338,8 +338,8 @@ public class Waypoints {
                 if( cmd.length < 4)
                     return "Not enough parameters given wpts:update,id,lat,lon";
                 var wpOpt = getWaypoint(cmd[1]);
-                if( wpOpt.isPresent()) {
-                    wpOpt.get().updatePosition(Tools.parseDouble(cmd[2], -999), Tools.parseDouble(cmd[3], -999));
+                if( wpOpt!=null) {
+                    wpOpt.updatePosition(Tools.parseDouble(cmd[2], -999), Tools.parseDouble(cmd[3], -999));
                     return "Updated "+cmd[1];
                 }
                 return "No such waypoint";
@@ -359,7 +359,7 @@ public class Waypoints {
                 double minBearing = Tools.parseDouble(cmd[2], 0);
                 double maxBearing = Tools.parseDouble(cmd[3], 360);
                 
-                way.get().addTravel(cmd[5], cmd[4], minBearing, maxBearing);
+                way.addTravel(cmd[5], cmd[4], minBearing, maxBearing);
                 return "Added travel "+cmd[5]+" to "+ cmd[1];
             default:
                 return "Unknown waypoints command";
