@@ -234,7 +234,7 @@ public class BaseWorker implements Runnable{
 					}
 				}
 				int proc = procCount.get();
-				if( proc >= 100000){
+				if( proc >= 500000){
 					procCount.set(0);
 					long millis = Instant.now().toEpochMilli() - procTime;
 					procTime = Instant.now().toEpochMilli();
