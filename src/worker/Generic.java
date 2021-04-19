@@ -17,8 +17,6 @@ import java.util.StringJoiner;
 
 public class Generic {
 
-
-
     enum DATATYPE{REAL,INTEGER,TEXT,FILLER,TAG}
 
     enum FILTERTYPE{REPLACE_ALL,REPLACE_FIRST}
@@ -297,13 +295,12 @@ public class Generic {
     public String toString(){
         StringJoiner join = new StringJoiner("",id+" -> ","");
         if( dbid!=null ){
-            join.add("Store in "+dbid+"(db):(table)"+table+" " );
-        }else if (!influxID.isEmpty() ){
-            join.add("Store in InfluxDB "+influxID+":"+table+" ");
+            join.add("Store in "+String.join(",",dbid)+"(db):(table)"+table+" " );
         }else if( !table.isEmpty()){
             join.add("Store for "+table+"(table) ");
-        }else{
-
+        }
+        if (!influxID.isEmpty() ){
+            join.add(" Store in InfluxDB "+influxID+":"+table+" ");
         }
         join.add("has delimiter '"+delimiter+"'"+(startsWith.isBlank()?"":"and starts with '"+startsWith+"'") );
         join.add("\r\n");
