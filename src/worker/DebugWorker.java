@@ -34,7 +34,7 @@ public class DebugWorker implements Runnable {
 
 	private BlockingQueue<Datagram> dQueue; // to simulate writing to main processing queue
 	private BlockingQueue<String> sqlQueue;
-	private boolean loop = false; // whether or not to loop the read file (read till end and then start over)
+	private int loop = 1; // whether or not to loop the read file (read till end and then start over)
 	private boolean goOn = true; // the thread is a endless loop, this gives a clean way of stopping it
 	private boolean logRaw = false;
 	private final ArrayList<Path> logs = new ArrayList<>(); // if more then one file needs to be read, the paths are
@@ -77,6 +77,7 @@ public class DebugWorker implements Runnable {
 				.addChild("sourcetype","raw")
 				.addChild("dbwrite","no")
 				.addChild("emails","no")
+				.addChild("loop","1")
 				.build();
 	}
 	public void readSettingsFromXML(Document xml) {
@@ -110,7 +111,7 @@ public class DebugWorker implements Runnable {
 		debugDB = XMLtools.getChildValueByTag(dbg, "dbwrite", "no").equals("yes"); // Write to DB or not
 		debugWS = XMLtools.getChildValueByTag(dbg, "wswrite", "no").equals("yes"); // Send WS messages or not
 		debugEmails = XMLtools.getChildValueByTag(dbg, "emails", "no").equals("yes"); // Send emails or not
-
+		loop = XMLtools.getChildIntValueByTag(dbg,"loop",1);
 
 		Logger.info("Debug sourcetype " + srcType);
 	}
@@ -178,7 +179,7 @@ public class DebugWorker implements Runnable {
 	 * @param loop True means the same file get read over and over and over and
 	 *             over...
 	 */
-	public void setLooping(boolean loop) {
+	public void setLoopingCount(int loop) {
 		this.loop = loop;
 	}
 
@@ -197,12 +198,10 @@ public class DebugWorker implements Runnable {
 	public synchronized void run() {
 		Logger.info("DebugWorker Started");
 		int readLines = 0;
+		int filePos=0;
+
 		findFiles();
-		
-		if (loop) {
-			// loop so add the first file to the end
-			logs.add(logs.get(0));
-		}
+
 		if (logs.isEmpty()){
 			Logger.warn("No files found!");
 			return;
@@ -213,9 +212,9 @@ public class DebugWorker implements Runnable {
 		}
 		Logger.info("Reading: " + logs.get(0).toString());
 		try {
-			//sc = new Scanner(logs.remove(0).toFile(), StandardCharsets.UTF_8);
 			br = new BufferedReader(
-					new InputStreamReader(new FileInputStream(logs.remove(0).toFile()), StandardCharsets.UTF_8));
+					new InputStreamReader(new FileInputStream(logs.get(0).toFile()), StandardCharsets.UTF_8));
+			filePos++;
 		} catch (IOException e) {
 			Logger.error(e);
 			return;
@@ -307,17 +306,27 @@ public class DebugWorker implements Runnable {
 				Logger.info("End of file reached");
 				try {
 					br.close();
-					if ( logs.isEmpty()) {
-						goOn=false;
-						break;
+					String suffix="";
+					if( filePos==logs.size()){
+						if( loop != 0 ){
+							filePos=0;
+						}
+						if(loop==0){
+							goOn=false;
+							continue;
+						}
+						if( loop > 0){
+							loop--;
+							Logger.info("Another loop, after this "+loop+" to go.");
+						}else{
+							Logger.info("Next run of endless loop");
+						}
 					}
-					Logger.info("Reading: " + logs.get(0).toString());
-					if (loop) { // loop so add the first file to the end
-						Path p = logs.get(0);
-						logs.add(p);
-					}
+
+					Logger.info("Reading: " + logs.get(filePos).toString());
 					br = new BufferedReader(
-							new InputStreamReader(new FileInputStream(logs.remove(0).toFile()), StandardCharsets.UTF_8));
+							new InputStreamReader(new FileInputStream(logs.get(filePos).toFile()), StandardCharsets.UTF_8));
+					filePos++;
 				} catch (IOException e) {
 					Logger.error(e);
 					return;

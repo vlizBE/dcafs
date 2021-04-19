@@ -5,17 +5,23 @@ Note: Version numbering: x.y.z
   -> z goes up for minor additions and bugfixes
 From 0.5.0 onwards, this should be better documented...
 
-## Work in progress 0.8.4
-- version bump because of baseworker redo
-
 #### Todo
-- influx db is not in the status window
 - db connect in separate thread
 
-#### N5 adds (get moved to list below on new nightly)
 
+## Work in progress 0.8.4
+
+#### N1 adds (get moved to list below on new nightly)
+- This release will mainly focus on performance improvements
+- BaseWorker rework is part of this and has its own branch because the testing needed
+- Updated the SQLite dependency, now changes in performance noticed
+- Altered install service script to use wildcard
+- Timetools using instant more (slightly faster than previous)
+- Generic uses NumberUtils instead of own parseDouble
+- Debugworker allows looping x times
 
 #### BugFixes
+- Influx wasn't mentioned in generic info if other dbid is present
 
 ## RELEASED
 #### 0.8.3

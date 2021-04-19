@@ -2,7 +2,6 @@
 SERVICE_NAME='dcafs.service'
 SCRIPT="$(readlink --canonicalize-existing "$0")"
 SCRIPT_PATH="$(dirname "$SCRIPT")"
-JAR_FILE=$(echo ` ls | grep dcafs*.jar`)
 
 SERVICE_PATH="/lib/systemd/system"
 SERVICE_FILE=$SERVICE_PATH/$SERVICE_NAME
@@ -13,7 +12,7 @@ Description=Dcafs Data Acquisition System Service
 After=multi-user.target
 [Service]
 Type=simple
-ExecStart=java -jar $SCRIPT_PATH/$JAR_FILE
+ExecStart=/bin/sh -c 'java -jar $SCRIPT_PATH/dcafs-*.jar'
 Restart=on-failure
 RestartSec=3s
 [Install]

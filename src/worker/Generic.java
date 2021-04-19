@@ -1,6 +1,7 @@
 package worker;
 
 import das.RealtimeValues;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.influxdb.dto.Point;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
@@ -15,8 +16,6 @@ import java.util.ArrayList;
 import java.util.StringJoiner;
 
 public class Generic {
-
-
 
     enum DATATYPE{REAL,INTEGER,TEXT,FILLER,TAG}
 
@@ -246,13 +245,13 @@ public class Generic {
             try{
                 double val;
                 switch( entry.type ){
-                    case INTEGER:      
-                            val=Tools.parseDouble(split[entry.index],-999);
-                            data[a]=(int)val;
+                    case INTEGER:
+                            val=NumberUtils.toInt(split[entry.index],-999);
+                            data[a]=val;
                             rtvals.setRealtimeValue( ref, val ); 
                             break;  
-                    case REAL:                                
-                            val=Tools.parseDouble(split[entry.index],-999);
+                    case REAL:
+                            val = NumberUtils.toDouble(split[entry.index],-999);
                             data[a]=val;
                             rtvals.setRealtimeValue( ref, val ); 
                             break;                
@@ -296,13 +295,12 @@ public class Generic {
     public String toString(){
         StringJoiner join = new StringJoiner("",id+" -> ","");
         if( dbid!=null ){
-            join.add("Store in "+dbid+"(db):(table)"+table+" " );
-        }else if (!influxID.isEmpty() ){
-            join.add("Store in InfluxDB "+influxID+":"+table+" ");
+            join.add("Store in "+String.join(",",dbid)+"(db):(table)"+table+" " );
         }else if( !table.isEmpty()){
             join.add("Store for "+table+"(table) ");
-        }else{
-
+        }
+        if (!influxID.isEmpty() ){
+            join.add(" Store in InfluxDB "+influxID+":"+table+" ");
         }
         join.add("has delimiter '"+delimiter+"'"+(startsWith.isBlank()?"":"and starts with '"+startsWith+"'") );
         join.add("\r\n");

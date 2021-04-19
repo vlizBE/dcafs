@@ -327,7 +327,6 @@ public class RealtimeValues implements CollectorFuture {
 			Logger.error("Empty param given");
 			return;
 		}
-		Logger.debug("Setting "+param+" to "+value);
 
 		rtvals.put(param, value);
 		if( !rtvalRequest.isEmpty()){

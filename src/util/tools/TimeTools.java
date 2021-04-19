@@ -13,7 +13,9 @@ import java.util.concurrent.TimeUnit;
 
 public class TimeTools {
 
+    static final public DateTimeFormatter LONGDATE_FORMATTER_UTC = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS").withZone(ZoneOffset.UTC);
     static final public DateTimeFormatter LONGDATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+
 	static final String SHORTDATE_STRING = "yyyy-MM-dd HH:mm:ss";
 	static final String NMEADATE_STRING = "yyyy-MM-dd HHmmss.SS";
 	static final String NMEASHORT_STRING = "yyyy-MM-dd HHmmss";
@@ -97,12 +99,10 @@ public class TimeTools {
      * @return If successful it returns the requested date, if not an empty string
      */
     public static String formatLongUTCNow( ) {
-    	OffsetDateTime utc = OffsetDateTime.now(ZoneOffset.UTC);    	
-        return utc.format(LONGDATE_FORMATTER);
+        return LONGDATE_FORMATTER_UTC.format(Instant.now());
     }
     public static String formatLongNow( ) {
-    	LocalDateTime local = LocalDateTime.now();    	
-        return local.format(LONGDATE_FORMATTER);
+        return LONGDATE_FORMATTER.format(Instant.now());
     }
     /**
      * Gets the current datetime and adds an offset in days and formats it
