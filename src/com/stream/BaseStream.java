@@ -197,7 +197,7 @@ public abstract class BaseStream {
     }
     ;
     /* Requesting data */
-    public boolean addTarget(Writable writable ){
+    public synchronized boolean addTarget(Writable writable ){
         if( writable == null){
             Logger.error("Tried adding request to "+id+" but writable is null");
             return false;
