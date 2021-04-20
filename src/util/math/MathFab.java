@@ -20,6 +20,7 @@ public class MathFab {
     static final String[] ORDERED_OPS={"^","^","*","/","%","%","+","-"};
     static final String OPS_REGEX="\\+|/|\\*|-|\\^|%";
     boolean debug = false;
+    String lastError="";
 
     public MathFab( String formula ){
         build(formula);
@@ -217,17 +218,25 @@ public class MathFab {
 
         return bd.doubleValue();
     }
-    public BigDecimal solve( BigDecimal[] data, BigDecimal scratchpad ){
+
+    /**
+     *
+     * @param data The bigdecimals used in the operation
+     * @param scratchpad Scratchpad variable
+     * @return Result of the operation
+     * @throws ArrayIndexOutOfBoundsException Indicating lack of elements
+     */
+    public BigDecimal solve( BigDecimal[] data, BigDecimal scratchpad ) throws ArrayIndexOutOfBoundsException{
         if( resultIndex == -1 ){
             Logger.error("No valid formula present");
             return null;
         }
         if( data == null ){
             Logger.error("Source data is null");
+            return null;
         }
         if( requiredInputs > data.length ){
-            Logger.error("Not enough elements given, need at least "+requiredInputs+" but got "+data.length);
-            return null;
+            throw new ArrayIndexOutOfBoundsException("Not enough elements given, need at least "+requiredInputs+" but got "+data.length);
         }
 
         BigDecimal[] total = ArrayUtils.addAll(new BigDecimal[offset],data);

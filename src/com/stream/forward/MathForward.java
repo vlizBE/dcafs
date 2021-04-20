@@ -290,9 +290,15 @@ public class MathForward extends AbstractForward {
                 }
             }else{
                 fab.setDebug(debug);
-                bd = fab.solve(data,scratchpad);
+                try {
+                    bd = fab.solve(data, scratchpad);
+                }catch ( ArrayIndexOutOfBoundsException e){
+                    Logger.error(id+" -> "+e.getMessage());
+                    return null;
+                }
             }
             if( bd == null ){
+                Logger.error(id+" -> Failed to solve the received data");
                 return null;
             }
             if( index!= -1 && index < data.length)
