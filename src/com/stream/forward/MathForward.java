@@ -292,7 +292,7 @@ public class MathForward extends AbstractForward {
                 fab.setDebug(debug);
                 try {
                     bd = fab.solve(data, scratchpad);
-                }catch ( ArrayIndexOutOfBoundsException e){
+                }catch ( ArrayIndexOutOfBoundsException | ArithmeticException e){
                     Logger.error(id+" -> "+e.getMessage());
                     return null;
                 }
