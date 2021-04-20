@@ -43,7 +43,9 @@ A Java tool (or can also be used as a library) that takes care of all the nitty-
   
 ## First steps
 
-Once running, and after opening a telnet connection to it, you'll be greeted with the following screen.
+It's recommended to follow [this](https://github.com/vlizBE/dcafs/wiki/Getting-to-know-dcafs) guide if it's the first time using it.
+
+But once running, and after opening a telnet connection to it, you'll be greeted with the following screen.
 
 <img src="https://user-images.githubusercontent.com/60646590/112713982-65630380-8ed8-11eb-8987-109a2a066b66.png" width="500" height="300">
 
