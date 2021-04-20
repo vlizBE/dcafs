@@ -42,7 +42,7 @@ public class FilterForward extends AbstractForward {
         if( targets.isEmpty() && label.isEmpty()){
             valid=false;
             if( deleteNoTargets )
-                dQueue.add( new Datagram("fs:remove,"+id,1,"system") );
+                dQueue.add( new Datagram("ff:remove,"+id,1,"system") );
             return false;
         }
         return true;

@@ -150,7 +150,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 	 * Request information regarding the settings of all the connections, this is
 	 * very rudimentary.
 	 * 
-	 * @return The label, title, address and TTL of each stream
+	 * @return The label, id, address and TTL of each stream
 	 */
 	public String getSettings() {
 		StringJoiner join = new StringJoiner("\r\n");
@@ -165,14 +165,14 @@ public class StreamPool implements StreamListener, CollectorFuture {
 	 * Get a list of all the StreamDescriptors available
 	 * @param html Whether or not to use html formatting
 	 * @return A String with a line for each StreamDescriptor which looks like
-	 *         Sxx=title
+	 *         Sxx=id
 	 */
 	public String getStreamList(boolean html) {
 		StringJoiner join = new StringJoiner(html ? "<br>" :"\r\n");
 		join.setEmptyValue("None yet");
 		int a = 1;
-		for (String title : streams.keySet()) {
-			join.add( "S" + (a++) + ":" + title);
+		for (String id : streams.keySet()) {
+			join.add( "S" + (a++) + ":" + id);
 		}
 		return join.toString();
 	}
@@ -180,7 +180,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 	 * Get a list of all the StreamDescriptors available
 	 * 
 	 * @return A String with a line for each StreamDescriptor which looks like
-	 *         Sxx=title
+	 *         Sxx=id
 	 */
 	public String getStreamList() {
 		return getStreamList(false);
@@ -354,7 +354,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 		return streams.size();
 	}
 	/**
-	 * Get the title of the stream based on the index in the hashmap
+	 * Get the id of the stream based on the index in the hashmap
 	 * 
 	 * @param index The index in the hashmap to retrieve
 	 * @return The ID of the stream on the index position or empty of bad index
@@ -524,8 +524,8 @@ public class StreamPool implements StreamListener, CollectorFuture {
 	/**
 	 * Stores the settings of a stream to the settings.xml. Writing isn't done if the address is already in use by a different stream.
 	 * If a stream with the name is already present, unless overwrite = true writing is aborted
-	 * @param id The title of the stream to write
-	 * @param overwrite If true an existing element with that title will be removed
+	 * @param id The id of the stream to write
+	 * @param overwrite If true an existing element with that id will be removed
 	 * @return True if ok, false if failed or aborted
 	 */
 	public boolean addStreamToXML( String id, boolean overwrite ){
@@ -535,7 +535,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 			return false;
 		}
 
-		// Check if it already exists (based on title and address?)
+		// Check if it already exists (based on id and address?)
 		XMLfab fab = XMLfab.withRoot(xmlPath, "das",XML_PARENT_TAG);
 		boolean exists = fab.hasChild(XML_CHILD_TAG, "id", stream.getID() );
 
@@ -842,10 +842,10 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				}
 			case "addtcp":
 				if( cmds.length < 3 ) // Make sure we got the correct amount of arguments
-					return "Bad amount of arguments, need atleast 3 ss:addtcp,title,ip:port(,label)";
+					return "Bad amount of arguments, need at least 3 ss:addtcp,id,ip:port(,label)";
 
 				if( streams.get(cmds[1].toLowerCase()) != null )// Make sure we don't overwrite an existing connection
-					return "Connection exists with that title ("+cmds[1]+") not creating it";
+					return "Connection exists with that id ("+cmds[1]+") not creating it";
 
 				if( !cmds[2].contains(":") )
 					return "No port number specified";
@@ -870,10 +870,10 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				return "Failed to update XML! Entry might exist already";
 			case "addudp":
 				if( cmds.length < 4 ) // Make sure we got the correct amount of arguments
-					return "Bad amount of arguments, need 4 (addudp,title,ip:port,label)";
+					return "Bad amount of arguments, need 4 ss:addudp,id,ip:port,label";
 
 				if( streams.get(cmds[1].toLowerCase()) != null )// Make sure we don't overwrite an existing connection
-					return "Connection exists with that title ("+cmds[1]+") not creating it";
+					return "Connection exists with that id ("+cmds[1]+") not creating it";
 
 				if( cmds.length>4)
 					cmds[3]=request.substring( request.indexOf(","+cmds[3])+1);
@@ -891,10 +891,10 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				return "Failed to update XML! Entry might exist already";
 			case "udpserver":
 				if( cmds.length < 4 ) // Make sure we got the correct amount of arguments
-					return "Bad amount of arguments, need 4 (addudpserver,title,port,label)";
+					return "Bad amount of arguments, need 4 (addudpserver,id,port,label)";
 
 				if( streams.get(cmds[1].toLowerCase()) != null )// Make sure we don't overwrite an existing connection
-					return "Connection exists with that title ("+cmds[1]+") not creating it";
+					return "Connection exists with that id ("+cmds[1]+") not creating it";
 
 				if( cmds.length>=4)
 					cmds[3]=request.substring( request.indexOf(","+cmds[3])+1);
@@ -904,12 +904,12 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				break;
 			case "addserial":
 				if( cmds.length < 3 ) // Make sure we got the correct amount of arguments
-					return "Bad amount of arguments, need atleast 3 ss:addserial,title,portname:baudrate(,label)";
+					return "Bad amount of arguments, need at least three ss:addserial,id,portname:baudrate(,label)";
 
 				cmds[1]=cmds[1].toLowerCase();
 
 				if( streams.get(cmds[1].toLowerCase()) != null )// Make sure we don't overwrite an existing connection
-					return "Connection exists with that title ("+cmds[1]+") not creating it";
+					return "Connection exists with that id ("+cmds[1]+") not creating it";
 
 				String serLabel = cmds.length==3?"void":"";
 				if( cmds.length>=4)
@@ -954,38 +954,38 @@ public class StreamPool implements StreamListener, CollectorFuture {
 	 *
 	 */
 	@Override
-	public void notifyIdle( String title ) {
-		String device = title.replace(" ", "").toLowerCase(); // Remove spaces
-		issues.reportIssue(device+".conidle", "TTL passed for "+title, true);
-		getStream(title.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.IDLE));
-		getStream(title.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.WAKEUP));
+	public void notifyIdle( String id ) {
+		String device = id.replace(" ", "").toLowerCase(); // Remove spaces
+		issues.reportIssue(device+".conidle", "TTL passed for "+id, true);
+		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.IDLE));
+		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.WAKEUP));
 	}
 	@Override
-	public boolean notifyActive(String title ) {
-		String device = title.replace(" ", "").toLowerCase(); // Remove spaces
-		issues.reportIssue(device+".conidle", "TTL passed for "+title, false);
+	public boolean notifyActive(String id ) {
+		String device = id.replace(" ", "").toLowerCase(); // Remove spaces
+		issues.reportIssue(device+".conidle", "TTL passed for "+id, false);
 		return true;
 	}
 	@Override
-	public void notifyOpened( String title ) {
-		String device = title.replace(" ", "").toLowerCase(); // Remove spaces
-		issues.reportIssue(device+".conlost", "Connection lost to "+title, false);
+	public void notifyOpened( String id ) {
+		String device = id.replace(" ", "").toLowerCase(); // Remove spaces
+		issues.reportIssue(device+".conlost", "Connection lost to "+id, false);
 
-		getStream(title.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.HELLO));
-		getStream(title.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.OPEN));
+		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.HELLO));
+		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.OPEN));
 
 	}
 	@Override
-	public void notifyClosed( String title ) {
-		String device = title.replace(" ", "").toLowerCase(); // Remove spaces
-		issues.reportIssue(device+".conlost", "Connection lost to "+title, true);
-		getStream(title.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.CLOSE));
+	public void notifyClosed( String id ) {
+		String device = id.replace(" ", "").toLowerCase(); // Remove spaces
+		issues.reportIssue(device+".conlost", "Connection lost to "+id, true);
+		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.CLOSE));
 	}
 	@Override
 	public boolean requestReconnection( String id ) {
 		BaseStream bs = streams.get(id.toLowerCase());
 		if( bs == null){
-			Logger.error("Bad title given for reconnection request: "+id);
+			Logger.error("Bad id given for reconnection request: "+id);
 			return false;
 		}
 		Logger.error("Requesting reconnect for "+bs.getID());
@@ -1215,8 +1215,8 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				join.add( "  ff:reload,id -> Reload the filter with the given id");
 				join.add( "  ff:reload -> Clear the list and reload all the filters");
 				join.add( "  ff:remove,id -> Remove the filter with the given id");
-				join.add( "  ff:list or fs -> Get a list of all the currently existing filters.");
-				join.add( "  ff:delrule,id,index -> Remove a rule from the filter based on the index given in fs:list");
+				join.add( "  ff:list or ff -> Get a list of all the currently existing filters.");
+				join.add( "  ff:delrule,id,index -> Remove a rule from the filter based on the index given in ff:list");
 				join.add( "  filter:id -> Receive the data in the telnet window, also the source reference");
 
 				return join.toString();
@@ -1236,7 +1236,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				return FilterForward.getRulesInfo(html?"<br>":"\r\n");
 			case "remove":
 				if( cmds.length < 2 )
-					return "Not enough arguments: fs:remove,id";
+					return "Not enough arguments: ff:remove,id";
 				if( filters.remove(cmds[1]) != null )
 					return "Filter removed";
 				return "No such filter";
@@ -1251,7 +1251,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 						fOpt.get().writeToXML(XMLfab.withRoot(xmlPath, "das"));
 						return "Rule added to "+cmds[1];
 					case 0:  return "Failed to add rule, no such filter called "+cmds[1];
-					case -1: return "Unknown type in "+step+", try fs:types for a list";
+					case -1: return "Unknown type in "+step+", try ff:types for a list";
 					case -2: return "Bad rule syntax, should be type:value";
 					default: return "Wrong response from getFilter";
 				}									
@@ -1269,7 +1269,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				return "Failed to add source, no such filter.";
 			case "addblank":
 				if( cmds.length<2)
-					return "Not enough arguments, needs to be fs:addblank,id<,src,>";
+					return "Not enough arguments, needs to be ff:addblank,id<,src,>";
 				if( getFilter(cmds[1]).isPresent() )
 					return "Already filter with that id";
 
@@ -1283,7 +1283,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				return "Blank filter with id "+cmds[1]+ " created"+(cmds.length>2?", with source "+cmds[2]:"")+".";
 			case "addshort":
 				if( cmds.length<4)
-					return "Not enough arguments, needs to be fs:addshort,id,src,type:value";
+					return "Not enough arguments, needs to be ff:addshort,id,src,type:value";
 				if( getFilter(cmds[1]).isPresent() )
 					return "Already filter with that id";
 				addFilter(cmds[1].toLowerCase(),cmds[2],cmds[3])
@@ -1302,7 +1302,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				if( cmds.length < 3)
 					return "Bad amount of arguments, should be ff:alter,id,param:value";
 				if( ff == null )
-					return "No such filterforward: "+cmds[1];
+					return "No such filter: "+cmds[1];
 
 				if( !cmds[2].contains(":"))
 					return "No proper param:value pair";
