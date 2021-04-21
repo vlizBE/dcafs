@@ -45,8 +45,7 @@ public class MathUtils {
                 i2 = second.startsWith("o")?index:index+offset;
             }
         }catch( NumberFormatException e){
-            Logger.error(e);
-            Logger.error("Something went wrong decoding: "+first.substring(1)+" or "+second.substring(1));
+            Logger.error("Something went wrong decoding: "+first+" or "+second);
             return null;
         }
 

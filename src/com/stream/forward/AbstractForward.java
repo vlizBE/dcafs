@@ -94,7 +94,7 @@ public abstract class AbstractForward implements Writable {
     }
     public String toString(){
         StringJoiner join = new StringJoiner("\r\n" );
-        join.add(id+ (sources.isEmpty()?" without sources":" from "+String.join( ";",sources)));
+        join.add(id+ (sources.isEmpty()?" without sources":" getting data from "+String.join( ";",sources)));
         join.add(getRules());
 
         StringJoiner ts = new StringJoiner(", ","Targets: ","" );

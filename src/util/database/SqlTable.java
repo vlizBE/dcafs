@@ -453,12 +453,12 @@ public class SqlTable {
         for (int a=0;a<size;a++) { //foreach can cause concurrency issues
 
             if( size > prep.getData().size() ){
-                Logger.error(name+":"+id+" -> Data shrunk during processing...? ori:"+size+" now "+prep.getData().size());
+                Logger.error(name+":"+(id.isEmpty()?"def":id) +" -> Data shrunk during processing...? ori:"+size+" now "+prep.getData().size());
                 return -3;
             }
             Object[] d = prep.getData().get(a);
             if( d==null ){
-                Logger.error( name+":"+id+" -> Asked for a record at "+a+" which is null... skipping");
+                Logger.error( name+":"+(id.isEmpty()?"def":id)+" -> Asked for a record at "+a+" which is null... skipping");
                 continue;
             }
             int index = 0;
