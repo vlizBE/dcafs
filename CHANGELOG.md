@@ -7,11 +7,14 @@ From 0.5.0 onwards, this should be better documented...
 
 #### Todo
 - db connect in separate thread
+- Writable comparable on id?
+- ConfirmCollector give ok on no reply or nok on certain reply?
 
+## Work in progress 
+### N2 adds 
 
-## Work in progress 0.8.4
+### 0.8.4
 
-#### N1 adds (get moved to list below on new nightly)
 - This release will mainly focus on performance improvements
 - BaseWorker rework is part of this and has its own branch because the testing needed
 - Updated the SQLite dependency, now changes in performance noticed
@@ -32,7 +35,8 @@ From 0.5.0 onwards, this should be better documented...
 - Influx wasn't mentioned in generic info if other dbid is present
 
 ## RELEASED
-#### 0.8.3
+
+### 0.8.3
 
 #### Taskmanager
 - Removed the sqlite from the taskmanager, wasn't used anyway
