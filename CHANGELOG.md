@@ -12,9 +12,20 @@ From 0.5.0 onwards, this should be better documented...
 
 ## Work in progress 
 ### N2 adds 
+#### MathForward
 
-#### Bugfix for N1 (will not be mentioned in final changelog)
-- The way writable is checked for transserver was wrong
+#### Mathforward
+- Added support for i0++ and i+=2 etc
+- Added mf:addcomplex,id,src,op  
+- Added single line xml (like filter has) if one op & one src  
+- bugfix: mf:addop now actually writes to xml
+
+
+#### Bugfixes for N1 (will not be mentioned in final changelog)
+- TransServer: The way writable is checked for transserver was wrong on various levels
+- TransServer: The way >>>label and >>>store were handled wasn't ok
+- TransServer: the storehandler didn't alter the label if node exists
+
 ### 0.8.4
 
 - This release will mainly focus on performance improvements
@@ -26,6 +37,7 @@ From 0.5.0 onwards, this should be better documented...
 - Debugworker allows looping x times
 
 #### TransServer
+With all the changes the server is now fit to receive data from sensors (instead of only serving).
 - Changed command to ts or transserver (fe. ts:list instead of trans:list)
 - Transserver connections are now available as forward, use trans:id 
 - Label is now an attribute for a default etc and can be altered
