@@ -367,14 +367,12 @@ public class TcpServer implements StreamListener {
 						targets.put(cmds[1], new ArrayList<>());
 					}
 					var list = targets.get(cmds[1]);
-					boolean found=false;
-					//TODO: Writable comparable on ID????
-					for( Writable rr : list ){
-						if( rr.getID().equalsIgnoreCase(wr.getID()))
-							found=true;
+
+					if( !list.contains(wr)){// no exact match
+						list.removeIf( w -> w==null ); // Remove invalid ones
+						list.removeIf( w -> w.getID().equalsIgnoreCase(wr.getID()));// Remove id match
 					}
-					if (!found)
-						list.add(wr);
+					list.add(wr);
 				}
 
 				if( !hOpt.isEmpty() ) {
