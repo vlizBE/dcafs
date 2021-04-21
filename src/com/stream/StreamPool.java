@@ -1018,6 +1018,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 		String[] cmds = cmd.split(",");
 
 		StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
+		boolean complex=false;
 		switch( cmds[0] ) {
 			case "?":
 				join.add(TelnetCodes.TEXT_RED+"Purpose"+TelnetCodes.TEXT_YELLOW)
@@ -1046,18 +1047,27 @@ public class StreamPool implements StreamListener, CollectorFuture {
 					maths.values().forEach(MathForward::disableDebug);
 					return "Debug disabled";
 				}
+			case "addcomplex":
+				complex=true;
+				if( cmds.length<4 && !cmds[cmds.length-1].startsWith("i"))
+					return "Incorrect amount of arguments, expected mf:addcomplex,id,source,op";
 			case "addblank":
 				if( cmds.length<3)
-					return "Incorrect amount of arguments, expected ms:addblank,id,source";
+					return "Incorrect amount of arguments, expected mf:addblank,id,source";
 				if( getMath(cmds[1]).isPresent() )
 					return "Already math with that id";
 				cmds[1]=cmds[1].toLowerCase();
 				StringJoiner src = new StringJoiner(",");
-				for( int a=2;a<cmds.length;a++){
+				int limit = cmds.length-(complex?1:0);
+				for( int a=2;a<limit;a++){
 					src.add(cmds[a]);
 				}
-				addMath(cmds[1],src.toString()).writeToXML(XMLfab.withRoot(xmlPath, "das"));
-				return "Blank math with id "+cmds[1]+ " created.";
+				var mm = addMath(cmds[1],src.toString());
+				if( cmds.length==4){
+					mm.addComplex(cmds[cmds.length-1]);
+				}
+				mm.writeToXML(XMLfab.withRoot(xmlPath, "das"));
+				return "Math with id "+cmds[1]+ " created.";
 			case "alter":
 				var mf = maths.get(cmds[1]);
 				if( cmds.length < 3)
@@ -1091,7 +1101,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 
 			case "reload":
 				if( cmds.length!=2)
-					return "Incorrect amount of arguments, expected ms:reload,id";
+					return "Incorrect amount of arguments, expected mf:reload,id";
 				if( getMath(cmds[1]).isEmpty() )
 					return "No such math";
 				getMath(cmds[1]).ifPresent( m ->
@@ -1101,11 +1111,11 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				return "Math reloaded";
 			case "list":
 				join.setEmptyValue("No maths yet");
-				maths.values().forEach(m -> join.add(m.toString()));
+				maths.values().forEach(m -> join.add(m.toString()).add(""));
 				return join.toString();
 			case "scratchpad":
 				if( cmds.length < 3)
-					return "Bad amount of arguments, should be maths:scratchpad,id,value";
+					return "Bad amount of arguments, should be mf:scratchpad,id,value";
 				if( cmds[1].equalsIgnoreCase("*")) {
 					maths.forEach((id, m) -> m.setScratchpad(NumberUtils.createDouble(cmds[2])));
 				}else{
@@ -1118,31 +1128,33 @@ public class StreamPool implements StreamListener, CollectorFuture {
 					return "Source added";
 				return "Failed to add source, no such math.";
 			case "addop":
-				if( cmds.length < 2)
-					return "Bad amount of arguments, should be maths:addop,id,inputIndex(fe. i1)=formula";
+				if( cmds.length < 3)
+					return "Bad amount of arguments, should be mf:addop,id,inputIndex(fe. i1)=formula";
 
 				cmds[1]=cmds[1].toLowerCase();
 
 				Logger.info("Math "+cmds[1]+" exists?"+getMath(cmds[1]).isPresent());
-				String op = cmds.length==3?cmds[2]:"i1=i1";
-				String[] split = op.split("=");
+
+				String[] split = cmds[2].split("=");
 				if( split.length!=2){
 					return "Op not in correct format, needs to be ix=formula (x is the index)";
-				}
-				int index = Tools.parseInt(split[0].substring(1),-1);
-				if( index == -1 ){
-					return "No valid index given: "+split[0];
 				}
 				if( getMath(cmds[1]).isEmpty())
 					return "No such math yet ("+cmds[1]+")";
 
-				if( getMath(cmds[1]).map( f -> f.addOperation(index, MathForward.OP_TYPE.COMPLEX,"",split[1]) ).orElse(false) ){
+				int index = Tools.parseInt(split[0].substring(1),-1);
+				if( index == -1 ){
+					return "No valid index given: "+split[0];
+				}
+
+				if( getMath(cmds[1]).map( f -> f.addComplex(cmds[2]) ).orElse(false) ){
+					getMath(cmds[1]).get().writeToXML(XMLfab.withRoot(xmlPath, "das"));
 					return "Operation added and written to xml";
 				}
-				return "Operation added, failed to write to xml";
+				return "Failed to add operation";
 			case "test":
 				if( cmds.length < 3)
-					return "Bad amount of arguments, should be maths:test,id,variables";
+					return "Bad amount of arguments, should be mf:test,id,variables";
 				if( getMath(cmds[1].toLowerCase()).isEmpty() )
 					return "No such math yet ("+cmds[1]+")";
 				getMath(cmds[1].toLowerCase()).ifPresent(MathForward::enableDebug);

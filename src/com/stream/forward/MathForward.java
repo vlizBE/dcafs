@@ -141,14 +141,16 @@ public class MathForward extends AbstractForward {
             fab.comment("Sources go here");
             sources.forEach( src -> fab.addChild("src", src) );
         }
-
-        fab.comment("Operations go here, possible types: complex (default) ,scale");
-        rulesString.forEach( rule -> {
-                        fab.addChild("op",rule[2]).attr("index",rule[1]);
-                        if( !rule[0].equalsIgnoreCase("complex"))
-                            fab.attr("type",rule[0]);
-        } );
-
+        if( rulesString.size()==1 && sources.size()==1){
+            fab.content("i"+rulesString.get(0)[1]+"="+rulesString.get(0)[2]);
+        }else{
+            fab.comment("Operations go here, possible types: complex (default) ,scale");
+            rulesString.forEach( rule -> {
+                fab.addChild("op",rule[2]).attr("index",rule[1]);
+                if( !rule[0].equalsIgnoreCase("complex"))
+                    fab.attr("type",rule[0]);
+            } );
+        }
         return fab.build()!=null;
     }
 
@@ -174,6 +176,10 @@ public class MathForward extends AbstractForward {
             return false;
 
         ops.clear();
+        String content = math.getTextContent();
+        if( content != null && !content.startsWith("\n") ){
+            addComplex(content);
+        }
         XMLtools.getChildElements(math, "op")
                     .forEach( ops -> addOperation(
                             Integer.parseInt(ops.getAttribute("index")),
@@ -221,11 +227,34 @@ public class MathForward extends AbstractForward {
         }
 
         rulesString.add(new String[]{type.toString().toLowerCase(),""+index,expression});
-        if( xmlOk )
-            writeToXML( XMLfab.withRoot(xml, "das"));
         return true;
     }
+    public boolean addComplex( String op ){
+        op=op.replace(" ",""); //remove spaces
 
+        // Support ++ and --
+        op=op.replace("++","+=1");
+        op=op.replace("--","-=1");
+
+
+        String[] split = op.split("\\D?[=]");
+
+        if( split.length == 2){
+            if( split[0].length()+split[1].length()+1 != op.length()){ // Support += -= *= and /=
+                String[] spl = op.split("=");
+                split[1]=spl[0]+split[1];
+            }
+            int index = Tools.parseInt(split[0].substring(1),-1);
+            if( index == -1 ){
+                Logger.error( id+" -> Incorrect index "+op);
+                return false;
+            }
+            return addOperation(index,OP_TYPE.COMPLEX,"",split[1]);
+        }else{
+            Logger.error(id+" -> Content in wrong format "+op);
+        }
+        return false;
+    }
     /**
      * Convert a string version of OP_TYPE to the enum
      * @return The resulting enum value
@@ -238,7 +267,17 @@ public class MathForward extends AbstractForward {
         Logger.error("Invalid op type given, valid ones complex,scale");
         return null;
     }
+    @Override
+    public String getRules(){
+        int index=0;
+        StringJoiner join = new StringJoiner("\r\n");
+        join.setEmptyValue(" -> No rules yet.");
 
+        for( String[] x : rulesString ){
+            join.add("\t"+(index++) +" : i"+x[1]+ " = "+x[2]);
+        }
+        return join.toString();
+    }
     /**
      * Solve the operations based on the given data
      * @param data The data to use in solving the operations
