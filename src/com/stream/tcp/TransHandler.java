@@ -51,6 +51,7 @@ public class TransHandler extends SimpleChannelInboundHandler<byte[]> implements
 		return label;
 	}
 	public void addTarget( Writable wr){
+		targets.removeIf( w -> w.equals(wr) || w.getID().equalsIgnoreCase(wr.getID()));
 		targets.add(wr);
 	}
 	/**
@@ -111,16 +112,16 @@ public class TransHandler extends SimpleChannelInboundHandler<byte[]> implements
     @Override
     public void channelRead0(ChannelHandlerContext ctx, byte[] data) throws Exception {
 
-
+		String tempLabel=label;
 		String msg = new String( data );	// Convert the raw data to a readable string
 
 		if( msg.startsWith(">>>") ) {
 			msg = msg.substring(3);
 			String[] cmds = msg.split(":");
 			if (msg.startsWith("label:")) {
-				this.label = cmds[1];
-				writeLine("Altered label to " + label);
-				return;
+				label = cmds[1];
+				msg="ts:alter,"+getID()+",label:"+label;
+				tempLabel="system";
 			}else if (msg.startsWith("id:")) {
 				this.id = msg.split(":")[1];
 				writeLine("Altered id to " + id);
@@ -129,10 +130,11 @@ public class TransHandler extends SimpleChannelInboundHandler<byte[]> implements
 				// Somehow save to xml?
 				writeLine("Stored setup to xml (and no longer recording history)");
 				if( cmds.length==2){
-					msg = "trans:store," + getID()+","+cmds[1];
+					msg = "ts:store," + getID()+","+cmds[1];
 				}else{
-					msg = "trans:store," + getID();
+					msg = "ts:store," + getID();
 				}
+				tempLabel="system";
 				keepHistory=false;
 			}else if (msg.startsWith("record")) {
 				keepHistory=true;
@@ -182,15 +184,14 @@ public class TransHandler extends SimpleChannelInboundHandler<byte[]> implements
 			return;
 		}
 
-		Datagram d = new Datagram( this, data, repeat+msg, 1, label );	// Build a datagram, based on known information
+		Datagram d = new Datagram( this, data, repeat+msg, 1, tempLabel );	// Build a datagram, based on known information
 		d.setOriginID(id);
+		dQueue.put(d);
 
-		if( !targets.isEmpty() ){
+		if( !targets.isEmpty() && !tempLabel.equals("system")){
 			targets.stream().forEach(dt -> dt.writeLine( repeat+new String(data) ) );
 			targets.removeIf(wr -> !wr.isConnectionValid() ); // Clear inactive
 		}
-
-		dQueue.put(d);
    }
 
 

@@ -256,17 +256,15 @@ public class TcpServer implements StreamListener {
 	 */
 	public void storeHandler( TransHandler handler, Writable wr ){
 		XMLfab fab = XMLfab.withRoot(xmlPath, "settings", XML_PARENT_TAG);
-		if( fab.selectParent("default", "id", handler.getID() ).isPresent() ){
-			fab.clearChildren();
+
+		fab.selectOrCreateParent("default","id",handler.getID());
+
+		if( handler.getLabel().equalsIgnoreCase("system")){
+			fab.removeAttr("label");
 		}else{
-			fab.addChild("default").attr("address",handler.getIP()).attr("id",handler.getID());
-			if( handler.getLabel().equalsIgnoreCase("system")){
-				fab.removeAttr("label");
-			}else{
-				fab.attr("label",handler.getLabel() );
-			}
-			fab.down();
+			fab.attr("label",handler.getLabel() );
 		}
+		fab.clearChildren(); // start from scratch
 		for( String h : handler.getHistory() ){
 			fab.addChild("cmd",h);
 		}
@@ -360,6 +358,7 @@ public class TcpServer implements StreamListener {
 						return "Altered id to "+value;
 					default: return "Nothing called "+ref;
 				}
+
 			case "forward":
 
 				if( defaults.containsKey(cmds[1]) || hOpt.isPresent() ) {
@@ -371,8 +370,8 @@ public class TcpServer implements StreamListener {
 					if( !list.contains(wr)){// no exact match
 						list.removeIf( w -> w==null ); // Remove invalid ones
 						list.removeIf( w -> w.getID().equalsIgnoreCase(wr.getID()));// Remove id match
+						list.add(wr);
 					}
-					list.add(wr);
 				}
 
 				if( !hOpt.isEmpty() ) {
