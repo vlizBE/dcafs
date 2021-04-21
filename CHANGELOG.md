@@ -13,6 +13,8 @@ From 0.5.0 onwards, this should be better documented...
 ## Work in progress 
 ### N2 adds 
 
+#### Bugfix for N1 (will not be mentioned in final changelog)
+- The way writable is checked for transserver was wrong
 ### 0.8.4
 
 - This release will mainly focus on performance improvements
