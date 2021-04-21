@@ -578,7 +578,7 @@ public class BaseReq {
 	 * @param html Whether or not to use html for newline etc
 	 * @return Descriptive result of the command, "Unknown command if not recognised
 	 */
-	public String doTRANS( String[] request, Writable wr, boolean html ){
+	public String doTransServer( String[] request, Writable wr, boolean html ){
 	
 		if( trans==null){
 			if( request[1].startsWith("create") ){
@@ -589,9 +589,16 @@ public class BaseReq {
 				trans.run();
 				return "Tried to create and start the TransServer";
 			}
-			return "No TransServer defined.";
+			return "No TransServer defined, create it with ts:create(,port) (only works once)";
 		}
 		return trans.replyToRequest(request[1], wr);
+	}
+	public String doTRANS(String[] request, Writable wr, boolean html ){
+		if( trans!=null){
+			return trans.replyToRequest("forward,"+request[1], wr);
+		}else{
+			return "No TransServer defined, create it with ts:create(,port) (only works once)";
+		}
 	}
 	public String doRAW( String[] request, Writable wr, boolean html ){
 		if( streampool.addForwarding(request[1], wr ) ){

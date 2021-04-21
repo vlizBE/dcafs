@@ -9,6 +9,7 @@ import worker.Datagram;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
 
 public class TransHandler extends SimpleChannelInboundHandler<byte[]> implements Writable{
@@ -28,6 +29,8 @@ public class TransHandler extends SimpleChannelInboundHandler<byte[]> implements
     
 	private static final String eol="\r\n";
 	private final ArrayList<String> history = new ArrayList<>();
+	String repeat="";
+	boolean keepHistory=false;
 
     public TransHandler( String label, BlockingQueue<Datagram> dQueue ){
         this.label=label;
@@ -41,7 +44,15 @@ public class TransHandler extends SimpleChannelInboundHandler<byte[]> implements
 	public void setID(String id){
 		this.id=id;
 	}
-
+	public void setLabel(String label){
+		this.label=label;
+	}
+	public String getLabel(){
+		return label;
+	}
+	public void addTarget( Writable wr){
+		targets.add(wr);
+	}
 	/**
 	 * Set the listener of the server here
 	 * @param listener The listener aka server
@@ -99,52 +110,89 @@ public class TransHandler extends SimpleChannelInboundHandler<byte[]> implements
     }
     @Override
     public void channelRead0(ChannelHandlerContext ctx, byte[] data) throws Exception {
-       
-       	String msg = new String( data );	// Convert the raw data to a readable string
 
-       	if ( !(msg.isBlank() )) { //make sure that the received data is not 'null' or an empty string
-			msg = msg.replace("\n", "");   // Remove newline characters
-			msg = msg.replace("\r", "");   // Remove carriage return characters
-			msg = msg.replace("\0","");    // Remove null characters
 
-			if( msg.startsWith(">>>") ){
-			   	msg = msg.substring(3);
-			   	if( msg.startsWith("label:") ){
-					this.label=msg.split(":")[1];
-					writeLine("Altered label to "+label);	
-					return;				
+		String msg = new String( data );	// Convert the raw data to a readable string
+
+		if( msg.startsWith(">>>") ) {
+			msg = msg.substring(3);
+			String[] cmds = msg.split(":");
+			if (msg.startsWith("label:")) {
+				this.label = cmds[1];
+				writeLine("Altered label to " + label);
+				return;
+			}else if (msg.startsWith("id:")) {
+				this.id = msg.split(":")[1];
+				writeLine("Altered id to " + id);
+				return;
+			}else if (msg.startsWith("store")) {
+				// Somehow save to xml?
+				writeLine("Stored setup to xml (and no longer recording history)");
+				if( cmds.length==2){
+					msg = "trans:store," + getID()+","+cmds[1];
+				}else{
+					msg = "trans:store," + getID();
 				}
-				if( msg.startsWith("id:") ){
-					this.id=msg.split(":")[1];
-					writeLine("Altered id to "+id);	
-					return;				
-				}
-				if( msg.startsWith("store") ){
-					// Somehow save to xml?
-					writeLine("Stored setup to xml");
-					msg="trans:store,"+getID();
-				}
-				switch( msg ){
-					case "id?": 	writeLine("id is "+id);		break;
-					case "label?":  writeLine("label is "+label);	break;
-					default: Logger.warn("Unknown message "+msg+" from "+id); break;
-				}								 
-			}else{
-				history.add(msg);
-			}		   
+				keepHistory=false;
+			}else if (msg.startsWith("record")) {
+				keepHistory=true;
+				writeLine("Recording history");
+				return;
+			}else if (msg.startsWith("forget")) {
+				history.clear();
+				writeLine("Cleared history");
+				return;
+			}else {
+				switch (msg) {
+					case "?":
+						StringJoiner join = new StringJoiner("\r\n");
+						join.add(">>>? -> Returns this message");
+						join.add(">>>label:newlabel  -> Change the label to the new label");
+						join.add(">>>id:newid  -> Change the id to the new id");
+						join.add(">>>store(:newid)   -> Store the session as default, including recorded history");
+						join.add(">>>record -> Commands send are stored in the history, which will be default on store");
+						join.add(">>>forget -> Clears the current history");
+						join.add(">>>id? -> returns the current id");
+						join.add(">>>label? -> returns the current label");
 
-		   
-			Datagram d = new Datagram( this, data, msg, 1, label );	// Build a datagram, based on known information
-			d.setOriginID(id);
-
-			if( !targets.isEmpty() ){
-				targets.stream().forEach(dt -> dt.writeLine( new String(data) ) );
-				targets.removeIf(wr -> !wr.isConnectionValid() ); // Clear inactive
+						writeLine(join.toString());
+						return;
+					case "id?":
+						writeLine("id is " + id);
+						return;
+					case "label?":
+						writeLine("label is " + label);
+						return;
+					default:
+						Logger.warn("Unknown message " + msg + " from " + id);
+						writeLine("Unknown command, try >>>? for a list");
+						return;
+				}
 			}
-			
-		   	dQueue.put(d);
-	   }
-	}
+		}else if(keepHistory){
+			history.add(msg);
+		}
+
+		if(msg.endsWith("!!")){
+			if( msg.length()==2){
+				repeat="";
+			}else{
+				repeat = msg.substring(0,msg.length()-2);
+			}
+			return;
+		}
+
+		Datagram d = new Datagram( this, data, repeat+msg, 1, label );	// Build a datagram, based on known information
+		d.setOriginID(id);
+
+		if( !targets.isEmpty() ){
+			targets.stream().forEach(dt -> dt.writeLine( repeat+new String(data) ) );
+			targets.removeIf(wr -> !wr.isConnectionValid() ); // Clear inactive
+		}
+
+		dQueue.put(d);
+   }
+
 
 	/**
 	 * Write the given data without changing it
