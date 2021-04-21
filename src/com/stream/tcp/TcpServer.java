@@ -40,6 +40,7 @@ public class TcpServer implements StreamListener {
 
 	private final ArrayList<TransHandler> clients = new ArrayList<>();
 	static final String XML_PARENT_TAG = "transserver";
+	private HashMap<String,ArrayList<Writable>> targets = new HashMap<>();
 
 	public TcpServer(Path xml, EventLoopGroup workerGroup) {
 		this.workerGroup = workerGroup;
@@ -93,6 +94,7 @@ public class TcpServer implements StreamListener {
 			defaults.clear();
 			for( Element client : XMLtools.getAllElementsByTag(xml, "default")){
 				TransDefault td = new TransDefault(client.getAttribute("id"),client.getAttribute("address"));
+				td.setLabel( XMLtools.getStringAttribute(client,"label","system"));
 				XMLtools.getChildElements(client, "cmd").forEach( req -> td.addCommand( req.getTextContent() ) );
 				defaults.put(td.id, td );
 			}
@@ -194,7 +196,11 @@ public class TcpServer implements StreamListener {
 					if( td.ip.equalsIgnoreCase(th.getIP())){
 						th.writeHistory(td.commands);
 						th.setID(td.id);
+						th.setLabel(td.label);
 					}
+				}
+				if(targets.containsKey(th.getID())){
+					targets.get(th.getID()).forEach( th::addTarget );
 				}
 				th.writeLine("Welcome back "+th.getID()+"!");
 				return true;
@@ -253,7 +259,13 @@ public class TcpServer implements StreamListener {
 		if( fab.selectParent("default", "id", handler.getID() ).isPresent() ){
 			fab.clearChildren();
 		}else{
-			fab.addChild("default").attr("address",handler.getIP()).attr("id",handler.getID()).down();
+			fab.addChild("default").attr("address",handler.getIP()).attr("id",handler.getID());
+			if( handler.getLabel().equalsIgnoreCase("system")){
+				fab.removeAttr("label");
+			}else{
+				fab.attr("label",handler.getLabel() );
+			}
+			fab.down();
 		}
 		for( String h : handler.getHistory() ){
 			fab.addChild("cmd",h);
@@ -288,38 +300,42 @@ public class TcpServer implements StreamListener {
 	 * @return the reply
 	 */
 	public String replyToRequest(String req, Writable wr) {
-		String[] cmd = req.split(",");
+		String[] cmds = req.split(",");
 
-		if( cmd[0].equals("create"))
+		if( cmds[0].equals("create"))
 			return "Server already exists";
 
-		switch( cmd[0] ){
-			case "?": 
-				return "trans:store,id/index -> Store the session in the xml\r\n"+
-						"trans:add,id/index,cmd -> Add the cmd to the id/index\r\n"+
-						"trans:clear,id/index -> Clear all cmds from the client id/index\r\n"+
-						"trans:list -> List of all the connected clients\r\n"+
-						"trans:defaults -> List of all the defaults\r\n"+
-						"trans:reload -> Reload the xml settings.\r\n";
+		Optional<TransHandler> hOpt = cmds.length>1?getHandler(cmds[1]):Optional.empty();
+
+		switch( cmds[0] ){
+			case "?":
+
+				return "ts:store,id/index(,newid) -> Store the session in the xml\r\n"+
+						"ts:add,id/index,cmd -> Add the cmd to the id/index\r\n"+
+						"ts:clear,id/index -> Clear all cmds from the client id/index\r\n"+
+						"ts:list -> List of all the connected clients\r\n"+
+						"ts:defaults -> List of all the defaults\r\n"+
+						"ts:alter,id,ref:value -> Alter some settings\r\n"+
+						"ts:forward,id -> Forward data received on the trans to the issuer of the command\r\n"+
+						"ts:reload -> Reload the xml settings.\r\n";
 			case "store":
-				var hOpt = getHandler(cmd[1]);
 				if( hOpt.isEmpty() )
 					return "Invalid id";
 				var handler = hOpt.get();
-				handler.setID(cmd.length==3?cmd[2]:handler.getID());
+				handler.setID(cmds.length==3?cmds[2]:handler.getID());
 				storeHandler(handler,wr);
 				return "";
 			case "add":
-				return getHandler(cmd[1]).map( h -> {
+				return getHandler(cmds[1]).map( h -> {
 					StringJoiner join = new StringJoiner(",");
-					for( int a=2;a<cmd.length;a++ )
-						join.add(cmd[a]);
+					for( int a=2;a<cmds.length;a++ )
+						join.add(cmds[a]);
 					h.addHistory(join.toString());
-					return cmd[1]+"  added "+join.toString();}).orElse("No such client: "+cmd[1]);
+					return cmds[1]+"  added "+join.toString();}).orElse("No such client: "+cmds[1]);
 			case "clear":
-				return getHandler(cmd[1]).map( h -> {
+				return getHandler(cmds[1]).map( h -> {
 					h.clearRequests();
-					return cmd[1]+"  cleared.";}).orElse("No such client: "+cmd[1]);
+					return cmds[1]+"  cleared.";}).orElse("No such client: "+cmds[1]);
 			case "defaults":
 				StringJoiner lines = new StringJoiner("\r\n");
 				defaults.forEach( (id,val) -> lines.add(id+" -> "+val.ip+" => "+String.join(",",val.commands)));
@@ -328,6 +344,46 @@ public class TcpServer implements StreamListener {
 				if( readSettingsFromXML(XMLtools.readXML(xmlPath),false) )
 					return "Defaults reloaded";
 				return "Reload failed";
+			case "alter":
+				if( hOpt.isEmpty() )
+					return "Invalid id";
+				if( cmds.length<3)
+					return "Not enough arguments: trans:alter,id,ref:value";
+				String ref = cmds[2].substring(0,cmds[2].indexOf(":"));
+				String value =  cmds[2].substring(cmds[2].indexOf(":")+1);
+				switch( ref ){
+					case "label":
+						hOpt.get().setLabel(value);
+						return "Altered label to "+value;
+					case "id":
+						hOpt.get().setID(value);
+						return "Altered id to "+value;
+					default: return "Nothing called "+ref;
+				}
+			case "forward":
+
+				if( defaults.containsKey(cmds[1]) || hOpt.isPresent() ) {
+					if (!targets.containsKey(cmds[1])) {
+						targets.put(cmds[1], new ArrayList<>());
+					}
+					var list = targets.get(cmds[1]);
+					boolean found=false;
+					//TODO: Writable comparable on ID????
+					for( Writable rr : list ){
+						if( rr.getID().equalsIgnoreCase(wr.getID()))
+							found=true;
+					}
+					if (!found)
+						list.add(wr);
+				}
+
+				if( !hOpt.isEmpty() ) {
+					hOpt.get().addTarget(wr);
+					return "Added to target for "+cmds[1];
+				}else{
+					return cmds[1]+" not active yet, but recorded request";
+				}
+
 			case "": case "list": 
 				return "Server running on port "+serverPort+"\r\n"+getClientList();
 			default: 
@@ -342,11 +398,15 @@ public class TcpServer implements StreamListener {
 	public static class TransDefault{
 		String ip;
 		String id;
+		String label="system";
 		ArrayList<String> commands = new ArrayList<>();
 
 		public TransDefault( String id, String ip ){
 			this.ip=ip;
 			this.id=id;
+		}
+		public void setLabel(String label){
+			this.label=label;
 		}
 		public boolean addCommand( String cmd ){
 			if( commands.contains(cmd))
