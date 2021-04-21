@@ -20,6 +20,14 @@ From 0.5.0 onwards, this should be better documented...
 - Generic uses NumberUtils instead of own parseDouble
 - Debugworker allows looping x times
 
+#### TransServer
+- Changed command to ts or transserver (fe. ts:list instead of trans:list)
+- Transserver connections are now available as forward, use trans:id 
+- Label is now an attribute for a default etc and can be altered
+- History recording is now optional, default off
+- Now supports !! like telnet
+- Added >>>? to get a list of available commands
+
 #### BugFixes
 - Influx wasn't mentioned in generic info if other dbid is present
 
