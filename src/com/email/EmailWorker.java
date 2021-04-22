@@ -23,6 +23,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 public class EmailWorker implements Runnable, CollectorFuture {
 
@@ -747,6 +748,19 @@ public class EmailWorker implements Runnable, CollectorFuture {
 		props.put( MAIL_SMTP_TIMEOUT, TIMEOUT_MILLIS);    
 		props.put( MAIL_SMTP_CONNECTIONTIMEOUT, TIMEOUT_MILLIS);
 	}
+	public List<String> findTo( String from ){
+		return to.entrySet().stream().filter( e -> e.getValue().contains(from)).map( e -> e.getKey()).collect(Collectors.toList());
+	}
+	private boolean isAllowed( List<String> to, String subject){
+		if( subject.contains("admin")
+				|| subject.startsWith("sd") || subject.startsWith("shutdown")
+				|| subject.startsWith("sleep")
+				|| subject.startsWith("update")
+				|| subject.startsWith("retrieve")){
+			return to.contains("admin");
+		}
+		return true;
+	}
 	/**
 	 * Class that checks for emails at a set interval.
 	 */
@@ -777,8 +791,25 @@ public class EmailWorker implements Runnable, CollectorFuture {
 			    	
 					String from = message.getFrom()[0].toString();
 					from = from.substring(from.indexOf("<")+1, from.length()-1);
-					Logger.info("Command: " + message.getSubject() + " from: " + from );
+					String cmd = message.getSubject();
+					Logger.info("Command: " + cmd + " from: " + from );
 
+
+					var tos = findTo(from);
+					if( tos.isEmpty()){
+						sendEmail(from,"My admin doesn't allow me to talk to strangers...","");
+						sendEmail("admin","Got spam? ","From: "+from+" "+cmd);
+						Logger.warn("Received spam from: "+from);
+						continue;
+					}
+
+					String body = getTextFromMessage(message);
+					if( !isAllowed(tos,cmd) ){
+						sendEmail(from,"Not allowed to use "+cmd,"Try asking an admin for permission?");
+						sendEmail("admin","Got spam? ","From: "+from+" "+message.getSubject());
+						Logger.warn("Received spam from: "+from);
+						continue;
+					}
 					if ( message.getContentType()!=null && message.getContentType().contains("multipart") ) {
 						try {
 							Object objRef = message.getContent();
@@ -814,29 +845,24 @@ public class EmailWorker implements Runnable, CollectorFuture {
 							Logger.error(e);
 						}
 					}
-					
-					if( from.endsWith(allowedDomain)) {
-						String cmd = message.getSubject();
-						String body = getTextFromMessage(message);
 
-						if( cmd.startsWith("label:")&&cmd.length()>7){ // email acts as data received from sensor, no clue on the use case yet
-							for( String line : body.split("\r\n") )
-								dQueue.add( new Datagram( body, 1, cmd.split(":")[1]));
-						}else{
-							// Retrieve asks files to be emailed, if this command is without email append from address
-							if( cmd.startsWith("retrieve:") && cmd.split(",").length==2 ){
-								cmd += ","+from;
-							}
-							Datagram d = new Datagram( cmd, 1, "email");
-							DataRequest req = new DataRequest(from,cmd);
-							d.setWritable(req.getWritable());
-							buffered.put(req.getID(), req);
-							d.setOriginID(from);
-							dQueue.add( d );
+
+					if( cmd.startsWith("label:")&&cmd.length()>7){ // email acts as data received from sensor, no clue on the use case yet
+						for( String line : body.split("\r\n") )
+							dQueue.add( new Datagram( body, 1, cmd.split(":")[1]));
+					}else{
+						// Retrieve asks files to be emailed, if this command is without email append from address
+						if( cmd.startsWith("retrieve:") && cmd.split(",").length==2 ){
+							cmd += ","+from;
 						}
-			    	}else {
-			    		Logger.warn("Received spam from: "+from);
+						Datagram d = new Datagram( cmd, 1, "email");
+						DataRequest req = new DataRequest(from,cmd);
+						d.setWritable(req.getWritable());
+						buffered.put(req.getID(), req);
+						d.setOriginID(from);
+						dQueue.add( d );
 					}
+
 					message.setFlag(Flags.Flag.DELETED, true);
 				}
 				ok=true;
