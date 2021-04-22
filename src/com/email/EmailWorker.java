@@ -9,6 +9,7 @@ import org.w3c.dom.Element;
 import util.DeadThreadListener;
 import util.tools.FileTools;
 import util.tools.TimeTools;
+import util.tools.Tools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
@@ -42,7 +43,7 @@ public class EmailWorker implements Runnable, CollectorFuture {
 
 	private final Map<String, String> to = new HashMap<>(); // Hashmap containing the reference to email address
 																	// 'translation'
-
+	private final ArrayList<Permit> permits = new ArrayList<>();
 	/* Outbox */
 	MailBox outbox = new MailBox();
 
@@ -81,7 +82,7 @@ public class EmailWorker implements Runnable, CollectorFuture {
 
 	String allowedDomain = ""; // From which domain are emails accepted
 
-	Document xml; // Link to the setting xml
+	Path xml; // Link to the setting xml
 	boolean deleteReceivedZip = true;
 
 	Session mailSession = null;
@@ -103,7 +104,7 @@ public class EmailWorker implements Runnable, CollectorFuture {
 	 */
 	public EmailWorker(Document xml, BlockingQueue<Datagram> dQueue) {
 		this.dQueue = dQueue;
-		this.readSettingsFromXML(xml);
+		this.readFromXML(xml);
 		init();
 	}
 
@@ -169,11 +170,13 @@ public class EmailWorker implements Runnable, CollectorFuture {
 	/**
 	 * Read the settings from the XML file and apply them
 	 * 
-	 * @param xml The XML document containing the settings
+	 * @param xmlDoc The XML document containing the settings
 	 */
-	public void readSettingsFromXML( Document xml ){
-		this.xml=xml;
-		Element email = XMLtools.getFirstElementByTag( xml, XML_PARENT_TAG);	// Get the element containing the settings and references
+	public void readFromXML(Document xmlDoc ){
+
+		xml = XMLtools.getDocPath(xmlDoc);
+
+		Element email = XMLtools.getFirstElementByTag( xmlDoc, XML_PARENT_TAG);	// Get the element containing the settings and references
 
 		// Sending
 		Element outboxElement = XMLtools.getFirstChildByTag(email, "outbox");
@@ -210,9 +213,10 @@ public class EmailWorker implements Runnable, CollectorFuture {
 		}			
 		
 		/*
-		*  Now figure out the various references used, linking keywords to emailaddresses
+		*  Now figure out the various references used, linking keywords to e-mail addresses
 		**/
 		readEmailBook(email);
+		readPermits(email);
 	}
 
 	/**
@@ -230,6 +234,26 @@ public class EmailWorker implements Runnable, CollectorFuture {
 			}else{
 				Logger.warn("email book entry has empty ref or address");
 			}			
+		}
+	}
+	private void readPermits( Element email){
+		permits.clear(); // clear previous permits
+		Element permit = XMLtools.getFirstChildByTag(email,"permits");
+		for( var perm : XMLtools.getChildElements(permit)){
+			boolean denies = perm.getTagName().equals("deny");
+			String ref = XMLtools.getStringAttribute(perm,"ref","");
+			if(ref.isEmpty()){
+				Logger.warn("Empty permit ref!");
+				continue;
+			}
+			String val = perm.getTextContent();
+			if( val.isEmpty() ){
+				Logger.warn("Empty permit value!");
+				continue;
+			}
+
+			boolean regex = XMLtools.getBooleanAttribute(perm,"regex",false);
+			this.permits.add( new Permit( denies, ref, val, regex) );
 		}
 	}
 	/**
@@ -261,43 +285,60 @@ public class EmailWorker implements Runnable, CollectorFuture {
 		}
 		fab.addParent("book","Add entries to the emailbook below")
 				.addChild("entry","admin@email.com").attr("ref","admin");
+
 		fab.build();
 		return true;
 	}
 	/**
 	 * Alter the settings.xml based on the current settings
-	 * 
-	 * @param xmlDoc The document to change
+	 *
 	 * @return True if no errors occurred
 	 */
-	public boolean updateSettingsInXML( Document xmlDoc ){
-		   
-		Element root = XMLtools.getFirstElementByTag( xmlDoc, "settings" );
-		Element emailbook = XMLtools.getFirstChildByTag( root,"email" );
-		Element outboxElement = XMLtools.getFirstChildByTag(emailbook, "outbox");
-		if( outboxElement != null ){
-			String ser = XMLtools.getChildValueByTag( outboxElement, "server", "" );
-			Logger.info("Server changed, from "+ser+" to "+outbox.server);
-			Element server = XMLtools.getFirstChildByTag(outboxElement, "server");
-			if( server != null ){
-				server.setTextContent(outbox.server);
-				server.setAttribute( "user", outbox.user);
-				server.setAttribute( "pass", outbox.pass);
-				server.setAttribute( "ssl", outbox.hasSSL?"yes":"no" );
-			}
-		}
-		Element inboxElement = XMLtools.getFirstChildByTag(emailbook, "inbox");
-		if( inboxElement != null && !inbox.server.isBlank() ){
-			Element server = XMLtools.getFirstChildByTag(inboxElement, "server");
-			if( server != null ){
-				server.setTextContent(inbox.server);
-				server.setAttribute( "user", inbox.user);
-				server.setAttribute( "pass", inbox.pass);
-				server.setAttribute( "ssl", inbox.hasSSL?"yes":"no" );
-			}
-		}
+	public boolean writeToXML( ){
 
-		return XMLtools.updateXML( xmlDoc );//overwrite the file
+		XMLfab fab = XMLfab.withRoot(xml,"das","settings");
+		fab.digRoot("email");
+		if( outbox != null ) {
+			fab.selectOrCreateParent("outbox")
+					.alterChild("server", outbox.server)
+						.attr("user",outbox.user)
+						.attr("pass",outbox.pass)
+						.attr("ssl", outbox.hasSSL?"yes":"no")
+						.attr("port", outbox.port)
+					.alterChild("from",outbox.from )
+					.alterChild("zip_from_size_mb", ""+doZipFromSizeMB)
+					.alterChild("delete_rec_zip", deleteReceivedZip?"yes":"no")
+					.alterChild("max_size_mb", ""+maxSizeMB);
+		}
+		if( inbox != null ){
+			fab.selectOrCreateParent("inbox")
+					.alterChild("server", inbox.server)
+						.attr("user",inbox.user)
+						.attr("pass",inbox.pass)
+						.attr("ssl",inbox.hasSSL?"yes":"no")
+						.attr("port",inbox.port)
+					.alterChild("checkinterval",TimeTools.convertPeriodtoString(checkIntervalSeconds,TimeUnit.SECONDS));
+		}
+		if ( fab.build()!=null ){
+			return writePermits();
+		}
+		return false;
+	}
+	private boolean writePermits(){
+		if( xml != null ){
+			var fab = XMLfab.withRoot(xml,"das","settings","email");
+			fab.selectOrCreateParent("permits");
+			fab.clearChildren();
+			for( var permit : permits ){
+				fab.addChild(permit.denies?"deny":"allow",permit.value).attr("ref",permit.ref);
+				if(permit.regex)
+					fab.attr("regex","yes");
+			}
+			return fab.build()!=null;
+		}else{
+			Logger.error("Tried to write permits but no valid xml yet");
+			return false;
+		}
 	}
 	/**
 	 * Add an email address to an id
@@ -655,12 +696,14 @@ public class EmailWorker implements Runnable, CollectorFuture {
 				b.add("email:refs -> Get a list of refs and emailadresses.");
 				b.add("email:setup -> Get a listing of all the settings.");
 				b.add("email:checknow -> Checks the inbox for new emails");
+				b.add("email:addallow,from,cmd(,isRegex) -> Adds permit allow node, default no regex");
+				b.add("email:adddeny,from,cmd(,isRegex) -> Adds permit deny node, default no regex");
 				b.add("email:interval,x -> Change the inbox check interval to x");
 				return b.toString();
 			case "reload": 
 				if( xml == null )
 					return "No xml defined yet...";
-				readSettingsFromXML(xml);
+				readFromXML(XMLtools.readXML(xml));
 				return "Settings reloaded";
 			case "refs": return this.getEmailBook();
 			case "setup":case "status": return this.getSettings();
@@ -680,6 +723,14 @@ public class EmailWorker implements Runnable, CollectorFuture {
 				}else{
 					return "Invalid number of parameters";
 				}
+			case "addallow":case "adddeny":
+				if( parts.length <3 ){
+					return "Not enough arguments email:"+parts[0]+",from,cmd(,isRegex)";
+				}
+				boolean regex = parts.length == 4 && Tools.parseBool(parts[3], false);
+				permits.add( new Permit(parts[0].equals("adddeny"),parts[1],parts[2],regex));
+				;
+				return writePermits()?"Permit added":"Failed to write to xml";
 			default	:
 				return "unknown command";
 		}
@@ -751,15 +802,43 @@ public class EmailWorker implements Runnable, CollectorFuture {
 	public List<String> findTo( String from ){
 		return to.entrySet().stream().filter( e -> e.getValue().contains(from)).map( e -> e.getKey()).collect(Collectors.toList());
 	}
-	private boolean isAllowed( List<String> to, String subject){
+
+	/**
+	 * Check if the email cmd from a certain sender is denied to run, admin commands are only allow for admins unless
+	 * explicit permission was given
+	 * @param to List of ref's the from belongs to
+	 * @param from The sender
+	 * @param subject The command to execute
+	 * @return True if this sender hasn't got the permission
+	 */
+	private boolean isDenied(List<String> to, String from, String subject){
+		boolean deny=false;
 		if( subject.contains("admin")
 				|| subject.startsWith("sd") || subject.startsWith("shutdown")
 				|| subject.startsWith("sleep")
 				|| subject.startsWith("update")
-				|| subject.startsWith("retrieve")){
-			return to.contains("admin");
+				|| subject.startsWith("retrieve:set")){
+			if( to.contains("admin") ){ // by default allow admins to issue admin commands...
+				return true;
+			}
+			deny=true; // change to default deny for admin commands
 		}
-		return true;
+		if( !permits.isEmpty() ){
+			boolean match=false;
+			for( Permit d : permits){
+				if (d.ref.contains("@")) {
+					if (d.ref.equals(from)) {
+						match = d.regex ? subject.matches(d.value) : subject.equals(d.value);
+					}
+				} else if (to.contains(d.ref)) {
+					match = d.regex ? subject.matches(d.value) : subject.equals(d.value);
+				}
+				if ( match ){
+					return d.denies;
+				}
+			}
+		}
+		return deny;
 	}
 	/**
 	 * Class that checks for emails at a set interval.
@@ -794,7 +873,6 @@ public class EmailWorker implements Runnable, CollectorFuture {
 					String cmd = message.getSubject();
 					Logger.info("Command: " + cmd + " from: " + from );
 
-
 					var tos = findTo(from);
 					if( tos.isEmpty()){
 						sendEmail(from,"My admin doesn't allow me to talk to strangers...","");
@@ -803,13 +881,14 @@ public class EmailWorker implements Runnable, CollectorFuture {
 						continue;
 					}
 
-					String body = getTextFromMessage(message);
-					if( !isAllowed(tos,cmd) ){
+					if( isDenied(tos, from, cmd) ){
 						sendEmail(from,"Not allowed to use "+cmd,"Try asking an admin for permission?");
-						sendEmail("admin","Got spam? ","From: "+from+" "+message.getSubject());
+						sendEmail("admin","Got spam? ","From: "+from+" -> "+cmd);
 						Logger.warn("Received spam from: "+from);
 						continue;
 					}
+					String body = getTextFromMessage(message);
+
 					if ( message.getContentType()!=null && message.getContentType().contains("multipart") ) {
 						try {
 							Object objRef = message.getContent();
@@ -997,6 +1076,19 @@ public class EmailWorker implements Runnable, CollectorFuture {
 		public void setLogin( String user, String pass ){
 			this.user=user;
 			this.pass=pass;
+		}
+	}
+	private class Permit {
+		boolean denies;
+		boolean regex;
+		String value;
+		String ref;
+
+		public Permit(boolean denies,String ref,String value,boolean regex){
+			this.denies=denies;
+			this.ref=ref;
+			this.value=value;
+			this.regex=regex;
 		}
 	}
 }
