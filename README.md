@@ -6,7 +6,7 @@ A Java tool (or can also be used as a library) that takes care of all the nitty-
 
 
 ## Main features
-* Collect data from TCP, UDP, MQTT, Websocket, serial/tty, I2C, SPI, email
+* Collect data from TCP, UDP, MQTT broker, serial/tty, I2C, SPI, email
 * Alter with string and math operations, or filter lines out
 * Forward back to origin, to any other source, a hosted tcp server or email (eg. even create a serial to tcp converter)
 * Store processed data in SQLite (dcafs will create these for you!), MariaDB, MySQL, InfluxDB and MSSQL  while additionally raw can be kept in timestamped .log files
