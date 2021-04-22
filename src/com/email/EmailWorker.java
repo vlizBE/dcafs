@@ -819,7 +819,7 @@ public class EmailWorker implements Runnable, CollectorFuture {
 				|| subject.startsWith("update")
 				|| subject.startsWith("retrieve:set")){
 			if( to.contains("admin") ){ // by default allow admins to issue admin commands...
-				return true;
+				return false;
 			}
 			deny=true; // change to default deny for admin commands
 		}
@@ -883,8 +883,8 @@ public class EmailWorker implements Runnable, CollectorFuture {
 
 					if( isDenied(tos, from, cmd) ){
 						sendEmail(from,"Not allowed to use "+cmd,"Try asking an admin for permission?");
-						sendEmail("admin","Got spam? ","From: "+from+" -> "+cmd);
-						Logger.warn("Received spam from: "+from);
+						sendEmail("admin","Permission issue?","From: "+from+" -> "+cmd);
+						Logger.warn(from+" tried using "+cmd+" without permission");
 						continue;
 					}
 					String body = getTextFromMessage(message);
