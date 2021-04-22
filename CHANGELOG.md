@@ -9,32 +9,36 @@ From 0.5.0 onwards, this should be better documented...
 - db connect in separate thread
 - Writable comparable on id?
 - ConfirmCollector give ok on no reply or nok on certain reply?
+- Trans as output in taskmanager?
+- Trans command >>>identify:id to claim to be a certain id and pass the ip test
 
 ## Work in progress 
-### N2 adds 
-#### MathForward
+### N3 adds 
+#### Emailworker
+- Used to be domain restricted cmd request now it's ref restricted meaning that if the from isn't mentioned in 
+the emailbook it can't issue cmd's
+- only admin's can issue 'admin' (admin:, retrieve, update,sd,sleep) cmds by default, others need permission
+- now uses XMLfab for the write to xml
 
-#### Mathforward
-- Added support for i0++ and i+=2 etc
-- Added mf:addcomplex,id,src,op  
-- Added single line xml (like filter has) if one op & one src  
-- bugfix: mf:addop now actually writes to xml
+#### Others
+- added selectOrCreate to XMLfab without a specified attribute
+- removed the doDAS command, was not maintained anyway (and had become outdated)
 
-
-#### Bugfixes for N1 (will not be mentioned in final changelog)
-- TransServer: The way writable is checked for transserver was wrong on various levels
-- TransServer: The way >>>label and >>>store were handled wasn't ok
-- TransServer: the storehandler didn't alter the label if node exists
-
-### 0.8.4
+### 0.8.4 (up to N2)
 
 - This release will mainly focus on performance improvements
 - BaseWorker rework is part of this and has its own branch because the testing needed
-- Updated the SQLite dependency, now changes in performance noticed
+- Updated the SQLite dependency, no changes in performance noticed
 - Altered install service script to use wildcard
 - Timetools using instant more (slightly faster than previous)
 - Generic uses NumberUtils instead of own parseDouble
 - Debugworker allows looping x times
+
+#### Mathforward
+- Added support for i0++ and i+=2 etc
+- Added mf:addcomplex,id,src,op
+- Added single line xml (like filter has) if one op & one src
+- bugfix: mf:addop now actually writes to xml
 
 #### TransServer
 With all the changes the server is now fit to receive data from sensors (instead of only serving).
