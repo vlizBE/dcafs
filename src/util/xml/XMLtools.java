@@ -153,7 +153,7 @@ public class XMLtools {
 		}
 		return getDocPath(xmlDoc).getParent();
 	}
-	private static Path getDocPath(Document xmlDoc){
+	public static Path getDocPath(Document xmlDoc){
 		try {
 			return Path.of(new URL(xmlDoc.getDocumentURI()).toURI());
 		} catch (URISyntaxException e) {
