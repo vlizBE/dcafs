@@ -315,22 +315,33 @@ public class XMLfab {
     /**
      * Checks the children of the active node for a specific tag,attribute,value match and make that active and parent
      * If not found create it.
-     * @param tag The tage of the parent
+     * @param tag The tag of the parent
      * @param attribute The attribute to check
      * @param value The value the attribute should be
      * @return This fab
      */
     public XMLfab selectOrCreateParent( String tag, String attribute, String value){
         Optional<Element> found = this.getChildren(tag).stream()
-                .filter( x -> x.getAttribute(attribute).equalsIgnoreCase(value)).findFirst();
+                .filter( x -> x.getAttribute(attribute).equalsIgnoreCase(value)||attribute.isEmpty()).findFirst();
         if( found.isPresent() ){
             last = found.get();
             parent = last;
         }else{
-            addChild(tag).attr(attribute,value) // Create the child
-                    .down(); // make it the last/parent
+            addChild(tag);// Create the child
+            if( !attribute.isEmpty())
+                attr(attribute,value);
+            down(); // make it the last/parent
         }
         return this;
+    }
+    /**
+     * Checks the children of the active node for a specific tag,attribute,value match and make that active and parent
+     * If not found create it.
+     * @param tag The tag of the parent
+     * @return This fab
+     */
+    public XMLfab selectOrCreateParent( String tag ){
+        return selectOrCreateParent(tag,"","");
     }
     /**
      * Select a child node for later alterations (eg. attributes etc) or create it if it doesn't exist
@@ -349,7 +360,7 @@ public class XMLfab {
     }
 
     /**
-     * Select a child node for later alterations (eg. attributes etc) an alter the content or create it if it doesn't exist
+     * Select a child node for later alterations (eg. attributes etc) and alter the content or create it if it doesn't exist
      * @param tag The tag of the child node to look for
      * @param content The new content for the child node
      * @return The fab after altering/selecting
