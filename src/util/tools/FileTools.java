@@ -4,7 +4,6 @@ import org.tinylog.Logger;
 
 import java.io.*;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
@@ -132,7 +131,7 @@ public class FileTools {
                     try {
                         writer.write(t+System.lineSeparator());
                     } catch ( IOException e) {
-                        
+                        Logger.error(e);
                     }
                 });
                 writer.close();
@@ -140,8 +139,6 @@ public class FileTools {
             Logger.error(ex);
 
             return false;
-        } finally{
-            
         }
         return true;
     }
@@ -191,11 +188,8 @@ public class FileTools {
         } catch (FileNotFoundException ex) {
             Logger.error("The file %s does not exist", filePath);
             return null;
-        } catch (NullPointerException e) {
+        } catch (NullPointerException |  IOException e) {
             Logger.error(e);
-            return null;
-        } catch (IOException ex) {
-            Logger.error(ex);
             return null;
         }
     }

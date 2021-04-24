@@ -1,15 +1,10 @@
 package das;
 
 import com.email.EmailWork;
-import com.stream.StreamPool;
 import org.tinylog.Logger;
-import util.database.SQLiteDB;
 import util.task.TaskManager;
 import util.tools.TimeTools;
 
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;

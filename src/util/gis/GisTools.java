@@ -72,10 +72,10 @@ public class GisTools {
     	BigDecimal di = BigDecimal.valueOf( degrees-degr );
     	
     	double res= Tools.roundDouble( Math.abs(di.multiply(BD60).doubleValue()),5);
-    	String ress = ""+Math.abs(res);
-    	ress = (res<10?"0":"")+ress;
+    	StringBuilder ress = new StringBuilder("" + Math.abs(res));
+    	ress.insert(0, (res < 10 ? "0" : ""));
     	while(ress.length()<8){
-    		ress+= "0";
+    		ress.append("0");
     	}
     	degr = Math.abs(degr);
     	String result = (degr<10?"0":"")+degr;    	

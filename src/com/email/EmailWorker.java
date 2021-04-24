@@ -955,7 +955,7 @@ public class EmailWorker implements Runnable, CollectorFuture {
 			return bwr.getWritable();
 		}
 	}
-	private class MailBox{
+	private static class MailBox{
 		String server = ""; // Server to send emails with
 		int port = -1; // Port to contact the server on
 		boolean hasSSL = false; // Whether or not the outbox uses ssl

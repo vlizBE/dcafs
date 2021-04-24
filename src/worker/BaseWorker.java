@@ -172,10 +172,8 @@ public class BaseWorker implements Runnable{
 	    if( nmeaMetMap == null) {
 	    	nmeaMetMap = new HashMap<>();
 	    	regMetMap = new HashMap<>();
-			
-			ArrayList<Method> methods = new ArrayList<>();
 
-			methods.addAll(Arrays.asList(baseworker.getDeclaredMethods()));
+			ArrayList<Method> methods = new ArrayList<>(Arrays.asList(baseworker.getDeclaredMethods()));
 
 			if( baseworker.getSuperclass() == BaseWorker.class){
 				methods.addAll(Arrays.asList(baseworker.getSuperclass().getDeclaredMethods()));
@@ -361,7 +359,7 @@ public class BaseWorker implements Runnable{
 				// Debug information
 				procCount.incrementAndGet();
 			} catch (java.lang.ArrayIndexOutOfBoundsException f) {
-				Logger.error("Interrupted because out ArrayIndexOut" + f.toString() + " while processing: " + d.getMessage() + " Label: " + d.label);
+				Logger.error("Interrupted because out ArrayIndexOut" + f + " while processing: " + d.getMessage() + " Label: " + d.label);
 			}
 		}
 	 }
@@ -499,7 +497,7 @@ public class BaseWorker implements Runnable{
 		}
 	}
 	private List<Generic> getGenerics( String id ){
-		return generics.entrySet().stream().filter( set -> set.getKey().equalsIgnoreCase(id) || set.getKey().matches(id)).map( x -> x.getValue()).collect(Collectors.toList());
+		return generics.entrySet().stream().filter( set -> set.getKey().equalsIgnoreCase(id) || set.getKey().matches(id)).map(Entry::getValue).collect(Collectors.toList());
 	}
 
 	public void doFILTER( Datagram d ){

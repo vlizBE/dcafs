@@ -249,7 +249,7 @@ public class MathFab {
                 int a=0;
                 for( var big : data){
                     if( big!=null) {
-                        Logger.error(a+" -> array:" + big.toString());
+                        Logger.error(a+" -> array:" + big);
                     }else{
                         Logger.error(a+" -> array:null");
                     }

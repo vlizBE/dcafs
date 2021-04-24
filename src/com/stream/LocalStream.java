@@ -29,7 +29,7 @@ public class LocalStream extends BaseStream implements Writable {
 
     public LocalStream( String id, String label, String source, BlockingQueue<Datagram> dQueue){
         super(id,label,dQueue);
-        triggeredCmds.add( new TriggeredCommand(TRIGGER.OPEN,source));
+        triggeredCmds.add(new TriggeredCommand(TRIGGER.OPEN, source));
     }
     @Override
     public boolean writeString(String data) {

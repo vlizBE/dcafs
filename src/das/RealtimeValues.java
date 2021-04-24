@@ -490,12 +490,7 @@ public class RealtimeValues implements CollectorFuture {
 	 * @return Result in string format
 	 */
 	public String getCalcValue(String what) {
-		switch (what) {
-			case "clock":
-				return getTimeStamp();
-			default:
-				return getExtraCalcValue(what);
-		}
+		return what.equalsIgnoreCase("clock")?getTimeStamp():getExtraCalcValue(what);
 	}
 
 	/**
@@ -566,9 +561,7 @@ public class RealtimeValues implements CollectorFuture {
 				}
 				break;
 			case "calc":
-				if( calcRequest.get(writable)==null) {
-					calcRequest.put(writable, new ArrayList<ScheduledFuture<?>>());
-				}
+				calcRequest.computeIfAbsent(writable, k -> new ArrayList<>());
 				calcRequest.get(writable).add(scheduler.scheduleWithFixedDelay(new CalcRequest(writable, req[1]), 0, 1,
 						TimeUnit.SECONDS));
 				break;

@@ -315,7 +315,7 @@ public class TcpServer implements StreamListener {
 					for( int a=2;a<cmd.length;a++ )
 						join.add(cmd[a]);
 					h.addHistory(join.toString());
-					return cmd[1]+"  added "+join.toString();}).orElse("No such client: "+cmd[1]);
+					return cmd[1]+"  added "+ join;}).orElse("No such client: "+cmd[1]);
 			case "clear":
 				return getHandler(cmd[1]).map( h -> {
 					h.clearRequests();

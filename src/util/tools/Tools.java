@@ -72,11 +72,11 @@ public class Tools {
             return "-999";
         BigDecimal bd = BigDecimal.valueOf(r);
         double d = bd.setScale(decimalPlace, RoundingMode.HALF_UP).doubleValue();
-        String l = "" + d;
+        StringBuilder l = new StringBuilder("" + d);
         while ((l.length() - l.indexOf(".") - 1) < decimalPlace) {
-            l += "0";
+            l.append("0");
         }
-        return l;
+        return l.toString();
     }
 
     /**
@@ -137,10 +137,10 @@ public class Tools {
      * @return the altered integer as a string
      */
     public static String addLeadingZeros(int nr, int length) {
-        String res = "" + nr;
+        StringBuilder res = new StringBuilder("" + nr);
         while (res.length() < length)
-            res = "0" + res;
-        return res;
+            res.insert(0, "0");
+        return res.toString();
     }
 
     /* ************************************** S T R I N G ******************************************************** */
@@ -323,7 +323,7 @@ public class Tools {
         txt = txt.replace("\\t","\t")
                     .replace("\\r","\r")
                     .replace("\\n","\n")
-                    .replace("\\0","\0");;
+                    .replace("\\0","\0");
 
         // First extract all the hexes
         var hexes = Pattern.compile("[\\\\][x]([0-9]|[A-F]){1,2}")
@@ -402,11 +402,11 @@ public class Tools {
      *         hexadecimal values
      */
     public static String fromDecToHexString(int decimal, int bytes) {
-        String hex = Integer.toHexString(decimal);
+        StringBuilder hex = new StringBuilder(Integer.toHexString(decimal));
 
         while (hex.length() % 2 == 1 || hex.length() / 2 < bytes)
-            hex = "0" + hex;
-        return "0x" + hex.toUpperCase();
+            hex.insert(0, "0");
+        return "0x" + hex.toString().toUpperCase();
     }
 
     /**

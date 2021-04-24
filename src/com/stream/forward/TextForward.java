@@ -278,9 +278,9 @@ public class TextForward extends AbstractForward{
             }
             if( indexes.length!=split.length && append){
                 StringJoiner rest = new StringJoiner(delimiter,delimiter,"");
-                for( int a=0;a<split.length;a++){
-                    if( split[a]!=null)
-                        rest.add(split[a]);
+                for( var a : split){
+                    if( a!=null)
+                        rest.add(a);
                 }
                 join.add(rest.toString());
             }

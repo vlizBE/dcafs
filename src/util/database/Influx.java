@@ -150,8 +150,8 @@ public class Influx extends Database{
                if( !series.isEmpty()){
                    var recs = new ArrayList<List<Object>>();
                    if( includeNames ){
-                       var names = new ArrayList<Object>();
-                       series.get(0).getColumns().forEach(names::add);
+                       var names = new ArrayList<>();
+                       names.addAll(series.get(0).getColumns());
                        recs.add(names);
                    }
                    recs.addAll(series.get(0).getValues());
@@ -230,10 +230,10 @@ public class Influx extends Database{
             this.name=name;
         }
         public void addField(String name, FIELD_TYPE type){
-            fields.add( new Field(name,type));
+            fields.add(new Field(name, type));
         }
     }
-    private class Field{
+    private static class Field{
         String name;
         FIELD_TYPE type;
         public Field( String name,FIELD_TYPE type){
