@@ -1,6 +1,5 @@
 package util.xml;
 
-import org.apache.commons.lang3.SystemUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
@@ -24,7 +23,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -52,7 +50,7 @@ public class XMLtools {
 			doc = dbf.newDocumentBuilder().parse(xml.toFile());
 			doc.getDocumentElement().normalize();
 		} catch (ParserConfigurationException | SAXException | IOException | java.nio.file.InvalidPathException e) {
-			Logger.error("Error occurred while reading " + xml.toAbsolutePath().toString(), true);
+			Logger.error("Error occurred while reading " + xml.toAbsolutePath(), true);
 			Logger.error(e);
 		}
 		return doc;
@@ -117,7 +115,7 @@ public class XMLtools {
 			Logger.error(e);
 			return false;
 		}
-		Logger.debug("Written XML: "+xmlFile.toString());
+		Logger.debug("Written XML: "+ xmlFile);
 		return true;
 	}
 	/**
@@ -156,9 +154,7 @@ public class XMLtools {
 	public static Path getDocPath(Document xmlDoc){
 		try {
 			return Path.of(new URL(xmlDoc.getDocumentURI()).toURI());
-		} catch (URISyntaxException e) {
-			Logger.error(e);
-		} catch (MalformedURLException e) {
+		} catch (URISyntaxException | MalformedURLException e) {
 			Logger.error(e);
 		}
 		return null;

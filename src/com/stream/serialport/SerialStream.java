@@ -21,7 +21,7 @@ import java.util.concurrent.BlockingQueue;
 public class SerialStream extends BaseStream implements Writable {
 
     protected SerialPort serialPort;
-    private byte[] buffer = new byte[1024];
+    private final byte[] buffer = new byte[1024];
     ByteBuffer recBuffer= ByteBuffer.wrap(buffer);
 
     public SerialStream(String port, BlockingQueue<Datagram> dQueue, String label, int priority) {

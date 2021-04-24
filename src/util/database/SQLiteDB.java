@@ -178,7 +178,7 @@ public class SQLiteDB extends SQLDB{
                             var t= new SqlTable(tableName);
                             tables.put(tableName, t);
                         }
-                        tables.get(tableName).toggleReadFromDB();;
+                        tables.get(tableName).toggleReadFromDB();
                     }
                 } catch (SQLException e) {
                     Logger.error( getID() + " -> Error during table read: "+e.getErrorCode());
@@ -295,10 +295,7 @@ public class SQLiteDB extends SQLDB{
         }
 
         /* Tables */
-        XMLtools.getChildElements(dbe,"table").stream().forEach( x -> {
-            SqlTable.readFromXml(x).ifPresent(table -> db.tables.put(table.name,table));
-        });
-
+        XMLtools.getChildElements(dbe,"table").stream().forEach( x -> SqlTable.readFromXml(x).ifPresent(table -> db.tables.put(table.name,table)));
         /* Create the content */
         db.getCurrentTables(false);
         db.lastError=db.createContent(false);

@@ -13,13 +13,13 @@ import java.util.concurrent.BlockingQueue;
 public class MultiStream extends SerialStream{
 
     private final byte[] rec = new byte[512];
-    private byte[] header = new byte[]{'_','(','*','*',')','_'};
+    private final byte[] header = new byte[]{'_','(','*','*',')','_'};
     private final ByteBuffer recBuffer;
-    private int index = 0;
-    private boolean readyForWorker=false;
-    private int payloadPosition=3;
-    private int idPosition=2;
-    private byte deviceId='1';
+    private final int index = 0;
+    private final boolean readyForWorker=false;
+    private final int payloadPosition=3;
+    private final int idPosition=2;
+    private static final byte deviceId='1';
 
 	public MultiStream(String port, BlockingQueue<Datagram> dQueue, String label, int priority) {
 		super(port,dQueue, label, priority);

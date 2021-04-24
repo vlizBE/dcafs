@@ -32,7 +32,8 @@ public class SQLDB extends Database{
     boolean busySimple =false;
     boolean busyPrepared =false;
 
-    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);;
+    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+
     /**
      * Prepare connection to one of the supported databases
      * @param type The type of database
@@ -204,11 +205,7 @@ public class SQLDB extends Database{
         return j.toString();
     }
     public boolean buildGenericFromTable(XMLfab fab, String tablename, String genID, String delim){
-        var table = getTable(tablename);
-        if( table.isPresent() ){
-            return table.get().buildGeneric(fab,id,genID,delim);
-        }
-        return false;
+        return getTable(tablename).map(sqlTable -> sqlTable.buildGeneric(fab, id, genID, delim)).orElse(false);
     }
 
     @Override
@@ -395,14 +392,14 @@ public class SQLDB extends Database{
             ResultSet rs = stmt.executeQuery(query);
             int cols = rs.getMetaData().getColumnCount();
             if( includeNames ){
-                var record = new ArrayList<Object>();
+                var record = new ArrayList<>();
                 for( int a=1;a<cols;a++ ){
                     record.add(rs.getMetaData().getColumnName(a));
                 }
                 data.add(record);
             }
             while( rs.next() ){
-                var record = new ArrayList<Object>();
+                var record = new ArrayList<>();
                 for( int a=0;a<cols;a++ ){
                     record.add(rs.getObject(a+1));
                 }
@@ -505,13 +502,11 @@ public class SQLDB extends Database{
         db.readBatchSetup(XMLtools.getFirstChildByTag(dbe, "setup"));
 
         /* Tables */
-        XMLtools.getChildElements(dbe,"table").stream().forEach( x -> {
-            SqlTable.readFromXml(x).ifPresent(table ->
-            {
-                table.toggleServer();
-                db.tables.put(table.name,table);
-            });
-        });
+        XMLtools.getChildElements(dbe,"table").stream().forEach( x -> SqlTable.readFromXml(x).ifPresent(table ->
+        {
+            table.toggleServer();
+            db.tables.put(table.name,table);
+        }));
 
         db.getCurrentTables(false);
         db.lastError = db.createContent(true);
@@ -699,7 +694,7 @@ public class SQLDB extends Database{
             }
 
             try {
-                temp.removeIf( x->x.isEmpty());
+                temp.removeIf(String::isEmpty);
                 if( !temp.isEmpty()){
                     firstSimpleStamp = Instant.now().toEpochMilli();
                     simpleQueries.addAll(temp);

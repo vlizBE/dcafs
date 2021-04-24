@@ -39,7 +39,7 @@ import java.util.concurrent.*;
 
 public class DAS implements DeadThreadListener {
 
-    private static final String version = "0.8.4_N3";
+    private static final String version = "0.9.0_N1";
 
     // Last date that changes were made
     Path settingsFile = Path.of("settings.xml");
@@ -449,7 +449,7 @@ public class DAS implements DeadThreadListener {
             if (Files.exists(p)) {
                 addTaskManager(e.getAttribute("id"), p);
             } else {
-                Logger.error("No such task xml: " + p.toString());
+                Logger.error("No such task xml: " + p);
             }
         }
     }

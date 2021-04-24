@@ -389,7 +389,7 @@ public class SqlTable {
             join.add("> " + column.toString()
                     + (column.alias.equals(column.title) ? "" : " (alias=" + column.alias + ")"));
         }
-        return join.toString() + "\r\n";
+        return join + "\r\n";
     }
 
     /**
@@ -415,7 +415,7 @@ public class SqlTable {
         for (Column col : columns) {
             cols.add(col.title);
         }
-        return new StringJoiner(",", "INSERT INTO " + name + " (" + cols.toString() + ") VALUES (", ");");
+        return new StringJoiner(",", "INSERT INTO " + name + " (" + cols + ") VALUES (", ");");
     }
     public int getRecordCount() {        
         return preps.values().stream().mapToInt( p -> p.getData().size()).sum();        
@@ -759,7 +759,7 @@ public class SqlTable {
             qMarks.add("?");
             cols.add( columns.get(c).title );
         });
-        stat.setStatement( cols.toString() + qMarks.toString() );
+        stat.setStatement( cols + qMarks.toString() );
 
         return true;
     }
@@ -772,7 +772,7 @@ public class SqlTable {
             qMarks.add("?");
             cols.add( columns.get(c).title );
         });
-        stat.setStatement( cols.toString() + qMarks.toString() );
+        stat.setStatement( cols + qMarks.toString() );
     }
     private PrepStatement buildPrep( String... params ){
         PrepStatement stat = new PrepStatement();

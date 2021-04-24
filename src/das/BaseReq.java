@@ -41,6 +41,7 @@ import java.util.*;
 /**
  * Handles a server-side channel.
  */
+@SuppressWarnings("ALL")
 public class BaseReq {
 
 	protected static DateTimeFormatter secFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -193,6 +194,7 @@ public class BaseReq {
 	}
 	
 	public void emailResponse( Datagram d ) {
+		Logger.info( "Executing email command ["+d.getMessage()+"], origin: " + d.getOriginID() );
 		emailResponse( d, "Bot Reply" );
 	}
 
@@ -288,7 +290,7 @@ public class BaseReq {
 				Logger.error(e);
 			 }
 		}
-		if( m == null || (m!= null && result.startsWith(UNKNOWN_CMD)) ){
+		if( m == null || result.startsWith(UNKNOWN_CMD) ){
 			var tm = das.taskManagers.get(split[0]);
 			if( tm != null){
 				var nl = html ? "<br>" : "\r\n";
@@ -316,9 +318,8 @@ public class BaseReq {
 	public void getMethodMapping() {
 
 		Class<?> reqdata = this.getClass();
-		ArrayList<Method> methods = new ArrayList<>();
 
-		methods.addAll(Arrays.asList(reqdata.getDeclaredMethods()));
+		ArrayList<Method> methods = new ArrayList<>(Arrays.asList(reqdata.getDeclaredMethods()));
 
 		if (reqdata.getSuperclass() == BaseReq.class) { // To make sure that both the child and the parent class are
 														// searched
@@ -329,17 +330,17 @@ public class BaseReq {
 			if (com.length() >= 3 && com.startsWith("do")) { // Needs to be atleast 3 characters long and start with
 																// 'do'
 				com = com.substring(2); // Remove the 'do'
-				String high = ""; // 'high' will contain the capital letters from the command to form the
+				StringBuilder high = new StringBuilder(); // 'high' will contain the capital letters from the command to form the
 									// alternative command
 				for (int a = 0; a < com.length(); a++) {
 					char x = com.charAt(a);
 					if (Character.isUpperCase(x) || x == '_') {
-						high += x;
+						high.append(x);
 					}
 				}
 				methodMapping.put(com.toLowerCase(), method);				
 				if (high.length() != com.length()) { // if both commands aren't the same
-					methodMapping.put(high.toLowerCase(), method);				
+					methodMapping.put(high.toString().toLowerCase(), method);
 				}
 			}
 		}
@@ -550,7 +551,7 @@ public class BaseReq {
 
 				Path p = Path.of(workPath,"scripts",spl[1]);
 				if( Files.notExists(p) ){
-					return "No such file: "+p.toString();
+					return "No such file: "+ p;
 				}
 
 				emailWorker.sendEmail(spl[2], "Requested file: "+spl[1], "Nothing to say", p.toString(),false);
@@ -559,7 +560,7 @@ public class BaseReq {
 			case "settings":
 				Path set = Path.of(workPath,"settings.xml");
 				if( Files.notExists(set) ){
-					return "No such file: "+set.toString();
+					return "No such file: "+ set;
 				}
 				if( spl.length!=2)
 					return "Not enough arguments, expected retrieve:setup,email/ref";
@@ -658,7 +659,7 @@ public class BaseReq {
 				for( String rt : rtvals.getRealtimeValuePairs() )
 					b.add(rt);
 
-				return "RTval options:"+b.toString();
+				return "RTval options:"+b;
 			}
 			if( request[1].endsWith("*")){
 				request[1] = StringUtils.removeEnd(request[1],"*");
@@ -691,7 +692,7 @@ public class BaseReq {
 				for( String rt : rtvals.getRealtimeTextPairs() )
 					b.add(rt);
 
-				return "RTtext options: "+b.toString();
+				return "RTtext options: "+b;
 			}
 			if( request[1].endsWith("*")){
 				request[1] = StringUtils.removeEnd(request[1],"*");
@@ -919,7 +920,7 @@ public class BaseReq {
 		currentGroup.enumerate(lstThreads);
 		response.append("\r\n");
 		for (Thread lstThread : lstThreads)
-			response.append("Thread ID:" + lstThread.getId() + " = " + lstThread.getName() + "\r\n");
+			response.append("Thread ID:").append(lstThread.getId()).append(" = ").append(lstThread.getName()).append("\r\n");
 		return response.toString();   
 	}
 
@@ -958,7 +959,7 @@ public class BaseReq {
 					var last = Files.list(it).filter( f -> !Files.isDirectory(f)).max( Comparator.comparingLong( f -> f.toFile().lastModified()));
 					if( last.isPresent() ){
 						emailWorker.sendEmail( "admin","Taskmanager.log","File attached (probably)", last.get().toString(), false );
-						return "Tried sending "+last.get().toString();
+						return "Tried sending "+last.get();
 					}else{
 						return "File not found";
 					}
@@ -1190,7 +1191,7 @@ public class BaseReq {
 		try{
 			response =  das.getStatus(html);   
 		}catch( java.lang.NullPointerException e){
-			Logger.error("Nullpointer Error status: "+e.getMessage()+" at "+e.getStackTrace().toString());
+			Logger.error(e);
 		}
 		return response;       	
 	}
@@ -1308,7 +1309,7 @@ public class BaseReq {
 						das.getI2CWorker().ifPresent(
 								worker -> worker.readSettingsFromXML(das.getXMLdoc())
 						);
-						return "Device added, created blank script at "+p.toString();
+						return "Device added, created blank script at "+p;
 					}else{
 						return "Device added, using existing script";
 					}

@@ -75,10 +75,10 @@ public class ValMap {
         return readsplit;
     }
     private void addRTValMap(String key,String rtval){
-        mapping.put(key,new Mapping(rtval,""));
+        mapping.put(key, new Mapping(rtval, ""));
     }
     private void addRTTextMap(String key,String rttext){
-        mapping.put(key,new Mapping("",rttext));
+        mapping.put(key, new Mapping("", rttext));
     }
     private void addText(String id, String key, String value){
         if( !mapping.containsKey(id) ){
@@ -133,7 +133,7 @@ public class ValMap {
         }
         return map;
     }
-    private class Mapping{
+    private static class Mapping{
         HashMap<String,String> texts = new HashMap<>();
         String rtval="";
         String rttext="";

@@ -4,7 +4,6 @@ import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import util.database.DatabaseManager;
-import util.tools.TimeTools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 
@@ -15,10 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.Scanner;
 import java.util.concurrent.BlockingQueue;
 
 /**
@@ -259,7 +255,7 @@ public class DebugWorker implements Runnable {
 						line[0] = line[0].replace("[", ""); // remove the [
 						line[0] = line[0].replace("]", "");// and remove the ]
 
-					//	LocalDateTime dt = TimeTools.parseDateTime(line[0], "yyyy-MM-dd HH:mm:ss.SSS");
+						LocalDateTime dt = TimeTools.parseDateTime(line[0], "yyyy-MM-dd HH:mm:ss.SSS");
 
 						try {
 							int prio = Integer.parseInt(line[1]);
@@ -271,8 +267,7 @@ public class DebugWorker implements Runnable {
 							Datagram d = new Datagram(line[3], prio, labid[0], 0);
 							d.setOriginID( labid.length==2?labid[1]:"debugworker");
 							d.raw = line[3].getBytes();
-							//d.setTimestamp(dt.toInstant(ZoneOffset.UTC).toEpochMilli());
-							//Logger.info("Adding to queue: "+d.getMessage());
+							d.setTimestamp(dt.toInstant(ZoneOffset.UTC).toEpochMilli());
 							dQueue.add(d);
 
 							if (logRaw) {

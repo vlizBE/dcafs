@@ -179,7 +179,7 @@ public class I2CWorker implements Runnable {
 
         if (i2c != null) {                       
             Logger.info("Found settings for a I2C bus");
-            devices.values().forEach( dev -> dev.close());
+            devices.values().forEach(I2CDevice::close);
             devices.clear();
             for( Element i2c_bus : XMLtools.getChildElements( i2c, "bus") ){
                 int bus = XMLtools.getIntAttribute(i2c_bus, "controller", -1);
@@ -292,7 +292,7 @@ public class I2CWorker implements Runnable {
                             continue;
                         }
                         if(debug)
-                            Logger.info("Added "+cmdID +" to "+script+" which does: "+cmd.toString() );
+                            Logger.info("Added "+cmdID +" to "+script+" which does: "+ cmd);
                     }
                     
                     commands.put( script+":"+cmdID,cmd);                            

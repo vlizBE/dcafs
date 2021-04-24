@@ -29,7 +29,6 @@ import util.xml.XMLtools;
 import worker.Datagram;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -375,7 +374,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 		
 		BaseStream stream = this.streams.get(id.toLowerCase());
 
-		Logger.info("Reloading "+id+ " from "+this.xmlPath.toAbsolutePath().toString() );
+		Logger.info("Reloading "+id+ " from "+ this.xmlPath.toAbsolutePath());
 		Document xmlDoc = XMLtools.readXML(this.xmlPath);
 		if( xmlDoc != null ){
 			Element streamElement = XMLtools.getFirstElementByTag(xmlDoc, XML_PARENT_TAG);
@@ -396,7 +395,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 			}
 
 		}else{
-			Logger.error("Failed to read xml file at "+this.xmlPath.toAbsolutePath().toString());
+			Logger.error("Failed to read xml file at "+ this.xmlPath.toAbsolutePath());
 			return "Failed to read xml";
 		}
 	}
@@ -429,7 +428,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 		
 		try {
 			xmlPath = XMLtools.getXMLparent(xml).resolve("settings.xml");
-			Logger.debug("Set XMLPath to "+xmlPath.toAbsolutePath().toString() );
+			Logger.debug("Set XMLPath to "+ xmlPath.toAbsolutePath());
 		} catch ( InvalidPathException | NullPointerException e) {
 			Logger.error(e);
 		}
@@ -622,9 +621,6 @@ public class StreamPool implements StreamListener, CollectorFuture {
 	public String replyToCmd(String request, boolean html ){
 
 		String nl = html?"<br>":"\r\n";
-
-		//if( request.equals("") )
-		//	request = "status";
 
 		String[] cmds = request.split(",");		
 
@@ -1375,8 +1371,8 @@ public class StreamPool implements StreamListener, CollectorFuture {
 			case "title": case "id":
 				if( !getStream(search).map( bs -> bs.addTarget(writable) ).orElse(false) ) {
 					var stream = streams.entrySet().stream().filter(set -> set.getKey().startsWith(search))
-							.map(set -> set.getValue()).findFirst();
-					if( !stream.isPresent() )
+							.map(Map.Entry::getValue).findFirst();
+					if(stream.isEmpty())
 						return false;
 					stream.get().addTarget(writable);
 				}

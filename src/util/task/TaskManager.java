@@ -237,7 +237,7 @@ public class TaskManager implements CollectorFuture {
 		if (set != null) {
 			task.id = id+"_"+set.getTaskCount();
 			set.addTask(task);
-			Logger.tag(TINY_TAG).info("[" + this.id + "] Adding task to set:" + task.toString());
+			Logger.tag(TINY_TAG).info("[" + this.id + "] Adding task to set:" + task);
 		} else {
 			Logger.tag(TINY_TAG).error("[" + this.id + "] Failed to ask task to set, no such set");
 		}
@@ -369,7 +369,7 @@ public class TaskManager implements CollectorFuture {
 
 		if (checkState(task.when)) { // Check whether the state allows for the task to run
 			if (task.future == null || task.future.isCancelled()) {
-				Logger.tag(TINY_TAG).info("[" + id + "] Scheduling task: " + task.toString() + " with delay/interval/unit:"
+				Logger.tag(TINY_TAG).info("[" + id + "] Scheduling task: " + task + " with delay/interval/unit:"
 						+ task.startDelay + ";" + task.interval + ";" + task.unit);
 				try {
 					task.future = scheduler.scheduleAtFixedRate(new DelayedControl(task), task.startDelay,
@@ -383,15 +383,15 @@ public class TaskManager implements CollectorFuture {
 				if (task.future != null && task.future.isCancelled()) {
 					Logger.tag(TINY_TAG).info("[" + id + "] Task future was cancelled " + task.id);
 				}
-				Logger.tag(TINY_TAG).info("[" + id + "] Task already running: " + task.toString() + " with delay/interval/unit:"
+				Logger.tag(TINY_TAG).info("[" + id + "] Task already running: " + task + " with delay/interval/unit:"
 						+ task.startDelay + ";" + task.interval + ";" + task.unit);
 			}
 		} else { // If the check fails, cancel the running task
 			if (task.future != null) {
 				task.future.cancel(false);
-				Logger.tag(TINY_TAG).info("[" + id + "] Cancelled task already running: " + task.toString());
+				Logger.tag(TINY_TAG).info("[" + id + "] Cancelled task already running: " + task);
 			} else {
-				Logger.tag(TINY_TAG).error("[" + id + "] NOT Scheduling (checkState failed): " + task.toString());
+				Logger.tag(TINY_TAG).error("[" + id + "] NOT Scheduling (checkState failed): " + task);
 			}
 		}
 	}
@@ -495,7 +495,7 @@ public class TaskManager implements CollectorFuture {
 			try {
 				executed = doTask(task);
 			} catch (Exception e) {
-				Logger.tag(TINY_TAG).error("Nullpointer in doTask " + e.toString());
+				Logger.tag(TINY_TAG).error("Nullpointer in doTask " + e);
 			}
 
 			TaskSet set = tasksets.get(task.getTaskset());
@@ -553,7 +553,7 @@ public class TaskManager implements CollectorFuture {
 					} else if (task.runs > 0) {
 						task.runs--;
 						Logger.tag(TINY_TAG).error(
-								"[" + id + "] Not executed, retries left:" + task.runs + " for " + task.toString());
+								"[" + id + "] Not executed, retries left:" + task.runs + " for " + task);
 					}
 				}
 				if (failure) {
@@ -899,7 +899,7 @@ public class TaskManager implements CollectorFuture {
 				if( emailQueue != null) {
 					emailQueue.add( new EmailWork("admin",  "Failed to reschedule task", task.toString() ) );
 				}else {
-					Logger.tag(TINY_TAG).error( "["+ id +"] Failed to reschedule task "+task.toString() );
+					Logger.tag(TINY_TAG).error( "["+ id +"] Failed to reschedule task "+ task);
 				}
 			}
 		}
@@ -913,15 +913,6 @@ public class TaskManager implements CollectorFuture {
 					}else{
 						Logger.tag(TINY_TAG).info( "["+ id +"] Executed last task in the tasket ["+set.getDescription()+"]");
 					}
-				}else{ // Meaning if execution failed
-					/*if( set.getFailureTask().startsWith("task:") ){
-						Task t = this.getTaskbyID(set.failureTask);
-						if( t != null ){
-							startTask(t);
-						}
-					}else if(set.getFailureTask().startsWith("taskset:") ){
-						this.startTaskset(set.getFailureTask().substring(8));
-					}*/
 				}
 			}
 		}
@@ -963,10 +954,10 @@ public class TaskManager implements CollectorFuture {
 					other.add(task.toString());
 				}
 			}else{
-				b.add(task.id + " -> " + task.toString());
+				b.add(task.id + " -> " + task);
 			}
 		}
-		return b.toString()+clk.toString()+intr.toString()+other.toString();
+		return b.toString()+ clk + intr + other;
 	}
 	/**
 	 * Get a listing of all the managed tasksets
@@ -1324,7 +1315,7 @@ public class TaskManager implements CollectorFuture {
 			 Logger.tag(TINY_TAG).info("["+ id +"] Loaded "+sets+ " tasksets and "+ts +" individual tasks.");
 			 return true;
     	}else {
-				Logger.tag(TINY_TAG).error("["+ id +"] File ["+path.toString()+"] not found.");
+				Logger.tag(TINY_TAG).error("["+ id +"] File ["+ path +"] not found.");
     		return false;
     	}
 	}

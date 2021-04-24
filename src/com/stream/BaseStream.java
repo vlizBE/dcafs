@@ -95,7 +95,7 @@ public abstract class BaseStream {
         for( Element cmd : XMLtools.getChildElements(stream, "cmd") ){
             String c = cmd.getTextContent();
             String trigger = XMLtools.getStringAttribute(cmd,"trigger","open");
-            triggeredCmds.add(new TriggeredCommand(trigger,c));
+            triggeredCmds.add(new TriggeredCommand(trigger, c));
         }
 
         return readExtraFromXML(stream);
@@ -195,9 +195,9 @@ public abstract class BaseStream {
     public void setReaderIdleTime(long seconds){
         this.readerIdleSeconds = seconds;
     }
-    ;
+
     /* Requesting data */
-    public boolean addTarget(Writable writable ){
+    public synchronized boolean addTarget(Writable writable ){
         if( writable == null){
             Logger.error("Tried adding request to "+id+" but writable is null");
             return false;
@@ -246,7 +246,7 @@ public abstract class BaseStream {
     }
     /* ******************************** TRIGGERED COMMANDS *****************************************************/
     public void addTriggeredCmd( String trigger, String action ){
-        triggeredCmds.add(new TriggeredCommand(trigger,action));
+        triggeredCmds.add(new TriggeredCommand(trigger, action));
     }
     public void applyTriggeredCmd(TRIGGER trigger ){
         for( TriggeredCommand cmd : triggeredCmds){
@@ -284,7 +284,7 @@ public abstract class BaseStream {
             default : Logger.error("Unknown trigger requested : "+trigger); return null;
         }
     }
-    protected class TriggeredCommand{
+    protected static class TriggeredCommand{
         String command;
         TRIGGER trigger;
 

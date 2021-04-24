@@ -12,6 +12,9 @@ From 0.5.0 onwards, this should be better documented...
 - Trans as output in taskmanager?
 - Trans command >>>identify:id to claim to be a certain id and pass the ip test
 
+## Work in progress 0.9.0
+- Updated dependencies
+- Rewrote BaseWorker to use multiple threads
 ## Work in progress 
 ### N3 adds 
 #### Emailworker

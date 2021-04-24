@@ -72,7 +72,7 @@ public abstract class AbstractForward implements Writable {
      * Add a writable that the result of the filter should be written to
      * @param target The writable the result of the filter will be written to
      */
-    public void addTarget( Writable target ){
+    public synchronized void addTarget( Writable target ){
         if( !targets.contains(target)){
             if( !valid ){
                 valid=true;

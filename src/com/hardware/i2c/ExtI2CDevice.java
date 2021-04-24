@@ -17,7 +17,6 @@ public class ExtI2CDevice extends I2CDevice {
 	private final String script;
 
 	private final ArrayList<Writable> targets = new ArrayList<>();
-	private final String info;
 	/**
 	 * Extension of the @see I2CDevice class that adds the command functionality
 	 * 
@@ -28,7 +27,6 @@ public class ExtI2CDevice extends I2CDevice {
 		super(controller,address);
 		this.label = label;
 		this.script=script;
-		info = "-> Label:"+label+" @"+address+ "on bus "+controller;
 		Logger.info("Connecting to controller:"+controller +" and address:"+address+" with label: "+label);
 	}
 	public String toString(){
