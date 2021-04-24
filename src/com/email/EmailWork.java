@@ -3,7 +3,11 @@
  */
 package com.email;
 
+import util.tools.TimeTools;
+
 import java.nio.file.Path;
+import java.time.Instant;
+import java.util.concurrent.TimeUnit;
 
 public class EmailWork {
 	String toRaw;				  	  // The destination without conversion between reference and email address
@@ -14,7 +18,8 @@ public class EmailWork {
 	int tries = 0;					  // How many tries have been done to send the email
 	int delay = 0;					  // Delay between attempts to send the email
 	boolean deleteAttachment = false; // Whether or not to delete the attachment after sending it
-	
+	long creationTime = Instant.now().toEpochMilli();  //Keep track of when this object was created
+
 	/* ******************************* C O N S T R U C T O R S ************************************************* */
 	/**
 	 * Short constructor with the mininum required info
@@ -53,6 +58,18 @@ public class EmailWork {
 	 */
 	public boolean isValid(){
 		return valid;
+	}
+
+	/**
+	 * Check is this email is older than the given amount of hours
+	 * @param hours The amount of hours to compare the age to
+	 * @return True if older than the given period
+	 */
+	public boolean isFresh(int hours){
+		if(hours <=0)
+			return true;
+		long seconds=(Instant.now().toEpochMilli()-creationTime)/1000;
+		return (seconds/60) < hours;
 	}
 	/**
 	 * Check if an attachment was defined

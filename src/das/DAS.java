@@ -1058,10 +1058,6 @@ public class DAS implements DeadThreadListener {
             Logger.info("Starting BaseWorker...");
             new Thread(dataWorker, "BaseWorker").start();// Start the thread
         }
-        if (this.emailWorker != null) {
-            Logger.info("Starting EmailWorker...");
-            new Thread(emailWorker, "EmailWorker").start();// Start the thread
-        }
         if (this.digiWorker != null) {
             Logger.info("Starting DigiWorker...");
             new Thread(digiWorker, "DigiWorker").start();// Start the thread
@@ -1097,8 +1093,6 @@ public class DAS implements DeadThreadListener {
     public void haltWorkers() {
         if (dataWorker != null)
             dataWorker.stopWorker();
-        if (emailWorker != null)
-            emailWorker.stopWorker();
     }
 
     /* **************************** * S T A T U S S T U F F *********************************************************/
@@ -1253,12 +1247,6 @@ public class DAS implements DeadThreadListener {
                 } else {
                     Logger.error("BaseWorker died 50 times, giving up reviving.");
                     issues.triggerIssue("fatal:" + thread, thread + " permanently dead.", LocalDateTime.now());
-                }
-                break;
-            case "EmailWorker": // done
-                if (emailWorker != null) {
-                    Logger.error("EmailWorker not alive, trying to restart...");
-                    new Thread(emailWorker, "EmailWorker").start();// Start the thread
                 }
                 break;
             case "DigiWorker": // done
