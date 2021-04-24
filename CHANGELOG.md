@@ -8,6 +8,9 @@ From 0.5.0 onwards, this should be better documented...
 #### Todo
 - db connect in separate thread
 
+## Work in progress 0.9.0
+- Updated dependencies
+- Rewrote BaseWorker to use multiple threads
 
 ## Work in progress 0.8.4
 
