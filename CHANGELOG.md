@@ -12,30 +12,17 @@ From 0.5.0 onwards, this should be better documented...
 - Trans as output in taskmanager?
 - Trans command >>>identify:id to claim to be a certain id and pass the ip test
 
-## Work in progress 0.9.0
+## RELEASED
+
+## 0.9.0 (24/04/2021)
 - Updated dependencies
-- Rewrote BaseWorker to use multiple threads
-## Work in progress 
-### N3 adds 
+- Rewrote BaseWorker to use multiple threads (reason for 0.8.x -> 0.9.x )
+
 #### Emailworker
 - Used to be domain restricted cmd request now it's ref restricted meaning that if the from isn't mentioned in 
 the emailbook it can't issue cmd's
 - only admin's can issue 'admin' (admin:, retrieve, update,sd,sleep) cmds by default, others need permission
 - now uses XMLfab for the write to xml
-
-#### Others
-- added selectOrCreate to XMLfab without a specified attribute
-- removed the doDAS command, was not maintained anyway (and had become outdated)
-
-### 0.8.4 (up to N2)
-
-- This release will mainly focus on performance improvements
-- BaseWorker rework is part of this and has its own branch because the testing needed
-- Updated the SQLite dependency, no changes in performance noticed
-- Altered install service script to use wildcard
-- Timetools using instant more (slightly faster than previous)
-- Generic uses NumberUtils instead of own parseDouble
-- Debugworker allows looping x times
 
 #### Mathforward
 - Added support for i0++ and i+=2 etc
@@ -52,10 +39,17 @@ With all the changes the server is now fit to receive data from sensors (instead
 - Now supports !! like telnet
 - Added >>>? to get a list of available commands
 
+#### Others
+- added selectOrCreate to XMLfab without a specified attribute
+- removed the doDAS command, was not maintained anyway (and had become outdated)
+- Updated the SQLite dependency, no changes in performance noticed
+- Altered install service script to use wildcard
+- Timetools using instant more (slightly faster than previous)
+- Generic uses NumberUtils instead of own parseDouble
+- Debugworker allows looping x times
+
 #### BugFixes
 - Influx wasn't mentioned in generic info if other dbid is present
-
-## RELEASED
 
 ### 0.8.3
 
