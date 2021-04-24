@@ -7,7 +7,7 @@ import java.util.StringJoiner;
 
 public class Insert {
     
-    private StringJoiner join=null;
+    private StringJoiner join;
 
     public Insert( String tablename ){
         join = new StringJoiner(",","INSERT INTO "+tablename+" VALUES (",");");

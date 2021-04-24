@@ -174,12 +174,12 @@ public class XMLfab {
     public static Stream<Element> getRootChildren( Document xml, String... roots){
         XMLfab fab = new XMLfab(xml,false);
         fab.root = XMLtools.getFirstElementByTag(fab.xmlDoc, roots[0]);
-        var list = new ArrayList<Element>();
+
         if( fab.hasRoots(roots) ){
             fab.last=(Element)fab.root.getParentNode();            
             return fab.getChildren(roots[roots.length-1]).stream();
         }        
-        return list.stream();
+        return new ArrayList<Element>().stream();
     }
 
     /**

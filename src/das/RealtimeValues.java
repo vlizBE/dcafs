@@ -396,7 +396,7 @@ public class RealtimeValues implements CollectorFuture {
 	 */
 	public String getFilteredRTVals(String param, String eol) {
 
-		Stream<Entry<String, Double>> stream = null;
+		Stream<Entry<String, Double>> stream;
 		if (param.endsWith("*") && param.startsWith("*")) {
 			stream = rtvals.entrySet().stream()
 					.filter(e -> e.getKey().contains(param.substring(1, param.length() - 1)));
@@ -445,7 +445,7 @@ public class RealtimeValues implements CollectorFuture {
 	 * @return Readable listing of the parameters
 	 */
 	public String getFilteredRTTexts(String param, String eol) {
-		Stream<Entry<String, String>> stream = null;
+		Stream<Entry<String, String>> stream;
 		if (param.endsWith("*") && param.startsWith("*")) {
 			stream = rttext.entrySet().stream()
 					.filter(e -> e.getKey().contains(param.substring(1, param.length() - 1)));

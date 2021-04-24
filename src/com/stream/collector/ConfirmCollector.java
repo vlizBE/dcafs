@@ -27,7 +27,6 @@ public class ConfirmCollector extends AbstractCollector {
         super(id);
         this.target=target;
         this.scheduler=scheduler;
-        id=target.getID();
     }
     public ConfirmCollector(String id, int tries, int timeoutSeconds, Writable target, ScheduledExecutorService scheduler){
         this(id,target,scheduler);

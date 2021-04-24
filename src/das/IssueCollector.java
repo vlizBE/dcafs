@@ -276,7 +276,7 @@ public class IssueCollector {
 
             Resolved r = resolveds.get(issue.getKey());  
             int cnt = r==null?0:r.getCount();   
-            String total="";
+            String total;
 
             if( cnt == 0){
                 total = TimeTools.convertPeriodtoString( i.isActive()?i.secondsSinceStart():0,TimeUnit.SECONDS);
@@ -323,7 +323,7 @@ public class IssueCollector {
         LocalDateTime startTime;
         LocalDateTime endTime;
         private boolean active = false;
-        String message="";
+        String message;
 
         public Issue( String message ){
             this.message=message;

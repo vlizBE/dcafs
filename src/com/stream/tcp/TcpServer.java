@@ -40,7 +40,7 @@ public class TcpServer implements StreamListener {
 
 	private final ArrayList<TransHandler> clients = new ArrayList<>();
 	static final String XML_PARENT_TAG = "transserver";
-	private HashMap<String,ArrayList<Writable>> targets = new HashMap<>();
+	private final HashMap<String,ArrayList<Writable>> targets = new HashMap<>();
 
 	public TcpServer(Path xml, EventLoopGroup workerGroup) {
 		this.workerGroup = workerGroup;
@@ -369,7 +369,7 @@ public class TcpServer implements StreamListener {
 					var list = targets.get(cmds[1]);
 
 					if( !list.contains(wr)){// no exact match
-						list.removeIf( w -> w==null ); // Remove invalid ones
+						list.removeIf(Objects::isNull); // Remove invalid ones
 						list.removeIf( w -> w.getID().equalsIgnoreCase(wr.getID()));// Remove id match
 						list.add(wr);
 					}

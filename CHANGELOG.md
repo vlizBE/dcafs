@@ -12,6 +12,19 @@ From 0.5.0 onwards, this should be better documented...
 - Trans as output in taskmanager?
 - Trans command >>>identify:id to claim to be a certain id and pass the ip test
 
+## Work in progress
+## 0.9.x
+- Goals for this version series
+  * Rework BaseWorker
+  * Code cleanup  
+    * Analysis based (using IDE tools)
+    * Bring javadoc up to date
+    * Try to improve memory usage (somehow)
+    * Decide on final class structure (mainly StreamPool)   
+  * Rework the TaskManager (will be trigger for 0.10.0)
+  
+## 0.9.1 
+
 ## RELEASED
 
 ## 0.9.0 (24/04/2021)

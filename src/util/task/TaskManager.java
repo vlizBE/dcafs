@@ -862,12 +862,11 @@ public class TaskManager implements CollectorFuture {
 							Logger.tag(TINY_TAG).warn( task.verifyType);
 							Logger.tag(TINY_TAG).warn( printVerify(task.preReq2) );
 							break;
-						case NONE:
-							break;
 						case SINGLE:
 							Logger.tag(TINY_TAG).warn("["+id+"] "+task.id+"/"+task.value+" => not executed, requirement not met.");
 							Logger.tag(TINY_TAG).warn( "["+id+"] Reason: "+printVerify(task.preReq1) );
 							break;
+						case NONE:
 						default:
 							break;
 					}

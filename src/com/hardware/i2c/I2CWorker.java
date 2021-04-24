@@ -39,7 +39,7 @@ public class I2CWorker implements Runnable {
     private boolean goOn=true;
 
     private final LinkedHashMap<String,I2CCommand> commands = new LinkedHashMap<>();
-    Path scriptsPath=Path.of("devices");
+    Path scriptsPath;
 
     public I2CWorker(Document xml, BlockingQueue<Datagram> dQueue) {
         this.dQueue = dQueue;

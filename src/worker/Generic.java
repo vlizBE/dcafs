@@ -396,8 +396,8 @@ public class Generic {
      * Class to store filters that can be applied before the generic is applied
      */
     private static class Filter{
-        String from="";
-        String to="";
+        String from;
+        String to;
         FILTERTYPE type;
 
         public Filter( FILTERTYPE type, String from, String to ){
@@ -438,8 +438,8 @@ public class Generic {
      */
     public static class Entry{
         DATATYPE type;
-        int index=-1;
-        String title="";
+        int index;
+        String title;
         String mqttDevice="";
 
         public Entry(int index, String title, DATATYPE type){

@@ -18,12 +18,12 @@ import java.util.concurrent.BlockingQueue;
  */
 public abstract class AbstractForward implements Writable {
 
-    protected BlockingQueue<Datagram> dQueue;                        // Queue to send commands
-    protected ArrayList<Writable> targets = new ArrayList<>();       // To where the data needs to be send
-    protected ArrayList<String[]> rulesString = new ArrayList<>();   // Readable info regarding rules
+    protected final BlockingQueue<Datagram> dQueue;                        // Queue to send commands
+    protected final ArrayList<Writable> targets = new ArrayList<>();       // To where the data needs to be send
+    protected final ArrayList<String[]> rulesString = new ArrayList<>();   // Readable info regarding rules
 
     protected String id="";                                   // The identifier for this object
-    protected ArrayList<String> sources = new ArrayList<>();  // The commands that provide the data to filter
+    protected final ArrayList<String> sources = new ArrayList<>();  // The commands that provide the data to filter
     protected boolean valid = false;           // Flag that determines of data should be received or not
     protected boolean debug = false;           // Flag that outputs more in the console for debugging purposes
     protected boolean xmlOk=false;             // There's a valid xml path available

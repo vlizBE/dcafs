@@ -253,7 +253,7 @@ public class EmailWorker implements Runnable, CollectorFuture {
 			}
 
 			boolean regex = XMLtools.getBooleanAttribute(perm,"regex",false);
-			this.permits.add( new Permit( denies, ref, val, regex) );
+			this.permits.add(new Permit(denies, ref, val, regex));
 		}
 	}
 	/**
@@ -728,8 +728,7 @@ public class EmailWorker implements Runnable, CollectorFuture {
 					return "Not enough arguments email:"+parts[0]+",from,cmd(,isRegex)";
 				}
 				boolean regex = parts.length == 4 && Tools.parseBool(parts[3], false);
-				permits.add( new Permit(parts[0].equals("adddeny"),parts[1],parts[2],regex));
-				;
+				permits.add(new Permit(parts[0].equals("adddeny"), parts[1], parts[2], regex));
 				return writePermits()?"Permit added":"Failed to write to xml";
 			default	:
 				return "unknown command";
@@ -800,7 +799,7 @@ public class EmailWorker implements Runnable, CollectorFuture {
 		props.put( MAIL_SMTP_CONNECTIONTIMEOUT, TIMEOUT_MILLIS);
 	}
 	public List<String> findTo( String from ){
-		return to.entrySet().stream().filter( e -> e.getValue().contains(from)).map( e -> e.getKey()).collect(Collectors.toList());
+		return to.entrySet().stream().filter( e -> e.getValue().contains(from)).map(Map.Entry::getKey).collect(Collectors.toList());
 	}
 
 	/**
@@ -1028,15 +1027,14 @@ public class EmailWorker implements Runnable, CollectorFuture {
 	}
 
 	/**
-	 * Test if the BufferCollector construction wroks
+	 * Test if the BufferCollector construction works
 	 */
 	public void testCollector(){
 		Datagram d = new Datagram( "calc:clock", 1, "email");
+		d.setOriginID("admin");
 		DataRequest req = new DataRequest("admin","calc:clock");
-		buffered.put(req.getID(), req);
 		d.setWritable(req.getWritable());
 		buffered.put(req.getID(), req);
-		d.setOriginID("admin");
 		dQueue.add( d );
 	}
 	public class DataRequest{
@@ -1078,7 +1076,7 @@ public class EmailWorker implements Runnable, CollectorFuture {
 			this.pass=pass;
 		}
 	}
-	private class Permit {
+	private static class Permit {
 		boolean denies;
 		boolean regex;
 		String value;

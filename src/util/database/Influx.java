@@ -180,7 +180,7 @@ public class Influx extends Database{
         var tables = res.get(0).getSeries().get(0).getValues();
 
         for( var table : tables){
-            var mes = new Measurement(table.toString().substring(1,table.toString().length()-1));
+            var mes = new Measurement(table.toString().substring(1, table.toString().length() - 1));
             measurements.put(mes.name,mes);
         }
         for( var mes : measurements.values() ){
@@ -222,7 +222,7 @@ public class Influx extends Database{
     public String getTitle(){
         return irl.substring(irl.lastIndexOf("=")+1);
     }
-    private class Measurement{
+    private static class Measurement{
         String name;
         ArrayList<Field> fields =new ArrayList<>();
 

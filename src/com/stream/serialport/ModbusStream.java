@@ -52,7 +52,7 @@ public class ModbusStream extends SerialStream{
         if( index < 4) // can't do anything with it yet anyway
             return;
 
-        Datagram d=null;
+        Datagram d;
         switch( rec[1] ){
             case 0x03: // Register read
                 if( index == 5+rec[2] ) // Received all the data

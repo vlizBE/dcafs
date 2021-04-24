@@ -10,12 +10,12 @@ import java.util.List;
 
 public class Positioning {
 
-	int id = -1;
+	int id;
 	
-	double latitude = -1;
-	double longitude = -1;
+	double latitude;
+	double longitude;
 	
-	long timestamp = -1;
+	long timestamp;
 	double depth = 0;
 	double distanceUpdate=0;
 	double heading=0;
@@ -317,7 +317,7 @@ public class Positioning {
 	public class Track{
 		ArrayList<double[]> coords = new ArrayList<>();
 		ArrayList<Long> timestamps = new ArrayList<>();
-		long maxTime=30000;
+		long maxTime;
 		
 		public Track( long seconds ) {
 			maxTime = seconds*1000;
@@ -429,7 +429,7 @@ public class Positioning {
 				return -999;
 			int x=-1;
 			double[] to = coords.get(coords.size()-1); //latest position
-			double dis=0;
+			double dis;
 
 			for( int a=coords.size()-2; coords.size()>2 && a>-1 ;a--) {
 				double[] from = coords.get(a);

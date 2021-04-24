@@ -660,7 +660,7 @@ public class SQLDB extends Database{
     public class DoSimple implements Runnable{
 
         ArrayList<String> temp = new ArrayList<>();
-        int total=0;
+        int total;
 
         public DoSimple( ArrayList<String> data){
             temp.addAll(data);
@@ -766,7 +766,7 @@ public class SQLDB extends Database{
                                 boolean ok=true;
                                 int errors=0;
                                 while( t.hasRecords(id)&&ok ){ //do again if new queries arrived or part of the batch failed
-                                    int cnt=0;
+                                    int cnt;
                                     try (PreparedStatement ps = con.prepareStatement(t.getPreparedStatement(id))){
                                         cnt = t.fillStatement(id,ps);
                                         if( cnt > 0 ){

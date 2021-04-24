@@ -303,8 +303,8 @@ public class Waypoint implements Comparable<Waypoint>{
 		}
 		public String getDirection(){
 			switch( direction ){
-				case ENTER: return "in";
 				case LEAVE: return "out";
+				case ENTER:
 				default: return "in";
 			}
 		}

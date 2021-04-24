@@ -220,8 +220,8 @@ public class GisTools {
         double cosU2 = Math.cos(U2);
 
         double lambda = L, lambdaP, iterLimit = 100;
-        double sinSigma = 0, cosSqAlpha = 0, cos2SigmaM = 0, cosSigma = 0, sigma = 0;
-        double sinAlpha = 0, C = 0;
+        double sinSigma, cosSqAlpha, cos2SigmaM, cosSigma, sigma;
+        double sinAlpha, C;
         do {
             double sinLambda = Math.sin(lambda), cosLambda = Math.cos(lambda);
             sinSigma = Math.sqrt((cosU2 * sinLambda) * (cosU2 * sinLambda)

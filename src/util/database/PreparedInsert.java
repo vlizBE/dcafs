@@ -10,7 +10,7 @@ public class PreparedInsert {
     ArrayList<Column> columns = new ArrayList<>();
     ArrayList<Object[]> data = new ArrayList<>();
 
-    String table ="";
+    String table;
     StringJoiner cols; 
     String statement="";
 

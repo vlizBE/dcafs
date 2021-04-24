@@ -41,7 +41,6 @@ public class DebugWorker implements Runnable {
 	private boolean sleep = true; // True means the program will sleep when it should, so data will be send based
 									// on the divider
 	private SourceType srcType = SourceType.RAW;
-	private final ArrayList<String[]> data = new ArrayList<>(); // buffer to hold the data read from the file
 
 	BufferedReader br;
 	Path filesPath;
@@ -278,7 +277,7 @@ public class DebugWorker implements Runnable {
 							}							
 						} catch (java.lang.OutOfMemoryError e) { // if an out of memory error occurs, output the buffer size
 																	// to see which one caused it
-							Logger.info("Out of Memory: Data size: " + data.size() + "\tDqueue size: " + dQueue.size());
+							Logger.info("Out of Memory: Dqueue size: " + dQueue.size());
 						}						
 					break;
 					case NMEA:

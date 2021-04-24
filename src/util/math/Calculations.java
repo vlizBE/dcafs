@@ -203,7 +203,7 @@ public class Calculations {
 
         double A1 = (8.86 * Math.pow(10, (0.78 * 7.6) - 5)) / sv;
         double A2 = (21.44 * salin * (1 + (0.025 * sbe38))) / sv;
-        double A3 = 0;
+        double A3;
         if (sbe38 > 20) {
             A3 = (3.964 * Math.pow(10, -4)) - (sbe38 * (1.146 * Math.pow(10, -5))
                     - (sbe38 * ((1.45 * Math.pow(10, -7)) - (6.5 * Math.pow(10, -10) * sbe38))));

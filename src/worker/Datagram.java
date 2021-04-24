@@ -9,7 +9,7 @@ import java.time.Instant;
  */
 public class Datagram {
 	
-    String message = "";     // The received data
+    String message;     // The received data
     byte[] raw;              // Raw received data
     double messValue = 0;    // Alternative data
     int priority = 1;        // The priority of the data source

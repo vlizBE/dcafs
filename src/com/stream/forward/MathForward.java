@@ -304,7 +304,7 @@ public class MathForward extends AbstractForward {
         Function<BigDecimal[],BigDecimal> op; // for the scale type
         MathFab fab;    // for the complex type
         int index;      // index for the result
-        String ori="";  // The expression before it was decoded mainly for listing purposes
+        String ori;  // The expression before it was decoded mainly for listing purposes
         String cmd =""; // Command in which to replace the $ with the result
 
         public Operation(String ori, Function<BigDecimal[],BigDecimal> op, int index ){
