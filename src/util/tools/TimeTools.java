@@ -102,7 +102,7 @@ public class TimeTools {
         return LONGDATE_FORMATTER_UTC.format(Instant.now());
     }
     public static String formatLongNow( ) {
-        return LONGDATE_FORMATTER.format(Instant.now());
+        return LONGDATE_FORMATTER.withZone( ZoneId.systemDefault() ).format(Instant.now());
     }
     /**
      * Gets the current datetime and adds an offset in days and formats it
