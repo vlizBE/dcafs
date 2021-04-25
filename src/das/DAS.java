@@ -15,6 +15,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.commons.lang3.SystemUtils;
 import org.tinylog.Logger;
+import org.tinylog.configuration.Configuration;
 import org.tinylog.provider.ProviderRegistry;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -101,6 +102,18 @@ public class DAS implements DeadThreadListener {
             if( workPath.matches(".*[lib]")) { // Meaning used as a lib
                 workPath = Path.of(workPath).getParent().toString();
             }
+
+            // Re set the paths for the file writers to use the same path as the rest of the program
+            // Do note that you can't do a get first...
+            Path logs = Path.of(workPath).resolve("logs");
+            Configuration.set("writer2.file", logs.resolve("info.log").toString());
+            Configuration.set("writer3.file", logs+File.separator+"errors_{date:yyMMdd}.log");
+            Configuration.set("writer6.file", logs.resolve("taskmanager.log").toString());
+
+            Path raw = Path.of(workPath).resolve("raw");
+            Configuration.set("writer4.file", raw+File.separator+"{date:yyyy-MM}/{date:yyyy-MM-dd}_RAW_{count}.log");
+            Configuration.set("writer5.file", raw+File.separator+"{date:yyyy-MM}/SQL_queries.log");
+
             settingsFile = Path.of(workPath, "settings.xml");
         } catch (URISyntaxException e) {
             Logger.error(e);
