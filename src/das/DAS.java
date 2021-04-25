@@ -1119,6 +1119,12 @@ public class DAS implements DeadThreadListener {
 
         StringBuilder b = new StringBuilder();
 
+        double totalMem = (double)Runtime.getRuntime().totalMemory();
+        double usedMem = totalMem-Runtime.getRuntime().freeMemory();
+
+        totalMem = Tools.roundDouble(totalMem/(1024.0*1024.0),1);
+        usedMem = Tools.roundDouble(usedMem/(1024.0*1024.0),1);
+
         if (html) {
             b.append("<b><u>DCAFS Status at ").append(TimeTools.formatNow("HH:mm:ss")).append(".</b></u><br><br>");
         } else {
@@ -1127,6 +1133,7 @@ public class DAS implements DeadThreadListener {
         }
         b.append(TEXT_YELLOW).append("DCAFS Version: ").append(TEXT_GREEN).append(version).append("\r\n");
         b.append(TEXT_YELLOW).append("Uptime: ").append(TEXT_GREEN).append(getUptime()).append("\r\n");
+        b.append(TEXT_YELLOW).append("Memory: ").append(TEXT_GREEN).append(usedMem).append("/").append(totalMem).append("MB\r\n");
         b.append(TEXT_YELLOW).append("Current mode: ").append(debug ? TEXT_RED + "debug" : TEXT_GREEN + "normal").append("\r\n");
         b.append(TEXT_YELLOW).append("IP: ").append(TEXT_GREEN).append(Tools.getLocalIP());
         b.append(UNDERLINE_OFF).append("\r\n");
