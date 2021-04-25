@@ -24,6 +24,15 @@ From 0.5.0 onwards, this should be better documented...
   * Rework the TaskManager (will be trigger for 0.10.0)
   
 ## 0.9.1 
+### Other
+- Added admin:gc, this forces the jvm to do a garbage collection
+- Added memory info to st report (used/total)
+### Influx
+- Added auto reconnect (state checker)
+- Written points are buffered if no connection
+
+### Bugfixes
+- TimeTools.formatLongNow didn't specify a zone
 
 ## RELEASED
 

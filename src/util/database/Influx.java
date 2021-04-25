@@ -3,6 +3,7 @@ package util.database;
 import org.apache.commons.lang3.StringUtils;
 import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDBFactory;
+import org.influxdb.InfluxDBIOException;
 import org.influxdb.dto.Point;
 import org.influxdb.dto.Query;
 import org.tinylog.Logger;
@@ -11,6 +12,7 @@ import util.tools.TimeTools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -23,6 +25,8 @@ public class Influx extends Database{
     InfluxDB influxDB;
     String dbname;
     HashMap<String,Measurement> measurements = new HashMap<>();
+    ArrayList<Point> pointBuffer = new ArrayList<>();
+
     enum FIELD_TYPE {
         INTEGER, FLOAT, STRING, TIMESTAMP
     }
@@ -79,19 +83,88 @@ public class Influx extends Database{
                 .alterChild("address",address)
                 .build();
     }
-    public void writePoint( Point p){
-        influxDB.write(p);
+    public boolean writePoint( Point p){
+        if( isValid(1)) {
+            influxDB.write(p);
+            return true;
+        }
+        state=STATE.NEED_CON;
+        pointBuffer.add(p);
+        return false;
+    }
+    public void checkState( int secondsPassed ){
+        switch(state){
+            case FLUSH_REQ:
+                if( !pointBuffer.isEmpty() ){
+                    pointBuffer.forEach( p -> writePoint(p));
+                }
+
+                if (isValid(1)) { // If not valid, flush didn't work either
+                    state = STATE.HAS_CON;
+                }else{
+                    state = STATE.NEED_CON;
+                }
+                break;
+            case HAS_CON: // If we have a connection, but not using it
+                if( !hasRecords() ){
+                    idleCount += secondsPassed;
+                    if( idleCount > idleTime && idleTime > 0){
+                        Logger.info(getID()+" -> Connection closed because idle: " + id +" for "+TimeTools.convertPeriodtoString( idleCount, TimeUnit.SECONDS)+" > "+
+                                TimeTools.convertPeriodtoString( idleTime, TimeUnit.SECONDS) );
+                        disconnect();
+                        state = STATE.IDLE;
+                    }
+                }else{
+                    Logger.debug(id+" -> Waiting for max age to pass...");
+                    if( !pointBuffer.isEmpty() ){
+                        pointBuffer.forEach( p -> writePoint(p));
+                    }
+                    idleCount=0;
+                }
+                break;
+            case IDLE:
+                if( hasRecords() ){
+                    if( connect(false) ){ // try to connect but don't reconnect if connected
+                        state=STATE.HAS_CON; // connected
+                    }else{
+                        state=STATE.NEED_CON; // connection failed
+                    }
+                }
+                break;
+            case NEED_CON:
+                Logger.info(id+" -> Need con, trying to connect...");
+                if( connect(false) ){
+                    if( hasRecords() ){
+                        state=STATE.HAS_CON;
+                        Logger.info(id+" -> Got a connection.");
+                    }else{
+                        state=STATE.IDLE;
+                        Logger.info(id+" -> Got a connection, but don't need it anymore...");
+                    }
+                }
+                break;
+            default:
+                break;
+        }
     }
     @Override
     public boolean connect(boolean force) {
-        influxDB = InfluxDBFactory.connect("http://"+irl, user, pass);
-        if( influxDB.ping().isGood() ){
-            Logger.info(id+" -> Connected to InfluxDB "+dbname);
-            influxDB.setDatabase(dbname);
-            influxDB.enableBatch(maxQueries, (int) maxAge, TimeUnit.SECONDS);
-            return true;
-        }else{
-            Logger.error(id+" -> Failed to connect");
+        try {
+            influxDB = InfluxDBFactory.connect("http://"+irl, user, pass);
+            if (influxDB.ping().isGood()) {
+                Logger.info("Connected to InfluxDB " + dbname);
+                influxDB.setDatabase(dbname);
+                influxDB.enableBatch(maxQueries, (int) maxAge, TimeUnit.SECONDS);
+                state = STATE.HAS_CON;
+                return true;
+            } else {
+                Logger.error("Failed to connect to Influx: "+dbname);
+                state = STATE.NEED_CON;
+                return false;
+            }
+        }catch( InfluxDBIOException e){
+            Logger.error("Failed to connect to "+ dbname+" because "+e.getMessage());
+            state = STATE.NEED_CON;
             return false;
         }
     }
@@ -111,12 +184,12 @@ public class Influx extends Database{
 
     @Override
     public int getRecordsCount() {
-        return -1;
+        return pointBuffer.size();
     }
 
     @Override
     public boolean hasRecords() {
-        return false;
+        return !pointBuffer.isEmpty();
     }
 
     public synchronized int doDirectInsert(String table, Object... values){
@@ -127,6 +200,7 @@ public class Influx extends Database{
             return 0;
 
         var p = Point.measurement(table);
+
         for( int a=0;a<mes.fields.size();a++ ){
             var field = mes.fields.get(a);
             switch( field.type ){
@@ -137,8 +211,7 @@ public class Influx extends Database{
                     break;
             }
         }
-        influxDB.write(p.build());
-        return 1;
+        return writePoint(p.build())?1:0;
     }
     @Override
     public Optional<List<List<Object>>> doSelect(String query, boolean includeNames) {
@@ -217,7 +290,7 @@ public class Influx extends Database{
         return 0;
     }
     public String toString(){
-        return "INFluxDB@"+ getTitle()+" -> Buffer managed by lib";
+        return "INFluxDB@"+ getTitle()+" -> Buffer managed by lib"+(pointBuffer.isEmpty()?".":" but "+pointBuffer.size()+" waiting for con...");
     }
     public String getTitle(){
         return irl.substring(irl.lastIndexOf("=")+1);
