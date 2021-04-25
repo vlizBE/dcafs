@@ -939,6 +939,8 @@ public class BaseReq {
 					.add("admin:sqlfile,yes/no -> Start/stop logging queries to raw/yyyy-MM/SQL_queries.log")
 					.add("admin:ipv4 -> Get the IPv4 and MAC of all network interfaces")
 					.add("admin:ipv6 -> Get the IPv6 and MAC of all network interfaces")
+					.add("admin:gc -> Fore a java garbage collection")
+					.add("admin:reboot -> Reboot the computer (linux only)")
 					.add("admin:methodcall -> Get the time passed since a certain BaseWorker method was called");
 				return join.toString();
 			case "getlogs":
@@ -984,6 +986,9 @@ public class BaseReq {
 				return das.getBaseWorker().getMethodCallAge( html?"<br>":"\r\n" );
 			case "ipv4": return Tools.getIP("", true);
 			case "ipv6": return Tools.getIP("", false);
+			case "gc":
+				System.gc();
+				return "Tried to execute GC";
 			case "reboot":
 				String os = System.getProperty("os.name").toLowerCase();
 				if( !os.startsWith("linux")){
