@@ -446,10 +446,10 @@ public class StreamPool implements StreamListener, CollectorFuture {
 			readEditorsFromXML(XMLtools.getChildElements( editorsEle, "editor"));
 
 		Element streamsElement = XMLtools.getFirstElementByTag( xml, "streams");
-		
-		retryDelayIncrement = XMLtools.getChildIntValueByTag(streamsElement, "retrydelayincrement", 5);
-		retryDelayMax = XMLtools.getChildIntValueByTag(streamsElement, "retrydelaymax", 30);
-		
+		if( streams!=null) {
+			retryDelayIncrement = XMLtools.getChildIntValueByTag(streamsElement, "retrydelayincrement", 5);
+			retryDelayMax = XMLtools.getChildIntValueByTag(streamsElement, "retrydelaymax", 30);
+		}
 		streams.clear(); // Clear out before the reread
 
 		for( Element el : XMLtools.getChildElements( streamsElement, XML_CHILD_TAG)){
