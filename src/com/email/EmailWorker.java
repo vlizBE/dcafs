@@ -839,7 +839,7 @@ public class EmailWorker implements CollectorFuture {
 			ClassLoader tcl = Thread.currentThread().getContextClassLoader();
 			Thread.currentThread().setContextClassLoader(javax.mail.Session.class.getClassLoader());
 			boolean ok = false;
-
+			Logger.info("Checking email...");
 			try( Store inboxStore = inboxSession.getStore("imaps")) {	// Store implements autoCloseable
 
 				inboxStore.connect( inbox.server, inbox.port, inbox.user, inbox.pass );
@@ -853,6 +853,9 @@ public class EmailWorker implements CollectorFuture {
 			    if( messages.length >0 ){
 					Logger.info("Messages found:"+messages.length);
 					maxQuickChecks = 5;
+				}else{
+			    	Logger.info("No new messages");
+			    	return;
 				}
 
 			    for ( Message message : messages ) {
