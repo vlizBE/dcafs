@@ -927,8 +927,12 @@ public class EmailWorker implements CollectorFuture {
 
 
 					if( cmd.startsWith("label:")&&cmd.length()>7){ // email acts as data received from sensor, no clue on the use case yet
-						for( String line : body.split("\r\n") )
-							dQueue.add( new Datagram( body, 1, cmd.split(":")[1]));
+						for( String line : body.split("\r\n") ) {
+							if( line.isEmpty()){
+								break;
+							}
+							dQueue.add(new Datagram(line, 1, cmd.split(":")[1]));
+						}
 					}else{
 						// Retrieve asks files to be emailed, if this command is without email append from address
 						if( cmd.startsWith("retrieve:") && !cmd.contains(",")){
