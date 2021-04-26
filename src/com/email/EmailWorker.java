@@ -844,16 +844,33 @@ public class EmailWorker implements CollectorFuture {
 				}
 
 			    for ( Message message : messages ) {
+			    	/* If working with alias's
 			    	var hasnot = Arrays.stream(message.getRecipients(Message.RecipientType.TO)).filter(ad -> outbox.from.equalsIgnoreCase(ad.toString())).findFirst().isEmpty();
-
 			    	if( hasnot ){
 			    		message.setFlag(Flags.Flag.SEEN,false);
 			    		continue;
 					}
-
+					*/
+					boolean delete=true;
 					String from = message.getFrom()[0].toString();
 					from = from.substring(from.indexOf("<")+1, from.length()-1);
 					String cmd = message.getSubject();
+
+					if( cmd.contains(" for ")) { // meaning for multiple client checking this inbox
+						var self= outbox.from.substring(0, outbox.from.indexOf("@")); // which id to look for
+						if (!cmd.contains( self )) { // the subject doesn't contain the id
+							message.setFlag(Flags.Flag.SEEN, false);// rever the flag to unseen
+							Logger.info("Email read but meant for someone else...");
+							continue; // go to next message
+						}else{
+							String newSub = cmd.replace(","+self,"").replace(self+",","");// remove self from subject
+							if( !newSub.endsWith("for ")){ // meaning NOT everyone read it
+								delete=false;
+								message.setFlag(Flags.Flag.SEEN, false);
+							}
+							message.setSubject(newSub); // apply the new subject
+						}
+					}
 					Logger.info("Command: " + cmd + " from: " + from );
 
 					var tos = findTo(from);
@@ -924,8 +941,8 @@ public class EmailWorker implements CollectorFuture {
 						d.setOriginID(from);
 						dQueue.add( d );
 					}
-
-					message.setFlag(Flags.Flag.DELETED, true);
+					if(delete)
+						message.setFlag(Flags.Flag.DELETED, true);
 				}
 				ok=true;
 				lastInboxConnect = Instant.now().toEpochMilli();							    		
