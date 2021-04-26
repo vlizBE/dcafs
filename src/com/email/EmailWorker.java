@@ -581,7 +581,10 @@ public class EmailWorker implements CollectorFuture {
 			Logger.warn("Sending emails disabled!");
 			return;
 		}
-
+		if( to.isEmpty() ){
+			Logger.warn("Email request received but to was empty, subject?"+subject);
+			return;
+		}
 		if (!to.contains("@")) {
 			String rep = emailBook.get(to);
 			if (rep != null && !rep.isBlank()) {
@@ -777,6 +780,11 @@ public class EmailWorker implements CollectorFuture {
 		props.put( MAIL_SMTP_CONNECTIONTIMEOUT, TIMEOUT_MILLIS);
 	}
 	public List<String> findTo( String from ){
+		if( from.startsWith(inbox.user)){
+			var ar = new ArrayList<String>();
+			ar.add("echo");
+			return ar;
+		}
 		return emailBook.entrySet().stream().filter(e -> e.getValue().contains(from)).map(Map.Entry::getKey).collect(Collectors.toList());
 	}
 
@@ -790,6 +798,7 @@ public class EmailWorker implements CollectorFuture {
 	 */
 	private boolean isDenied(List<String> to, String from, String subject){
 		boolean deny=false;
+
 		if( subject.contains("admin")
 				|| subject.startsWith("sd") || subject.startsWith("shutdown")
 				|| subject.startsWith("sleep")
@@ -800,6 +809,9 @@ public class EmailWorker implements CollectorFuture {
 			}
 			deny=true; // change to default deny for admin commands
 		}
+		if( from.startsWith(inbox.user+"@") )
+			return false;
+
 		if( !permits.isEmpty() ){
 			boolean match=false;
 			for( Permit d : permits){
@@ -856,23 +868,6 @@ public class EmailWorker implements CollectorFuture {
 					from = from.substring(from.indexOf("<")+1, from.length()-1);
 					String cmd = message.getSubject();
 
-					if( cmd.contains(" for ")) { // meaning for multiple client checking this inbox
-						if (!cmd.contains( outbox.getFromStart() )) { // the subject doesn't contain the id
-							message.setFlag(Flags.Flag.SEEN, false);// rever the flag to unseen
-							Logger.info("Email read but meant for someone else...");
-							continue; // go to next message
-						}else{
-							String newSub = cmd.replace(","+outbox.getFromStart(),"").replace(outbox.getFromStart()+",","");// remove self from subject
-							if( !newSub.endsWith("for ")){ // meaning NOT everyone read it
-								delete=false;
-								message.setFlag(Flags.Flag.SEEN, false);
-							}
-							message.setSubject(newSub); // apply the new subject
-						}
-						cmd = cmd.substring(0,cmd.indexOf(" for ")); // remove everything not related to the command
-					}
-					Logger.info("Command: " + cmd + " from: " + from );
-
 					var tos = findTo(from);
 					if( tos.isEmpty()){
 						sendEmail(from,"My admin doesn't allow me to talk to strangers...","");
@@ -887,7 +882,29 @@ public class EmailWorker implements CollectorFuture {
 						Logger.warn(from+" tried using "+cmd+" without permission");
 						continue;
 					}
+
+					String to = message.getRecipients(Message.RecipientType.TO)[0].toString();
 					String body = getTextFromMessage(message);
+
+					if( cmd.contains(" for ")) { // meaning for multiple client checking this inbox
+						if (!cmd.contains( outbox.getFromStart() )) { // the subject doesn't contain the id
+							message.setFlag(Flags.Flag.SEEN, false);// rever the flag to unseen
+							Logger.info("Email read but meant for someone else...");
+							continue; // go to next message
+						}else{
+							String newSub = cmd.replaceFirst(",?"+outbox.getFromStart(),"");
+							Logger.info( "Altered subject: "+newSub);
+							if( !newSub.endsWith("for ")){ // meaning NOT everyone read it
+								delete=false;
+								message.setFlag(Flags.Flag.SEEN, false);
+								Logger.info( "Not yet read by "+newSub.substring(newSub.indexOf(" for ")+5));
+							}
+							Logger.info("Someone else wants this...");
+							sendEmail(to,newSub,body); // make sure the other can get it
+						}
+						cmd = cmd.substring(0,cmd.indexOf(" for ")); // remove everything not related to the command
+					}
+					Logger.info("Command: " + cmd + " from: " + from );
 
 					if ( message.getContentType()!=null && message.getContentType().contains("multipart") ) {
 						try {
@@ -925,13 +942,14 @@ public class EmailWorker implements CollectorFuture {
 						}
 					}
 
-
 					if( cmd.startsWith("label:")&&cmd.length()>7){ // email acts as data received from sensor, no clue on the use case yet
 						for( String line : body.split("\r\n") ) {
 							if( line.isEmpty()){
 								break;
 							}
-							dQueue.add(new Datagram(line, 1, cmd.split(":")[1]));
+							var d = new Datagram(line, 1, cmd.split(":")[1]);
+							d.setOriginID(from);
+							dQueue.add(d);
 						}
 					}else{
 						// Retrieve asks files to be emailed, if this command is without email append from address
