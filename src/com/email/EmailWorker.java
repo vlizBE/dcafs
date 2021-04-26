@@ -672,7 +672,7 @@ public class EmailWorker implements CollectorFuture {
 						Logger.error(e);
 					}
 				}
-				message.setFrom(new InternetAddress("DCAFS <" + outbox.from + ">"));
+				message.setFrom(new InternetAddress(  outbox.getFromStart()+"<" + outbox.from + ">"));
 				for (String single : email.toRaw.split(",")) {
 					try {
 						message.addRecipient(Message.RecipientType.TO, new InternetAddress(single.split("\\|")[0]));
@@ -857,19 +857,19 @@ public class EmailWorker implements CollectorFuture {
 					String cmd = message.getSubject();
 
 					if( cmd.contains(" for ")) { // meaning for multiple client checking this inbox
-						var self= outbox.from.substring(0, outbox.from.indexOf("@")); // which id to look for
-						if (!cmd.contains( self )) { // the subject doesn't contain the id
+						if (!cmd.contains( outbox.getFromStart() )) { // the subject doesn't contain the id
 							message.setFlag(Flags.Flag.SEEN, false);// rever the flag to unseen
 							Logger.info("Email read but meant for someone else...");
 							continue; // go to next message
 						}else{
-							String newSub = cmd.replace(","+self,"").replace(self+",","");// remove self from subject
+							String newSub = cmd.replace(","+outbox.getFromStart(),"").replace(outbox.getFromStart()+",","");// remove self from subject
 							if( !newSub.endsWith("for ")){ // meaning NOT everyone read it
 								delete=false;
 								message.setFlag(Flags.Flag.SEEN, false);
 							}
 							message.setSubject(newSub); // apply the new subject
 						}
+						cmd = cmd.substring(0,cmd.indexOf(" for ")); // remove everything not related to the command
 					}
 					Logger.info("Command: " + cmd + " from: " + from );
 
@@ -1075,6 +1075,9 @@ public class EmailWorker implements CollectorFuture {
 		public void setLogin( String user, String pass ){
 			this.user=user;
 			this.pass=pass;
+		}
+		public String getFromStart(){
+			return from.substring(0,from.indexOf("@"));
 		}
 	}
 	private static class Permit {
