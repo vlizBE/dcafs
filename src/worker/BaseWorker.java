@@ -1,5 +1,6 @@
 package worker;
 
+import com.stream.Readable;
 import com.stream.Writable;
 import das.BaseReq;
 import das.RealtimeValues;
@@ -33,6 +34,7 @@ public class BaseWorker implements Runnable {
 	Map<String, Generic> generics = new HashMap<>();
 	Map<String, ValMap> mappers = new HashMap<>();
 	Map<String, Writable> writables = new HashMap<>();
+	Map<String, Readable> readables = new HashMap<>();
 
 	protected BlockingQueue<Datagram> dQueue = new LinkedBlockingQueue<>();      // The queue holding raw data for processing
 	private boolean goOn = true; // General process boolean, clean way of stopping thread
@@ -243,8 +245,31 @@ public class BaseWorker implements Runnable {
 					executor.execute(new ProcessNMEA(d));
 				} else if (d.label.startsWith("valmap")) {
 					executor.execute(new ProcessValmap(d));
+				} else if (d.label.startsWith("read:")) {
+					if( d.getWritable()!=null){
+						if (d.label.split(":").length >= 2) {
+							String readID = d.label.substring(d.label.indexOf(":")+1);
+							var read = readables.get(readID);
+							if( read != null && !read.isInvalid()){
+								read.addTarget(d.getWritable());
+								Logger.info("Added "+d.getWritable().getID()+ " to target list of "+read.getID());
+							}else{
+								Logger.error(d.getWritable().getID()+" asked for data from "+readID+" but doesn't exists (anymore)");
+							}
+							readables.entrySet().removeIf( entry -> entry.getValue().isInvalid());
+						}else{
+							Logger.error("No id given for the wanted readable from "+d.getWritable().getID());
+						}
+					}else{
+						Logger.error("No valid writable in the datagram from "+d.getOriginID());
+					}
 				} else {
 					switch (d.label) {
+						case "readable":
+							if(  d.getReadable()!=null)
+								readables.put(d.getReadable().getID(),d.getReadable());
+							readables.entrySet().removeIf( entry -> entry.getValue().isInvalid()); // cleanup
+							break;
 						case "system":
 							executor.execute(() -> reqData.createResponse(d.getMessage(), d.getWritable(), false));
 							break;

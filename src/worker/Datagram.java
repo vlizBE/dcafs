@@ -3,7 +3,7 @@ package worker;
 import com.stream.Writable;
 
 import java.time.Instant;
-
+import com.stream.Readable;
 /**
  * Simple storage class that holds the raw data before processing
  */
@@ -18,6 +18,7 @@ public class Datagram {
     String originID ="";     // ID of the origin of the message
     long timestamp;          // Timestamp when the data was received
     Writable writable;  //
+    Readable readable;
     boolean silent = false;     
 
     public Datagram(String message, int priority, String label ){
@@ -42,6 +43,11 @@ public class Datagram {
     public Datagram(Writable dt, String message, int priority, String label ){
     	this(message,priority,label);
     	this.writable=dt;
+    }
+    public Datagram( String label, Readable readable ){
+        this.readable=readable;
+        this.label=label;
+        this.originID=readable.getID();
     }
     public Datagram(String message, double val, int priority, String label ){
     	this(message,priority,label);
@@ -91,5 +97,8 @@ public class Datagram {
     }
     public void toggleSilent(){
         silent = !silent;
+    }
+    public Readable getReadable(){
+        return readable;
     }
 }
