@@ -922,7 +922,10 @@ public class BaseReq {
 			response.append("Thread ID:").append(lstThread.getId()).append(" = ").append(lstThread.getName()).append("\r\n");
 		return response.toString();   
 	}
-
+	public String doREAD( String[] request, Writable wr, boolean html ){
+		das.getDataQueue().add( new Datagram(wr,"",1,"read:"+request[1]));
+		return "Request for readable "+request[1]+" from "+wr.getID()+" issued";
+	}
 	public String doADMIN( String[] request, Writable wr, boolean html ){	
 		
 		String[] cmd = request[1].split(",");
