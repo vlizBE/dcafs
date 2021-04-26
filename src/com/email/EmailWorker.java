@@ -843,8 +843,14 @@ public class EmailWorker implements CollectorFuture {
 					maxQuickChecks = 5;
 				}
 
-			    for ( Message message : messages ) {					
-			    	
+			    for ( Message message : messages ) {
+			    	var hasnot = Arrays.stream(message.getRecipients(Message.RecipientType.TO)).filter(ad -> outbox.from.equalsIgnoreCase(ad.toString())).findFirst().isEmpty();
+
+			    	if( hasnot ){
+			    		message.setFlag(Flags.Flag.SEEN,false);
+			    		continue;
+					}
+
 					String from = message.getFrom()[0].toString();
 					from = from.substring(from.indexOf("<")+1, from.length()-1);
 					String cmd = message.getSubject();
