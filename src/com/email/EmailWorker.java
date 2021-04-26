@@ -931,7 +931,7 @@ public class EmailWorker implements CollectorFuture {
 							dQueue.add( new Datagram( body, 1, cmd.split(":")[1]));
 					}else{
 						// Retrieve asks files to be emailed, if this command is without email append from address
-						if( cmd.startsWith("retrieve:") && cmd.split(",").length==2 ){
+						if( cmd.startsWith("retrieve:") && !cmd.contains(",")){
 							cmd += ","+from;
 						}
 						Datagram d = new Datagram( cmd, 1, "email");
