@@ -90,7 +90,7 @@ public class SQLDB extends Database{
     }
 
     public String getTitle(){
-        if( isMySQL() )
+        if( isMySQL() || type==DBTYPE.POSTGRESQL)
             return irl.substring(irl.lastIndexOf("/")+1);
         return irl.substring(irl.lastIndexOf("=")+1);
     }
