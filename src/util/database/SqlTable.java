@@ -631,7 +631,7 @@ public class SqlTable {
                     if( val==null && col.hasDefault )
                         val = NumberUtils.createDouble(def);
                 }else if( col.type == COLUMN_TYPE.LOCALDTNOW){
-                    val = LocalDateTime.now();
+                    val = OffsetDateTime.now();
                 }else if( col.type == COLUMN_TYPE.UTCDTNOW){
                     val = OffsetDateTime.now(ZoneOffset.UTC);
                 }else if( col.type == COLUMN_TYPE.DATETIME){
@@ -703,7 +703,8 @@ public class SqlTable {
                 return title+" TEXT" + (unique?" UNIQUE":"") + (notnull?" NOT NULL":"")+(primary?" PRIMARY KEY":"");
             if( type == COLUMN_TYPE.EPOCH )
                 return title+" REAL" + (unique?" UNIQUE":"") + (notnull?" NOT NULL":"")+(primary?" PRIMARY KEY":"");
-
+            if( (type == COLUMN_TYPE.LOCALDTNOW || type== COLUMN_TYPE.UTCDTNOW)  )
+                return title+" timestamptz" + (unique?" UNIQUE":"") + (notnull?" NOT NULL":"")+(primary?" PRIMARY KEY":"");
             return title+" "+type + (unique?" UNIQUE":"") + (notnull?" NOT NULL":"")+(primary?" PRIMARY KEY":"");
         }
     }

@@ -269,7 +269,7 @@ public class Generic {
                             }else if(ref.endsWith("epoch") ) {
                                 data[a] = Instant.now().toEpochMilli();
                             }else if( ref.endsWith("localdt") ){
-                                data[a] = LocalDateTime.now();
+                                data[a] = OffsetDateTime.now();
                             }else if( ref.endsWith("utcdt") ){
                                 data[a] = OffsetDateTime.now(ZoneOffset.UTC);
                             }else{
