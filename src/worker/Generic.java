@@ -12,6 +12,9 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.StringJoiner;
 
@@ -262,8 +265,12 @@ public class Generic {
                     case FILLER:
                             if( ref.endsWith("timestamp") ){
                                 data[a]=TimeTools.formatLongUTCNow();
-                            }else if(ref.endsWith("epoch") ){
-                                data[a]=Instant.now().toEpochMilli();
+                            }else if(ref.endsWith("epoch") ) {
+                                data[a] = Instant.now().toEpochMilli();
+                            }else if( ref.endsWith("localdt") ){
+                                data[a] = LocalDateTime.now();
+                            }else if( ref.endsWith("utcdt") ){
+                                data[a] = OffsetDateTime.now(ZoneOffset.UTC);
                             }else{
                                 data[a]=ref;
                             }
