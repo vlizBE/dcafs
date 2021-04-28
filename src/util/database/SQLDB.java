@@ -63,7 +63,7 @@ public class SQLDB extends Database{
                 columnRequest="SHOW COLUMNS FROM ";
                 break;
             case POSTGRESQL:
-                irl="jdbc:jdbc:postgresql://"+ address + (address.contains(":")?"/":":5432/")+dbName;
+                irl="jdbc:postgresql://"+ address + (address.contains(":")?"/":":5432/")+dbName;
                 tableRequest="SELECT table_name FROM information_schema.tables WHERE NOT table_schema='pg_catalog'AND NOT table_schema='information_schema';";
                 columnRequest="SELECT * FROM information_schema.columns WHERE table_name=";
                 break;
@@ -502,7 +502,7 @@ public class SQLDB extends Database{
             case "mssql": db = SQLDB.asMSSQL(address, dbname, user, pass); break;
             case "mysql": db = SQLDB.asMYSQL(address, dbname, user, pass); break;
             case "mariadb": db = SQLDB.asMARIADB(address, dbname, user, pass); break;
-            case "postgres": db = SQLDB.asPOSTGRESQL(address, dbname, user, pass); break;
+            case "postgresql": db = SQLDB.asPOSTGRESQL(address, dbname, user, pass); break;
             default:
                 Logger.error("Invalid database type: "+type);
                 return null;         
