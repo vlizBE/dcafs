@@ -299,7 +299,7 @@ public class DebugWorker implements Readable {
 						}
 						if (!send.isEmpty()) {
 							targets.stream().forEach(wr -> wr.writeLine(send));
-							if( targets.removeIf(wr -> !wr.isValid())){
+							if( targets.removeIf(wr -> !wr.isConnectionValid())){
 								Logger.info("Removed an element from targets");
 							}
 						}
