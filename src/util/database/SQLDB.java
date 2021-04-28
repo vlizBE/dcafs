@@ -350,21 +350,21 @@ public class SQLDB extends Database{
         }
         if( isValid(5) ){
                 // Create the tables
-                tables.values().forEach(x -> {
-                    Logger.debug(id+" -> Checking to create "+x.getName()+" read from?"+x.isReadFromDB());
-                    if( !x.isReadFromDB() ){
+                tables.values().forEach(tbl -> {
+                    Logger.debug(id+" -> Checking to create "+tbl.getName()+" read from?"+tbl.isReadFromDB());
+                    if( !tbl.isReadFromDB() ){
                         try( Statement stmt = con.createStatement() ){
-                            stmt.execute( x.create() );
-                            if( tables.get(x.getName())!=null && x.hasIfNotExists() ){
-                                Logger.warn(id+" -> Already a table with the name "+x.getName()+" nothing done because 'IF NOT EXISTS'.");
+                            stmt.execute( tbl.create() );
+                            if( tables.get(tbl.getName())!=null && tbl.hasIfNotExists() ){
+                                Logger.warn(id+" -> Already a table with the name "+tbl.getName()+" nothing done because 'IF NOT EXISTS'.");
                             }
                         } catch (SQLException e) {
-                            Logger.error(id+" -> Failed to create table with: "+x.create() );
+                            Logger.error(id+" -> Failed to create table with: "+tbl.create() );
                             Logger.error(e.getMessage());
-                            x.setLastError(e.getMessage()+" when creating "+x.name+" for "+id);
+                            tbl.setLastError(e.getMessage()+" when creating "+tbl.name+" for "+id);
                         }
                     }else{
-                        Logger.debug(id+" -> Not creating "+x.getName()+" because already read from database...");
+                        Logger.debug(id+" -> Not creating "+tbl.getName()+" because already read from database...");
                     }
                 });
                 // Create the views
