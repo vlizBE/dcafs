@@ -361,6 +361,8 @@ public class TcpServer implements StreamListener {
 				}
 
 			case "forward":
+				if( cmds.length==1)
+					return "No enough parameters given for forwarding...";
 
 				if( defaults.containsKey(cmds[1]) || hOpt.isPresent() ) {
 					if (!targets.containsKey(cmds[1])) {
