@@ -1671,6 +1671,19 @@ public class BaseReq {
 				}else{
 					return "Failed to connect to database.";
 				}
+			case "addpostgresql":
+				if( cmds.length<5)
+					return "Not enough arguments: dbm:addpostgresql,id,db name,ip:port,user:pass";
+				var postgres = SQLDB.asPOSTGRESQL(address,dbName,user,pass);
+				postgres.setID(id);
+				if( postgres.connect(false) ){
+					postgres.getCurrentTables(false);
+					postgres.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"das","settings","databases"));
+					das.getDatabaseManager().addSQLDB(id,postgres);
+					return "Connected to PostgreSQL database and stored in xml with id "+id;
+				}else{
+					return "Failed to connect to database.";
+				}
 			case "addsqlite":
 				if( !dbName.contains(File.separator))
 					dbName = "db"+File.separator+(dbName.isEmpty()?id:dbName)+".sqlite";
