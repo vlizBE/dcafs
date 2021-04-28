@@ -37,9 +37,11 @@ public class FilterForward extends AbstractForward {
                 d.setOriginID("ff:"+id);
                 dQueue.add( d );
             }
+            if( log )
+                Logger.tag("RAW").info( "1\t" + (label.isEmpty()?"void":label)+"|"+getID() + "\t" + data);
         }
 
-        if( targets.isEmpty() && label.isEmpty()){
+        if( targets.isEmpty() && label.isEmpty() && !log ){
             valid=false;
             if( deleteNoTargets )
                 dQueue.add( new Datagram("ff:remove,"+id,1,"system") );
@@ -103,19 +105,12 @@ public class FilterForward extends AbstractForward {
      */
     public boolean readFromXML( Element filter ){
 
-        id = XMLtools.getStringAttribute( filter, "id", "");
-        if( id.isEmpty() )
+        if( !readBasicsFromXml(filter) )
             return false;
-        Logger.info(id+" -> Reading from xml");
-        label = XMLtools.getStringAttribute( filter, "label", "");
 
-        if( !label.isEmpty() ){ // this counts as a target, so enable it
-            valid=true;
-        }
 
-        sources.clear();
         rules.clear();
-        rulesString.clear();
+
 
         addSource(XMLtools.getStringAttribute( filter, "src", ""));
 

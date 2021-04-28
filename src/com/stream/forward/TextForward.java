@@ -40,13 +40,16 @@ public class TextForward extends AbstractForward{
         String finalData = data;
         targets.removeIf(t-> !t.writeLine(finalData) ); // Send this data to the targets, remove those that refuse it
 
+        if( log )
+            Logger.tag("RAW").info( "1\t" + (label.isEmpty()?"void":label)+"|"+getID() + "\t" + data);
+
         if( !label.isEmpty() ){ // If the object has a label associated
             var d = new Datagram(this,label,data); // build a datagram with it
             d.setOriginID("editor:"+id);
             dQueue.add( d ); // add it to the queue
         }
         // If there are no target, no label, this no longer needs to be a target
-        if( targets.isEmpty() && label.isEmpty() ){
+        if( targets.isEmpty() && label.isEmpty() && !log){
             valid=false;
             if( deleteNoTargets )
                 dQueue.add( new Datagram("editor:remove,"+id,1,"system") ); // todo
@@ -62,19 +65,11 @@ public class TextForward extends AbstractForward{
 
     @Override
     public boolean readFromXML(Element editor) {
-        id = XMLtools.getStringAttribute( editor, "id", "");
-        if( id.isEmpty() )
+
+        if( !readBasicsFromXml(editor))
             return false;
-        Logger.info(id+" -> Reading from xml");
-        label = XMLtools.getStringAttribute( editor, "label", "");
 
-        if( !label.isEmpty() ){ // this counts as a target, so enable it
-            valid=true;
-        }
-
-        sources.clear();
         edits.clear();
-        rulesString.clear();
 
         addSource(XMLtools.getStringAttribute( editor, "src", ""));
         XMLtools.getChildElements(editor, "src").forEach( ele ->sources.add(ele.getTextContent()) );
