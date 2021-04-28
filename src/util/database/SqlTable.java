@@ -1,5 +1,6 @@
 package util.database;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -108,6 +109,26 @@ public class SqlTable {
         if (ok)
             return Optional.ofNullable(table);
         return Optional.empty();
+    }
+    public void writeToXml( XMLfab fab, boolean build ){
+        fab.addChild("table").attr("name",name).down();
+        for( var col : columns ){
+            fab.addChild(col.type.toString().toLowerCase(),col.title);
+            if( !col.alias.isEmpty() && !col.alias.equalsIgnoreCase(name+"_"+col.title)) {
+                fab.attr("alias", col.alias);
+            }else{
+                fab.removeAttr("alias");
+            }
+            if( !col.defString.isEmpty())
+                fab.attr("def",col.defString);
+            String setup = (col.primary?"primary ":"")+(col.notnull?"notnull ":"")+(col.unique?"unique ":"");
+            if( !setup.isEmpty())
+                fab.attr("setup",setup.trim());
+        }
+        fab.up();
+
+        if (build)
+            fab.build();
     }
     /**
      * Create a SQLiteTable object for a table with the given name
@@ -601,9 +622,14 @@ public class SqlTable {
                         if( val instanceof Double){
                             val = ((Double)val).intValue();
                         }
+                    }else{
+                        if( col.hasDefault )
+                            val = NumberUtils.toInt(def);
                     }
                 }else if( col.type == COLUMN_TYPE.REAL){
                     val = rtvals.get(ref);
+                    if( val==null && col.hasDefault )
+                        val = NumberUtils.createDouble(def);
                 }else if( col.type == COLUMN_TYPE.LOCALDTNOW){
                     val = LocalDateTime.now();
                 }else if( col.type == COLUMN_TYPE.UTCDTNOW){
@@ -694,26 +720,7 @@ public class SqlTable {
             }
         }
     }
-    public void writeToXml( XMLfab fab, boolean build ){
-        fab.addChild("table").attr("name",name).down();
-        for( var col : columns ){
-            fab.addChild(col.type.toString().toLowerCase(),col.title);
-            if( !col.alias.isEmpty() && !col.alias.equalsIgnoreCase(name+"_"+col.title)) {
-                fab.attr("alias", col.alias);
-            }else{
-                fab.removeAttr("alias");
-            }
-            if( !col.defString.isEmpty())
-                fab.attr("def",col.defString);
-            String setup = (col.primary?"primary ":"")+(col.notnull?"notnull ":"")+(col.unique?"unique ":"");
-            if( !setup.isEmpty())
-                fab.attr("setup",setup.trim());
-        }
-        fab.up();
 
-        if (build)
-            fab.build();
-    }
     /**
      * Builds a generic based on this table
      * @param fab The fab to create the node, pointing to generics node
@@ -741,6 +748,8 @@ public class SqlTable {
             if( col.defString.contains("@macro"))
                 continue;
             switch( col.type ){
+                case LOCALDTNOW: fab.addChild("filler","localdt");break;
+                case UTCDTNOW: fab.addChild("filler","utcdt");break;
                 case INTEGER: fab.addChild("integer",macro?col.alias:col.title).attr("index",index++);break;
                 case REAL:    fab.addChild("real",macro?col.alias:col.title).attr("index",index++);break;
                 case TEXT:    fab.addChild("text",macro?col.alias:col.title).attr("index",index++);break;
