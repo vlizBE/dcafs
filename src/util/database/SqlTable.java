@@ -10,6 +10,9 @@ import util.xml.XMLtools;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.ConcurrentMap;
 
@@ -18,7 +21,7 @@ public class SqlTable {
     String name = "";
 
     enum COLUMN_TYPE {
-        INTEGER, REAL, TEXT, TIMESTAMP, EPOCH, OBJECT
+        INTEGER, REAL, TEXT, TIMESTAMP, EPOCH, OBJECT, LOCALDTNOW, UTCDTNOW, DATETIME
     }
 
     ArrayList<Column> columns = new ArrayList<>();
@@ -88,6 +91,9 @@ public class SqlTable {
                     case "text":
                         table.addText(val, alias);
                         break;
+                    case "localdtnow": table.addLocalDateTime(val, alias,true); break;
+                    case "utcdtnow": table.addUTCDateTime(val, alias,true); break;
+                    case "datetime": table.addLocalDateTime(val, alias,false); break;
                 }
 
                 /* Setup of the column */
@@ -235,7 +241,14 @@ public class SqlTable {
         addColumn(new Column(title, alias, COLUMN_TYPE.TIMESTAMP));
         return this;
     }
-
+    public SqlTable addLocalDateTime(String title, String alias,boolean now) {
+        addColumn(new Column(title, alias, now?COLUMN_TYPE.LOCALDTNOW:COLUMN_TYPE.DATETIME));
+        return this;
+    }
+    public SqlTable addUTCDateTime(String title, String alias,boolean now) {
+        addColumn(new Column(title, alias, now?COLUMN_TYPE.UTCDTNOW:COLUMN_TYPE.DATETIME));
+        return this;
+    }
     /* Epoc Millis */
     /**
      * Add a column that contains timestamp data (in integer format).
@@ -573,6 +586,7 @@ public class SqlTable {
             String ref = col.alias.replace("@macro", macro);
             Object val = null;
             try{
+
                 if( col.type==COLUMN_TYPE.TIMESTAMP ){
                     record[index] = index==0?TimeTools.formatLongUTCNow():rttext.get(ref);
                     continue;
@@ -586,12 +600,16 @@ public class SqlTable {
                     if( val!=null) {
                         if( val instanceof Double){
                             val = ((Double)val).intValue();
-                        }else if( val instanceof Integer) {
-                            val = val;
                         }
                     }
                 }else if( col.type == COLUMN_TYPE.REAL){
                     val = rtvals.get(ref);
+                }else if( col.type == COLUMN_TYPE.LOCALDTNOW){
+                    val = LocalDateTime.now();
+                }else if( col.type == COLUMN_TYPE.UTCDTNOW){
+                    val = OffsetDateTime.now(ZoneOffset.UTC);
+                }else if( col.type == COLUMN_TYPE.DATETIME){
+                    val = TimeTools.parseDateTime(ref,TimeTools.SQL_LONG_FORMAT);
                 }
             }catch( NullPointerException e ){
                 Logger.error("Null pointer when looking for "+ref + " type:"+col.type);

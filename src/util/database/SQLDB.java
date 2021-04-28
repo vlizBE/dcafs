@@ -65,7 +65,7 @@ public class SQLDB extends Database{
             case POSTGRESQL:
                 irl="jdbc:postgresql://"+ address + (address.contains(":")?"/":":5432/")+dbName;
                 tableRequest="SELECT table_name FROM information_schema.tables WHERE NOT table_schema='pg_catalog'AND NOT table_schema='information_schema';";
-                columnRequest="SELECT * FROM information_schema.columns WHERE table_name=";
+                columnRequest="SELECT column_name,udt_name,is_nullable,is_identity FROM information_schema.columns WHERE table_name=";
                 break;
         }
 
@@ -257,9 +257,14 @@ public class SQLDB extends Database{
                 try {
                     if( clear )
                         tables.clear();
-                    while (rs.next()) {               
+                    while (rs.next()) {
+                        ResultSetMetaData rsmd = rs.getMetaData();
                         String tableName = rs.getString(1);
-                        String tableType=rs.getString(2);
+
+                        String tableType="base table";
+                        if( rsmd.getColumnCount()==2)
+                            tableType=rs.getString(2);
+
                         if( tableType.equalsIgnoreCase("base table") && !tableName.startsWith("sym_") ){ // ignore symmetricsDS tables and don't overwrite
                             SqlTable table = tables.get(tableName); // look for it in the stored tables
                             if( table == null ){ // if not found, it's new
@@ -273,6 +278,7 @@ public class SQLDB extends Database{
                     }
                 } catch (SQLException e) {
                     Logger.error(id+" -> Error during table read: "+e.getErrorCode());
+                    Logger.error(e.getMessage());
                     return false;
                 }  
             }
@@ -287,7 +293,10 @@ public class SQLDB extends Database{
                 continue;
             }
             try( Statement stmt = con.createStatement() ){
-                ResultSet rs = stmt.executeQuery(columnRequest+table.getName()+";");
+                String tblName = table.getName();
+                if( type == DBTYPE.POSTGRESQL )
+                    tblName = "'"+tblName+"'";
+                ResultSet rs = stmt.executeQuery(columnRequest+tblName+";");
                 if (rs != null) {
                     try {
                         boolean first = true;
@@ -301,11 +310,13 @@ public class SQLDB extends Database{
                                 table.addEpochMillis(name);
                             }else if( colType.contains("date") || colType.contains("text") || colType.contains("char") ){
                                 table.addText(name);
-                            }else if( colType.equalsIgnoreCase("double") || colType.equalsIgnoreCase("decimal") || colType.equalsIgnoreCase("float")|| colType.equalsIgnoreCase("real")){
+                            }else if( colType.equalsIgnoreCase("double") || colType.equalsIgnoreCase("decimal") || colType.startsWith("float")|| colType.equals("real")){
                                 table.addReal(name);
                             }else if( colType.contains("int") || colType.contains("bit") || colType.contains("boolean")) {
                                 table.addInteger(name);
                             }else if(colType.equalsIgnoreCase("timestamp") ){
+                                table.addTimestamp(name);
+                            }else if(colType.equalsIgnoreCase("timestamptz") ){
                                 table.addTimestamp(name);
                             }else{
                                 Logger.info(id+" -> Found unknown column type in "+table.getName()+": "+name+" -> "+colType);
