@@ -27,7 +27,7 @@ public class SQLDB extends Database{
     protected Connection con = null;
 
     DBTYPE type;
-    enum DBTYPE {MSSQL,MYSQL,MARIADB,POSTGRES}
+    enum DBTYPE {MSSQL,MYSQL,MARIADB, POSTGRESQL}
 
     boolean busySimple =false;
     boolean busyPrepared =false;
@@ -62,7 +62,7 @@ public class SQLDB extends Database{
                 tableRequest="SHOW FULL TABLES;";
                 columnRequest="SHOW COLUMNS FROM ";
                 break;
-            case POSTGRES:
+            case POSTGRESQL:
                 irl="jdbc:jdbc:postgresql://"+ address + (address.contains(":")?"/":":5432/")+dbName;
                 tableRequest="SELECT table_name FROM information_schema.tables WHERE NOT table_schema='pg_catalog'AND NOT table_schema='information_schema';";
                 columnRequest="SELECT * FROM information_schema.columns WHERE table_name=";
@@ -81,8 +81,8 @@ public class SQLDB extends Database{
     public static SQLDB asMYSQL( String address, String dbName, String user, String pass ){
         return new SQLDB( DBTYPE.MYSQL,address,dbName,user,pass);
     }
-    public static SQLDB asPOSTGRES( String address, String dbName, String user, String pass ){
-        return new SQLDB( DBTYPE.POSTGRES,address,dbName,user,pass);
+    public static SQLDB asPOSTGRESQL(String address, String dbName, String user, String pass ){
+        return new SQLDB( DBTYPE.POSTGRESQL,address,dbName,user,pass);
     }
     /* **************************************************************************************************/
     public String toString(){
@@ -128,7 +128,7 @@ public class SQLDB extends Database{
                 case MARIADB: 
                     Class.forName("org.mariadb.jdbc.Driver");                       
                     break;
-                case POSTGRES:
+                case POSTGRESQL:
                     Class.forName("org.postgresql.Driver");
                     break;
             }
@@ -502,7 +502,7 @@ public class SQLDB extends Database{
             case "mssql": db = SQLDB.asMSSQL(address, dbname, user, pass); break;
             case "mysql": db = SQLDB.asMYSQL(address, dbname, user, pass); break;
             case "mariadb": db = SQLDB.asMARIADB(address, dbname, user, pass); break;
-            case "postgres": db = SQLDB.asPOSTGRES(address, dbname, user, pass); break;
+            case "postgres": db = SQLDB.asPOSTGRESQL(address, dbname, user, pass); break;
             default:
                 Logger.error("Invalid database type: "+type);
                 return null;         
