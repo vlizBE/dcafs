@@ -860,8 +860,8 @@ public class DAS implements DeadThreadListener {
         Logger.info("Adding DebugWorker");
         addBaseWorker();
 
-        debugWorker = new DebugWorker(dataWorker.getQueue(), dbManager);
-        debugWorker.readSettingsFromXML(xml);
+        debugWorker = new DebugWorker(dataWorker.getQueue(), dbManager, xml);
+
         if (this.inDebug() && emailWorker != null) 
             emailWorker.setSending(debugWorker.doEmails());            
     }
@@ -1001,7 +1001,7 @@ public class DAS implements DeadThreadListener {
     }
 
     /**
-     * Attach a hook to the shutdownprocess so we're sure that all queue's etc get
+     * Attach a hook to the shutdown process so we're sure that all queue's etc get
      * processed first
      */
     private void attachShutDownHook() {
@@ -1084,7 +1084,7 @@ public class DAS implements DeadThreadListener {
         } else if (this.debugWorker != null) {
             if (debug) {
                 Logger.info("Starting DebugWorker...");
-                new Thread(debugWorker, "DebugWorker").start();// Start the thread
+                debugWorker.start();// Start the thread
             } else {
                 Logger.info("Not in debug mode, not starting debugworker...");
             }
