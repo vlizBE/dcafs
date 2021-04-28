@@ -22,9 +22,18 @@ From 0.5.0 onwards, this should be better documented...
   * Rework the TaskManager (will be trigger for 0.10.0)
 
 ## 0.9.2
-  
-## RELEASED  
+### Forwards
+- Added attribute 'log' (default false) to indicate if the result should be written to raw files
 
+### Other
+ - Added concept of Readable, with this an object can declare that it is willing
+to accept writables. Applied it to debugworker to use and baseworker to interconnect.
+ - jvm version is now added to the status page, after dcafs version
+
+### Bugfixes
+- IssueCollector had a missing bracket in a to string that changed formatting
+
+## RELEASED
 ## 0.9.1 (25/04/2021)
 Early release because of the way Influxdb was badly handled on bad connections and that 
 tinylog didn't write to workpath (on linux when using service) because of relative paths.
@@ -99,7 +108,7 @@ With all the changes the server is now fit to receive data from sensors (instead
 - Added dbm:addrollover to add rollover to an sqlite
 - Table no longer contains a default empty alias
 - When tables are read from xml, table name and columnname are trimmed
-- It's assumed that if there's a autofill timestamp column it's the first one
+- It's assumed that if there's an autofill timestamp column it's the first one
 - Tables are no longer written to the xml if present in db on first connect
 - Added command to write a table in memory to xml dbm:tablexml
 
