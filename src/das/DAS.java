@@ -76,7 +76,8 @@ public class DAS implements DeadThreadListener {
     // Hardware
     I2CWorker i2cWorker;
 
-    boolean debug = false;
+    private boolean debug = false;
+    private boolean log = false;
     private boolean bootOK = false; // Flag to show if booting went ok
     String sdReason = "Unwanted shutdown."; // Reason for shutdown of das, default is unwanted
 
@@ -139,6 +140,7 @@ public class DAS implements DeadThreadListener {
 
             if (settings != null) {
                 debug = XMLtools.getChildValueByTag(settings, "mode", "normal").equals("debug");
+                log = XMLtools.getChildValueByTag(settings, "mode", "normal").equals("log");
                 if (debug) {
                     Logger.info("Program booting in DEBUG mode");
                 } else {
@@ -1089,7 +1091,7 @@ public class DAS implements DeadThreadListener {
         if (debug && this.debugWorker == null) {
             Logger.info("Debug mode but no debugworker created...");
         } else if (this.debugWorker != null) {
-            if (debug) {
+            if (debug || log) {
                 Logger.info("Starting DebugWorker...");
                 debugWorker.start();// Start the thread
             } else {
