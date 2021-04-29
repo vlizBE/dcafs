@@ -249,19 +249,21 @@ public class Generic {
                             if( NumberUtils.isCreatable(split[entry.index])){
                                 val=NumberUtils.toInt(split[entry.index],-999);
                                 data[a]=val;
+                                rtvals.setRealtimeValue( ref, val );
                             }else{
                                 data[a]=null;
+                                rtvals.removeRealtimeValue(ref);
                             }
-                            rtvals.setRealtimeValue( ref, val ); 
                             break;  
                     case REAL:
                             if( NumberUtils.isCreatable(split[entry.index])) {
                                 val = NumberUtils.toDouble(split[entry.index], val);
                                 data[a] = val;
+                                rtvals.setRealtimeValue( ref, val );
                             }else{
                                 data[a]=null;
+                                rtvals.removeRealtimeValue(ref);
                             }
-                            rtvals.setRealtimeValue( ref, val ); 
                             break;                
                     case TEXT: case TAG:
                             data[a]=split[entry.index];

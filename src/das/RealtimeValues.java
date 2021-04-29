@@ -313,7 +313,9 @@ public class RealtimeValues implements CollectorFuture {
 		}
 		return d;
 	}
-
+	public boolean removeRealtimeValue( String parameter ){
+		return rtvals.remove(parameter)!=null;
+	}
 	/**
 	 * Sets the value of a parameter (in a hashmap)
 	 * 
