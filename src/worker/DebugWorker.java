@@ -255,6 +255,7 @@ public class DebugWorker implements Readable {
 				for( int a=0;a<steps;a++) {
 					String r = br.readLine();
 					if( r == null || br==null ){
+						Logger.info("End of file reached, reading next one");
 						try {
 							if( filePos == logs.size() ){
 								loop--;
@@ -263,6 +264,7 @@ public class DebugWorker implements Readable {
 								}
 								filePos=0;
 							}
+							Logger.info("Reading "+logs.get(filePos));
 							br = new BufferedReader(
 									new InputStreamReader(new FileInputStream(logs.get(filePos).toFile()), StandardCharsets.UTF_8));
 							filePos++;
@@ -297,12 +299,22 @@ public class DebugWorker implements Readable {
 								send = r;
 								break;
 						}
+
 						if (!send.isEmpty()) {
-							targets.stream().forEach(wr -> wr.writeLine(send));
+							targets.stream().forEach(wr ->
+							{
+								try {
+									wr.writeLine(send);
+								}catch(Exception e){
+									Logger.error(e);
+								}
+							});
 							if( targets.removeIf(wr -> !wr.isConnectionValid())){
 								Logger.info("Removed an element from targets");
 							}
 						}
+					}else{
+						Logger.warn("End of debug file reached? "+logs.get(filePos--));
 					}
 				}
 			} catch (IOException e) {
