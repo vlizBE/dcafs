@@ -323,8 +323,14 @@ public class SerialStream extends BaseStream implements Writable {
      * @return True If nothing was wrong with the connection
      */
     public synchronized boolean writeBytes(byte[] data) {
-        if (serialPort != null && serialPort.isOpen()) {
-            var res = serialPort.writeBytes(data, data.length);
+        if (serialPort != null && serialPort.isOpen() && serialPort.bytesAwaitingWrite()<8000) {
+            var res=-1;
+            try{
+                res = serialPort.writeBytes(data, data.length);
+
+            }catch(Exception e) {
+                Logger.error(e);
+            }
             if( res==-1){
                 Logger.error(id+" -> Error writing to port "+serialPort.getSystemPortName());
             }else if( res != data.length ){
@@ -333,8 +339,13 @@ public class SerialStream extends BaseStream implements Writable {
             return  res == data.length;
         }else if( serialPort==null){
             Logger.error(id+" -> No write done, serialport is null.");
+
+            return false;
         }else if( !serialPort.isOpen()){
             Logger.error(id+" -> No write done, serialport is closed.");
+        }
+        if( serialPort.bytesAwaitingWrite()<8000 ){
+            Logger.error("Data not being read from "+id);
         }
         return false;
     }
@@ -347,7 +358,7 @@ public class SerialStream extends BaseStream implements Writable {
 
     @Override
     public boolean isConnectionValid() {
-        if (serialPort == null)
+        if (serialPort == null && serialPort.bytesAwaitingWrite()>8000)
             return false;
         return serialPort.isOpen();
     }
