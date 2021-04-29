@@ -566,7 +566,9 @@ public class BaseWorker implements Runnable {
 										if (gen.isTableMatch()) {
 											rtvals.provideRecord( gen.getDBID(), gen.getTable(), data);
 										} else {
-											rtvals.writeRecord( gen.getDBID(), gen.getTable(), gen.macro);
+											if( !rtvals.writeRecord( gen.getDBID(), gen.getTable(), gen.macro) ){
+												Logger.error("Failed to write record for "+gen.getTable());
+											}
 										}
 									}
 								} else {
