@@ -247,17 +247,27 @@ public class Generic {
                 ref = entry.title.replace("@macro", macro);
             
             try{
-                double val;
+                double val=-999;
                 switch( entry.type ){
                     case INTEGER:
-                            val=NumberUtils.toInt(split[entry.index],-999);
-                            data[a]=val;
-                            rtvals.setRealtimeValue( ref, val ); 
+                            if( NumberUtils.isCreatable(split[entry.index])){
+                                val=NumberUtils.toInt(split[entry.index],-999);
+                                data[a]=val;
+                                rtvals.setRealtimeValue( ref, val );
+                            }else{
+                                data[a]=null;
+                                rtvals.removeRealtimeValue(ref);
+                            }
                             break;  
                     case REAL:
-                            val = NumberUtils.toDouble(split[entry.index],-999);
-                            data[a]=val;
-                            rtvals.setRealtimeValue( ref, val ); 
+                            if( NumberUtils.isCreatable(split[entry.index])) {
+                                val = NumberUtils.toDouble(split[entry.index], val);
+                                data[a] = val;
+                                rtvals.setRealtimeValue( ref, val );
+                            }else{
+                                data[a]=null;
+                                rtvals.removeRealtimeValue(ref);
+                            }
                             break;                
                     case TEXT: case TAG:
                             data[a]=split[entry.index];

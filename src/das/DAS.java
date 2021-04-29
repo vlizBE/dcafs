@@ -827,7 +827,14 @@ public class DAS implements DeadThreadListener {
         return XMLtools.getChildElements(root, "server").stream()
                         .filter( db -> db.getAttribute("id").equals(id))
                         .findFirst()
-                        .map( db -> addSQLDB(id, SQLDB.readFromXML(db)).get()).orElse(null);
+                        .map( db -> {
+                            var sqldb =SQLDB.readFromXML(db);
+                            if( sqldb!=null) {
+                                return addSQLDB(id, sqldb).get();
+                            }else{
+                                return null;
+                            }
+                        }).orElse(null);
 
     }
     private void readDatabasesFromXML() {
