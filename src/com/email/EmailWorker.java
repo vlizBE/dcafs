@@ -26,7 +26,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
-public class EmailWorker implements CollectorFuture {
+public class EmailWorker implements CollectorFuture, EmailSending {
 
 	static double megaByte = 1024.0 * 1024.0;
 
@@ -37,7 +37,6 @@ public class EmailWorker implements CollectorFuture {
 	double maxSizeMB = 1; // Maximum size of attachments to send (in MB)
 
 	/* Queues that hold new emails and retries */
-	private final BlockingQueue<EmailWork> emailQueue = new LinkedBlockingQueue<>(); // Queue that holds the emails to send
 	private final ArrayList<EmailWork> retryQueue = new ArrayList<>(); // Queue holding emails to be
 																		// send/retried
 
@@ -146,8 +145,8 @@ public class EmailWorker implements CollectorFuture {
 	 * 
 	 * @return The BlockingQueue to hold the emails to send
 	 */
-	public BlockingQueue<EmailWork> getQueue(){
-		return emailQueue;
+	public EmailSending getSender(){
+		return this;
 	}
 	/**
 	 * Get the amount of emails in the retry queue, meaning those that need to be send again.

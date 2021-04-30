@@ -446,7 +446,7 @@ public class DAS implements DeadThreadListener {
         if (streampool != null)
             tm.setStreamPool(streampool);
         if (emailWorker != null)
-            tm.setEmailQueue(emailWorker.getQueue());
+            tm.setEmailSending(emailWorker.getSender());
         if (digiWorker != null) {
             tm.setSMSQueue(digiWorker.getQueue());
         }
@@ -700,52 +700,8 @@ public class DAS implements DeadThreadListener {
         emailWorker.setEventListener(this);
         baseReq.setEmailWorker(emailWorker);
     }
-
-    public BlockingQueue<EmailWork> getEmailQueue() {
-        if (emailWorker == null)
-            return null;
-        return emailWorker.getQueue();
-    }
-
-    public String getEmailRefs(String email) {
-        return emailWorker.getEmailRefs(email);
-    }
-
-    /**
-     * Method to send a email using the EmailWorker
-     * 
-     * @param to               The address to send the email to
-     * @param title            The title of the message
-     * @param message          The message itself
-     * @param attachment       Any files that need to be attached (if any)
-     * @param deleteAttachment Delete the attachment if the email was succesfully
-     *                         send
-     * @return True if the email was added to the queue
-     */
-    public boolean sendEmail(String to, String title, String message, String attachment, boolean deleteAttachment) {
-        if (emailWorker == null) {
-            Logger.error("Can't send email to " + to + ", no server defined!");
-            return false;
-        }
-        if (to.contains(";")) {
-            for (String email : to.split(";"))
-                emailWorker.getQueue().add(new EmailWork(email, title, message, attachment, deleteAttachment));
-        } else {
-            emailWorker.getQueue().add(new EmailWork(to, title, message, attachment, deleteAttachment));
-        }
-        return true;
-    }
-
-    public boolean sendEmail(String to, String title, String message) {
-        return this.sendEmail(to, title, message, "", false);
-    }
-
-    public void setEmailServer(String server) {
-        this.emailWorker.setOutboxServer(server);
-    }
-
     public EmailWorker getEmailWorker() {
-        return this.emailWorker;
+        return emailWorker;
     }
 
     /* *****************************************  D I G I W O R K E R **************************************************/
@@ -1029,7 +985,7 @@ public class DAS implements DeadThreadListener {
 
                 // Try to send email...
                 if (emailWorker != null)
-                    sendEmail("admin", telnet.getTitle() + " shutting down.", "Reason: " + sdReason);
+                    emailWorker.sendEmail("admin", telnet.getTitle() + " shutting down.", "Reason: " + sdReason);
 
                 try {
                     Logger.info("Giving things two seconds to finish up.");
@@ -1226,8 +1182,7 @@ public class DAS implements DeadThreadListener {
         join.add("Data buffer size: " + this.dQueue.size() + " records.");
 
         if (emailWorker != null)
-            join.add("Email buffer size: " + emailWorker.getQueue().size() + " emails. (backlog: "
-                    + emailWorker.getRetryQueueSize() + ")");
+            join.add("Email backlog: " + emailWorker.getRetryQueueSize() );
         return join.toString();
     }
 
