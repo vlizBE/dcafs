@@ -4,6 +4,7 @@ import com.stream.Writable;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.xml.XMLfab;
+import util.xml.XMLtools;
 import worker.Datagram;
 
 import java.nio.file.Path;
@@ -32,6 +33,7 @@ public abstract class AbstractForward implements Writable {
     protected String label="";                 // With this the forward can use the dataQueue as a target
     protected int badDataCount=0;               // Keep track of the amount of bad data received
     static final protected int MAX_BAD_COUNT=10;
+    protected boolean log = false;
 
     protected AbstractForward(String id, String source, BlockingQueue<Datagram> dQueue ){
         this.id=id;
@@ -125,6 +127,26 @@ public abstract class AbstractForward implements Writable {
     public void setLabel(String label){
         this.label=label;
         valid = !label.isEmpty(); // A label counts as a valid target
+    }
+    protected boolean readBasicsFromXml( Element fw ){
+
+        if( fw==null) // Can't work if this is null
+            return false;
+
+        id = XMLtools.getStringAttribute( fw, "id", "");
+        if( id.isEmpty() ) // Cant work without id
+            return false;
+
+        label = XMLtools.getStringAttribute( fw, "label", "");
+        log = XMLtools.getBooleanAttribute(fw,"log",false);
+
+        if( !label.isEmpty() || log ){ // this counts as a target, so enable it
+            valid=true;
+        }
+        sources.clear();
+        rulesString.clear();
+        Logger.info(id+" -> Reading from xml");
+        return true;
     }
     /* *********************** Abstract Methods ***********************************/
     /**

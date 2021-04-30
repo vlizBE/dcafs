@@ -15,6 +15,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.commons.lang3.SystemUtils;
 import org.tinylog.Logger;
+import org.tinylog.configuration.Configuration;
 import org.tinylog.provider.ProviderRegistry;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -39,7 +40,7 @@ import java.util.concurrent.*;
 
 public class DAS implements DeadThreadListener {
 
-    private static final String version = "0.9.0";
+    private static final String version = "0.9.2";
 
     // Last date that changes were made
     Path settingsFile = Path.of("settings.xml");
@@ -75,7 +76,8 @@ public class DAS implements DeadThreadListener {
     // Hardware
     I2CWorker i2cWorker;
 
-    boolean debug = false;
+    private boolean debug = false;
+    private boolean log = false;
     private boolean bootOK = false; // Flag to show if booting went ok
     String sdReason = "Unwanted shutdown."; // Reason for shutdown of das, default is unwanted
 
@@ -101,6 +103,18 @@ public class DAS implements DeadThreadListener {
             if( workPath.matches(".*[lib]")) { // Meaning used as a lib
                 workPath = Path.of(workPath).getParent().toString();
             }
+
+            // Re set the paths for the file writers to use the same path as the rest of the program
+            // Do note that you can't do a get first...
+            Path logs = Path.of(workPath).resolve("logs");
+            Configuration.set("writer2.file", logs.resolve("info.log").toString());
+            Configuration.set("writer3.file", logs+File.separator+"errors_{date:yyMMdd}.log");
+            Configuration.set("writer6.file", logs.resolve("taskmanager.log").toString());
+
+            Path raw = Path.of(workPath).resolve("raw");
+            Configuration.set("writer4.file", raw+File.separator+"{date:yyyy-MM}/{date:yyyy-MM-dd}_RAW_{count}.log");
+            Configuration.set("writer5.file", raw+File.separator+"{date:yyyy-MM}/SQL_queries.log");
+
             settingsFile = Path.of(workPath, "settings.xml");
         } catch (URISyntaxException e) {
             Logger.error(e);
@@ -126,6 +140,7 @@ public class DAS implements DeadThreadListener {
 
             if (settings != null) {
                 debug = XMLtools.getChildValueByTag(settings, "mode", "normal").equals("debug");
+                log = XMLtools.getChildValueByTag(settings, "mode", "normal").equals("log");
                 if (debug) {
                     Logger.info("Program booting in DEBUG mode");
                 } else {
@@ -814,7 +829,14 @@ public class DAS implements DeadThreadListener {
         return XMLtools.getChildElements(root, "server").stream()
                         .filter( db -> db.getAttribute("id").equals(id))
                         .findFirst()
-                        .map( db -> addSQLDB(id, SQLDB.readFromXML(db)).get()).orElse(null);
+                        .map( db -> {
+                            var sqldb =SQLDB.readFromXML(db);
+                            if( sqldb!=null) {
+                                return addSQLDB(id, sqldb).get();
+                            }else{
+                                return null;
+                            }
+                        }).orElse(null);
 
     }
     private void readDatabasesFromXML() {
@@ -847,8 +869,8 @@ public class DAS implements DeadThreadListener {
         Logger.info("Adding DebugWorker");
         addBaseWorker();
 
-        debugWorker = new DebugWorker(dataWorker.getQueue(), dbManager);
-        debugWorker.readSettingsFromXML(xml);
+        debugWorker = new DebugWorker(dataWorker.getQueue(), dbManager, xml);
+
         if (this.inDebug() && emailWorker != null) 
             emailWorker.setSending(debugWorker.doEmails());            
     }
@@ -988,7 +1010,7 @@ public class DAS implements DeadThreadListener {
     }
 
     /**
-     * Attach a hook to the shutdownprocess so we're sure that all queue's etc get
+     * Attach a hook to the shutdown process so we're sure that all queue's etc get
      * processed first
      */
     private void attachShutDownHook() {
@@ -1065,9 +1087,9 @@ public class DAS implements DeadThreadListener {
         if (debug && this.debugWorker == null) {
             Logger.info("Debug mode but no debugworker created...");
         } else if (this.debugWorker != null) {
-            if (debug) {
+            if (debug || log) {
                 Logger.info("Starting DebugWorker...");
-                new Thread(debugWorker, "DebugWorker").start();// Start the thread
+                debugWorker.start();// Start the thread
             } else {
                 Logger.info("Not in debug mode, not starting debugworker...");
             }
@@ -1113,14 +1135,21 @@ public class DAS implements DeadThreadListener {
 
         StringBuilder b = new StringBuilder();
 
+        double totalMem = (double)Runtime.getRuntime().totalMemory();
+        double usedMem = totalMem-Runtime.getRuntime().freeMemory();
+
+        totalMem = Tools.roundDouble(totalMem/(1024.0*1024.0),1);
+        usedMem = Tools.roundDouble(usedMem/(1024.0*1024.0),1);
+
         if (html) {
             b.append("<b><u>DCAFS Status at ").append(TimeTools.formatNow("HH:mm:ss")).append(".</b></u><br><br>");
         } else {
             b.append(TEXT_GREEN).append("DCAFS Status at ").append(TimeTools.formatNow("HH:mm:ss")).append("\r\n\r\n")
                     .append(UNDERLINE_OFF);
         }
-        b.append(TEXT_YELLOW).append("DCAFS Version: ").append(TEXT_GREEN).append(version).append("\r\n");
+        b.append(TEXT_YELLOW).append("DCAFS Version: ").append(TEXT_GREEN).append(version).append(" (jvm:").append(System.getProperty("java.version")).append(")\r\n");
         b.append(TEXT_YELLOW).append("Uptime: ").append(TEXT_GREEN).append(getUptime()).append("\r\n");
+        b.append(TEXT_YELLOW).append("Memory: ").append(TEXT_GREEN).append(usedMem).append("/").append(totalMem).append("MB\r\n");
         b.append(TEXT_YELLOW).append("Current mode: ").append(debug ? TEXT_RED + "debug" : TEXT_GREEN + "normal").append("\r\n");
         b.append(TEXT_YELLOW).append("IP: ").append(TEXT_GREEN).append(Tools.getLocalIP());
         b.append(UNDERLINE_OFF).append("\r\n");

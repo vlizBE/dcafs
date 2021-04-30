@@ -1,5 +1,6 @@
 package worker;
 
+import com.stream.Readable;
 import com.stream.Writable;
 import das.BaseReq;
 import das.RealtimeValues;
@@ -24,23 +25,24 @@ import java.util.stream.Collectors;
  *
  * @author Michiel TJampens @vliz
  */
-public class BaseWorker implements Runnable{
-	   
+public class BaseWorker implements Runnable {
+
 	Map<String, Method> nmeaMetMap = null;
 	Map<String, Method> regMetMap = null;
-	
-	Map<String,Long[]> lastUsage = new HashMap<>();
-	Map<String,Generic> generics = new HashMap<>();
-	Map<String,ValMap> mappers = new HashMap<>();
-	Map<String,Writable> writables = new HashMap<>();
 
-	protected BlockingQueue<Datagram> dQueue  = new LinkedBlockingQueue<>();	  // The queue holding raw data for processing
+	Map<String, Long[]> lastUsage = new HashMap<>();
+	Map<String, Generic> generics = new HashMap<>();
+	Map<String, ValMap> mappers = new HashMap<>();
+	Map<String, Writable> writables = new HashMap<>();
+	Map<String, Readable> readables = new HashMap<>();
+
+	protected BlockingQueue<Datagram> dQueue = new LinkedBlockingQueue<>();      // The queue holding raw data for processing
 	private boolean goOn = true; // General process boolean, clean way of stopping thread
-	
+
 	protected BaseReq reqData;
-		
+
 	protected boolean debugMode = false;
-		
+
 	private final AtomicInteger procCount = new AtomicInteger(0);
 	private long procTime = Instant.now().toEpochMilli();
 	protected boolean printData = false;
@@ -49,7 +51,7 @@ public class BaseWorker implements Runnable{
 
 	protected DeadThreadListener listener;
 
-	ExecutorService executor = Executors.newFixedThreadPool(Math.min(3,Runtime.getRuntime().availableProcessors())); //
+	ExecutorService executor = Executors.newFixedThreadPool(Math.min(3, Runtime.getRuntime().availableProcessors())); //
 
 	public enum FAILreason { // Used by the nmea processing to return the result
 		NONE, PRIORITY, LENGTH, SYNTAX, INVALID, TODO, IGNORED, DISABLED, EMPTY
@@ -59,103 +61,120 @@ public class BaseWorker implements Runnable{
 
 	/**
 	 * Default constructor that gets a queue to use
+	 *
 	 * @param dQueue The queue to use
 	 */
-	public BaseWorker( BlockingQueue<Datagram> dQueue ) {
+	public BaseWorker(BlockingQueue<Datagram> dQueue) {
 		this();
 		this.dQueue = dQueue;
-		Logger.info("Using "+Math.min(3,Runtime.getRuntime().availableProcessors())+" threads");
+		Logger.info("Using " + Math.min(3, Runtime.getRuntime().availableProcessors()) + " threads");
 	}
+
 	/**
 	 * Constructor to use its own queue
 	 */
-	public BaseWorker( ) {
-		getMethodMapping( this.getClass() );
+	public BaseWorker() {
+		getMethodMapping(this.getClass());
 	}
+
 	/**
 	 * Add a listener to be notified of the event the thread fails.
-	 * 
+	 *
 	 * @param listener the listener
 	 */
-	public void setEventListener( DeadThreadListener listener ){
-		this.listener=listener;
+	public void setEventListener(DeadThreadListener listener) {
+		this.listener = listener;
 	}
+
 	/**
 	 * Set the BaseReq for this worker to use
+	 *
 	 * @param baseReq The default BaseReq or extended one
 	 */
-	public void setReqData( BaseReq baseReq ){
-		this.reqData=baseReq;
+	public void setReqData(BaseReq baseReq) {
+		this.reqData = baseReq;
 	}
+
 	/**
 	 * Set the realtimevalues for the worker to use
+	 *
 	 * @param rtvals The default RealtimeValues or extended one
 	 */
-	public void setRealtimeValues( RealtimeValues rtvals){
-		this.rtvals=rtvals;
+	public void setRealtimeValues(RealtimeValues rtvals) {
+		this.rtvals = rtvals;
 	}
 
 
 	/* *************************** VALMAPS **********************************************/
-	public ValMap addValMap( ValMap map ){
+	public ValMap addValMap(ValMap map) {
 		mappers.put(map.getID(), map);
-		Logger.info("Added generic "+map.getID());
+		Logger.info("Added generic " + map.getID());
 		return map;
 	}
 
-	public void clearValMaps(){
+	public void clearValMaps() {
 		mappers.clear();
 	}
-	public ValMap addValMap( String id ){
+
+	public ValMap addValMap(String id) {
 		ValMap map = new ValMap("");
 		mappers.put(id, map);
 		return map;
 	}
-	public String getValMapsInfo(){
-		StringJoiner join = new StringJoiner("\r\n","Valmaps:\r\n","\r\n");
-		for( ValMap map : mappers.values() ){
-			join.add(map.toString()+"\r\n");
+
+	public String getValMapsInfo() {
+		StringJoiner join = new StringJoiner("\r\n", "Valmaps:\r\n", "\r\n");
+		for (ValMap map : mappers.values()) {
+			join.add(map.toString() + "\r\n");
 		}
 		return join.toString();
 	}
 
 	/* *************************** GENERICS **********************************************/
-	public Generic addGeneric( Generic gen ){
+	public Generic addGeneric(Generic gen) {
 		generics.put(gen.getID(), gen);
-		Logger.info("Added generic "+gen.getID());
+		Logger.info("Added generic " + gen.getID());
 		return gen;
 	}
-	public void clearGenerics(){
+
+	public void clearGenerics() {
 		mappers.clear();
 	}
-	public Generic addGeneric( String id ){
+
+	public Generic addGeneric(String id) {
 		Generic gen = new Generic("");
 		generics.put(id, gen);
 		return gen;
 	}
-	public String getGenericInfo(){
-		StringJoiner join = new StringJoiner("\r\n","Generics:\r\n","\r\n");
-		for( Generic gen : generics.values() ){
-			join.add(gen.toString()+"\r\n");
+
+	public String getGenericInfo() {
+		StringJoiner join = new StringJoiner("\r\n", "Generics:\r\n", "\r\n");
+		for (Generic gen : generics.values()) {
+			join.add(gen.toString() + "\r\n");
 		}
 		return join.toString();
 	}
 
 	/* ******************************** Q U E U E S **********************************************/
+
 	/**
 	 * Get the queue for adding work for this worker
+	 *
 	 * @return The qeueu
 	 */
-	public BlockingQueue<Datagram> getQueue(){
+	public BlockingQueue<Datagram> getQueue() {
 		return dQueue;
 	}
+
 	/**
 	 * Set the queue for adding work for this worker
+	 *
 	 * @param d The queue
 	 */
-	public void setQueue(BlockingQueue<Datagram> d){
-		this.dQueue=d;
+	public void setQueue(BlockingQueue<Datagram> d) {
+		this.dQueue = d;
 	}
+
 	/**
 	 * Clear this workers queue
 	 */
@@ -163,136 +182,173 @@ public class BaseWorker implements Runnable{
 		dQueue.clear();
 	}
 	/* ******************************** I N V O K E **********************************************/
+
 	/**
 	 * Get all the relevant methods available in this (extended) class
+	 *
 	 * @param baseworker THe class to look in
 	 */
 	public void getMethodMapping(Class<?> baseworker) {
 
-	    if( nmeaMetMap == null) {
-	    	nmeaMetMap = new HashMap<>();
-	    	regMetMap = new HashMap<>();
+		if (nmeaMetMap == null) {
+			nmeaMetMap = new HashMap<>();
+			regMetMap = new HashMap<>();
 
 			ArrayList<Method> methods = new ArrayList<>(Arrays.asList(baseworker.getDeclaredMethods()));
 
-			if( baseworker.getSuperclass() == BaseWorker.class){
+			if (baseworker.getSuperclass() == BaseWorker.class) {
 				methods.addAll(Arrays.asList(baseworker.getSuperclass().getDeclaredMethods()));
 			}
-	        for(Method method : methods) {
-	        	String com = method.getName();
-	        	if(com.contains("NMEA")){
-	        		com = com.substring(com.indexOf("NMEA")+4);
-	        		if( com.equals("time")){
-	        			nmeaMetMap.put("me_", method);
-	        		}else{	      								
-	        			nmeaMetMap.put(com, method);	        			
-					}				
-	        	}else if(com.length()>=4 && com.startsWith("do")){
-	        		com = com.substring(2); //Remove the 'do'	
+			for (Method method : methods) {
+				String com = method.getName();
+				if (com.contains("NMEA")) {
+					com = com.substring(com.indexOf("NMEA") + 4);
+					if (com.equals("time")) {
+						nmeaMetMap.put("me_", method);
+					} else {
+						nmeaMetMap.put(com, method);
+					}
+				} else if (com.length() >= 4 && com.startsWith("do")) {
+					com = com.substring(2); //Remove the 'do'
 					regMetMap.put(com.toLowerCase(), method);
 				}
-			}   
-			Logger.info( "Found "+nmeaMetMap.size() +" doNMEA and "+regMetMap.size()+" other ones."); 
-	    }
+			}
+			Logger.info("Found " + nmeaMetMap.size() + " doNMEA and " + regMetMap.size() + " other ones.");
+		}
 	}
+
 	/* *******************************************************************************************/
 	@Override
 	public void run() {
 
-		if( this.reqData==null){
+		if (this.reqData == null) {
 			Logger.error("Not starting without proper BaseReq");
 			return;
 		}
-		while(goOn){
+		while (goOn) {
 			try {
 				Datagram d = dQueue.take();
 
-				if( d==null ){
+				if (d == null) {
 					Logger.error("Invalid datagram received");
 					continue;
 				}
-				if(d.label==null) {
-					Logger.error("Invalid label received along with message :"+d.getMessage());
+				if (d.label == null) {
+					Logger.error("Invalid label received along with message :" + d.getMessage());
 					continue;
 				}
-				d.label=d.label.toLowerCase();
+				d.label = d.label.toLowerCase();
 
-				if( d.label.startsWith("generic:")) {
-					executor.submit(new ProcessGeneric(d));
-				}else if( d.label.startsWith("nmea")){
-					executor.submit( new ProcessNMEA(d) );
-				}else{
-					switch(d.label)
-					{
-						case "system": executor.submit( () -> reqData.createResponse( d.getMessage(), d.getWritable(), false ) ); break;
-						case "test": executor.submit( ()-> Logger.info(d.originID+"|"+d.label+" -> "+d.getMessage())); break;
-						case "email": executor.submit( ()-> reqData.emailResponse( d ) );
-						case "void": break;
-						default: executor.submit( new ProcessDatagram(d) ); break;
+				if (d.label.startsWith("generic:")) {
+					executor.execute(new ProcessGeneric(d));
+				} else if (d.label.startsWith("nmea")) {
+					executor.execute(new ProcessNMEA(d));
+				} else if (d.label.startsWith("valmap")) {
+					executor.execute(new ProcessValmap(d));
+				} else if (d.label.startsWith("read:")) {
+					if( d.getWritable()!=null){
+						if (d.label.split(":").length >= 2) {
+							String readID = d.label.substring(d.label.indexOf(":")+1);
+							var read = readables.get(readID);
+							if( read != null && !read.isInvalid()){
+								read.addTarget(d.getWritable());
+								Logger.info("Added "+d.getWritable().getID()+ " to target list of "+read.getID());
+							}else{
+								Logger.error(d.getWritable().getID()+" asked for data from "+readID+" but doesn't exists (anymore)");
+							}
+							readables.entrySet().removeIf( entry -> entry.getValue().isInvalid());
+						}else{
+							Logger.error("No id given for the wanted readable from "+d.getWritable().getID());
+						}
+					}else{
+						Logger.error("No valid writable in the datagram from "+d.getOriginID());
+					}
+				} else {
+					switch (d.label) {
+						case "readable":
+							if(  d.getReadable()!=null)
+								readables.put(d.getReadable().getID(),d.getReadable());
+							readables.entrySet().removeIf( entry -> entry.getValue().isInvalid()); // cleanup
+							break;
+						case "system":
+							executor.execute(() -> reqData.createResponse(d.getMessage(), d.getWritable(), false));
+							break;
+						case "test":
+							executor.execute(() -> Logger.info(d.originID + "|" + d.label + " -> " + d.getMessage()));
+							break;
+						case "email":
+							executor.execute(() -> reqData.emailResponse(d));
+						case "void":
+							break;
+						default:
+							executor.execute(new ProcessDatagram(d));
+							break;
 					}
 				}
 				int proc = procCount.get();
-				if( proc >= 500000){
+				if (proc >= 500000) {
 					procCount.set(0);
 					long millis = Instant.now().toEpochMilli() - procTime;
 					procTime = Instant.now().toEpochMilli();
-					Logger.info("Processed "+(proc/1000)+"k lines in "+TimeTools.convertPeriodtoString(millis,TimeUnit.MILLISECONDS));
-
+					Logger.info("Processed " + (proc / 1000) + "k lines in " + TimeTools.convertPeriodtoString(millis, TimeUnit.MILLISECONDS));
 				}
 			} catch (InterruptedException e) {
 				Logger.error(e);
 			}
 		}
 	}
+
 	/**
 	 * The main processing method for this class
 	 */
 	private class ProcessNMEA implements Runnable {
 		Datagram d;
 
-		public ProcessNMEA(Datagram d ){
-			this.d=d;
+		public ProcessNMEA(Datagram d) {
+			this.d = d;
 		}
+
 		public void run() {
 
-			if ( MathUtils.doNMEAChecksum(d.getMessage()) ) {// Either checksum was ok or test was skipped
-				String[] split = d.getMessage().substring(0,d.getMessage().length()-3).split(",");// remove the checksum and split the nmea string in its components
+			if (MathUtils.doNMEAChecksum(d.getMessage())) {// Either checksum was ok or test was skipped
+				String[] split = d.getMessage().substring(0, d.getMessage().length() - 3).split(",");// remove the checksum and split the nmea string in its components
 				FAILreason fail = FAILreason.IGNORED;
 
 				try {
 					String nmea = split[0].substring(3).toLowerCase();
-					if( nmeaMetMap.get(nmea) != null ){
+					if (nmeaMetMap.get(nmea) != null) {
 						/* Keep track of method usage *********************************************/
 						Long[] times = lastUsage.get(nmea);
-						if( times == null){
+						if (times == null) {
 							times = new Long[2];
-							times[1]=Instant.now().toEpochMilli();
+							times[1] = Instant.now().toEpochMilli();
 						}
-						times[0]=times[1];
-						times[1]=Instant.now().toEpochMilli();
+						times[0] = times[1];
+						times[1] = Instant.now().toEpochMilli();
 
-						lastUsage.put(nmea,times);
+						lastUsage.put(nmea, times);
 						/* *************************************************************************/
-						fail = (FAILreason) nmeaMetMap.get(nmea).invoke(BaseWorker.this,split,d.priority);
-					}else{
-						Logger.error( "Can't process the message: "+d.getMessage());
+						fail = (FAILreason) nmeaMetMap.get(nmea).invoke(BaseWorker.this, split, d.priority);
+					} else {
+						Logger.error("Can't process the message: " + d.getMessage());
 					}
 				} catch (IllegalAccessException | IllegalArgumentException e) {
-					Logger.error( "Something wrong in the processing method for: " + d.getMessage()+" -> "+e.getMessage() );
-				} catch( java.lang.NullPointerException np){
-					Logger.error( "Nullpointer when processing: " + d.getMessage() );
-				}catch (InvocationTargetException e) {
+					Logger.error("Something wrong in the processing method for: " + d.getMessage() + " -> " + e.getMessage());
+				} catch (java.lang.NullPointerException np) {
+					Logger.error("Nullpointer when processing: " + d.getMessage());
+				} catch (InvocationTargetException e) {
 					Throwable originalException = e.getTargetException();
-					Logger.error( "'"+originalException+"' at "+originalException.getStackTrace()[0].toString()+" when processing: "+d.getMessage());
+					Logger.error("'" + originalException + "' at " + originalException.getStackTrace()[0].toString() + " when processing: " + d.getMessage());
 				}
 
 				switch (fail) {
-					case NONE: break; // Most common result
+					case NONE:
+						break; // Most common result
 					case SYNTAX:// The process failed because of a syntax error, eg. the string doesn't contain the right amount of parts
-						Logger.warn( "Bad NMEA String Syntax: "+d.getMessage() );
+						Logger.warn("Bad NMEA String Syntax: " + d.getMessage());
 						break;
 					case LENGTH:// The string was longer or shorter then expected
-						Logger.warn( "Bad NMEA String Length: "+d.getMessage() + " (length:"+split.length+") from "+d.getOriginID());
+						Logger.warn("Bad NMEA String Length: " + d.getMessage() + " (length:" + split.length + ") from " + d.getOriginID());
 						break;
 					case PRIORITY:
 									/* The datagram didn't have the right priority to use it (highest priority = 1,
@@ -300,11 +356,11 @@ public class BaseWorker implements Runnable{
 									   Logger.debug("SKIPPED (priority): " +  d.getMessage())*/
 						break;
 					case INVALID:
-						Logger.warn( "Invalid NMEA String: "+d.getMessage(), true);
+						Logger.warn("Invalid NMEA String: " + d.getMessage(), true);
 						break;
 					case TODO:// A NMEA string was received that hasn't got
 						// any processing code yet.
-						Logger.warn( "TODO: "+ d.priority+"\t"+ d.getMessage()+"\t From:"+d.getOriginID());
+						Logger.warn("TODO: " + d.priority + "\t" + d.getMessage() + "\t From:" + d.getOriginID());
 						break;
 					case IGNORED: // For some reason the string was ignored
 					case DISABLED:
@@ -312,19 +368,21 @@ public class BaseWorker implements Runnable{
 						break;
 				}
 			} else {
-				if( d.getMessage().length() > 250 )
-					d.setMessage(d.getMessage().substring(0,250));
-				Logger.warn( "NMEA message from "+d.getOriginID() +" failed checksum "+d.getMessage().replace("\r","<cr>").replace("\n","<lf>") );
+				if (d.getMessage().length() > 250)
+					d.setMessage(d.getMessage().substring(0, 250));
+				Logger.warn("NMEA message from " + d.getOriginID() + " failed checksum " + d.getMessage().replace("\r", "<cr>").replace("\n", "<lf>"));
 			}
 			procCount.incrementAndGet();
 		}
 	}
+
 	private class ProcessDatagram implements Runnable {
 		Datagram d;
 
 		public ProcessDatagram(Datagram d) {
 			this.d = d;
 		}
+
 		public void run() {
 			try {
 				String what = d.label.toLowerCase().split(":")[0];
@@ -350,7 +408,7 @@ public class BaseWorker implements Runnable{
 					} catch (InvocationTargetException e) {
 						Throwable originalException = e.getTargetException();
 						Logger.error("'" + originalException + "' at " + originalException.getStackTrace()[0].toString() + " when processing: " + d.getMessage());
-					} catch( Exception e ){
+					} catch (Exception e) {
 						Logger.error(e);
 					}
 				} else {
@@ -362,41 +420,43 @@ public class BaseWorker implements Runnable{
 				Logger.error("Interrupted because out ArrayIndexOut" + f + " while processing: " + d.getMessage() + " Label: " + d.label);
 			}
 		}
-	 }
+	}
 
-	public void setDebugging( boolean deb ){
-		this.debugMode=deb;
+	public void setDebugging(boolean deb) {
+		this.debugMode = deb;
 	}
 
 	public synchronized int getProcCount(int seconds) {
 		double a = procCount.get();
-		long passed = (Instant.now().toEpochMilli()-procTime)/1000; //seconds since last check
-		
-		a /= (double) passed; 
-		a*=seconds;
-		procCount.set(0);	// Clear the count
+		long passed = (Instant.now().toEpochMilli() - procTime) / 1000; //seconds since last check
+
+		a /= (double) passed;
+		a *= seconds;
+		procCount.set(0);    // Clear the count
 		procTime = Instant.now().toEpochMilli(); // Overwrite for next check
-		return (int)Math.rint(a);
-	}
-	protected long dataAge(){
-		return (Instant.now().toEpochMilli() - waitingSince)/1000;
+		return (int) Math.rint(a);
 	}
 
-	public String getMethodCallAge(String newline){
+	protected long dataAge() {
+		return (Instant.now().toEpochMilli() - waitingSince) / 1000;
+	}
+
+	public String getMethodCallAge(String newline) {
 		StringJoiner b = new StringJoiner(newline);
 		ArrayList<String> items = new ArrayList<>();
-		for( Entry<String,Long[]> la : lastUsage.entrySet() ){
+		for (Entry<String, Long[]> la : lastUsage.entrySet()) {
 
 			Long[] times = la.getValue();
 			long time = System.currentTimeMillis() - times[1];
-			double freq = (double)(times[1]-times[0]);
-			freq = Tools.roundDouble( 1000/freq, freq > 900?0:1);
-			items.add( la.getKey() +" -> Age/Interval:"+ TimeTools.convertPeriodtoString(time, TimeUnit.MILLISECONDS) + "/"+freq+"Hz");
+			double freq = (double) (times[1] - times[0]);
+			freq = Tools.roundDouble(1000 / freq, freq > 900 ? 0 : 1);
+			items.add(la.getKey() + " -> Age/Interval:" + TimeTools.convertPeriodtoString(time, TimeUnit.MILLISECONDS) + "/" + freq + "Hz");
 		}
 		Collections.sort(items);
-		items.forEach(b::add);		
+		items.forEach(b::add);
 		return b.toString();
 	}
+
 	/**
 	 * Stop the worker thread
 	 */
@@ -405,55 +465,81 @@ public class BaseWorker implements Runnable{
 	}
 
 	/* ******************************* D E F A U L T   S T U F F *****************************************/
+	public void doFILTER( Datagram d ){
+		String[] filter = d.label.split(":");
 
-	public void doTELNET( Datagram d ){
+		for( var f : filter[1].split(",")) {
+			var wr = writables.get(filter[0]+":"+f);
+			if (wr != null) {
+				wr.writeLine(d.getMessage());
+			} else {
+				var filterOpt = reqData.getFilter(f);
+				if (filterOpt.isPresent()) {
+					writables.put(d.label, filterOpt.get().getWritable());
+					filterOpt.get().getWritable().writeLine(d.getMessage());
+				}
+			}
+		}
+		procCount.incrementAndGet();
+	}
+	public void doTELNET(Datagram d) {
 		Writable dt = d.getWritable();
-		if( !d.getMessage().equals("status")){
+		if (!d.getMessage().equals("status")) {
 			String from = " for ";
-			
-			if( dt!=null){
+
+			if (dt != null) {
 				from += dt.getID();
 			}
-			if( !d.getMessage().isBlank() )
-				Logger.info( "Executing telnet command ["+d.getMessage()+"]"+from);
+			if (!d.getMessage().isBlank())
+				Logger.info("Executing telnet command [" + d.getMessage() + "]" + from);
 		}
-		String response = reqData.createResponse( d.getMessage(), dt, false );
+		String response = reqData.createResponse(d.getMessage(), dt, false);
 		String[] split = d.label.split(":");
-		if( dt != null){
-			if( !d.silent ){
-				dt.writeLine( response );
-				dt.writeString( (split.length>=2?"<"+split[1]:"")+">" );
+		if (dt != null) {
+			if (!d.silent) {
+				dt.writeLine(response);
+				dt.writeString((split.length >= 2 ? "<" + split[1] : "") + ">");
 			}
-		}else{
-			Logger.info(response); 
-			Logger.info( (split.length>=2?"<"+split[1]:"")+">" );
+		} else {
+			Logger.info(response);
+			Logger.info((split.length >= 2 ? "<" + split[1] : "") + ">");
 		}
 		procCount.incrementAndGet();
 	}
 
-	public void doVALMAP( Datagram d ){
-		try{
-			String valmapIDs = d.label.split(":")[1];
-			String mes = d.getMessage();
+	public class ProcessValmap implements Runnable {
+		Datagram d;
 
-			if( mes.isBlank() ){
-				Logger.warn( valmapIDs + " -> Ignoring blank line" );
-				return;
-			}
-			for( String valmapID : valmapIDs.split(",") ){
-				var map = mappers.get(valmapID);
-				if( map != null ){
-					map.apply( mes, rtvals);
-				}else{
-					if( map==null){
-						Logger.error("Valmap requested but unknown id: "+valmapID+ " -> Message: "+d.getMessage());
+		public ProcessValmap(Datagram d) {
+			this.d = d;
+		}
+
+		public void run() {
+			try {
+				String valMapIDs = d.label.split(":")[1];
+				String mes = d.getMessage();
+
+				if (mes.isBlank()) {
+					Logger.warn(valMapIDs + " -> Ignoring blank line");
+					return;
+				}
+				for (String valmapID : valMapIDs.split(",")) {
+					var map = mappers.get(valmapID);
+					if (map != null) {
+						map.apply(mes, rtvals);
+					}else{
+						Logger.error("ValMap requested but unknown id: " + valmapID + " -> Message: " + d.getMessage());
 					}
 				}
+			} catch (ArrayIndexOutOfBoundsException l) {
+				Logger.error("Generic requested (" + d.label + ") but no valid id given.");
 			}
-		}catch( ArrayIndexOutOfBoundsException l ){
-			Logger.error("Generic requested ("+d.label+") but no valid id given.");
+			procCount.incrementAndGet();
 		}
-		procCount.incrementAndGet();
+	}
+	private List<Generic> getGenerics( String id ){
+		return generics.entrySet().stream().filter( set -> set.getKey().equalsIgnoreCase(id) ||set.getKey().matches(id))
+				.map(Entry::getValue).collect(Collectors.toList());
 	}
 	public class ProcessGeneric implements Runnable{
 		Datagram d;
@@ -461,6 +547,7 @@ public class BaseWorker implements Runnable{
 		public ProcessGeneric(Datagram d){
 			this.d=d;
 		}
+
 		public void run(){
 			try{
 				String mes = d.getMessage();
@@ -479,7 +566,9 @@ public class BaseWorker implements Runnable{
 										if (gen.isTableMatch()) {
 											rtvals.provideRecord( gen.getDBID(), gen.getTable(), data);
 										} else {
-											rtvals.writeRecord( gen.getDBID(), gen.getTable(), gen.macro);
+											if( !rtvals.writeRecord( gen.getDBID(), gen.getTable(), gen.macro) ){
+												Logger.error("Failed to write record for "+gen.getTable());
+											}
 										}
 									}
 								} else {
@@ -495,26 +584,5 @@ public class BaseWorker implements Runnable{
 			}
 			procCount.incrementAndGet();
 		}
-	}
-	private List<Generic> getGenerics( String id ){
-		return generics.entrySet().stream().filter( set -> set.getKey().equalsIgnoreCase(id) || set.getKey().matches(id)).map(Entry::getValue).collect(Collectors.toList());
-	}
-
-	public void doFILTER( Datagram d ){
-		String[] filter = d.label.split(":");
-
-		for( var f : filter[1].split(",")) {
-			var wr = writables.get(filter[0]+":"+f);
-			if (wr != null) {
-				wr.writeLine(d.getMessage());
-			} else {
-				var filterOpt = reqData.getFilter(f);
-				if (filterOpt.isPresent()) {
-					writables.put(d.label, filterOpt.get().getWritable());
-					filterOpt.get().getWritable().writeLine(d.getMessage());
-				}
-			}
-		}
-		procCount.incrementAndGet();
 	}
 }

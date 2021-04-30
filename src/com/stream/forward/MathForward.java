@@ -81,8 +81,11 @@ public class MathForward extends AbstractForward {
             d.setOriginID("math:"+id);
             dQueue.add( d ); // add it to the queue
         }
+        if( log )
+            Logger.tag("RAW").info( "1\t" + (label.isEmpty()?"void":label)+"|"+getID() + "\t" + join);
+
         // If there are no target, no label and no ops that build a command, this no longer needs to be a target
-        if( targets.isEmpty() && label.isEmpty() && !doCmd){
+        if( targets.isEmpty() && label.isEmpty() && !doCmd && !log){
             valid=false;
             if( deleteNoTargets )
                 dQueue.add( new Datagram("maths:remove,"+id,1,"system") );
@@ -162,18 +165,10 @@ public class MathForward extends AbstractForward {
     @Override
     public boolean readFromXML(Element math) {
 
-        if( math==null)
+        if( !readBasicsFromXml(math) )
             return false;
 
-        id = XMLtools.getStringAttribute( math, "id", "");
         setDelimiter(XMLtools.getStringAttribute( math, "delimiter", delimiter));
-        label = XMLtools.getStringAttribute( math, "label", "");
-
-        if( !label.isEmpty() ){ // this counts as a target, so enable it
-            valid=true;
-        }
-        if( id.isEmpty() )
-            return false;
 
         ops.clear();
         String content = math.getTextContent();
@@ -187,7 +182,6 @@ public class MathForward extends AbstractForward {
                             XMLtools.getStringAttribute(ops,"cmd",""),
                             ops.getTextContent()) );
 
-        sources.clear();
         XMLtools.getChildElements(math, "src").forEach( ele ->addSource(ele.getTextContent()) );
         addSource( XMLtools.getStringAttribute( math, "src", ""));
         return true;

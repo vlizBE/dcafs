@@ -269,7 +269,7 @@ public class IssueCollector {
             html?"<b>"+type+" Issues</b><br>":type+" Issues\r\n", // prefix
             newline  //suffix
         );            
-        actives.setEmptyValue( (html?"<b>"+type+" Issues</b><br>":type)+" Issues\r\n"+"None yet."+newline);
+        actives.setEmptyValue( "None yet."+newline);
         
         for( Entry<String,Issue> issue : issues.entrySet() ){
             Issue i = issue.getValue();

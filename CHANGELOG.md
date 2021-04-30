@@ -14,18 +14,56 @@ From 0.5.0 onwards, this should be better documented...
 
 ## Work in progress
 ## 0.9.x
-- Goals for this version series
-  * Rework BaseWorker
-  * Code cleanup  
-    * Analysis based (using IDE tools)
+- Goals for this version series (removed when as they are done)
+  * Code cleanup
     * Bring javadoc up to date
     * Try to improve memory usage (somehow)
     * Decide on final class structure (mainly StreamPool)   
   * Rework the TaskManager (will be trigger for 0.10.0)
-  
-## 0.9.1 
+
+## 0.9.2
+
+### Email
+- Added extra restrictions to commands via email
+
+### Databases
+- Added PostgreSQL support because of #16
+  * Added support for timestamp/timestamptz
+- Now writing the OffsetDateTime class to the database instead of converting to string when possible
+- Added the columns datetime,localdtnow and utcdtnow last two are filled in by dcafs
+
+### Generics
+- Added filler localdt and utcdt to present the offsetdatetime object of 'now'
+
+### Forwards
+- Added attribute 'log' (default false) to indicate if the result should be written to the raw files
+
+### Other
+ - Added concept of Readable, with this an object can declare that it is willing
+to accept writables. Applied it to debugworker to use and baseworker to interconnect.
+ - jvm version is now added to the status page, after dcafs version
+
+### Bugfixes
+- IssueCollector had a missing bracket in a to string that changed formatting
 
 ## RELEASED
+## 0.9.1 (25/04/2021)
+Early release because of the way Influxdb was badly handled on bad connections and that 
+tinylog didn't write to workpath (on linux when using service) because of relative paths.
+
+### Influx
+- Added auto reconnect (state checker)
+- Written points are buffered if no connection
+
+### Other
+- Added admin:gc, this forces the jvm to do garbage collection
+- Added memory info to st report (used/total)
+
+### Bugfixes
+- TimeTools.formatLongNow didn't specify a zone
+- Paths for tinylog are relative which is an issue if the jar isn't started directly, 
+now the paths get set at the beginning.
+  
 
 ## 0.9.0 (24/04/2021)
 - Updated dependencies
@@ -64,7 +102,7 @@ With all the changes the server is now fit to receive data from sensors (instead
 #### BugFixes
 - Influx wasn't mentioned in generic info if other dbid is present
 
-### 0.8.3
+### 0.8.3 (09/04/2021)
 
 #### Taskmanager
 - Removed the sqlite from the taskmanager, wasn't used anyway
@@ -83,7 +121,7 @@ With all the changes the server is now fit to receive data from sensors (instead
 - Added dbm:addrollover to add rollover to an sqlite
 - Table no longer contains a default empty alias
 - When tables are read from xml, table name and columnname are trimmed
-- It's assumed that if there's a autofill timestamp column it's the first one
+- It's assumed that if there's an autofill timestamp column it's the first one
 - Tables are no longer written to the xml if present in db on first connect
 - Added command to write a table in memory to xml dbm:tablexml
 
@@ -116,7 +154,7 @@ With all the changes the server is now fit to receive data from sensors (instead
 - index of label read from commands wasn't correct
 - removed default alarms taskmanager but didn't check if one was made later
 
-### 0.8.2
+### 0.8.2 (27/03/2021)
 #### I2CWorker
  * Added command to add a device (and generate empty script)
  * Altered i2c:list to only show list of devices and commands
@@ -146,7 +184,7 @@ previous change that should have fixed removing them.
 - Database no longer gets default 'remote' name when it already has a table
 - script to command now allows numbers in the name/id
 
-### 0.8.1  
+### 0.8.1  (14/03/2021)
 ####TaskManager  
  * Task(sets) with an id can now be started as a single command:
     * taskmanagerid:taskid/tasksetid => start the task/taskset (first tasksets are checked) same as tm:run,manid:taskid
@@ -164,7 +202,7 @@ previous change that should have fixed removing them.
 * CalcRequests now have an entry for each request from the same writable (instead of overwriting...)
 * Calc and rtval requests can no longer by duplicated (eg. asking twice the same won't give twice)
 
-### 0.8.0 
+### 0.8.0 (14/01/2021)
 
 ### Summary
 - Stream part has been revamped to allow easier expansion, introduction of writable etc
@@ -203,7 +241,7 @@ previous change that should have fixed removing them.
 - TODO: CTD(shouldn't be in the core)
 - StreamListener is now stored in arraylist in the stream to allow multiple listeners
 
-### 0.7.2
+### 0.7.2 (22/10/2020)
 
 **Features**
 - Improved command: rtval: now allows wildcards rtval:*temp -> rtvals that end with temp, rtval:temp* -> rtvals that start with temp, rtval:*temp* > rtvals that contain temp
@@ -237,7 +275,7 @@ previous change that should have fixed removing them.
 - Mathtools.calstdev tried running with empty array, caused out of bounds
 - IssueCollector: the resolved instances were kept track of, this can get huge so limited it to the last 15
 
-### 0.7.0
+### 0.7.0 
 
 **Summary**
 - Database code revised

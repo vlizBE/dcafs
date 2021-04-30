@@ -3,6 +3,7 @@ package util.tools;
 import org.apache.commons.lang3.tuple.Pair;
 import org.tinylog.Logger;
 
+import java.sql.Date;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.*;
@@ -16,6 +17,7 @@ public class TimeTools {
     static final public DateTimeFormatter LONGDATE_FORMATTER_UTC = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS").withZone(ZoneOffset.UTC);
     static final public DateTimeFormatter LONGDATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
+    public static final String SQL_LONG_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS";
 	static final String SHORTDATE_STRING = "yyyy-MM-dd HH:mm:ss";
 	static final String NMEADATE_STRING = "yyyy-MM-dd HHmmss.SS";
 	static final String NMEASHORT_STRING = "yyyy-MM-dd HHmmss";
@@ -63,7 +65,14 @@ public class TimeTools {
      * @return Parsed datetime
      */
     public static LocalDateTime parseDateTime( String dt , String format ){
-        return LocalDateTime.parse(dt, DateTimeFormatter.ofPattern(format));
+        if( dt==null)
+            return null;
+        try {
+            return LocalDateTime.parse(dt, DateTimeFormatter.ofPattern(format));
+        }catch( DateTimeParseException e ){
+            Logger.error("Failed to parse "+dt);
+            return null;
+        }
     }
     /**
      * Takes a millis since epoch and creates a string in yyyy-MM-dd HH:mm:ss.SSS format
@@ -102,7 +111,7 @@ public class TimeTools {
         return LONGDATE_FORMATTER_UTC.format(Instant.now());
     }
     public static String formatLongNow( ) {
-        return LONGDATE_FORMATTER.format(Instant.now());
+        return LONGDATE_FORMATTER.withZone( ZoneId.systemDefault() ).format(Instant.now());
     }
     /**
      * Gets the current datetime and adds an offset in days and formats it

@@ -922,7 +922,10 @@ public class BaseReq {
 			response.append("Thread ID:").append(lstThread.getId()).append(" = ").append(lstThread.getName()).append("\r\n");
 		return response.toString();   
 	}
-
+	public String doREAD( String[] request, Writable wr, boolean html ){
+		das.getDataQueue().add( new Datagram(wr,"",1,"read:"+request[1]));
+		return "Request for readable "+request[1]+" from "+wr.getID()+" issued";
+	}
 	public String doADMIN( String[] request, Writable wr, boolean html ){	
 		
 		String[] cmd = request[1].split(",");
@@ -939,6 +942,8 @@ public class BaseReq {
 					.add("admin:sqlfile,yes/no -> Start/stop logging queries to raw/yyyy-MM/SQL_queries.log")
 					.add("admin:ipv4 -> Get the IPv4 and MAC of all network interfaces")
 					.add("admin:ipv6 -> Get the IPv6 and MAC of all network interfaces")
+					.add("admin:gc -> Fore a java garbage collection")
+					.add("admin:reboot -> Reboot the computer (linux only)")
 					.add("admin:methodcall -> Get the time passed since a certain BaseWorker method was called");
 				return join.toString();
 			case "getlogs":
@@ -984,6 +989,9 @@ public class BaseReq {
 				return das.getBaseWorker().getMethodCallAge( html?"<br>":"\r\n" );
 			case "ipv4": return Tools.getIP("", true);
 			case "ipv6": return Tools.getIP("", false);
+			case "gc":
+				System.gc();
+				return "Tried to execute GC";
 			case "reboot":
 				String os = System.getProperty("os.name").toLowerCase();
 				if( !os.startsWith("linux")){
@@ -1660,6 +1668,19 @@ public class BaseReq {
 					mariadb.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"das","settings","databases"));
 					das.getDatabaseManager().addSQLDB(id,mariadb);
 					return "Connected to MariaDB database and stored in xml with id "+id;
+				}else{
+					return "Failed to connect to database.";
+				}
+			case "addpostgresql":
+				if( cmds.length<5)
+					return "Not enough arguments: dbm:addpostgresql,id,db name,ip:port,user:pass";
+				var postgres = SQLDB.asPOSTGRESQL(address,dbName,user,pass);
+				postgres.setID(id);
+				if( postgres.connect(false) ){
+					postgres.getCurrentTables(false);
+					postgres.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"das","settings","databases"));
+					das.getDatabaseManager().addSQLDB(id,postgres);
+					return "Connected to PostgreSQL database and stored in xml with id "+id;
 				}else{
 					return "Failed to connect to database.";
 				}

@@ -135,6 +135,13 @@ public class DatabaseManager{
                     Logger.error(e);
                 }
             }
+            for( Influx db : influxes.values() ){
+                try{
+                    db.checkState(CHECK_INTERVAL);
+                }catch(Exception e){
+                    Logger.error(e);
+                }
+            }
         }
     }
 

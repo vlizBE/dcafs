@@ -90,6 +90,8 @@ public abstract class Database {
     public abstract boolean buildGenericFromTable( XMLfab fab, String tableName, String genID, String delim);
     public abstract int buildGenericFromTables( XMLfab fab,boolean overwrite, String delim);
 
+    public abstract void checkState( int secondsPassed ) throws Exception;
+
     public abstract int doDirectInsert(String table, Object... values);
 
     public abstract Optional<List<List<Object>>> doSelect(String query, boolean includeNames );
