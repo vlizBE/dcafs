@@ -12,12 +12,16 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.StringJoiner;
 
 public class Generic {
 
-    enum DATATYPE{REAL,INTEGER,TEXT,FILLER,TAG}
+    enum DATATYPE{REAL,INTEGER,TEXT,FILLER,TAG,LOCALDT,UTCDT}
 
     enum FILTERTYPE{REPLACE_ALL,REPLACE_FIRST}
 
@@ -272,12 +276,25 @@ public class Generic {
                     case FILLER:
                             if( ref.endsWith("timestamp") ){
                                 data[a]=TimeTools.formatLongUTCNow();
-                            }else if(ref.endsWith("epoch") ){
-                                data[a]=Instant.now().toEpochMilli();
+                            }else if(ref.endsWith("epoch") ) {
+                                data[a] = Instant.now().toEpochMilli();
+                            }else if( ref.endsWith("localdt") ){
+                                data[a] = OffsetDateTime.now();
+                            }else if( ref.endsWith("utcdt") ){
+                                data[a] = OffsetDateTime.now(ZoneOffset.UTC);
                             }else{
                                 data[a]=ref;
                             }
                             break;
+                    case LOCALDT:
+                        data[a]=LocalDateTime.parse(split[entry.index], DateTimeFormatter.ofPattern(TimeTools.SQL_LONG_FORMAT));
+                        rtvals.setRealtimeText( ref, split[entry.index]);
+                        break;
+                    case UTCDT:
+                        var ldt = LocalDateTime.parse(split[entry.index], DateTimeFormatter.ofPattern(TimeTools.SQL_LONG_FORMAT));
+                        data[a]=OffsetDateTime.of(ldt,ZoneOffset.UTC);
+                        rtvals.setRealtimeText( ref, split[entry.index]);
+                        break;
                 }
                 if( !influxID.isEmpty() && pb!=null ){
                    switch (entry.type ){
@@ -371,6 +388,12 @@ public class Generic {
                     break;
                 case "tag":
                     generic.addTag(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), ent.getTextContent());
+                    break;
+                case "localdt":
+                    generic.addThing(XMLtools.getIntAttribute(ent, INDEX_STRING, -1),ent.getTextContent(),DATATYPE.LOCALDT);
+                    break;
+                case "utcdt":
+                    generic.addThing(XMLtools.getIntAttribute(ent, INDEX_STRING, -1),ent.getTextContent(),DATATYPE.UTCDT);
                     break;
                 default: Logger.warn("Tried to add generic part with wrong tag: "+ent.getNodeName()); break;
             }

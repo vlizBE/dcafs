@@ -16,6 +16,7 @@ public class TimeTools {
     static final public DateTimeFormatter LONGDATE_FORMATTER_UTC = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS").withZone(ZoneOffset.UTC);
     static final public DateTimeFormatter LONGDATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
+    public static final String SQL_LONG_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS";
 	static final String SHORTDATE_STRING = "yyyy-MM-dd HH:mm:ss";
 	static final String NMEADATE_STRING = "yyyy-MM-dd HHmmss.SS";
 	static final String NMEASHORT_STRING = "yyyy-MM-dd HHmmss";

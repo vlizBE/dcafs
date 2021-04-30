@@ -27,7 +27,7 @@ public class SQLDB extends Database{
     protected Connection con = null;
 
     DBTYPE type;
-    enum DBTYPE {MSSQL,MYSQL,MARIADB}
+    enum DBTYPE {MSSQL,MYSQL,MARIADB, POSTGRESQL}
 
     boolean busySimple =false;
     boolean busyPrepared =false;
@@ -62,6 +62,11 @@ public class SQLDB extends Database{
                 tableRequest="SHOW FULL TABLES;";
                 columnRequest="SHOW COLUMNS FROM ";
                 break;
+            case POSTGRESQL:
+                irl="jdbc:postgresql://"+ address + (address.contains(":")?"/":":5432/")+dbName;
+                tableRequest="SELECT table_name FROM information_schema.tables WHERE NOT table_schema='pg_catalog'AND NOT table_schema='information_schema';";
+                columnRequest="SELECT column_name,udt_name,is_nullable,is_identity FROM information_schema.columns WHERE table_name=";
+                break;
         }
 
     }
@@ -76,13 +81,16 @@ public class SQLDB extends Database{
     public static SQLDB asMYSQL( String address, String dbName, String user, String pass ){
         return new SQLDB( DBTYPE.MYSQL,address,dbName,user,pass);
     }
+    public static SQLDB asPOSTGRESQL(String address, String dbName, String user, String pass ){
+        return new SQLDB( DBTYPE.POSTGRESQL,address,dbName,user,pass);
+    }
     /* **************************************************************************************************/
     public String toString(){
         return type.toString().toLowerCase()+"@"+getTitle() +" -> " +getRecordsCount()+"/"+maxQueries;
     }
 
     public String getTitle(){
-        if( isMySQL() )
+        if( isMySQL() || type==DBTYPE.POSTGRESQL)
             return irl.substring(irl.lastIndexOf("/")+1);
         return irl.substring(irl.lastIndexOf("=")+1);
     }
@@ -119,6 +127,9 @@ public class SQLDB extends Database{
                     break;
                 case MARIADB: 
                     Class.forName("org.mariadb.jdbc.Driver");                       
+                    break;
+                case POSTGRESQL:
+                    Class.forName("org.postgresql.Driver");
                     break;
             }
 		} catch (ClassNotFoundException ex) {
@@ -246,9 +257,14 @@ public class SQLDB extends Database{
                 try {
                     if( clear )
                         tables.clear();
-                    while (rs.next()) {               
+                    while (rs.next()) {
+                        ResultSetMetaData rsmd = rs.getMetaData();
                         String tableName = rs.getString(1);
-                        String tableType=rs.getString(2);
+
+                        String tableType="base table";
+                        if( rsmd.getColumnCount()==2)
+                            tableType=rs.getString(2);
+
                         if( tableType.equalsIgnoreCase("base table") && !tableName.startsWith("sym_") ){ // ignore symmetricsDS tables and don't overwrite
                             SqlTable table = tables.get(tableName); // look for it in the stored tables
                             if( table == null ){ // if not found, it's new
@@ -262,6 +278,7 @@ public class SQLDB extends Database{
                     }
                 } catch (SQLException e) {
                     Logger.error(id+" -> Error during table read: "+e.getErrorCode());
+                    Logger.error(e.getMessage());
                     return false;
                 }  
             }
@@ -276,7 +293,10 @@ public class SQLDB extends Database{
                 continue;
             }
             try( Statement stmt = con.createStatement() ){
-                ResultSet rs = stmt.executeQuery(columnRequest+table.getName()+";");
+                String tblName = table.getName();
+                if( type == DBTYPE.POSTGRESQL )
+                    tblName = "'"+tblName+"'";
+                ResultSet rs = stmt.executeQuery(columnRequest+tblName+";");
                 if (rs != null) {
                     try {
                         boolean first = true;
@@ -290,11 +310,13 @@ public class SQLDB extends Database{
                                 table.addEpochMillis(name);
                             }else if( colType.contains("date") || colType.contains("text") || colType.contains("char") ){
                                 table.addText(name);
-                            }else if( colType.equalsIgnoreCase("double") || colType.equalsIgnoreCase("decimal") || colType.equalsIgnoreCase("float")|| colType.equalsIgnoreCase("real")){
+                            }else if( colType.equalsIgnoreCase("double") || colType.equalsIgnoreCase("decimal") || colType.startsWith("float")|| colType.equals("real")){
                                 table.addReal(name);
                             }else if( colType.contains("int") || colType.contains("bit") || colType.contains("boolean")) {
                                 table.addInteger(name);
                             }else if(colType.equalsIgnoreCase("timestamp") ){
+                                table.addTimestamp(name);
+                            }else if(colType.equalsIgnoreCase("timestamptz") ){
                                 table.addTimestamp(name);
                             }else{
                                 Logger.info(id+" -> Found unknown column type in "+table.getName()+": "+name+" -> "+colType);
@@ -328,21 +350,21 @@ public class SQLDB extends Database{
         }
         if( isValid(5) ){
                 // Create the tables
-                tables.values().forEach(x -> {
-                    Logger.debug(id+" -> Checking to create "+x.getName()+" read from?"+x.isReadFromDB());
-                    if( !x.isReadFromDB() ){
+                tables.values().forEach(tbl -> {
+                    Logger.debug(id+" -> Checking to create "+tbl.getName()+" read from?"+tbl.isReadFromDB());
+                    if( !tbl.isReadFromDB() ){
                         try( Statement stmt = con.createStatement() ){
-                            stmt.execute( x.create() );
-                            if( tables.get(x.getName())!=null && x.hasIfNotExists() ){
-                                Logger.warn(id+" -> Already a table with the name "+x.getName()+" nothing done because 'IF NOT EXISTS'.");
+                            stmt.execute( tbl.create() );
+                            if( tables.get(tbl.getName())!=null && tbl.hasIfNotExists() ){
+                                Logger.warn(id+" -> Already a table with the name "+tbl.getName()+" nothing done because 'IF NOT EXISTS'.");
                             }
                         } catch (SQLException e) {
-                            Logger.error(id+" -> Failed to create table with: "+x.create() );
+                            Logger.error(id+" -> Failed to create table with: "+tbl.create() );
                             Logger.error(e.getMessage());
-                            x.setLastError(e.getMessage()+" when creating "+x.name+" for "+id);
+                            tbl.setLastError(e.getMessage()+" when creating "+tbl.name+" for "+id);
                         }
                     }else{
-                        Logger.debug(id+" -> Not creating "+x.getName()+" because already read from database...");
+                        Logger.debug(id+" -> Not creating "+tbl.getName()+" because already read from database...");
                     }
                 });
                 // Create the views
@@ -491,6 +513,7 @@ public class SQLDB extends Database{
             case "mssql": db = SQLDB.asMSSQL(address, dbname, user, pass); break;
             case "mysql": db = SQLDB.asMYSQL(address, dbname, user, pass); break;
             case "mariadb": db = SQLDB.asMARIADB(address, dbname, user, pass); break;
+            case "postgresql": db = SQLDB.asPOSTGRESQL(address, dbname, user, pass); break;
             default:
                 Logger.error("Invalid database type: "+type);
                 return null;         

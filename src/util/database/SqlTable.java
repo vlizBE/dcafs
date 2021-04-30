@@ -1,5 +1,6 @@
 package util.database;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -10,6 +11,9 @@ import util.xml.XMLtools;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.ConcurrentMap;
 
@@ -18,7 +22,7 @@ public class SqlTable {
     String name = "";
 
     enum COLUMN_TYPE {
-        INTEGER, REAL, TEXT, TIMESTAMP, EPOCH, OBJECT
+        INTEGER, REAL, TEXT, TIMESTAMP, EPOCH, OBJECT, LOCALDTNOW, UTCDTNOW, DATETIME
     }
 
     ArrayList<Column> columns = new ArrayList<>();
@@ -88,6 +92,9 @@ public class SqlTable {
                     case "text":
                         table.addText(val, alias);
                         break;
+                    case "localdtnow": table.addLocalDateTime(val, alias,true); break;
+                    case "utcdtnow": table.addUTCDateTime(val, alias,true); break;
+                    case "datetime": table.addLocalDateTime(val, alias,false); break;
                 }
 
                 /* Setup of the column */
@@ -102,6 +109,26 @@ public class SqlTable {
         if (ok)
             return Optional.ofNullable(table);
         return Optional.empty();
+    }
+    public void writeToXml( XMLfab fab, boolean build ){
+        fab.addChild("table").attr("name",name).down();
+        for( var col : columns ){
+            fab.addChild(col.type.toString().toLowerCase(),col.title);
+            if( !col.alias.isEmpty() && !col.alias.equalsIgnoreCase(name+"_"+col.title)) {
+                fab.attr("alias", col.alias);
+            }else{
+                fab.removeAttr("alias");
+            }
+            if( !col.defString.isEmpty())
+                fab.attr("def",col.defString);
+            String setup = (col.primary?"primary ":"")+(col.notnull?"notnull ":"")+(col.unique?"unique ":"");
+            if( !setup.isEmpty())
+                fab.attr("setup",setup.trim());
+        }
+        fab.up();
+
+        if (build)
+            fab.build();
     }
     /**
      * Create a SQLiteTable object for a table with the given name
@@ -235,7 +262,14 @@ public class SqlTable {
         addColumn(new Column(title, alias, COLUMN_TYPE.TIMESTAMP));
         return this;
     }
-
+    public SqlTable addLocalDateTime(String title, String alias,boolean now) {
+        addColumn(new Column(title, alias, now?COLUMN_TYPE.LOCALDTNOW:COLUMN_TYPE.DATETIME));
+        return this;
+    }
+    public SqlTable addUTCDateTime(String title, String alias,boolean now) {
+        addColumn(new Column(title, alias, now?COLUMN_TYPE.UTCDTNOW:COLUMN_TYPE.DATETIME));
+        return this;
+    }
     /* Epoc Millis */
     /**
      * Add a column that contains timestamp data (in integer format).
@@ -573,6 +607,7 @@ public class SqlTable {
             String ref = col.alias.replace("@macro", macro);
             Object val = null;
             try{
+
                 if( col.type==COLUMN_TYPE.TIMESTAMP ){
                     record[index] = index==0?TimeTools.formatLongUTCNow():rttext.get(ref);
                     continue;
@@ -586,12 +621,21 @@ public class SqlTable {
                     if( val!=null) {
                         if( val instanceof Double){
                             val = ((Double)val).intValue();
-                        }else if( val instanceof Integer) {
-                            val = val;
                         }
+                    }else{
+                        if( col.hasDefault )
+                            val = NumberUtils.toInt(def);
                     }
                 }else if( col.type == COLUMN_TYPE.REAL){
                     val = rtvals.get(ref);
+                    if( val==null && col.hasDefault )
+                        val = NumberUtils.createDouble(def);
+                }else if( col.type == COLUMN_TYPE.LOCALDTNOW){
+                    val = OffsetDateTime.now();
+                }else if( col.type == COLUMN_TYPE.UTCDTNOW){
+                    val = OffsetDateTime.now(ZoneOffset.UTC);
+                }else if( col.type == COLUMN_TYPE.DATETIME){
+                    val = TimeTools.parseDateTime(ref,TimeTools.SQL_LONG_FORMAT);
                 }
             }catch( NullPointerException e ){
                 Logger.error("Null pointer when looking for "+ref + " type:"+col.type);
@@ -659,7 +703,8 @@ public class SqlTable {
                 return title+" TEXT" + (unique?" UNIQUE":"") + (notnull?" NOT NULL":"")+(primary?" PRIMARY KEY":"");
             if( type == COLUMN_TYPE.EPOCH )
                 return title+" REAL" + (unique?" UNIQUE":"") + (notnull?" NOT NULL":"")+(primary?" PRIMARY KEY":"");
-
+            if( (type == COLUMN_TYPE.LOCALDTNOW || type== COLUMN_TYPE.UTCDTNOW)  )
+                return title+" timestamptz" + (unique?" UNIQUE":"") + (notnull?" NOT NULL":"")+(primary?" PRIMARY KEY":"");
             return title+" "+type + (unique?" UNIQUE":"") + (notnull?" NOT NULL":"")+(primary?" PRIMARY KEY":"");
         }
     }
@@ -676,26 +721,7 @@ public class SqlTable {
             }
         }
     }
-    public void writeToXml( XMLfab fab, boolean build ){
-        fab.addChild("table").attr("name",name).down();
-        for( var col : columns ){
-            fab.addChild(col.type.toString().toLowerCase(),col.title);
-            if( !col.alias.isEmpty() && !col.alias.equalsIgnoreCase(name+"_"+col.title)) {
-                fab.attr("alias", col.alias);
-            }else{
-                fab.removeAttr("alias");
-            }
-            if( !col.defString.isEmpty())
-                fab.attr("def",col.defString);
-            String setup = (col.primary?"primary ":"")+(col.notnull?"notnull ":"")+(col.unique?"unique ":"");
-            if( !setup.isEmpty())
-                fab.attr("setup",setup.trim());
-        }
-        fab.up();
 
-        if (build)
-            fab.build();
-    }
     /**
      * Builds a generic based on this table
      * @param fab The fab to create the node, pointing to generics node
@@ -723,6 +749,8 @@ public class SqlTable {
             if( col.defString.contains("@macro"))
                 continue;
             switch( col.type ){
+                case LOCALDTNOW: fab.addChild("filler","localdt");break;
+                case UTCDTNOW: fab.addChild("filler","utcdt");break;
                 case INTEGER: fab.addChild("integer",macro?col.alias:col.title).attr("index",index++);break;
                 case REAL:    fab.addChild("real",macro?col.alias:col.title).attr("index",index++);break;
                 case TEXT:    fab.addChild("text",macro?col.alias:col.title).attr("index",index++);break;
