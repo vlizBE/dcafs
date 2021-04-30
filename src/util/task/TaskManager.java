@@ -1,5 +1,6 @@
 package util.task;
 
+import com.email.EmailSending;
 import com.email.EmailWork;
 import com.stream.StreamPool;
 import com.stream.collector.CollectorFuture;
@@ -36,7 +37,7 @@ public class TaskManager implements CollectorFuture {
 	Path xmlPath = null; // Path to the xml file containing the tasks/tasksets
 
 	/* Queues for the different outputs */
-	BlockingQueue<EmailWork> emailQueue = null; // Reference to the email queue, so emails can be send
+	EmailSending emailQueue = null; // Reference to the email send, so emails can be send
 	BlockingQueue<String[]> smsQueue = null; // Reference to the sms queue, so sms's can be send	
 	StreamPool streampool; // Reference to the streampool, so sensors can be talked to
 	RealtimeValues rtvals;
@@ -84,7 +85,7 @@ public class TaskManager implements CollectorFuture {
 	 * Adds the emailQueue to the manager so it can send emails
 	 * @param emailQueue The queue of the EmailWorker
 	 */
-	public void setEmailQueue(BlockingQueue<EmailWork> emailQueue) {
+	public void setEmailSending(EmailSending emailQueue) {
 		this.emailQueue = emailQueue;
 	}
 
@@ -689,7 +690,7 @@ public class TaskManager implements CollectorFuture {
 						for (String item : task.outputRef.split(";")) {
 							if( splits.length==1)
 								response = "";
-							emailQueue.add(new EmailWork(item, header, response, task.attachment, false));
+							emailQueue.sendEmail(item,header,response,task.attachment,false);
 						}
 						break;
 					case STREAM: // Send the value to a device
@@ -774,7 +775,7 @@ public class TaskManager implements CollectorFuture {
 							break;
 							case "error":	// Note the error and send email								
 								Logger.tag(TINY_TAG).error("TaskManager.reportIssue\t["+ id +"] "+device+"\t"+mess);
-								emailQueue.add( new EmailWork( "admin", device+" -> "+mess, "", "", false) );
+								emailQueue.sendEmail( "admin", device+" -> "+mess, "", "", false);
 							break;
 							default: Logger.error("Tried to use unknown outputref: "+task.outputRef); break;
 						}
@@ -896,7 +897,7 @@ public class TaskManager implements CollectorFuture {
 			}else{
 				Logger.tag(TINY_TAG).info( " Next is :"+next );
 				if( emailQueue != null) {
-					emailQueue.add( new EmailWork("admin",  "Failed to reschedule task", task.toString() ) );
+					emailQueue.sendEmail("admin",  "Failed to reschedule task", task.toString() );
 				}else {
 					Logger.tag(TINY_TAG).error( "["+ id +"] Failed to reschedule task "+ task);
 				}
