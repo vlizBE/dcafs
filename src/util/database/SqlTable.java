@@ -95,6 +95,9 @@ public class SqlTable {
                     case "localdtnow": table.addLocalDateTime(val, alias,true); break;
                     case "utcdtnow": table.addUTCDateTime(val, alias,true); break;
                     case "datetime": table.addLocalDateTime(val, alias,false); break;
+                    default:
+                        Logger.error("Unknown column specified "+node.getNodeName()+" for "+table.getName());
+                        return Optional.empty();
                 }
 
                 /* Setup of the column */
