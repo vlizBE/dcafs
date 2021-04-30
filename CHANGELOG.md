@@ -23,12 +23,20 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.9.2
 
+### Email
+- Added extra restrictions to commands via email
+
 ### Databases
-- Added PostgreSQL support
+- Added PostgreSQL support because of #16
   * Added support for timestamp/timestamptz
-  
+- Now writing the OffsetDateTime class to the database instead of converting to string when possible
+- Added the columns datetime,localdtnow and utcdtnow last two are filled in by dcafs
+
+### Generics
+- Added filler localdt and utcdt to present the offsetdatetime object of 'now'
+
 ### Forwards
-- Added attribute 'log' (default false) to indicate if the result should be written to raw files
+- Added attribute 'log' (default false) to indicate if the result should be written to the raw files
 
 ### Other
  - Added concept of Readable, with this an object can declare that it is willing
