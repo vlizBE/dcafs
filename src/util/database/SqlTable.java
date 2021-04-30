@@ -499,7 +499,7 @@ public class SqlTable {
             try {
                 for ( int colIndex : prep.getIndexes() ) {
                     if(  d[index] == null){
-                        return -3;
+                       // return -3;
                     }
                     Column c = columns.get(colIndex);
                     try{     
@@ -641,14 +641,11 @@ public class SqlTable {
                 Logger.error("Null pointer when looking for "+ref + " type:"+col.type);
             }
 
-            if( val == null ){
-                if( col.hasDefault ){
-                    record[index]= def;
-                }else{
-                    Logger.error("Tried to create insert for "+name+" but couldn't find: "+ref);
-                    return false;
-                }
+            if( val == null && col.hasDefault ){
+                record[index]= def;
             }else{
+                if( val == null)
+                    Logger.error("Couldn't find "+ref+" for "+name+" added null");
                 record[index] = val;
             }
         }        

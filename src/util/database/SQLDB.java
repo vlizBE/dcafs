@@ -201,7 +201,7 @@ public class SQLDB extends Database{
     public Optional<SqlTable> getTable(String id) {
         if (tables.get(id) == null && !tablesRetrieved) { // No table info
             tablesRetrieved = true;
-            this.getCurrentTables(false);
+            getCurrentTables(false);
         }
         return Optional.ofNullable(tables.get(id));
     }
@@ -303,21 +303,21 @@ public class SQLDB extends Database{
                         while (rs.next()) {               
                             String name = rs.getString(1);
                             String colType=rs.getString(2).toLowerCase();
-                            if( first && (name.equalsIgnoreCase("timestamp") && (colType.contains("text") || colType.startsWith("date")|| colType.contains("stamp"))) ){
-                                table.addTimestamp(name);
+                            if( first && (colType.equals("timestamp") || colType.equals("datetime"))){
+                                table.addUTCDateTime(name,"",true);
                                 first=false;                                
                             }else if( name.equalsIgnoreCase("timestamp") && colType.equalsIgnoreCase("long") ){
                                 table.addEpochMillis(name);
-                            }else if( colType.contains("date") || colType.contains("text") || colType.contains("char") ){
+                            }else if( colType.contains("text") || colType.contains("char") ){
                                 table.addText(name);
                             }else if( colType.equalsIgnoreCase("double") || colType.equalsIgnoreCase("decimal") || colType.startsWith("float")|| colType.equals("real")){
                                 table.addReal(name);
                             }else if( colType.contains("int") || colType.contains("bit") || colType.contains("boolean")) {
                                 table.addInteger(name);
                             }else if(colType.equalsIgnoreCase("timestamp") ){
-                                table.addTimestamp(name);
-                            }else if(colType.equalsIgnoreCase("timestamptz") ){
-                                table.addTimestamp(name);
+                                table.addLocalDateTime(name,"",false);
+                            }else if(colType.equalsIgnoreCase("timestamptz") || colType.equalsIgnoreCase("datetime") ){
+                                table.addUTCDateTime(name,"",false);
                             }else{
                                 Logger.info(id+" -> Found unknown column type in "+table.getName()+": "+name+" -> "+colType);
                             }                            
