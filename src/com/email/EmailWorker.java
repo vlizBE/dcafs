@@ -597,6 +597,9 @@ public class EmailWorker implements CollectorFuture {
 		}
 		scheduler.execute( new Sender( new EmailWork( to, subject, content,attachment,deleteAttachment),false ));
 	}
+	private void sendEmail( EmailWork work ){
+		scheduler.execute( new Sender( work,false ));
+	}
 	/* *********************************  W O R K E R S ******************************************************* */
 	/**
 	 * Main worker thread that sends emails
@@ -675,7 +678,8 @@ public class EmailWorker implements CollectorFuture {
 						Logger.error(e);
 					}
 				}
-				message.setFrom(new InternetAddress(  outbox.getFromStart()+"<" + outbox.from + ">"));
+				String from = email.from.isEmpty()?(outbox.getFromStart()+"<" + outbox.from + ">"):email.from;
+				message.setFrom(new InternetAddress(  from ));
 				for (String single : email.toRaw.split(",")) {
 					try {
 						message.addRecipient(Message.RecipientType.TO, new InternetAddress(single.split("\\|")[0]));
@@ -903,7 +907,9 @@ public class EmailWorker implements CollectorFuture {
 								Logger.info( "Not yet read by "+newSub.substring(newSub.indexOf(" for ")+5));
 							}
 							Logger.info("Someone else wants this...");
-							sendEmail(to,newSub,body); // make sure the other can get it
+							var work = new EmailWork(to,newSub,body);
+							work.from = from; // use the same from as the original
+							sendEmail(work); // make sure the other can get it
 						}
 						cmd = cmd.substring(0,cmd.indexOf(" for ")); // remove everything not related to the command
 					}

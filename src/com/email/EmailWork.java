@@ -14,6 +14,7 @@ public class EmailWork {
 	String subject;					  // The subject of the email
 	String content;					  // The content of the email
 	String attachment="";			  // Link to the attachment
+	String from="";
 	boolean valid = false;			  // Flag whether or not the email is valid
 	int tries = 0;					  // How many tries have been done to send the email
 	int delay = 0;					  // Delay between attempts to send the email
