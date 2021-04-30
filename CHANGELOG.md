@@ -11,6 +11,7 @@ From 0.5.0 onwards, this should be better documented...
 - ConfirmCollector give ok on no reply or nok on certain reply?
 - Trans as output in taskmanager?
 - Trans command >>>identify:id to claim to be a certain id and pass the ip test
+- Wildcard to email sending to an instance group?
 
 ## Work in progress
 ## 0.9.x
@@ -25,6 +26,13 @@ From 0.5.0 onwards, this should be better documented...
 
 ### Email
 - Added extra restrictions to commands via email
+  * Emails not from someone in contactlist are considered spam
+  * commands from someone in contactlist without permission is ignored
+- Multiple instances can share an inbox, subject end with 'for ...' where
+... is whatever is in front of the @ in the from email. Multiple can be seperated
+  with ,
+- No wildcard yet to send to all instances without the 'for' only the first check
+will get it.
 
 ### Databases
 - Added PostgreSQL support because of #16
