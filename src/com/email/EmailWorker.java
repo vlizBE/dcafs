@@ -842,7 +842,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 			ClassLoader tcl = Thread.currentThread().getContextClassLoader();
 			Thread.currentThread().setContextClassLoader(javax.mail.Session.class.getClassLoader());
 			boolean ok = false;
-			Logger.info("Checking email...");
+
 			try( Store inboxStore = inboxSession.getStore("imaps")) {	// Store implements autoCloseable
 
 				inboxStore.connect( inbox.server, inbox.port, inbox.user, inbox.pass );
@@ -856,18 +856,11 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 			    if( messages.length >0 ){
 					Logger.info("Messages found:"+messages.length);
 				}else{
-			    	Logger.info("No new messages");
 			    	return;
 				}
 
 			    for ( Message message : messages ) {
-			    	/* If working with alias's
-			    	var hasnot = Arrays.stream(message.getRecipients(Message.RecipientType.TO)).filter(ad -> outbox.from.equalsIgnoreCase(ad.toString())).findFirst().isEmpty();
-			    	if( hasnot ){
-			    		message.setFlag(Flags.Flag.SEEN,false);
-			    		continue;
-					}
-					*/
+
 					boolean delete=true;
 					String from = message.getFrom()[0].toString();
 					from = from.substring(from.indexOf("<")+1, from.length()-1);
@@ -878,6 +871,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 						sendEmail(from,"My admin doesn't allow me to talk to strangers...","");
 						sendEmail("admin","Got spam? ","From: "+from+" "+cmd);
 						Logger.warn("Received spam from: "+from);
+						message.setFlag(Flags.Flag.DELETED, true); // delete spam
 						continue;
 					}
 
@@ -885,6 +879,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 						sendEmail(from,"Not allowed to use "+cmd,"Try asking an admin for permission?");
 						sendEmail("admin","Permission issue?","From: "+from+" -> "+cmd);
 						Logger.warn(from+" tried using "+cmd+" without permission");
+						message.setFlag(Flags.Flag.DELETED, true); // delete things without permission
 						continue;
 					}
 
@@ -968,9 +963,11 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 							cmd += ","+from;
 						}
 						Datagram d = new Datagram( cmd, 1, "email");
-						DataRequest req = new DataRequest(from,cmd);
-						d.setWritable(req.getWritable());
-						buffered.put(req.getID(), req);
+						if( cmd.contains(":")) { // only relevant for commands that contain :
+							DataRequest req = new DataRequest(from, cmd);
+							d.setWritable(req.getWritable());
+							buffered.put(req.getID(), req);
+						}
 						d.setOriginID(from);
 						dQueue.add( d );
 					}
@@ -996,6 +993,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 			}else if( maxQuickChecks > 0){
 				// If an email was received, schedule an earlier check. This way follow ups are responded to quicker
 				maxQuickChecks--;
+				Logger.info("Still got "+maxQuickChecks+" to go...");
 				scheduler.schedule( new Check(), Math.min(checkIntervalSeconds/3, 30), TimeUnit.SECONDS);
 			}
 	   }
