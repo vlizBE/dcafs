@@ -22,6 +22,11 @@ From 0.5.0 onwards, this should be better documented...
   * Rework the TaskManager (will be trigger for 0.10.0)
 
 ## 0.9.2
+
+### Databases
+- Added PostgreSQL support
+  * Added support for timestamp/timestamptz
+  
 ### Forwards
 - Added attribute 'log' (default false) to indicate if the result should be written to raw files
 
