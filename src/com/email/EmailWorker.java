@@ -855,7 +855,6 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 
 			    if( messages.length >0 ){
 					Logger.info("Messages found:"+messages.length);
-					maxQuickChecks = 5;
 				}else{
 			    	Logger.info("No new messages");
 			    	return;
@@ -893,25 +892,29 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 					String body = getTextFromMessage(message);
 
 					if( cmd.contains(" for ")) { // meaning for multiple client checking this inbox
+						Logger.info("Checking if meant for me... "+outbox.getFromStart());
 						if (!cmd.contains( outbox.getFromStart() )) { // the subject doesn't contain the id
 							message.setFlag(Flags.Flag.SEEN, false);// rever the flag to unseen
 							Logger.info("Email read but meant for someone else...");
 							continue; // go to next message
 						}else{
 							String newSub = cmd.replaceFirst(",?"+outbox.getFromStart(),"");
-							Logger.info( "Altered subject: "+newSub);
+							Logger.info( "Altered subject: "+newSub+"<");
 							if( !newSub.endsWith("for ")){ // meaning NOT everyone read it
-								delete=false;
 								message.setFlag(Flags.Flag.SEEN, false);
 								Logger.info( "Not yet read by "+newSub.substring(newSub.indexOf(" for ")+5));
+
+								Logger.info("Someone else wants this...");
+								var work = new EmailWork(to,newSub,body);
+								work.from = from; // use the same from as the original
+								sendEmail(work); // make sure the other can get it
+							}else{
+								Logger.info( "Only one/Last one read it");
 							}
-							Logger.info("Someone else wants this...");
-							var work = new EmailWork(to,newSub,body);
-							work.from = from; // use the same from as the original
-							sendEmail(work); // make sure the other can get it
 						}
-						cmd = cmd.substring(0,cmd.indexOf(" for ")); // remove everything not related to the command
+						cmd = cmd.substring(0,cmd.indexOf(" for")); // remove everything not related to the command
 					}
+					maxQuickChecks = 5;
 					Logger.info("Command: " + cmd + " from: " + from );
 
 					if ( message.getContentType()!=null && message.getContentType().contains("multipart") ) {
@@ -992,6 +995,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 				scheduler.schedule( new Check(), 60, TimeUnit.SECONDS);
 			}else if( maxQuickChecks > 0){
 				// If an email was received, schedule an earlier check. This way follow ups are responded to quicker
+				maxQuickChecks--;
 				scheduler.schedule( new Check(), Math.min(checkIntervalSeconds/3, 30), TimeUnit.SECONDS);
 			}
 	   }
