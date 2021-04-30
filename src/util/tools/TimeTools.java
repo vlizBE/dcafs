@@ -3,6 +3,7 @@ package util.tools;
 import org.apache.commons.lang3.tuple.Pair;
 import org.tinylog.Logger;
 
+import java.sql.Date;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.*;
@@ -64,7 +65,14 @@ public class TimeTools {
      * @return Parsed datetime
      */
     public static LocalDateTime parseDateTime( String dt , String format ){
-        return LocalDateTime.parse(dt, DateTimeFormatter.ofPattern(format));
+        if( dt==null)
+            return null;
+        try {
+            return LocalDateTime.parse(dt, DateTimeFormatter.ofPattern(format));
+        }catch( DateTimeParseException e ){
+            Logger.error("Failed to parse "+dt);
+            return null;
+        }
     }
     /**
      * Takes a millis since epoch and creates a string in yyyy-MM-dd HH:mm:ss.SSS format
