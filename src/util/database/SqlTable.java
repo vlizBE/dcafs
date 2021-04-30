@@ -607,7 +607,6 @@ public class SqlTable {
             String ref = col.alias.replace("@macro", macro);
             Object val = null;
             try{
-
                 if( col.type==COLUMN_TYPE.TIMESTAMP ){
                     record[index] = index==0?TimeTools.formatLongUTCNow():rttext.get(ref);
                     continue;
@@ -748,9 +747,10 @@ public class SqlTable {
             switch( col.type ){
                 case LOCALDTNOW: fab.addChild("filler","localdt");break;
                 case UTCDTNOW: fab.addChild("filler","utcdt");break;
-                case INTEGER: fab.addChild("integer",macro?col.alias:col.title).attr("index",index++);break;
-                case REAL:    fab.addChild("real",macro?col.alias:col.title).attr("index",index++);break;
-                case TEXT:    fab.addChild("text",macro?col.alias:col.title).attr("index",index++);break;
+                case INTEGER:  fab.addChild("integer",macro?col.alias:col.title).attr("index",index++);break;
+                case REAL:     fab.addChild("real",macro?col.alias:col.title).attr("index",index++);break;
+                case TEXT:     fab.addChild("text",macro?col.alias:col.title).attr("index",index++);break;
+                case DATETIME: fab.addChild("utcdt",macro?col.alias:col.title).attr("index",index++);break;
                 case TIMESTAMP:
                     if( index !=0)
                         fab.addChild("timestamp",macro?col.alias:col.title).attr("index",index++);

@@ -244,11 +244,11 @@ public class RealtimeValues implements CollectorFuture {
 	}
 	public boolean sendToInflux( Point p){
 
-		if( infuxdb!=null) {
+		if( infuxdb!=null && p!=null) {
 			infuxdb.writePoint(p);
 			return true;
 		}
-		Logger.error("Failed to store point in Influx DB");
+		Logger.error("Failed to store point in Influx DB (point or db are null");
 		return false;
 	}
 	/* ************************************** * D E S C R I P T O R S *************************************************/

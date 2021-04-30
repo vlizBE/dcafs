@@ -283,11 +283,11 @@ public class Generic {
                             }else if( ref.endsWith("utcdt") ){
                                 data[a] = OffsetDateTime.now(ZoneOffset.UTC);
                             }else{
-                                data[a]=ref;
+                                data[a] = ref;
                             }
                             break;
                     case LOCALDT:
-                        data[a]=LocalDateTime.parse(split[entry.index], DateTimeFormatter.ofPattern(TimeTools.SQL_LONG_FORMAT));
+                        data[a]=OffsetDateTime.parse(split[entry.index], DateTimeFormatter.ofPattern(TimeTools.SQL_LONG_FORMAT));
                         rtvals.setRealtimeText( ref, split[entry.index]);
                         break;
                     case UTCDT:
