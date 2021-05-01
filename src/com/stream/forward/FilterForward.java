@@ -161,32 +161,41 @@ public class FilterForward extends AbstractForward {
         Logger.info(id+" -> Adding rule "+type+" > "+value);
 
         switch( StringUtils.removeEnd(type,"s") ){
-            case "start":    addStartsWith(value); break;
-            case "nostart":  addStartsNotWith(value); break;
-            case "end":      addEndsWith(value);   break;
-            case "contain":  addContains(value);   break;
-            case "c_start":  addCharAt(Tools.parseInt(values[0], -1), values[1].charAt(0) );      break;
-            case "c_end":    addCharFromEnd(Tools.parseInt(values[0], -1), values[1].charAt(0) ); break;
+            case "start":     addStartsWith(value); break;
+            case "nostart":   addStartsNotWith(value); break;
+            case "end":       addEndsWith(value);   break;
+            case "contain":   addContains(value);   break;
+            case "c_start":   addCharAt(Tools.parseInt(values[0], -1)-1, value.charAt(value.indexOf(",")+1) );      break;
+            case "c_end":     addCharFromEnd(Tools.parseInt(values[0], -1)-1, value.charAt(value.indexOf(",")+1) ); break;
             case "minlength": addMinimumLength(Tools.parseInt(value,-1)); break;
             case "maxlength": addMaximumLength(Tools.parseInt(value,-1)); break;
-            case "nmea": addNMEAcheck( Tools.parseBool(value,true));break;
+            case "nmea":      addNMEAcheck( Tools.parseBool(value,true));break;
             default: 
                 Logger.error(id+" -> Unknown type chosen "+type);
                 return -1;
         }
         return 1;
     }
-    public static String getRulesInfo(String eol){
+    public static String getHelp(String eol){
         StringJoiner join = new StringJoiner(eol);
-        join.add("start   -> Which text the message should start with" );
-        join.add("nostart -> Which text the message can't start with");
-        join.add("end     -> Which text the message should end with");
-        join.add("contain -> Which text the message should contain");
-        join.add("c_start -> Which character should be found on position c from the start (0=first)");
-        join.add("c_end   -> Which character should be found on position c from the end (0=last)");
-        join.add("minlength -> The minimum length the message should be");
-        join.add("maxlength -> The maximum length the message can be");
-        join.add("nmea -> True or false that it's a valid nmea string");
+        join.add("start   -> Which text the data should start with" )
+            .add("    fe. <filter type='star'>$</filter> --> The data must start with $");
+        join.add("nostart -> Which text the data can't start with")
+            .add("    fe. <filter type='nostart'>$</filter> --> The data can't start with $");
+        join.add("end     -> Which text the data should end with")
+            .add("    fe. <filter type='end'>!?</filter> --> The data must end with !?");
+        join.add("contain -> Which text the data should contain")
+            .add("    fe. <filter type='contain'>zda</filter> --> The data must contain zda somewhere");
+        join.add("c_start -> Which character should be found on position c from the start (1=first)")
+            .add("    fe. <filter type='c_start'>1,+</filter> --> The first character must be a +");
+        join.add("c_end   -> Which character should be found on position c from the end (1=last)")
+            .add("    fe. <filter type='c_end'>3,+</filter> --> The third last character must be a +");
+        join.add("minlength -> The minimum length the data should be")
+            .add("    fe. <filter type='minlength'>6</filter> --> if data is shorter than 6 chars, filter out");
+        join.add("maxlength -> The maximum length the data can be")
+            .add("    fe.<filter type='maxlength'>10</filter>  --> if data is longer than 10, filter out");
+        join.add("nmea -> True or false that it's a valid nmea string")
+            .add("    fe. <filter type='nmea'>true</filter> --> The data must end be a valid nmea string");
         return join.toString();
     }
     /**
@@ -239,10 +248,10 @@ public class FilterForward extends AbstractForward {
         rules.add( p -> p.endsWith(with) );
     }
     public void addCharAt( int index, char c ){
-        rules.add( p -> index < p.length() && p.charAt(index)==c);
+        rules.add( p -> index >=0 && index < p.length() && p.charAt(index)==c);
     }
     public void addCharFromEnd( int index, char c ){
-        rules.add( p -> p.length() > index && p.charAt(p.length()-index-1)==c );
+        rules.add( p -> index >=0 && p.length() > index && p.charAt(p.length()-index-1)==c );
     }
     public void addMinimumLength( int length ){ rules.add( p -> p.length() >= length); }
     public void addMaximumLength( int length ){ rules.add( p -> p.length() <= length); }
