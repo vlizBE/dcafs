@@ -1201,7 +1201,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 		String[] cmds = cmd.split(",");	
 
 		StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
-
+		FilterForward ff;
 		switch( cmds[0] ){
 			case "?":
 				join.add(TelnetCodes.TEXT_RED+"Purpose"+TelnetCodes.TEXT_YELLOW)
@@ -1223,6 +1223,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				join.add( "  ff:reload,id -> Reload the filter with the given id");
 				join.add( "  ff:reload -> Clear the list and reload all the filters");
 				join.add( "  ff:remove,id -> Remove the filter with the given id");
+				join.add( "  ff:test,id,data -> Test if the data would pass the filter");
 				join.add( "  ff:list or ff -> Get a list of all the currently existing filters.");
 				join.add( "  ff:delrule,id,index -> Remove a rule from the filter based on the index given in ff:list");
 				join.add( "  filter:id -> Receive the data in the telnet window, also the source reference");
@@ -1241,7 +1242,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				filters.values().forEach( f -> join.add(f.toString()).add("") );
 				return join.toString();
 			case "rules":
-				return FilterForward.getRulesInfo(html?"<br>":"\r\n");
+				return FilterForward.getHelp(html?"<br>":"\r\n");
 			case "remove":
 				if( cmds.length < 2 )
 					return "Not enough arguments: ff:remove,id";
@@ -1306,7 +1307,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				getFilter(cmds[1]).ifPresent( f -> f.addTarget(wr) );
 				return "Temp filter with id "+cmds[1]+ " created"+(cmds.length>2?", with source"+cmds[2]:"")+".";
 			case "alter":
-				var ff = filters.get(cmds[1]);
+				ff = filters.get(cmds[1]);
 				if( cmds.length < 3)
 					return "Bad amount of arguments, should be ff:alter,id,param:value";
 				if( ff == null )
@@ -1343,6 +1344,19 @@ public class StreamPool implements StreamListener, CollectorFuture {
 					readFiltersFromXML(XMLfab.withRoot(xmlPath, "das", "filters").getChildren("filter"));
 				}
 				return "Filter reloaded.";
+			case "test":
+				if( cmds.length != 2)
+					return "Not enough arguments, ff:test,id,data";
+				String data = cmd.substring(8);
+				final String d = data.substring(data.indexOf(",")+1);
+				fOpt = getFilter(cmds[1]);
+				if( fOpt.isEmpty())
+					return "No such filter";
+				if( fOpt.map( f -> f.doFilter(d)).orElse(false) ){
+					return "Data passed the filter";
+				}else{
+					return "Data failed the filter";
+				}
 			default: return "No such command";
 		}
 	}
