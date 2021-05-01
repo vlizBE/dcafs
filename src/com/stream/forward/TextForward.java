@@ -1,5 +1,6 @@
 package com.stream.forward;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.tools.TimeTools;
@@ -102,6 +103,10 @@ public class TextForward extends AbstractForward{
                                 addResplit(deli,content,leftover.equalsIgnoreCase("append"));
                                 Logger.info(id+" -> Added resplit edit on delimiter "+deli+" with formula "+content);
                                 break;
+                            case "rexsplit":
+                                addRexsplit(deli,content);
+                                Logger.info(id+" -> Get items from "+content+ " and join with "+deli);
+                                break;
                             case "redate":
                                 addRedate(from,content,index,deli);
                                 Logger.info(id+" -> Added redate edit on delimiter "+deli+" from "+from+" to "+content);
@@ -132,21 +137,36 @@ public class TextForward extends AbstractForward{
                                 addRegexReplacement(content,"");
                                 Logger.info(id+" -> Remove matches off "+content);
                                 break;
-                            case "rexsplit":
-                                addRexsplit(deli,content);
-                                Logger.info(id+" -> Get items from "+content+ " and join with "+deli);
-                                break;
                             case "rexkeep":
                                 addRexsplit("",content);
                                 Logger.info(id+" -> Keep result of "+content);
                                 break;
-                            case "prepend":
+                            case "prepend":case "prefix":
                                 addPrepend(content);
                                 Logger.info(id+" -> Added prepend of "+content);
                                 break;
-                            case "append":
+                            case "append": case "suffix":
                                 addAppend(content);
                                 Logger.info(id+" -> Added append of "+content);
+                                break;
+                            case "cutstart":
+                                if( NumberUtils.toInt(content,0)!=0) {
+                                    addCutStart(NumberUtils.toInt(content, 0));
+                                    Logger.info(id + " -> Added cut start of " + content + " chars");
+                                }else{
+                                    Logger.warn(id + " -> Invalid number given to cut from start "+content);
+                                }
+                                break;
+                            case "cutend":
+                                if( NumberUtils.toInt(content,0)!=0) {
+                                    addCutEnd(NumberUtils.toInt(content, 0));
+                                    Logger.info(id + " -> Added cut end of " + content + " chars");
+                                }else{
+                                    Logger.warn(id + " -> Invalid number given to cut from end "+content);
+                                }
+                                break;
+                            default:
+                                Logger.error(id+" -> Unknown type used : "+edit.getAttribute("type"));
                                 break;
                         }
                     });
@@ -307,6 +327,14 @@ public class TextForward extends AbstractForward{
     public void addRegexReplacement( String find, String replace){
         rulesString.add( new String[]{"","regexreplace","from "+find+" -> "+replace} );
         edits.add( input -> input.replaceAll(find,replace) );
+    }
+    public void addCutStart(int characters ){
+        rulesString.add( new String[]{"","cropstart","remove "+characters+" chars from start of data"} );
+        edits.add( input -> input.length()>characters?input.substring(characters):"" );
+    }
+    public void addCutEnd( int characters ){
+        rulesString.add( new String[]{"","cutend","remove "+characters+" chars from end of data"} );
+        edits.add( input -> input.length()>characters?input.substring(0,input.length()-characters):"" );
     }
     /**
      *
