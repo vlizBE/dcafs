@@ -22,7 +22,22 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamPool)   
   * Rework the TaskManager (will be trigger for 0.10.0)
 
-## 0.9.2
+## 0.9.3
+This seems like it's going to be a bugfix/prevent issues release...
+
+### SQLDB
+- If a 'no such table error' is thrown while processing an sqlite prep, it's tried to
+make the table
+  
+### BaseWorker
+- Replaced Executioner with Threadpool for more runtime info
+- Added selfcheck on 10min interval that for now only gives info in the logs about processing
+
+### Bugfixes
+- DebugWorker: if the raw data contains tabs, this wasn't processed properly
+
+## RELEASED
+## 0.9.2 (30/04/2021)
 
 ### Email
 - Added extra restrictions to commands via email
@@ -54,7 +69,7 @@ to accept writables. Applied it to debugworker to use and baseworker to intercon
 ### Bugfixes
 - IssueCollector had a missing bracket in a to string that changed formatting
 
-## RELEASED
+
 ## 0.9.1 (25/04/2021)
 Early release because of the way Influxdb was badly handled on bad connections and that 
 tinylog didn't write to workpath (on linux when using service) because of relative paths.
