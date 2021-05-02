@@ -981,12 +981,14 @@ public class DAS implements DeadThreadListener {
                 }
 
                 // SQLite & SQLDB
+                Logger.info("Flushing database buffers");
                 dbManager.flushAll();
 
                 // Try to send email...
-                if (emailWorker != null)
+                if (emailWorker != null) {
+                    Logger.info("Informing admin");
                     emailWorker.sendEmail("admin", telnet.getTitle() + " shutting down.", "Reason: " + sdReason);
-
+                }
                 try {
                     Logger.info("Giving things two seconds to finish up.");
                     sleep(2000);
@@ -1179,7 +1181,7 @@ public class DAS implements DeadThreadListener {
      */
     public String getQueueSizes() {
         StringJoiner join = new StringJoiner("\r\n", "", "\r\n");
-        join.add("Data buffer size: " + this.dQueue.size() + " records.");
+        join.add("Data buffer: " + this.dQueue.size() + " in receive buffer and "+dataWorker.getWaitingQueueSize()+" waiting...");
 
         if (emailWorker != null)
             join.add("Email backlog: " + emailWorker.getRetryQueueSize() );
