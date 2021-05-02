@@ -53,7 +53,7 @@ public class BaseWorker implements Runnable {
 
 	ThreadPoolExecutor executor = new ThreadPoolExecutor(1,
 			Math.min(3, Runtime.getRuntime().availableProcessors()), // max allowed threads
-			1000L, TimeUnit.MILLISECONDS,
+			30L, TimeUnit.SECONDS,
 			new LinkedBlockingQueue<Runnable>());
 
 	ScheduledExecutorService debug = Executors.newSingleThreadScheduledExecutor();
@@ -238,7 +238,7 @@ public class BaseWorker implements Runnable {
 			try {
 				Datagram d = dQueue.take();
 				readCount++;
-				//Logger.info("Got "+d.getMessage()+" from "+d.originID+" for label "+d.label);
+
 				if (d == null) {
 					Logger.error("Invalid datagram received");
 					continue;
@@ -303,7 +303,9 @@ public class BaseWorker implements Runnable {
 					procTime = Instant.now().toEpochMilli();
 					Logger.info("Processed " + (proc / 1000) + "k lines in " + TimeTools.convertPeriodtoString(millis, TimeUnit.MILLISECONDS));
 				}
-			} catch (InterruptedException e) {
+			} catch (InterruptedException  e) {
+				Logger.error(e);
+			} catch( Exception e){
 				Logger.error(e);
 			}
 		}
@@ -429,6 +431,8 @@ public class BaseWorker implements Runnable {
 				procCount.incrementAndGet();
 			} catch (java.lang.ArrayIndexOutOfBoundsException f) {
 				Logger.error("Interrupted because out ArrayIndexOut" + f + " while processing: " + d.getMessage() + " Label: " + d.label);
+			} catch( Exception e){
+				Logger.error(e);
 			}
 		}
 	}
@@ -560,6 +564,8 @@ public class BaseWorker implements Runnable {
 				}
 			} catch (ArrayIndexOutOfBoundsException l) {
 				Logger.error("Generic requested (" + d.label + ") but no valid id given.");
+			} catch( Exception e){
+				Logger.error(e);
 			}
 			procCount.incrementAndGet();
 		}
@@ -577,6 +583,7 @@ public class BaseWorker implements Runnable {
 
 		public void run(){
 			try{
+
 				String mes = d.getMessage();
 				if( mes.isBlank() ){
 					Logger.warn( d.getOriginID() + " -> Ignoring blank line" );
@@ -606,8 +613,11 @@ public class BaseWorker implements Runnable {
 							}
 					);
 				}
-			}catch( ArrayIndexOutOfBoundsException l ){
+			}catch( ArrayIndexOutOfBoundsException e ){
 				Logger.error("Generic requested ("+d.label+") but no valid id given.");
+			} catch( Exception e){
+				Logger.error("Caught an exception when processing "+d.getMessage()+" from "+d.getOriginID());
+				Logger.error(e);
 			}
 			procCount.incrementAndGet();
 		}
