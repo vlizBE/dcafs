@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.StringJoiner;
 import java.util.concurrent.*;
 
 import com.stream.Readable;
@@ -283,6 +284,12 @@ public class DebugWorker implements Readable {
 								if (d != null) {
 									dQueue.add(d);
 									String[] line = r.split("\t");
+									StringJoiner join = new StringJoiner("\t");
+									if( line.length>3){
+										for( int x=3;x<line.length;x++)
+											join.add(line[x]);
+										line[3]=join.toString();
+									}
 									if (logRaw) {
 										Logger.tag("RAW").warn(d.getPriority() + "\t" + line[2] + "\t" + line[3]);
 									}
