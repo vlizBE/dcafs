@@ -51,12 +51,20 @@ public class BaseWorker implements Runnable {
 
 	protected DeadThreadListener listener;
 
-	ExecutorService executor = Executors.newFixedThreadPool(Math.min(3, Runtime.getRuntime().availableProcessors())); //
+	ThreadPoolExecutor executor = new ThreadPoolExecutor(1,
+			Math.min(3, Runtime.getRuntime().availableProcessors()), // max allowed threads
+			1000L, TimeUnit.MILLISECONDS,
+			new LinkedBlockingQueue<Runnable>());
 
+	ScheduledExecutorService debug = Executors.newSingleThreadScheduledExecutor();
 	public enum FAILreason { // Used by the nmea processing to return the result
 		NONE, PRIORITY, LENGTH, SYNTAX, INVALID, TODO, IGNORED, DISABLED, EMPTY
 	}
 
+	// Debug help
+	int readCount=0;
+	int oldReadCount=0;
+	String lastOrigin="";
 	/* ***************************** C O N S T R U C T O R **************************************/
 
 	/**
@@ -68,6 +76,7 @@ public class BaseWorker implements Runnable {
 		this();
 		this.dQueue = dQueue;
 		Logger.info("Using " + Math.min(3, Runtime.getRuntime().availableProcessors()) + " threads");
+		debug.scheduleAtFixedRate(new SelfCheck(),5,10,TimeUnit.MINUTES);
 	}
 
 	/**
@@ -228,11 +237,13 @@ public class BaseWorker implements Runnable {
 		while (goOn) {
 			try {
 				Datagram d = dQueue.take();
-
+				readCount++;
+				//Logger.info("Got "+d.getMessage()+" from "+d.originID+" for label "+d.label);
 				if (d == null) {
 					Logger.error("Invalid datagram received");
 					continue;
 				}
+				lastOrigin=d.originID;
 				if (d.label == null) {
 					Logger.error("Invalid label received along with message :" + d.getMessage());
 					continue;
@@ -465,6 +476,7 @@ public class BaseWorker implements Runnable {
 	}
 
 	/* ******************************* D E F A U L T   S T U F F *****************************************/
+
 	public void doFILTER( Datagram d ){
 		String[] filter = d.label.split(":");
 
@@ -506,7 +518,22 @@ public class BaseWorker implements Runnable {
 		}
 		procCount.incrementAndGet();
 	}
+	/* ************************************** RUNNABLES ******************************************************/
+	public int getWaitingQueueSize(){
+		return executor.getQueue().size();
+	}
+	public class SelfCheck implements Runnable {
 
+		public void run() {
+			Logger.info("Read count now "+readCount+", old one "+oldReadCount+ " last message processed from "+lastOrigin+ " buffersize "+dQueue.size());
+			Logger.info("Executioner: "+ executor.getCompletedTaskCount()+" completed, "+ executor.getTaskCount()+" submitted, "
+							+ executor.getActiveCount()+"/"+ executor.getCorePoolSize()+"("+executor.getMaximumPoolSize()+")"+" active threads, "+ executor.getQueue().size()+" waiting to run");
+
+			oldReadCount = readCount;
+			readCount=0;
+			lastOrigin="";
+		}
+	}
 	public class ProcessValmap implements Runnable {
 		Datagram d;
 
