@@ -804,16 +804,29 @@ public class SQLDB extends Database{
                                         }
                                     } catch (BatchUpdateException e) {
                                         // One or multiple queries in the batch failed
-                                        Logger.error("Batch error, clearing batched:"+e.getMessage());
+                                        Logger.error(getID()+" -> Batch error, clearing batched:"+e.getMessage());
                                         Logger.error(e.getErrorCode());
-                                        Logger.error("Removed bad records: "+t.clearRecords( id, e.getLargeUpdateCounts() )); // just drop the data or try one by one?
+                                        Logger.error(getID()+" -> Removed bad records: "+t.clearRecords( id, e.getLargeUpdateCounts() )); // just drop the data or try one by one?
                                     } catch (SQLException e) {
-                                        Logger.error("SQL Error:"+e.getMessage());
                                         errors++;
-                                        if( errors>10)
-                                            ok=false;
+                                        if( e.getMessage().contains("no such table")&& SQLDB.this instanceof SQLiteDB){
+                                            Logger.error(getID()+" -> Got no such sqlite table error, trying to resolve...");
+                                            try {
+                                                var c = con.createStatement();
+                                                c.execute(t.create());
+                                                if (!con.getAutoCommit())
+                                                    con.commit();
+                                            } catch (SQLException f) {
+                                                Logger.error(f);
+                                            }
+                                        }
+                                        if( errors>10) {
+                                            Logger.error(getID()+" -> 10x SQL Error:"+e.getMessage() );
+                                            Logger.error(getID()+" -> "+SQLDB.this.toString());
+                                            ok = false;
+                                        }
                                     } catch (Exception e) {
-                                        Logger.error("General Error:"+e);
+                                        Logger.error(getID()+" -> General Error:"+e);
                                         Logger.error(e);
                                         ok=false;
                                     }
