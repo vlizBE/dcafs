@@ -258,7 +258,7 @@ public class SQLiteDB extends SQLDB{
         if( !p.isAbsolute() ){
             p = Path.of(workPath).resolve(p);
         }
-        SQLiteDB db = SQLiteDB.createDB(id,p);
+        SQLiteDB db;
         
         /* RollOver */
         Element roll = XMLtools.getFirstChildByTag(dbe, "rollover");
@@ -278,11 +278,13 @@ public class SQLiteDB extends SQLDB{
             }
             if( rollUnit !=null){
                 Logger.info("Setting rollover: "+format+" "+rollCount+" "+rollUnit);
-                db.setRollOver(format, rollCount, rollUnit);
+                db = SQLiteDB.createDB(id,p,format,rollCount,rollUnit);
             }else{
-                Logger.error(db.getID()+" -> Bad Rollover given" );
+                Logger.error(id+" -> Bad Rollover given" );
                 return null;
             }
+        }else{
+            db = SQLiteDB.createDB(id,p);
         }
         /* Setup */
         db.readBatchSetup(XMLtools.getFirstChildByTag(dbe, "setup"));
@@ -339,8 +341,10 @@ public class SQLiteDB extends SQLDB{
 
         format = DateTimeFormatter.ofPattern(dateFormat);
         rolloverTimestamp = LocalDateTime.now(ZoneOffset.UTC).withNano(0);
+
+        updateRolloverTimestamp(true);
         updateFileName(rolloverTimestamp);
-        updateRolloverTimestamp();
+        updateRolloverTimestamp(false);
         long next = Duration.between(LocalDateTime.now(ZoneOffset.UTC),rolloverTimestamp).toMillis();
         if( next > 1000) {
             rollOverFuture = scheduler.schedule(new DoRollOver(), next, TimeUnit.MILLISECONDS);
@@ -388,6 +392,7 @@ public class SQLiteDB extends SQLDB{
             Logger.error( getID() + " -> Format given is unsupported! Database creation cancelled.");
             return false;
         }
+        Logger.info("Updated filename after rollover to "+getPath());
         return true;
     }
 
@@ -405,40 +410,45 @@ public class SQLiteDB extends SQLDB{
     /**
      * Alter the rollover timestamp to the next rollover moment
      */
-    private void updateRolloverTimestamp(){
-        Logger.debug(id+" -> Original date: "+ rolloverTimestamp.format(TimeTools.LONGDATE_FORMATTER));
+    private void updateRolloverTimestamp(boolean init){
+        Logger.info(id+" -> Original date: "+ rolloverTimestamp.format(TimeTools.LONGDATE_FORMATTER));
         rolloverTimestamp = rolloverTimestamp.withSecond(0).withNano(0);
+        int count = init?0:rollCount;
 
         if(rollUnit==RollUnit.MINUTE){
-            int min = rollCount-rolloverTimestamp.getMinute()%rollCount; // So that 'every 5 min is at 0 5 10 15 etc
-            rolloverTimestamp = rolloverTimestamp.plusMinutes(min==0?rollCount:min);//make sure it's not zero
+            if( init ) {
+                rolloverTimestamp = rolloverTimestamp.minusMinutes( rolloverTimestamp.getMinute()%rollCount );//make sure it's not zero
+            }else{
+                int min = rollCount-rolloverTimestamp.getMinute()%rollCount; // So that 'every 5 min is at 0 5 10 15 etc
+                rolloverTimestamp = rolloverTimestamp.plusMinutes(min == 0 ? rollCount : min);//make sure it's not zero
+            }
         }else{
             rolloverTimestamp = rolloverTimestamp.withMinute(0);
             if(rollUnit==RollUnit.HOUR){
-                rolloverTimestamp = rolloverTimestamp.plusHours( rollCount);
+                rolloverTimestamp = rolloverTimestamp.plusHours( count );
             }else{
                 rolloverTimestamp = rolloverTimestamp.withHour(0);
                 if(rollUnit==RollUnit.DAY){
-                    rolloverTimestamp = rolloverTimestamp.plusDays( rollCount);
+                    rolloverTimestamp = rolloverTimestamp.plusDays( count );
                 }else{
                     if(rollUnit==RollUnit.WEEK){
                         rolloverTimestamp = rolloverTimestamp.minusDays(rolloverTimestamp.getDayOfWeek().getValue()-1);
-                        rolloverTimestamp = rolloverTimestamp.plusWeeks(rollCount);
+                        rolloverTimestamp = rolloverTimestamp.plusWeeks(count);
                     }else{
                         rolloverTimestamp = rolloverTimestamp.withDayOfMonth(1);
                         if(rollUnit==RollUnit.MONTH){
-                            rolloverTimestamp=rolloverTimestamp.plusMonths(rollCount);
+                            rolloverTimestamp=rolloverTimestamp.plusMonths(count);
                         }else{
                             rolloverTimestamp = rolloverTimestamp.withMonth(1);
                             if(rollUnit==RollUnit.YEAR){
-                                rolloverTimestamp=rolloverTimestamp.plusMonths(rollCount);
+                                rolloverTimestamp=rolloverTimestamp.plusMonths(count);
                             }
                         }
                     }
                 }
             }
         }
-        Logger.debug(id+" -> Next rollover date: "+ rolloverTimestamp.format(TimeTools.LONGDATE_FORMATTER));
+        Logger.info(id+" -> Next rollover date: "+ rolloverTimestamp.format(TimeTools.LONGDATE_FORMATTER));
     }
 
     /**
@@ -480,15 +490,14 @@ public class SQLiteDB extends SQLDB{
                     }
                 }
             }
-
-            disconnect();
-
-            updateFileName(rolloverTimestamp);
-            updateRolloverTimestamp();
+            updateFileName(rolloverTimestamp); // first update the filename
+            getTables().forEach( t -> t.clearReadFromDB()); // Otherwise they won't get generated
+            disconnect();// then disconnect, to be sure it doesn't reconnect to the wrong one...
+            Logger.info("Disconnected to connect to new one...");
             if( !createContent(true).isEmpty() ){
                 Logger.error(id+" -> Failed to create the database");
             }
-
+            updateRolloverTimestamp(false); // figure out the next rollover moment
             long next = Duration.between(LocalDateTime.now(ZoneOffset.UTC),rolloverTimestamp).toMillis();
             rollOverFuture = scheduler.schedule( new DoRollOver(),next,TimeUnit.MILLISECONDS);
         }

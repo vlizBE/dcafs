@@ -145,6 +145,9 @@ public class SqlTable {
     public void toggleReadFromDB(){
         readFromDatabase=true;
     }
+    public void clearReadFromDB(){
+        readFromDatabase=false;
+    }
     public boolean isReadFromDB(){
         return readFromDatabase;
     }
