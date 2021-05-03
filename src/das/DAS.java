@@ -1,6 +1,5 @@
 package das;
 
-import com.email.EmailWork;
 import com.email.EmailWorker;
 import com.hardware.i2c.I2CWorker;
 import com.mqtt.MqttWorker;
@@ -40,7 +39,7 @@ import java.util.concurrent.*;
 
 public class DAS implements DeadThreadListener {
 
-    private static final String version = "0.9.3";
+    private static final String version = "0.9.4";
 
     // Last date that changes were made
     Path settingsFile = Path.of("settings.xml");

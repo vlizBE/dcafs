@@ -22,12 +22,20 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamPool)   
   * Rework the TaskManager (will be trigger for 0.10.0)
 
-## 0.9.3
-This seems like it's going to be a bugfix/prevent issues release...
 
-### SQLDB
-- If a 'no such table error' is thrown while processing an sqlite prep, it's tried to
-make the table
+## 0.9.4 (work in progress)
+
+### SQLLiteDB
+- Fixed rollover so the error mentioned in 0.9.2 is no longer thrown
+
+
+## RELEASED
+## 0.9.3 (03/05/2021)
+This seems like it's going to be a bugfix/prevent issues release...
+ToDo: Sometimes a rollover doesn't properly generate the tables...
+
+### SQLLiteDB
+- If a 'no such table error' is thrown while processing an sqlite prep.
   
 ### BaseWorker
 - Replaced Executioner with Threadpool for more runtime info
@@ -35,8 +43,8 @@ make the table
 
 ### Bugfixes
 - DebugWorker: if the raw data contains tabs, this wasn't processed properly
+- SQLiteDB: First change path to db and then disconnect, to be sure nothing else gets in between...
 
-## RELEASED
 ## 0.9.2 (30/04/2021)
 
 ### Email
