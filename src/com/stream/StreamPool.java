@@ -424,8 +424,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 	 */
 	public void readSettingsFromXML( Document xml ) {
 		this.xml=xml;
-		URI uri;
-		
+
 		try {
 			xmlPath = XMLtools.getXMLparent(xml).resolve("settings.xml");
 			Logger.debug("Set XMLPath to "+ xmlPath.toAbsolutePath());
@@ -446,7 +445,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 			readEditorsFromXML(XMLtools.getChildElements( editorsEle, "editor"));
 
 		Element streamsElement = XMLtools.getFirstElementByTag( xml, "streams");
-		if( streams!=null) {
+		if( streamsElement!=null) {
 			retryDelayIncrement = XMLtools.getChildIntValueByTag(streamsElement, "retrydelayincrement", 5);
 			retryDelayMax = XMLtools.getChildIntValueByTag(streamsElement, "retrydelaymax", 30);
 		}
