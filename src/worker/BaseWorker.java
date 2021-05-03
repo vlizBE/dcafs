@@ -307,8 +307,10 @@ public class BaseWorker implements Runnable {
 				Logger.error(e);
 			} catch( Exception e){
 				Logger.error(e);
+
 			}
 		}
+		listener.notifyCancelled("BaseWorker");
 	}
 
 	/**
