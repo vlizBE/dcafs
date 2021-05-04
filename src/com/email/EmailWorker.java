@@ -887,10 +887,10 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 					String body = getTextFromMessage(message);
 
 					if( cmd.contains(" for ")) { // meaning for multiple client checking this inbox
-						Logger.info("Checking if meant for me... "+outbox.getFromStart());
+						Logger.info("Checking if meant for me... "+outbox.getFromStart()+" in "+cmd);
 						if (!cmd.contains( outbox.getFromStart() )) { // the subject doesn't contain the id
 							message.setFlag(Flags.Flag.SEEN, false);// rever the flag to unseen
-							Logger.info("Email read but meant for someone else...");
+							Logger.info("Email read but meant for another instance...");
 							continue; // go to next message
 						}else{
 							String newSub = cmd.replaceFirst(",?"+outbox.getFromStart(),"");
