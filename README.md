@@ -40,6 +40,12 @@ A Java tool (or can also be used as a library) that takes care of all the nitty-
     * Get the status: sudo systemctl status dcafs
     * Read the full log: sudo journalctl -u dcafs.service
     * Follow the console: sudo journalctl -u dcafs.service -f
+   * Optional, add bash Alias for easier usage
+     * echo "alias dcafs_restart='sudo systemctl restart dcafs'" >> .bashrc
+     * echo "alias dcafs_start='sudo systemctl start dcafs'" >> .bashrc
+     * echo "alias dcafs_stop='sudo systemctl stop dcafs'" >> .bashrc
+     * echo "alias dcafs_log='sudo journalctl -u dcafs.service'" >> .bashrc
+     * echo "alias dcafs_track='sudo journalctl -u dcafs.service -f'" >> .bashrc
   
 ## First steps
 
