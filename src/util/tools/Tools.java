@@ -597,7 +597,7 @@ public class Tools {
             return socket.getLocalAddress().getHostAddress();
         } catch (UnknownHostException | java.net.SocketException | java.io.UncheckedIOException e) {
             Logger.error(e.getMessage());
-            return "Unknown";
+            return "None";
         }
     }
 }
