@@ -592,10 +592,11 @@ public class Tools {
 
     public static String getLocalIP() {
         try (final DatagramSocket socket = new DatagramSocket()) {
-            socket.connect(InetAddress.getByName("8.8.8.8"), 10002);
+            var sock = InetAddress.getByName("8.8.8.8");
+            socket.connect(sock, 10002);
             return socket.getLocalAddress().getHostAddress();
-        } catch (UnknownHostException | SocketException e) {
-            e.printStackTrace();
+        } catch (UnknownHostException | java.net.SocketException | java.io.UncheckedIOException e) {
+            Logger.error(e.getMessage());
             return "Unknown";
         }
     }
