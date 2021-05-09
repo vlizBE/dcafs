@@ -24,10 +24,14 @@ From 0.5.0 onwards, this should be better documented...
 
 
 ## 0.9.4 (work in progress)
+### Streams
+- Added the trigger !idle to run if idle condition is lifted
 
-### SQLLiteDB
+### SQLiteDB
 - Fixed rollover so the error mentioned in 0.9.2 is no longer thrown
 
+### Bugfixes
+- Tools get ip failed when no network connectivity was active
 
 ## RELEASED
 ## 0.9.3 (03/05/2021)
