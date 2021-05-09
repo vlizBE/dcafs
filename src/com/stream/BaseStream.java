@@ -49,7 +49,7 @@ public abstract class BaseStream {
 
     private static final String XML_PRIORITY_TAG="priority";
     private static final String XML_STREAM_TAG="stream";
-    protected enum TRIGGER{OPEN,IDLE,CLOSE,HELLO,WAKEUP}
+    protected enum TRIGGER{OPEN,IDLE,CLOSE,HELLO,WAKEUP, IDLE_END}
 
     protected BaseStream( String id, String label, BlockingQueue<Datagram> dQueue){
         this.id=id;
@@ -279,6 +279,7 @@ public abstract class BaseStream {
             case "open":  return TRIGGER.OPEN;
             case "close":  return TRIGGER.CLOSE;
             case "idle":  return TRIGGER.IDLE;
+            case "!idle":  return TRIGGER.IDLE_END;
             case "hello": return TRIGGER.HELLO;
             case "wakeup": return TRIGGER.WAKEUP;
             default : Logger.error("Unknown trigger requested : "+trigger); return null;
