@@ -1,5 +1,6 @@
 package das;
 
+import com.email.EmailSending;
 import com.email.EmailWorker;
 import com.hardware.i2c.I2CWorker;
 import com.mqtt.MqttWorker;
@@ -28,6 +29,7 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.*;
 
+import javax.swing.text.html.Option;
 import java.io.File;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -232,6 +234,14 @@ public class DAS implements DeadThreadListener {
         this();
         if( start )
             startAll();
+    }
+    public String getWorkPath(){
+        return workPath;
+    }
+    public Optional<EmailSending> getEmailSender(){
+        if(emailWorker!=null)
+            return Optional.ofNullable(emailWorker.getSender());
+        return Optional.empty();
     }
     /**
      * Check if the boot up was successful
@@ -853,7 +863,9 @@ public class DAS implements DeadThreadListener {
         baseReq.setIssues(this.issues);
         rtvals.setIssueCollector(issues);
     }
-
+    public IssueCollector getIssueCollector(){
+        return issues;
+    }
     /* ************************************ * R E Q D A T A ****************************************************/
     /**
      * Replace the BaseReq with the extended one

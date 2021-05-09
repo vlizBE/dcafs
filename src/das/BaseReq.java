@@ -1,5 +1,6 @@
 package das;
 
+import com.email.EmailSending;
 import com.email.EmailWorker;
 import com.fazecast.jSerialComm.SerialPort;
 import com.hardware.i2c.I2CWorker;
@@ -25,6 +26,7 @@ import worker.Datagram;
 import worker.DebugWorker;
 import worker.Generic;
 
+import javax.swing.text.html.Option;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -67,6 +69,8 @@ public class BaseReq {
 	protected String workPath=Path.of("").toString();
 
 	static final String UNKNOWN_CMD = "unknown command";
+	protected Optional<EmailSending> sendEmail = Optional.empty();
+
 	/* ******************************  C O N S T R U C T O R *********************************************************/
 	/**
 	 * Constructor requiring a link to the @see RealtimeValues for runtime values
@@ -112,9 +116,23 @@ public class BaseReq {
 	 * @param emailWorker An reference to the emailworker
 	 */
 	public void setEmailWorker(EmailWorker emailWorker) {
-		this.emailWorker = emailWorker;
-	}
 
+		this.emailWorker = emailWorker;
+		sendEmail = Optional.ofNullable(emailWorker.getSender());
+	}
+	protected boolean sendEmail( String to, String subject, String content,String attach,boolean delAttach){
+		return sendEmail.map( e -> {
+			e.sendEmail(to,subject,content,attach,delAttach);
+			return true;
+		}).orElse(false);
+	}
+	protected boolean sendEmail( String to, String subject, String content){
+		return sendEmail.map( e -> {
+			e.sendEmail(to,subject,content);
+			return true;
+		}).orElse(false);
+
+	}
 	/**
 	 * To interact with streams/channels, access to the streampool is needed
 	 * 
