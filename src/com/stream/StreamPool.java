@@ -28,7 +28,6 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
-import java.net.URI;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -310,7 +309,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 
 			if( cw==null ){// If none exists yet
 				if( txt.contains(";") || !reply.isEmpty() ){
-					cw = new ConfirmCollector( id,3,3, (Writable)stream, group );
+					cw = new ConfirmCollector( id,3,3, (Writable)stream, scheduler );
 					cw.addListener(this);
 					if( !reply.isEmpty()) // No need to get data if we won't use it
 						stream.addTarget(cw);
