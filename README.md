@@ -26,7 +26,7 @@ A Java tool (or can also be used as a library) that takes care of all the nitty-
 * If you have java11+ installed properly, just doubleclick the dcafs*.jar
   * If extra folders and a settings.xml appear, this worked
 * If java 11+ isn't installed properly...
-  * [Download and install java 16]<https://adoptopenjdk.net/releases.html?variant=openjdk16&jvmVariant=hotspot>
+  * [Download and install java 16](https://adoptopenjdk.net/releases.html?variant=openjdk16&jvmVariant=hotspot)
    
 ### Linux
 * In a terminal
