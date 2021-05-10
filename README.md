@@ -4,18 +4,17 @@ dcafs
 
 A Java tool (or can also be used as a library) that takes care of all the nitty-gritty that needs to be done when a sensor has generated data and you want to find that data in a database. Hence _data collect alter forward store_. This is in broad terms what it is capable of.
 
-
 ## Main features
 * Collect data from TCP, UDP, MQTT broker, serial/tty, I2C, SPI, email
 * Alter with string and math operations, or filter lines out
 * Forward back to origin, to any other source, a hosted tcp server or email (eg. even create a serial to tcp converter)
-* Store processed data in SQLite (dcafs will create these for you!), MariaDB, MySQL, InfluxDB, PostgreSQL and MSSQL (dcafs can create the tables) while additionally raw can be kept in timestamped .log files
+* Store processed data in SQLite (dcafs will create these), MariaDB, MySQL, InfluxDB, PostgreSQL and MSSQL (dcafs can create/read the table structure) while additionally raw data can be kept in timestamped .log files
 * XML based scheduling engine capabable of interacting with all connected sources and respond to realtime data
 * Single control pipeline that can be accessed via telnet, email or the earlier mentioned scheduling engine
 * Update itself via email (linux only for now)
 
 ## Installation
-* Make sure you have _atleast_ java11 installed 
+* Make sure you have _atleast_ java11 installed, if not [download and install java 16](https://adoptopenjdk.net/releases.html?variant=openjdk16&jvmVariant=hotspot)  
 * Either download the most recent (pre)release [here](https://github.com/vlizBE/dcafs/releases)
   * Unpack to the working folder  
 * Or clone the repo and compile it in an IDE
@@ -25,8 +24,7 @@ A Java tool (or can also be used as a library) that takes care of all the nitty-
 ### Windows
 * If you have java11+ installed properly, just doubleclick the dcafs*.jar
   * If extra folders and a settings.xml appear, this worked
-* If java 11+ isn't installed properly...
-  * [Download and install java 16](https://adoptopenjdk.net/releases.html?variant=openjdk16&jvmVariant=hotspot)
+* If java 11+ isn't installed properly, check the installation step
    
 ### Linux
 * In a terminal
