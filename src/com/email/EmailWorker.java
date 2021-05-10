@@ -515,6 +515,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 				StringJoiner b = new StringJoiner(html?"<br>":"\r\n");
 				b.add("email:reload -> Reload the settings found in te XML.");
 				b.add("email:refs -> Get a list of refs and emailadresses.");
+				b.add("email:send,to,subject,content -> Send an email using to with subject and content");
 				b.add("email:setup -> Get a listing of all the settings.");
 				b.add("email:checknow -> Checks the inbox for new emails");
 				b.add("email:addallow,from,cmd(,isRegex) -> Adds permit allow node, default no regex");
