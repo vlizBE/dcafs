@@ -14,7 +14,7 @@ A Java tool (or can also be used as a library) that takes care of all the nitty-
 * Update itself via email (linux only for now)
 
 ## Installation
-* Make sure you have _atleast_ java11 installed, if not [download and install java 16](https://adoptopenjdk.net/releases.html?variant=openjdk16&jvmVariant=hotspot)  
+* Make sure you have _atleast_ java11 installed. If not, [download and install java 16](https://adoptopenjdk.net/releases.html?variant=openjdk16&jvmVariant=hotspot)  
 * Either download the most recent (pre)release [here](https://github.com/vlizBE/dcafs/releases)
   * Unpack to the working folder  
 * Or clone the repo and compile it in an IDE
