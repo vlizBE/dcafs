@@ -9,16 +9,16 @@ A Java tool (or can also be used as a library) that takes care of all the nitty-
 * Collect data from TCP, UDP, MQTT broker, serial/tty, I2C, SPI, email
 * Alter with string and math operations, or filter lines out
 * Forward back to origin, to any other source, a hosted tcp server or email (eg. even create a serial to tcp converter)
-* Store processed data in SQLite (dcafs will create these for you!), MariaDB, MySQL, InfluxDB, PostgreSQL and MSSQL  while additionally raw can be kept in timestamped .log files
+* Store processed data in SQLite (dcafs will create these for you!), MariaDB, MySQL, InfluxDB, PostgreSQL and MSSQL (dcafs can create the tables) while additionally raw can be kept in timestamped .log files
 * XML based scheduling engine capabable of interacting with all connected sources and respond to realtime data
-* Single control pipeline that can be accessed by telnet, email or the earlier mentioned scheduling engine
+* Single control pipeline that can be accessed via telnet, email or the earlier mentioned scheduling engine
 * Update itself via email (linux only for now)
 
 ## Installation
-* Make sure you have atleast java11 installed 
+* Make sure you have _atleast_ java11 installed 
 * Either download the most recent (pre)release [here](https://github.com/vlizBE/dcafs/releases)
   * Unpack to the working folder  
-* Or clone the repo
+* Or clone the repo and compile it in an IDE
   * copy the resulting dcafs*.jar and lib folder to a working dir
 
 ## Running it
@@ -26,6 +26,7 @@ A Java tool (or can also be used as a library) that takes care of all the nitty-
 * If you have java11+ installed properly, just doubleclick the dcafs*.jar
   * If extra folders and a settings.xml appear, this worked
 * If java 11+ isn't installed properly...
+  * [Download and install java 16]<https://adoptopenjdk.net/releases.html?variant=openjdk16&jvmVariant=hotspot>
    
 ### Linux
 * In a terminal
@@ -114,7 +115,7 @@ The instance that started it all 8 years ago (and is still very active onboard [
 * sends out emails when the ships leaves or returns to the harbour
 * can be monitored from shore using email
 
-The above is the biggest project it's used for, here some smaller ones:
+The above is the biggest project it's used for, here are some smaller ones:
 
 * The earlier mentioned 'calibration and verification process' is also used in a mobile setup build that has visited the RV James Cook.
 * Multiple Beaglebones are running dcafs to log salinity data for an experimental setup that tracks Enhanced silicate weathering
