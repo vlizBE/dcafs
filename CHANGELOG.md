@@ -22,8 +22,11 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamPool)   
   * Rework the TaskManager (will be trigger for 0.10.0)
 
+## 0.9.5 (work in progress)
 
-## 0.9.4 (work in progress)
+## RELEASED
+## 0.9.4 (11/05/2021)
+
 ### Streams
 - Added the trigger !idle to run if idle condition is lifted
 
@@ -32,8 +35,8 @@ From 0.5.0 onwards, this should be better documented...
 
 ### Bugfixes
 - Tools get ip failed when no network connectivity was active
+- TransServer: For some reason the addresss was missing from the store command
 
-## RELEASED
 ## 0.9.3 (03/05/2021)
 This seems like it's going to be a bugfix/prevent issues release...
 ToDo: Sometimes a rollover doesn't properly generate the tables...
@@ -51,7 +54,7 @@ ToDo: Sometimes a rollover doesn't properly generate the tables...
 ### Bugfixes
 - DebugWorker: if the raw data contains tabs, this wasn't processed properly
 - SQLiteDB: First change path to db and then disconnect, to be sure nothing else gets in between...
-- TransServer: For some reason the addresss was missing from the store command
+
 
 ## 0.9.2 (30/04/2021)
 
