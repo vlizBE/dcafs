@@ -281,14 +281,15 @@ public class BaseWorker implements Runnable {
 								readables.put(d.getReadable().getID(),d.getReadable());
 							readables.entrySet().removeIf( entry -> entry.getValue().isInvalid()); // cleanup
 							break;
-						case "system":
-							executor.execute(() -> reqData.createResponse(d.getMessage(), d.getWritable(), false));
-							break;
 						case "test":
 							executor.execute(() -> Logger.info(d.originID + "|" + d.label + " -> " + d.getMessage()));
 							break;
 						case "email":
 							executor.execute(() -> reqData.emailResponse(d));
+							break;
+						case "system":
+							executor.execute(() -> reqData.createResponse(d.getMessage(), d.getWritable(), false));
+							break;
 						case "void":
 							break;
 						default:
@@ -305,6 +306,8 @@ public class BaseWorker implements Runnable {
 				}
 			} catch (InterruptedException  e) {
 				Logger.error(e);
+			}catch( RejectedExecutionException e){
+				Logger.error(e.getMessage());
 			} catch( Exception e){
 				Logger.error(e);
 
