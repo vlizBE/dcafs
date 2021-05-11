@@ -22,6 +22,7 @@ import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
+import util.xml.XMLtools;
 import worker.Datagram;
 import worker.DebugWorker;
 import worker.Generic;
@@ -1042,8 +1043,14 @@ public class BaseReq {
 			return "Failed to add default email settings";
 		}
 		
-		if( emailWorker == null )
-			return "No EmailWorker defined (yet), use email:addblank to add blank to xml.";
+		if( emailWorker == null ){
+			if(request[1].equals("reload") && XMLtools.hasElementByTag(xml, "email") ){
+				das.addEmailWorker();
+			}else{
+				return "No EmailWorker defined (yet), use email:addblank to add blank to xml.";
+			}
+		}
+
 		return emailWorker.replyToSingleRequest(request[1], html);
 	}
 
