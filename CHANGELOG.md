@@ -45,9 +45,13 @@ ToDo: Sometimes a rollover doesn't properly generate the tables...
 - Replaced Executioner with Threadpool for more runtime info
 - Added selfcheck on 10min interval that for now only gives info in the logs about processing
 
+### Other
+- After email:addblank, loading is possible with email:reload
+
 ### Bugfixes
 - DebugWorker: if the raw data contains tabs, this wasn't processed properly
 - SQLiteDB: First change path to db and then disconnect, to be sure nothing else gets in between...
+- TransServer: For some reason the addresss was missing from the store command
 
 ## 0.9.2 (30/04/2021)
 
