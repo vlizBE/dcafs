@@ -258,7 +258,7 @@ public class TcpServer implements StreamListener {
 		XMLfab fab = XMLfab.withRoot(xmlPath, "settings", XML_PARENT_TAG);
 
 		fab.selectOrCreateParent("default","id",handler.getID());
-
+		fab.attr("address",handler.getIP());
 		if( handler.getLabel().equalsIgnoreCase("system")){
 			fab.removeAttr("label");
 		}else{
