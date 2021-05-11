@@ -957,7 +957,10 @@ public class TaskManager implements CollectorFuture {
 				b.add(task.id + " -> " + task);
 			}
 		}
-		return b.toString()+ clk + intr + other;
+		Logger.info("clk;"+clk.length());
+		Logger.info("other;"+other.length());
+		Logger.info("intr;"+intr.length());
+		return b.toString()+ (clk.length()>19?clk:"") + intr + (other.length()>19?other:"");
 	}
 	/**
 	 * Get a listing of all the managed tasksets
@@ -965,8 +968,11 @@ public class TaskManager implements CollectorFuture {
 	 * @return A string with the toString result of the taskset
 	 */
 	public String getTaskSetListing( String newline ){
-		StringBuilder b = new StringBuilder();
-		b.append("-Task sets-").append(newline);
+		if( tasksets.isEmpty() ){
+			return "No tasksets yet."+newline;
+		}
+		StringBuilder b = new StringBuilder("-Task sets-");
+		b.append(newline);
 		for( TaskSet set : tasksets.values()){
 			b.append((char) 27).append("[31m").append(set.getID()).append(" ==> ").append(set.getDescription()).append("(")
 					.append(set.getTasks().size()).append(" items)").append("Run type:").append(set.getRunType()).append(newline);
@@ -1269,10 +1275,11 @@ public class TaskManager implements CollectorFuture {
 				Logger.tag(TINY_TAG).info("["+ id +"] Tasks File ["+ref+"] found!");
 			}
 
-			Element ss = XMLtools.getFirstElementByTag( doc, ref );
-			if( ss==null)
-				ss = XMLtools.getFirstElementByTag( doc, "tasklist" );
-
+			Element ss = XMLtools.getFirstElementByTag( doc, "tasklist" );
+			if( ss==null) {
+				Logger.error("No valid taskmanager script, need the node tasklist");
+				return false;
+			}
 			for( Element el : XMLtools.getChildElements( XMLtools.getFirstChildByTag( ss,"tasksets" ), "taskset" )){
 				var description = XMLtools.getStringAttribute(el,"name","");
 				if( description.isEmpty() )
