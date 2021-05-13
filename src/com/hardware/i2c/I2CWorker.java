@@ -43,7 +43,7 @@ public class I2CWorker implements Runnable {
 
     public I2CWorker(Document xml, BlockingQueue<Datagram> dQueue) {
         this.dQueue = dQueue;
-        scriptsPath = XMLtools.getXMLparent(xml).resolve("devices");
+        scriptsPath = XMLtools.getXMLparent(xml).resolve("i2cscripts");
         this.readSettingsFromXML(xml);
     }
     public boolean setDebug( boolean debug ){
@@ -55,8 +55,7 @@ public class I2CWorker implements Runnable {
     /**
      * Adds a device to the hashmap
      * 
-     * @param id         The name of the device, will be used to reference it from
-     *                   the TaskManager etc
+     * @param id         The name of the device, will be used to reference it from the TaskManager etc
      * @param controller The controller the device is connected to
      * @param address    The address the device had
      * @return The created device
@@ -217,7 +216,7 @@ public class I2CWorker implements Runnable {
             xmls = files.filter(p -> p.toString().endsWith(".xml")).collect(Collectors.toList());
         }catch (IOException e) {            
             Logger.error("Something went wrong trying to read the commandset files");
-            return "Failed to read files in devices folder";
+            return "Failed to read files in i2cscripts folder";
         }
         Logger.info("Reading I2C scripts from: "+scriptsPath);
 
