@@ -87,7 +87,10 @@ public class FilterForward extends AbstractForward {
             fab.comment("Sources go here");
             sources.forEach( src -> fab.addChild("source", src) );
         }
-        if( rules.size()<=1 && sources.size()==1){
+        if( rules.isEmpty() )
+            return fab.build()!=null;
+
+        if( rules.size()==1 && sources.size()==1){
             fab.attr("type",rulesString.get(0)[1]).content(rulesString.get(0)[2]);
         }else{
             fab.content("");
