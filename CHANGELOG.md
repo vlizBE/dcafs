@@ -24,6 +24,17 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.9.5 (work in progress)
 
+### TaskManager
+- Changed the default folder to tmscripts, this doesn't affect current installs
+
+### Breaking changes
+- default path for i2c xml is moved from devices to i2cscripts
+
+### Fixes
+- dbm:store command was missing from dbm:?
+- TransHandler: label containing a : wasn't processed properly
+- FilterForward: without rules had issues writing to xml
+
 ## RELEASED
 ## 0.9.4 (11/05/2021)
 
@@ -35,7 +46,7 @@ From 0.5.0 onwards, this should be better documented...
 
 ### Bugfixes
 - Tools get ip failed when no network connectivity was active
-- TransServer: For some reason the addresss was missing from the store command
+- TransServer: For some reason the address was missing from the store command
 
 ## 0.9.3 (03/05/2021)
 This seems like it's going to be a bugfix/prevent issues release...
