@@ -1107,16 +1107,16 @@ public class BaseReq {
 
 					// Add to the settings xml
 					try {
-						Files.createDirectories(Path.of(workPath,"scripts"));
+						Files.createDirectories(Path.of(workPath,"tmscripts"));
 					} catch (IOException e) {
 						Logger.error(e);
 					}
 					XMLfab tmFab = XMLfab.withRoot(das.getXMLdoc(), "das","settings");
-					tmFab.addChild("taskmanager","scripts"+File.separator+cmd[1]+".xml").attr("id",cmd[1]).build();
+					tmFab.addChild("taskmanager","tmscripts"+File.separator+cmd[1]+".xml").attr("id",cmd[1]).build();
 					tmFab.build();
 
 					// Create an empty file
-					XMLfab.withRoot(Path.of(workPath,"scripts",cmd[1]+".xml"), "tasklist")
+					XMLfab.withRoot(Path.of(workPath,"tmscripts",cmd[1]+".xml"), "tasklist")
 						.comment("Any id is case insensitive")
 						.comment("Reload the script using tm:reload,"+cmd[1])
 						.comment("If something is considered default, it can be omitted")
@@ -1332,7 +1332,7 @@ public class BaseReq {
 						cmd[4] //script
 						)) {
 					// Check if the script already exists, if not build it
-					var p = Path.of(workPath,"devices",cmd[4]+".xml");
+					var p = Path.of(workPath,"i2cscripts",cmd[4]+".xml");
 					if( !Files.exists(p)){
 						XMLfab.withRoot(p,"commandset").attr("script",cmd[4])
 								.addParent("command","An empty command to start with")
