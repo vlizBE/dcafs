@@ -119,8 +119,9 @@ public class TransHandler extends SimpleChannelInboundHandler<byte[]> implements
 			msg = msg.substring(3);
 			String[] cmds = msg.split(":");
 			if (msg.startsWith("label:")) {
-				label = cmds[1];
+				label = msg.substring(9);
 				msg="ts:alter,"+getID()+",label:"+label;
+				writeLine("Altered label to "+label);
 				tempLabel="system";
 			}else if (msg.startsWith("id:")) {
 				this.id = msg.split(":")[1];
