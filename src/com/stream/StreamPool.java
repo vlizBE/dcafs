@@ -1095,15 +1095,20 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				}
 
 			case "reload":
-				if( cmds.length!=2)
-					return "Incorrect amount of arguments, expected mf:reload,id";
-				if( getMath(cmds[1]).isEmpty() )
-					return "No such math";
-				getMath(cmds[1]).ifPresent( m ->
-									m.readFromXML(
-											XMLfab.withRoot(xmlPath,"das","maths").getChild("math","id",cmds[1]).get()
-											));
-				return "Math reloaded";
+				if( cmds.length==2) {
+					if(getMath(cmds[1]).isEmpty())
+						return "No such math";
+
+					getMath(cmds[1]).ifPresent(m ->
+							m.readFromXML(
+									XMLfab.withRoot(xmlPath, "das", "maths").getChild("math", "id", cmds[1]).get()
+							));
+					return "Math reloaded: "+cmds[1];
+				}else{ //reload all
+					maths.clear();
+					readMathsFromXML(XMLfab.withRoot(xmlPath, "das", "maths").getChildren("math"));
+					return "Maths reloaded";
+				}
 			case "list":
 				join.setEmptyValue("No maths yet");
 				maths.values().forEach(m -> join.add(m.toString()).add(""));
