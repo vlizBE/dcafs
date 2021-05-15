@@ -1,5 +1,6 @@
 package util.math;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import util.tools.Tools;
 
 import java.math.BigDecimal;
@@ -32,9 +33,36 @@ public class Calculations {
     static final TimeZone UTC = TimeZone.getTimeZone("UTC");
 
 
-    public static Function<BigDecimal[],BigDecimal> procSalinity( int tempIndex, int condIndex, double pressure){
+    public static Function<BigDecimal[],BigDecimal> procSalinity( String temp, String cond, String pressure){
+        int tempIndex,condIndex,pressIndex;
+        double tempVal,condVal,pressVal;
+        if( temp.startsWith("i")) {
+            tempIndex = NumberUtils.toInt(temp.substring(1), -1);
+            tempVal=0;
+        }else{
+            tempIndex=-1;
+            tempVal=NumberUtils.toDouble(temp);
+        }
+        if( cond.startsWith("i")) {
+            condIndex = NumberUtils.toInt(cond.substring(1), -1);
+            condVal=0;
+        }else{
+            condIndex=-1;
+            condVal=NumberUtils.toDouble(cond);
+        }
+
+        if( pressure.startsWith("i")) {
+            pressIndex = NumberUtils.toInt(pressure.substring(1), -1);
+            pressVal=0;
+        }else{
+            pressIndex=-1;
+            pressVal=NumberUtils.toDouble(pressure);
+        }
         return x -> {
-            var sal = calcSalinity(x[condIndex].doubleValue(),x[tempIndex].doubleValue(),pressure);
+            var sal = calcSalinity(
+                    condIndex==-1?condVal:x[condIndex].doubleValue(),
+                    tempIndex==-1?tempVal:x[tempIndex].doubleValue(),
+                    pressIndex==-1?pressVal:x[pressIndex].doubleValue());
             return BigDecimal.valueOf(sal);
         };
     }
@@ -134,14 +162,41 @@ public class Calculations {
 
     /**
      * Create a function to calculate soundvelocity based on values present in the array
-     * @param tempIndex The index of temperature in the array (dC ITS90)
-     * @param salIndex The index of salinity in the array (psu)
-     * @param pressure The pressure in DB
+     * @param temp The index or value of temperature in the array (dC ITS90)
+     * @param salinity The index or value of salinity in the array (psu)
+     * @param pressure The index or value pressure in DB
      * @return Calculated sound velocity in m/s
      */
-    public static Function<BigDecimal[],BigDecimal> procSoundVelocity( int tempIndex, int salIndex, double pressure){
+    public static Function<BigDecimal[],BigDecimal> procSoundVelocity( String temp, String salinity, String pressure){
+        int tempIndex,salIndex,pressIndex;
+        double tempVal,salVal,pressVal;
+        if( temp.startsWith("i")) {
+            tempIndex = NumberUtils.toInt(temp.substring(1), -1);
+            tempVal=0;
+        }else{
+            tempIndex=-1;
+            tempVal=NumberUtils.toDouble(temp);
+        }
+        if( salinity.startsWith("i")) {
+            salIndex = NumberUtils.toInt(salinity.substring(1), -1);
+            salVal=0;
+        }else{
+            salIndex=-1;
+            salVal=NumberUtils.toDouble(salinity);
+        }
+
+        if( pressure.startsWith("i")) {
+            pressIndex = NumberUtils.toInt(pressure.substring(1), -1);
+            pressVal=0;
+        }else{
+            pressIndex=-1;
+            pressVal=NumberUtils.toDouble(pressure);
+        }
         return x -> {
-            var sal = calcSndVelC(x[salIndex].doubleValue(),x[tempIndex].doubleValue(),pressure);
+            var sal = calcSndVelC(
+                    salIndex==-1?salVal:x[salIndex].doubleValue(),
+                    tempIndex==-1?tempVal:x[tempIndex].doubleValue(),
+                    pressIndex==-1?pressVal:x[pressIndex].doubleValue());
             return BigDecimal.valueOf(sal);
         };
     }

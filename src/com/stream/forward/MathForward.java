@@ -26,7 +26,7 @@ public class MathForward extends AbstractForward {
     private boolean doCmd = false;
     HashMap<String,String> defs = new HashMap<>();
 
-    public enum OP_TYPE{COMPLEX, SCALE, LN, SALINITY}
+    public enum OP_TYPE{COMPLEX, SCALE, LN, SALINITY, SVC}
 
     public MathForward(String id, String source, BlockingQueue<Datagram> dQueue ){
         super(id,source,dQueue);
@@ -212,6 +212,7 @@ public class MathForward extends AbstractForward {
         }
 
         Operation op;
+        String[] indexes;
         switch( type ){
               case COMPLEX:
                     // Apply defs
@@ -225,18 +226,23 @@ public class MathForward extends AbstractForward {
                     op = new Operation( expression, MathUtils.decodeBigDecimals("i"+index,expression,"scale",0),index);
                     break;
             case LN:
-                op = new Operation( expression, MathUtils.decodeBigDecimals("i"+index,expression,"log",0),index);
+                op = new Operation( expression, MathUtils.decodeBigDecimals("i"+index,expression,"ln",0),index);
                 break;
             case SALINITY:
-                String[] indexes = expression.replace("i","").split(",");
+                indexes = expression.split(",");
                 if( indexes.length != 3 ){
                     Logger.error("Not enough info for salinity calculation");
                     return false;
                 }
-                op = new Operation(expression, Calculations.procSalinity(
-                        NumberUtils.toInt(indexes[0]),
-                        NumberUtils.toInt(indexes[1]),
-                        NumberUtils.toDouble(indexes[2])), index);
+                op = new Operation(expression, Calculations.procSalinity(indexes[0],indexes[1],indexes[2]), index);
+                break;
+            case SVC:
+                indexes = expression.split(",");
+                if( indexes.length != 3 ){
+                    Logger.error("Not enough info for salinity calculation");
+                    return false;
+                }
+                op = new Operation(expression, Calculations.procSoundVelocity(indexes[0],indexes[1],indexes[2]), index);
                 break;
             default:
                 return false;
@@ -288,6 +294,7 @@ public class MathForward extends AbstractForward {
             case "scale": return OP_TYPE.SCALE;
             case "ln": return OP_TYPE.LN;
             case "salinity": return OP_TYPE.SALINITY;
+            case "svc": return OP_TYPE.SVC;
         }
         Logger.error("Invalid op type given, valid ones complex,scale");
         return null;
