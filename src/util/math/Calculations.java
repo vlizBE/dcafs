@@ -4,6 +4,7 @@ import util.tools.Tools;
 
 import java.math.BigDecimal;
 import java.util.TimeZone;
+import java.util.function.Function;
 
 public class Calculations {
 
@@ -30,9 +31,16 @@ public class Calculations {
 
     static final TimeZone UTC = TimeZone.getTimeZone("UTC");
 
+
+    public static Function<BigDecimal[],BigDecimal> procSalinity( int tempIndex, int condIndex, double pressure){
+        return x -> {
+            var sal = calcSalinity(x[condIndex].doubleValue(),x[tempIndex].doubleValue(),pressure);
+            return BigDecimal.valueOf(sal);
+        };
+    }
     /**
      * Method that calculates the salinity based on CTP measurements
-     * 
+     *
      * @param C The conductivity in Siemens/meter
      * @param T The temperature in �C
      * @param P The pressure in
@@ -124,6 +132,19 @@ public class Calculations {
         return sv;
     }
 
+    /**
+     * Create a function to calculate soundvelocity based on values present in the array
+     * @param tempIndex The index of temperature in the array (dC ITS90)
+     * @param salIndex The index of salinity in the array (psu)
+     * @param pressure The pressure in DB
+     * @return Calculated sound velocity in m/s
+     */
+    public static Function<BigDecimal[],BigDecimal> procSoundVelocity( int tempIndex, int salIndex, double pressure){
+        return x -> {
+            var sal = calcSndVelC(x[salIndex].doubleValue(),x[tempIndex].doubleValue(),pressure);
+            return BigDecimal.valueOf(sal);
+        };
+    }
     /**
      * Method that calculates the truewindvelocity based on apparant wind and ships
      * navigation Source: http://coaps.fsu.edu/woce/truewind/paper/
