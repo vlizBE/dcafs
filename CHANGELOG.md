@@ -23,6 +23,11 @@ From 0.5.0 onwards, this should be better documented...
   * Rework the TaskManager (will be trigger for 0.10.0)
 
 ## 0.9.5 (work in progress)
+
+### Breaking changes
+- default path for i2c xml is moved from devices to i2cscripts
+- default node of the xml changed to dcafs from das
+
 ### BaseWorker
 - Added the labels rtval:x and rttext:x, to directly store as rtval/rtext without generic
 the rtval part only works if the data = a number (so no delimiting etc)
@@ -43,9 +48,6 @@ for calibration coefficients that might otherwise be buried...
 
 ### TaskManager
 - Changed the default folder to tmscripts, this doesn't affect current installs
-
-### Breaking changes
-- default path for i2c xml is moved from devices to i2cscripts
 
 ### Fixes
 - dbm:store command was missing from dbm:?

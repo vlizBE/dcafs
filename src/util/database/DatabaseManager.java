@@ -195,11 +195,11 @@ public class DatabaseManager{
                .build();
     }
     public static boolean addBlankTableToXML( Document xml, String id, String table, String format){
-        var opt = XMLfab.getRootChildren(xml, "das",XML_PARENT_TAG,"sqlite")
+        var opt = XMLfab.getRootChildren(xml, "dcafs",XML_PARENT_TAG,"sqlite")
                 .filter( db -> db.getAttribute("id").equals(id) )
                 .findFirst();
         if( opt.isEmpty()){
-            opt = XMLfab.getRootChildren(xml, "das",XML_PARENT_TAG,"server")
+            opt = XMLfab.getRootChildren(xml, "dcafs",XML_PARENT_TAG,"server")
                     .filter( db -> db.getAttribute("id").equals(id) && !db.getAttribute("type").startsWith("influx") )
                     .findFirst();
             if( opt.isEmpty())

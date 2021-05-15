@@ -114,7 +114,7 @@ public class Waypoints {
             Logger.error("XML not defined yet.");
             return false;
         }  
-        Element root = XMLtools.getFirstElementByTag( xml, "das" );
+        Element root = XMLtools.getFirstElementByTag( xml, "dcafs" );
         int cnt=0;
         if( root==null){
             Logger.error("XML root (das) not found.");

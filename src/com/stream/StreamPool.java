@@ -377,7 +377,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 		Document xmlDoc = XMLtools.readXML(this.xmlPath);
 		if( xmlDoc != null ){
 			Element streamElement = XMLtools.getFirstElementByTag(xmlDoc, XML_PARENT_TAG);
-			var child = XMLfab.withRoot(xmlPath,"das","streams").getChild("stream","id",id);
+			var child = XMLfab.withRoot(xmlPath,"dcafs","streams").getChild("stream","id",id);
 			var base = getStream(id);
 			if( child.isEmpty() )
 				return "No stream named "+id+" found.";
@@ -533,7 +533,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 		}
 
 		// Check if it already exists (based on id and address?)
-		XMLfab fab = XMLfab.withRoot(xmlPath, "das",XML_PARENT_TAG);
+		XMLfab fab = XMLfab.withRoot(xmlPath, "dcafs",XML_PARENT_TAG);
 		boolean exists = fab.hasChild(XML_CHILD_TAG, "id", stream.getID() );
 
 		if( exists && !overwrite ){
@@ -1061,7 +1061,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				if( cmds.length==4){
 					mm.addComplex(cmds[cmds.length-1]);
 				}
-				mm.writeToXML(XMLfab.withRoot(xmlPath, "das"));
+				mm.writeToXML(XMLfab.withRoot(xmlPath, "dcafs"));
 				return "Math with id "+cmds[1]+ " created.";
 			case "alter":
 				var mf = maths.get(cmds[1]);
@@ -1101,12 +1101,12 @@ public class StreamPool implements StreamListener, CollectorFuture {
 
 					getMath(cmds[1]).ifPresent(m ->
 							m.readFromXML(
-									XMLfab.withRoot(xmlPath, "das", "maths").getChild("math", "id", cmds[1]).get()
+									XMLfab.withRoot(xmlPath, "dcafs", "maths").getChild("math", "id", cmds[1]).get()
 							));
 					return "Math reloaded: "+cmds[1];
 				}else{ //reload all
 					maths.clear();
-					readMathsFromXML(XMLfab.withRoot(xmlPath, "das", "maths").getChildren("math"));
+					readMathsFromXML(XMLfab.withRoot(xmlPath, "dcafs", "maths").getChildren("math"));
 					return "Maths reloaded";
 				}
 			case "list":
@@ -1148,7 +1148,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				}
 
 				if( getMath(cmds[1]).map( f -> f.addComplex(cmds[2]) ).orElse(false) ){
-					getMath(cmds[1]).get().writeToXML(XMLfab.withRoot(xmlPath, "das"));
+					getMath(cmds[1]).get().writeToXML(XMLfab.withRoot(xmlPath, "dcafs"));
 					return "Operation added and written to xml";
 				}
 				return "Failed to add operation";
@@ -1192,7 +1192,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				break;
 			case "reload":
 				if( cmds.length == 2) {
-					Optional<Element> x = XMLfab.withRoot(xmlPath, "das", "editors").getChild("editor", "id", cmds[1]);
+					Optional<Element> x = XMLfab.withRoot(xmlPath, "dcafs", "editors").getChild("editor", "id", cmds[1]);
 					if (x.isPresent()) {
 						getEditor(cmds[1]).ifPresent(e -> e.readFromXML(x.get()));
 					} else {
@@ -1200,7 +1200,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 					}
 				}else{ //reload all
 					editors.clear();
-					readEditorsFromXML(XMLfab.withRoot(xmlPath, "das", "editors").getChildren("editor"));
+					readEditorsFromXML(XMLfab.withRoot(xmlPath, "dcafs", "editors").getChildren("editor"));
 				}
 				return "Editor reloaded.";
 			case "list":
@@ -1293,7 +1293,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				Logger.info("Filter exists?"+fOpt.isPresent());
 				switch( fOpt.map( f -> f.addRule(step) ).orElse(0) ){
 					case 1:
-						fOpt.get().writeToXML(XMLfab.withRoot(xmlPath, "das"));
+						fOpt.get().writeToXML(XMLfab.withRoot(xmlPath, "dcafs"));
 						return "Rule added to "+cmds[1];
 					case 0:  return "Failed to add rule, no such filter called "+cmds[1];
 					case -1: return "Unknown type in "+step+", try ff:types for a list";
@@ -1324,7 +1324,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				}
 
 				addFilter(cmds[1].toLowerCase(),src.toString(),"")
-						.writeToXML( XMLfab.withRoot(xmlPath, "das") );
+						.writeToXML( XMLfab.withRoot(xmlPath, "dcafs") );
 				return "Blank filter with id "+cmds[1]+ " created"+(cmds.length>2?", with source "+cmds[2]:"")+".";
 			case "addshort":
 				if( cmds.length<4)
@@ -1332,7 +1332,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				if( getFilter(cmds[1]).isPresent() )
 					return "Already filter with that id";
 				addFilter(cmds[1].toLowerCase(),cmds[2],cmds[3])
-						.writeToXML( XMLfab.withRoot(xmlPath, "das") );
+						.writeToXML( XMLfab.withRoot(xmlPath, "dcafs") );
 				return "Filter with id "+cmds[1]+ " created, with source "+cmds[2]+" and rule "+cmds[3];
 			case "addtemp":
 				if( getFilter(cmds[1]).isPresent() ){
@@ -1370,7 +1370,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				}
 			case "reload":
 				if( cmds.length == 2) {
-					Optional<Element> x = XMLfab.withRoot(xmlPath, "das", "filters").getChild("filter", "id", cmds[1]);
+					Optional<Element> x = XMLfab.withRoot(xmlPath, "dcafs", "filters").getChild("filter", "id", cmds[1]);
 					if (x.isPresent()) {
 						getFilter(cmds[1]).ifPresent(f -> f.readFromXML(x.get()));
 					} else {
@@ -1378,7 +1378,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 					}
 				}else{ //reload all
 					filters.clear();
-					readFiltersFromXML(XMLfab.withRoot(xmlPath, "das", "filters").getChildren("filter"));
+					readFiltersFromXML(XMLfab.withRoot(xmlPath, "dcafs", "filters").getChildren("filter"));
 				}
 				return "Filter reloaded.";
 			case "test":

@@ -33,7 +33,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 	protected static final byte[] EOL = new byte[]{13,10};
 
 	String repeat = "";
-	String title = "DAS";
+	String title = "dcafs";
 	String mode ="";
 	byte[] last={'s','t'};
 	/* ****************************************** C O N S T R U C T O R S ********************************************/
@@ -130,23 +130,12 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 				return;
 			}else {
 				d.setLabel(LABEL);
-				if( repeat.startsWith("das")){
-					d.setMessage("das:!");
-					repeat="";
-					this.writeString("Leaving DAS setup!\r\n>");
-				}else{
-					repeat="";
-					this.writeString("Mode cleared!\r\n>");
-					return;
-				}
+				repeat="";
+				this.writeString("Mode cleared!\r\n>");
+				return;
 			}
 		}else {
-			if( d.getMessage().startsWith("das") ){
-				repeat = d.getMessage()+":";
-				d.setLabel(LABEL+":"+repeat);
-			}else{
-				d.setMessage(repeat+d.getMessage());
-			}
+			d.setMessage(repeat+d.getMessage());
 		}
 		
 		if ( d.getMessage().equalsIgnoreCase("bye")||d.getMessage().equalsIgnoreCase("exit")) {

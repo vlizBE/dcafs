@@ -26,7 +26,7 @@ public class TelnetServer {
     ChannelFuture telnetFuture;
     
     int port = 23;
-    String title = "DAS";
+    String title = "dcafs";
     String ignore = "";
     
     BlockingQueue<Datagram> dQueue;

@@ -491,7 +491,7 @@ public class BaseReq {
 					.add( "update:script,<script name> -> Try to update the given script")
 					.add( "update:settings -> Try to update the settings.xml");
 				return join.toString();			
-			case "das":
+			case "dcafs":
 				return "todo";
 			case "script"://fe. update:script,tasks.xml
 				if( !spl[1].endsWith(".xml"))
@@ -997,7 +997,7 @@ public class BaseReq {
 					return "Something went wrong trying to get the file";
 				}
 			case "adddebugnode":
-				DebugWorker.addBlank(XMLfab.withRoot(das.getXMLdoc(),"das","settings"));
+				DebugWorker.addBlank(XMLfab.withRoot(das.getXMLdoc(),"dcafs","settings"));
 				return "Tried to add node";
 			case "sms":
 				das.sendSMS("admin", "Test");
@@ -1117,7 +1117,7 @@ public class BaseReq {
 					} catch (IOException e) {
 						Logger.error(e);
 					}
-					XMLfab tmFab = XMLfab.withRoot(das.getXMLdoc(), "das","settings");
+					XMLfab tmFab = XMLfab.withRoot(das.getXMLdoc(), "dcafs","settings");
 					tmFab.addChild("taskmanager","tmscripts"+File.separator+cmd[1]+".xml").attr("id",cmd[1]).build();
 					tmFab.build();
 
@@ -1331,7 +1331,7 @@ public class BaseReq {
 					return "Incorrect number of variables: i2c:adddevice,id,bus,address,script";
 				if( das.getI2CWorker().isEmpty()) // if no worker yet, make it
 					das.addI2CWorker();
-				if( I2CWorker.addDeviceToXML(XMLfab.withRoot(das.getXMLdoc(),"das","settings"),
+				if( I2CWorker.addDeviceToXML(XMLfab.withRoot(das.getXMLdoc(),"dcafs","settings"),
 						cmd[1], //id
 						Integer.parseInt(cmd[2]), //bus
 						cmd[3], //address in hex
@@ -1528,7 +1528,7 @@ public class BaseReq {
 				var db = das.getDatabase(cmd[1]);
 				if( db ==null)
 					return "No such database found "+cmd[1];
-				if( db.buildGenericFromTable(XMLfab.withRoot(das.getXMLdoc(), "das","generics"),cmd[2],cmd[3],cmd.length>4?cmd[4]:",") ){
+				if( db.buildGenericFromTable(XMLfab.withRoot(das.getXMLdoc(), "dcafs","generics"),cmd[2],cmd[3],cmd.length>4?cmd[4]:",") ){
 					return "Generic written";
 				}else{
 					return "Failed to write to xml";
@@ -1540,7 +1540,7 @@ public class BaseReq {
 				if( dbs ==null)
 					return "No such database found "+cmd[1];
 
-				if( dbs.buildGenericFromTables(XMLfab.withRoot(das.getXMLdoc(), "das","generics"),false,cmd.length>2?cmd[2]:",") >0 ){
+				if( dbs.buildGenericFromTables(XMLfab.withRoot(das.getXMLdoc(), "dcafs","generics"),false,cmd.length>2?cmd[2]:",") >0 ){
 					return "Generic(s) written";
 				}else{
 					return "No generics written";
@@ -1672,7 +1672,7 @@ public class BaseReq {
 				mysql.setID(id);
 				if( mysql.connect(false) ){
 					mysql.getCurrentTables(false);
-					mysql.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"das","settings","databases"));
+					mysql.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"dcafs","settings","databases"));
 					das.getDatabaseManager().addSQLDB(id,mysql);
 					return "Connected to MYSQL database and stored in xml as id "+id;
 				}else{
@@ -1683,7 +1683,7 @@ public class BaseReq {
 				mssql.setID(id);
 				if( mssql.connect(false) ){
 					mssql.getCurrentTables(false);
-					mssql.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"das","settings","databases"));
+					mssql.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"dcafs","settings","databases"));
 					das.getDatabaseManager().addSQLDB(id,mssql);
 					return "Connected to MYSQL database and stored in xml as id "+id;
 				}else{
@@ -1696,7 +1696,7 @@ public class BaseReq {
 				mariadb.setID(id);
 				if( mariadb.connect(false) ){
 					mariadb.getCurrentTables(false);
-					mariadb.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"das","settings","databases"));
+					mariadb.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"dcafs","settings","databases"));
 					das.getDatabaseManager().addSQLDB(id,mariadb);
 					return "Connected to MariaDB database and stored in xml with id "+id;
 				}else{
@@ -1709,7 +1709,7 @@ public class BaseReq {
 				postgres.setID(id);
 				if( postgres.connect(false) ){
 					postgres.getCurrentTables(false);
-					postgres.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"das","settings","databases"));
+					postgres.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"dcafs","settings","databases"));
 					das.getDatabaseManager().addSQLDB(id,postgres);
 					return "Connected to PostgreSQL database and stored in xml with id "+id;
 				}else{
@@ -1721,7 +1721,7 @@ public class BaseReq {
 				var sqlite = SQLiteDB.createDB(id,Path.of(workPath,dbName));
 				if( sqlite.connect(false) ){
 					das.getDatabaseManager().addSQLiteDB(id,sqlite);
-					sqlite.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"das","settings","databases") );
+					sqlite.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"dcafs","settings","databases") );
 					return "Created SQLite at "+dbName+" and wrote to settings.xml";
 				}else{
 					return "Failed to create SQLite";
@@ -1733,7 +1733,7 @@ public class BaseReq {
 				if( dbOpt == null)
 					return "No such database "+cmds[1];
 				// Select the correct server node
-				var fab = XMLfab.withRoot(das.getXMLdoc(),"das","settings","databases");
+				var fab = XMLfab.withRoot(das.getXMLdoc(),"dcafs","settings","databases");
 				if( fab.selectParent("server","id",cmds[1]).isEmpty())
 					fab.selectParent("sqlite","id",cmds[1]);
 				if( fab.hasChild("table","name",cmds[2]))
@@ -1753,14 +1753,14 @@ public class BaseReq {
 				if( s == null)
 					return cmds[1] +" is not an SQLite";
 				s.setRollOver(cmds[4],NumberUtils.createInteger(cmds[2]),cmds[3]);
-				s.writeToXml(XMLfab.withRoot(das.getXMLdoc(),"das","settings","databases"));
+				s.writeToXml(XMLfab.withRoot(das.getXMLdoc(),"dcafs","settings","databases"));
 				s.forceRollover();
 				return "Rollover added";
 			case "addinfluxdb": case "addinflux":
 				var influx = new Influx(address,dbName,user,pass);
 				if( influx.connect(false)){
 					das.getDatabaseManager().addInfluxDB(id,influx);
-					influx.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"das","settings","databases") );
+					influx.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"dcafs","settings","databases") );
 					return "Connected to InfluxDB and stored it in xml with id "+id;
 				}else{
 					return "Failed to connect to InfluxDB";

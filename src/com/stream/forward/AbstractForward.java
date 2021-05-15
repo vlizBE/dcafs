@@ -65,7 +65,7 @@ public abstract class AbstractForward implements Writable {
                 dQueue.add( new Datagram(this,source,1,"system") );
             }
             if( xmlOk )
-                writeToXML( XMLfab.withRoot(xml, "das"));
+                writeToXML( XMLfab.withRoot(xml, "dcafs"));
             return true;
         }
         return false;

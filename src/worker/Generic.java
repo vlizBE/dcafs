@@ -402,7 +402,7 @@ public class Generic {
     }
     public static String addBlankToXML( Document xml, String id, String format,String delimiter ){
         char[] form = format.toCharArray();
-        XMLfab fab = XMLfab.withRoot(xml, "das","generics")
+        XMLfab fab = XMLfab.withRoot(xml, "dcafs","generics")
                                 .addParent("generic").attr("id",id).attr("table");
         if( format.length() > 1)
             fab.attr("delimiter",delimiter);

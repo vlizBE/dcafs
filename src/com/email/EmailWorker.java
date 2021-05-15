@@ -293,7 +293,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 	 */
 	public boolean writeToXML( ){
 
-		XMLfab fab = XMLfab.withRoot(xml,"das","settings");
+		XMLfab fab = XMLfab.withRoot(xml,"dcafs","settings");
 		fab.digRoot("email");
 		if( outbox != null ) {
 			fab.selectOrCreateParent("outbox")
@@ -323,7 +323,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 	}
 	private boolean writePermits(){
 		if( xml != null ){
-			var fab = XMLfab.withRoot(xml,"das","settings","email");
+			var fab = XMLfab.withRoot(xml,"dcafs","settings","email");
 			fab.selectOrCreateParent("permits");
 			fab.clearChildren();
 			for( var permit : permits ){
@@ -1099,7 +1099,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 		String user = ""; // User for the outbox
 		String pass = ""; // Password for the outbox user
 		boolean auth = false; // Whether or not to authenticate
-		String from = "das"; // The email address to use as from address
+		String from = "dcafs"; // The email address to use as from address
 
 		public void setServer(String server, int port){
 			this.port = port;

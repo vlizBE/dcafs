@@ -115,7 +115,7 @@ public class GisTools {
         Element gpx = xml.createElement("gpx");
         gpx.setAttribute( "xmlns","http://www.topografix.com/GPX/1/1"); 
         gpx.setAttribute( "xmlns:xsi","http://www.w3.org/2001/XMLSchema-instance" );
-        gpx.setAttribute( "creator","DAS" );
+        gpx.setAttribute( "creator","dcafs" );
         gpx.setAttribute( "version","1.1"); 
         gpx.setAttribute( "xsi:schemaLocation","http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd");
 

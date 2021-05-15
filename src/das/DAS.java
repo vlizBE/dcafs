@@ -29,7 +29,6 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.*;
 
-import javax.swing.text.html.Option;
 import java.io.File;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -125,7 +124,7 @@ public class DAS implements DeadThreadListener {
         if (Files.notExists(settingsFile)) {
             Logger.warn("No Settings.xml file found, creating new one. Searched path: "
                     + settingsFile.toFile().getAbsolutePath());
-            this.createXML();
+            createXML();
         } else {
             Logger.info("Settings.xml found at " + settingsFile.toFile().getAbsolutePath());
         }
@@ -218,7 +217,7 @@ public class DAS implements DeadThreadListener {
             }
 
             /* Math Collectors */
-            MathCollector.createFromXml( XMLfab.getRootChildren(xml,"das","maths","*") ).forEach(
+            MathCollector.createFromXml( XMLfab.getRootChildren(xml,"dcafs","maths","*") ).forEach(
                 mc ->
                 {
                     rtvals.addMathCollector(mc);
@@ -292,7 +291,7 @@ public class DAS implements DeadThreadListener {
     /* ************************************  X M L *****************************************************/
     public void createXML() {
        
-       XMLfab.withRoot(settingsFile, "das") 
+       XMLfab.withRoot(settingsFile, "dcafs")
                 .addParent("settings")
                     .addChild("mode","normal")
                 .addParent("streams")
@@ -644,7 +643,7 @@ public class DAS implements DeadThreadListener {
             xml = XMLtools.readXML(settingsFile);
             dataWorker.clearGenerics();
         }        
-        XMLfab.getRootChildren( xml, "das","generics","generic")
+        XMLfab.getRootChildren( xml, "dcafs","generics","generic")
                 .forEach( ele ->  dataWorker.addGeneric( Generic.readFromXML(ele) ) );
     }
     public void loadValMaps(boolean clear){
@@ -652,7 +651,7 @@ public class DAS implements DeadThreadListener {
             xml = XMLtools.readXML(settingsFile);
             dataWorker.clearValMaps();
         }
-        XMLfab.getRootChildren( xml, "das","valmaps","valmap")
+        XMLfab.getRootChildren( xml, "dcafs","valmaps","valmap")
                 .forEach( ele ->  dataWorker.addValMap( ValMap.readFromXML(ele) ) );
     }
     /* *****************************************  T R A N S S E R V E R ******************************************/
