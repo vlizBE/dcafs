@@ -749,6 +749,12 @@ public class BaseReq {
 		}
 		return streampool.replyToFilterCmd(request[1], wr, html);
 	}
+	public String doEditorForward( String[] request, Writable wr, boolean html ){
+		if( streampool == null ){
+			return "No StreamPool defined.";
+		}
+		return streampool.replyToEditorCmd(request[1], wr, html);
+	}
 	public String doMathForward( String[] request, Writable wr, boolean html ){
 		if( streampool == null ){
 			return "No StreamPool defined.";

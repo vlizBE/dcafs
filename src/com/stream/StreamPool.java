@@ -2,9 +2,9 @@ package com.stream;
 
 import com.stream.collector.CollectorFuture;
 import com.stream.collector.ConfirmCollector;
+import com.stream.forward.EditorForward;
 import com.stream.forward.FilterForward;
 import com.stream.forward.MathForward;
-import com.stream.forward.TextForward;
 import com.stream.serialport.ModbusStream;
 import com.stream.serialport.MultiStream;
 import com.stream.serialport.SerialStream;
@@ -58,7 +58,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 
 	HashMap<String, ConfirmCollector> confirmCollectors = new HashMap<>();
 	HashMap<String, FilterForward> filters = new HashMap<>();
-	HashMap<String, TextForward> editors = new HashMap<>();
+	HashMap<String, EditorForward> editors = new HashMap<>();
 	HashMap<String, MathForward> maths = new HashMap<>();
 
 	LinkedHashMap<String,BaseStream> streams = new LinkedHashMap<>();
@@ -1164,20 +1164,52 @@ public class StreamPool implements StreamListener, CollectorFuture {
 		}
 	}
 	/*    ------------------------ Editor ---------------------------------    */
-	public TextForward addEditor(String id, String source ){
-		var tf = new TextForward( id, source, dQueue);
+	public EditorForward addEditor(String id, String source ){
+		var tf = new EditorForward( id, source, dQueue);
 		editors.put( id, tf);
 		return tf;
 	}
-	public Optional<TextForward> getEditor(String id ){
+	public Optional<EditorForward> getEditor(String id ){
 		return Optional.ofNullable( editors.get(id));
 	}
-	public void readEditorsFromXML( List<Element> editors ){
+	public void readEditorsFromXML( List<Element> editorsEle ){
 		Logger.info("Reading TextForwards from xml");
-		for( Element ele : editors ){
-			var tf = new TextForward( ele,dQueue );
-			this.editors.put(tf.getID().replace("editor:", ""), tf);
+		for( Element ele : editorsEle ){
+			var tf = new EditorForward( ele,dQueue );
+			editors.put(tf.getID().replace("editor:", ""), tf);
 		}
+	}
+	public String replyToEditorCmd( String cmd, Writable wr, boolean html ){
+		if( cmd.isEmpty() )
+			cmd = "list";
+
+		String[] cmds = cmd.split(",");
+
+		StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
+		FilterForward ff;
+		switch( cmds[0] ) {
+			case "?":
+				break;
+			case "reload":
+				if( cmds.length == 2) {
+					Optional<Element> x = XMLfab.withRoot(xmlPath, "das", "editors").getChild("editor", "id", cmds[1]);
+					if (x.isPresent()) {
+						getEditor(cmds[1]).ifPresent(e -> e.readFromXML(x.get()));
+					} else {
+						return "No such editor, " + cmds[1];
+					}
+				}else{ //reload all
+					editors.clear();
+					readEditorsFromXML(XMLfab.withRoot(xmlPath, "das", "editors").getChildren("editor"));
+				}
+				return "Editor reloaded.";
+			case "list":
+				join.setEmptyValue("No editors yet");
+				editors.values().forEach( f -> join.add(f.toString()).add("") );
+				return join.toString();
+			case "rules": return EditorForward.getHelp(html?"<br>":"\r\n");
+		}
+		return "Unknown command: "+cmds[0];
 	}
 	/*    ------------------------ Filter ---------------------------------    */
 	public FilterForward addFilter(String id, String source, String rule ){
@@ -1345,6 +1377,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 						return "No such filter, " + cmds[1];
 					}
 				}else{ //reload all
+					filters.clear();
 					readFiltersFromXML(XMLfab.withRoot(xmlPath, "das", "filters").getChildren("filter"));
 				}
 				return "Filter reloaded.";
