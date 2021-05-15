@@ -33,11 +33,12 @@ the rtval part only works if the data = a number (so no delimiting etc)
 for calibration coefficients that might otherwise be buried...
 - mf:reload now reloads all of them from the xml
 - Added type salinity to calculate salinity based on temp,cond and pressure
+- Added type svc to calculate soundvelocity based on temp,salinity and pressure
 
 ### EditorForward
 - Renamed from TextForward
 - Started adding commands with ef:x
-- Added charsplit to split a string based on charposition (fe. ABCDEF -> 3 => ABC,DEF )
+- Added charsplit to split a string based on charposition (fe. ABCDEF -> 2,4 => AB,CD,EF )
 - Added trim, to remove leading an trailing spaces (instead of remove ' ')
 
 ### TaskManager
