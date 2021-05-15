@@ -7,6 +7,7 @@ import util.tools.Tools;
 import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.math.RoundingMode;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
@@ -138,7 +139,12 @@ public class MathUtils {
                     if( bd1!=null && bd2!=null ){ // meaning both numbers
                         proc = x -> bd1.pow(bd2.intValue());
                     }else if( bd1==null && bd2!=null){ // meaning first is an index and second a number
-                        proc = x -> x[i1].pow(bd2.intValue());
+                        if( bd2.compareTo(BigDecimal.valueOf(0.5)) == 0){ // root
+                            proc = x -> x[i1].sqrt(MathContext.DECIMAL64);
+                        }else{
+                            proc = x -> x[i1].pow(bd2.intValue());
+                        }
+
                     }else if( bd1!=null && bd2==null ){ //  meaning first is a number and second an index
                         proc = x -> bd1.pow(x[i2].intValue());
                     }else{ // meaning both indexes
@@ -159,6 +165,22 @@ public class MathUtils {
                         proc = x -> bd1.setScale(x[i2].intValue(),RoundingMode.HALF_UP);
                     }else{ // meaning both indexes
                         proc = x -> x[i1].setScale(x[i2].intValue(),RoundingMode.HALF_UP);
+                    }
+                }catch (IndexOutOfBoundsException | NullPointerException e){
+                    Logger.error("Bad things when "+first+" "+op+" "+second+ " was processed");
+                    Logger.error(e);
+                }
+                break;
+            case "ln":
+                try{
+                    if( bd1!=null && bd2!=null ){ // meaning both numbers
+                        Logger.error("Todo - ln bd,bd");
+                    }else if( bd1==null && bd2!=null){ // meaning first is an index and second a number
+                        Logger.error("Todo - ln ix,bd");
+                    }else if( bd1!=null && bd2==null ){ //  meaning first is a number and second an index
+                        proc = x -> BigDecimal.valueOf(Math.log(x[i2].doubleValue()));
+                    }else{ // meaning both indexes
+                        proc = x -> BigDecimal.valueOf(Math.log(x[i2].doubleValue()));
                     }
                 }catch (IndexOutOfBoundsException | NullPointerException e){
                     Logger.error("Bad things when "+first+" "+op+" "+second+ " was processed");
