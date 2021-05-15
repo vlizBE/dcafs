@@ -4,6 +4,7 @@ import com.stream.Readable;
 import com.stream.Writable;
 import das.BaseReq;
 import das.RealtimeValues;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import util.DeadThreadListener;
 import util.math.MathUtils;
@@ -250,16 +251,22 @@ public class BaseWorker implements Runnable {
 				}
 				d.label = d.label.toLowerCase();
 
+				String readID = d.label.substring(d.label.indexOf(":")+1);
+
 				if (d.label.startsWith("generic:")) {
 					executor.execute(new ProcessGeneric(d));
 				} else if (d.label.startsWith("nmea")) {
 					executor.execute(new ProcessNMEA(d));
 				} else if (d.label.startsWith("valmap")) {
 					executor.execute(new ProcessValmap(d));
+				} else if (d.label.startsWith("rtval:")) {
+					executor.execute(() -> storeRtval(readID,d.getMessage(),d.getOriginID()));
+				} else if (d.label.startsWith("rttext:")) {
+					executor.execute(() -> rtvals.setRealtimeText(readID,d.message));
 				} else if (d.label.startsWith("read:")) {
 					if( d.getWritable()!=null){
 						if (d.label.split(":").length >= 2) {
-							String readID = d.label.substring(d.label.indexOf(":")+1);
+
 							var read = readables.get(readID);
 							if( read != null && !read.isInvalid()){
 								read.addTarget(d.getWritable());
@@ -314,6 +321,21 @@ public class BaseWorker implements Runnable {
 			}
 		}
 		listener.notifyCancelled("BaseWorker");
+	}
+	private void storeRtval( String param, String data, String origin ){
+		try{
+			var val = NumberUtils.toDouble(data,Double.NEGATIVE_INFINITY);
+			if( val == Double.NEGATIVE_INFINITY && NumberUtils.isCreatable(data)){
+				val = NumberUtils.createInteger(data);
+			}
+			if( val != Double.NEGATIVE_INFINITY){
+				rtvals.setRealtimeValue(param,val);
+			}else{
+				Logger.warn("Tried to convert "+data+" from "+origin+" to an rtval...");
+			}
+		}catch( NumberFormatException e ){
+			Logger.warn("Tried to convert "+data+" from "+origin+" to an rtval...");
+		}
 	}
 
 	/**
