@@ -4,27 +4,45 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.tools.TimeTools;
+import util.tools.Tools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
 import java.util.function.Function;
 import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
 
-public class TextForward extends AbstractForward{
+public class EditorForward extends AbstractForward{
     ArrayList<Function<String,String>> edits = new ArrayList<>(); // for the scale type
 
-    public TextForward(String id, String source, BlockingQueue<Datagram> dQueue ){
+    public EditorForward(String id, String source, BlockingQueue<Datagram> dQueue ){
         super(id,source,dQueue);
     }
-    public TextForward(Element ele, BlockingQueue<Datagram> dQueue  ){
+    public EditorForward(Element ele, BlockingQueue<Datagram> dQueue  ){
         super(dQueue);
         readFromXML(ele);
     }
+
+    public static String getHelp(String eol) {
+        StringJoiner join = new StringJoiner(eol);
+        join.add(">Standard edits");
+        join.add("  remove -> Remove all occurrences of the value given");
+        join.add("  trim -> Remove leading an trailing spaces");
+        join.add("  retime -> Reformat a time field");
+        join.add("  redate -> Reformat a date field");
+        join.add("  replace -> Replace the occurrences of find attribute with the value given");
+        join.add(">Regex based edits");
+        join.add("  rexkeep -> Only keep the result of the regex given");
+        join.add("  rexsplit -> Split the data according to regex value given and use the delim attribute for the result");
+        join.add("  rexreplace -> Replace the occurrences of the result of the find attribute regex with the value given");
+        return join.toString();
+    }
+
     @Override
     protected boolean addData(String data) {
 
@@ -77,104 +95,147 @@ public class TextForward extends AbstractForward{
 
         if( XMLtools.hasChildByTag(editor,"edit") ) { // if rules are defined as nodes
             // Process all the types except 'start'
-
             XMLtools.getChildElements(editor, "edit")
-                    .stream()
-                    .forEach( edit ->
-                    {
-                        String deli = XMLtools.getStringAttribute(edit,"delimiter",",");
-                        String content = edit.getTextContent();
-                        String from = XMLtools.getStringAttribute(edit,"from",",");
-                        String find = XMLtools.getStringAttribute(edit,"find","");
-                        String leftover = XMLtools.getStringAttribute(edit,"leftover","append");
-
-                        int index = XMLtools.getIntAttribute(edit,"index",-1);
-
-                        if( content == null ){
-                            Logger.error(id+" -> Missing content in an edit.");
-                            return;
-                        }
-                        if( index == -1 ){
-                            Logger.warn(id+" -> Using default index of 0");
-                            index=0;
-                        }
-                        switch(edit.getAttribute("type")){
-                            case "resplit":
-                                addResplit(deli,content,leftover.equalsIgnoreCase("append"));
-                                Logger.info(id+" -> Added resplit edit on delimiter "+deli+" with formula "+content);
-                                break;
-                            case "rexsplit":
-                                addRexsplit(deli,content);
-                                Logger.info(id+" -> Get items from "+content+ " and join with "+deli);
-                                break;
-                            case "redate":
-                                addRedate(from,content,index,deli);
-                                Logger.info(id+" -> Added redate edit on delimiter "+deli+" from "+from+" to "+content);
-                                break;
-                            case "retime":
-                                addRetime(from,content,index,deli);
-                                Logger.info(id+" -> Added retime edit on delimiter "+deli+" from "+from+" to "+content);
-                                break;
-                            case "replace":
-                                if( find.isEmpty() ){
-                                    Logger.error(id+" -> Tried to add an empty replace.");
-                                }else{
-                                    addReplacement(find,content);
-                                }
-                                break;
-                            case "rexreplace": case "regexreplace":
-                                if( find.isEmpty() ){
-                                    Logger.error(id+" -> Tried to add an empty replace.");
-                                }else{
-                                    addRegexReplacement(find,content);
-                                }
-                                break;
-                            case "remove":
-                                addReplacement(content,"");
-                                Logger.info(id+" -> Remove occurrences off "+content);
-                                break;
-                            case "rexremove":
-                                addRegexReplacement(content,"");
-                                Logger.info(id+" -> Remove matches off "+content);
-                                break;
-                            case "rexkeep":
-                                addRexsplit("",content);
-                                Logger.info(id+" -> Keep result of "+content);
-                                break;
-                            case "prepend":case "prefix":
-                                addPrepend(content);
-                                Logger.info(id+" -> Added prepend of "+content);
-                                break;
-                            case "append": case "suffix":
-                                addAppend(content);
-                                Logger.info(id+" -> Added append of "+content);
-                                break;
-                            case "cutstart":
-                                if( NumberUtils.toInt(content,0)!=0) {
-                                    addCutStart(NumberUtils.toInt(content, 0));
-                                    Logger.info(id + " -> Added cut start of " + content + " chars");
-                                }else{
-                                    Logger.warn(id + " -> Invalid number given to cut from start "+content);
-                                }
-                                break;
-                            case "cutend":
-                                if( NumberUtils.toInt(content,0)!=0) {
-                                    addCutEnd(NumberUtils.toInt(content, 0));
-                                    Logger.info(id + " -> Added cut end of " + content + " chars");
-                                }else{
-                                    Logger.warn(id + " -> Invalid number given to cut from end "+content);
-                                }
-                                break;
-                            default:
-                                Logger.error(id+" -> Unknown type used : "+edit.getAttribute("type"));
-                                break;
-                        }
-                    });
+                    .forEach( this::processNode );
+        }else{
+            processNode(editor);
         }
-
         return false;
     }
+    private void processNode( Element edit ){
+        String deli = XMLtools.getStringAttribute(edit,"delimiter",",");
+        String content = edit.getTextContent();
+        String from = XMLtools.getStringAttribute(edit,"from",",");
+        String find = XMLtools.getStringAttribute(edit,"find","");
+        String leftover = XMLtools.getStringAttribute(edit,"leftover","append");
 
+        int index = XMLtools.getIntAttribute(edit,"index",-1);
+
+        if( content == null ){
+            Logger.error(id+" -> Missing content in an edit.");
+            return;
+        }
+        if( index == -1 ){
+            Logger.warn(id+" -> Using default index of 0");
+            index=0;
+        }
+        switch(edit.getAttribute("type")){
+            case "charsplit":
+                addCharSplit( deli,content );
+                Logger.info(id+" -> Added charsplit with delimiter "+deli+" on positions "+content);
+                break;
+            case "resplit":
+                addResplit(deli,content,leftover.equalsIgnoreCase("append"));
+                Logger.info(id+" -> Added resplit edit on delimiter "+deli+" with formula "+content);
+                break;
+            case "rexsplit":
+                addRexsplit(deli,content);
+                Logger.info(id+" -> Get items from "+content+ " and join with "+deli);
+                break;
+            case "redate":
+                addRedate(from,content,index,deli);
+                Logger.info(id+" -> Added redate edit on delimiter "+deli+" from "+from+" to "+content);
+                break;
+            case "retime":
+                addRetime(from,content,index,deli);
+                Logger.info(id+" -> Added retime edit on delimiter "+deli+" from "+from+" to "+content);
+                break;
+            case "replace":
+                if( find.isEmpty() ){
+                    Logger.error(id+" -> Tried to add an empty replace.");
+                }else{
+                    addReplacement(find,content);
+                }
+                break;
+            case "rexreplace": case "regexreplace":
+                if( find.isEmpty() ){
+                    Logger.error(id+" -> Tried to add an empty replace.");
+                }else{
+                    addRegexReplacement(find,content);
+                }
+                break;
+            case "remove":
+                addReplacement(content,"");
+                Logger.info(id+" -> Remove occurrences off "+content);
+                break;
+            case "trim":
+                addTrim( );
+                Logger.info(id+" -> Trimming spaces");
+                break;
+            case "rexremove":
+                addRegexReplacement(content,"");
+                Logger.info(id+" -> Remove matches off "+content);
+                break;
+            case "rexkeep":
+                addRexsplit("",content);
+                Logger.info(id+" -> Keep result of "+content);
+                break;
+            case "prepend":case "prefix":
+                addPrepend(content);
+                Logger.info(id+" -> Added prepend of "+content);
+                break;
+            case "append": case "suffix":
+                addAppend(content);
+                Logger.info(id+" -> Added append of "+content);
+                break;
+            case "cutstart":
+                if( NumberUtils.toInt(content,0)!=0) {
+                    addCutStart(NumberUtils.toInt(content, 0));
+                    Logger.info(id + " -> Added cut start of " + content + " chars");
+                }else{
+                    Logger.warn(id + " -> Invalid number given to cut from start "+content);
+                }
+                break;
+            case "cutend":
+                if( NumberUtils.toInt(content,0)!=0) {
+                    addCutEnd(NumberUtils.toInt(content, 0));
+                    Logger.info(id + " -> Added cut end of " + content + " chars");
+                }else{
+                    Logger.warn(id + " -> Invalid number given to cut from end "+content);
+                }
+                break;
+            default:
+                Logger.error(id+" -> Unknown type used : "+edit.getAttribute("type"));
+                break;
+        }
+    }
+    public void addCharSplit( String deli, String positions){
+        rulesString.add( new String[]{"","charsplit","At "+positions+" to "+deli} );
+        String[] pos = Tools.splitList(positions);
+        var indexes = new ArrayList<Integer>();
+        if( !pos[0].equals("0"))
+            indexes.add(0);
+        Arrays.stream(pos).forEach( p -> indexes.add( NumberUtils.toInt(p)));
+
+        String delimiter;
+        if( pos.length >= 2){
+            delimiter = ""+positions.charAt(positions.indexOf(pos[1])-1);
+        }else{
+            delimiter=deli;
+        }
+
+        Function<String,String> edit = input ->
+        {
+            if(indexes.get(indexes.size()-1) > input.length()){
+                Logger.error("Can't split "+input+" if nothing exits at "+indexes.get(indexes.size()-1));
+                return input;
+            }
+            try {
+                StringJoiner result = new StringJoiner(delimiter);
+                for (int a = 0; a < indexes.size() - 1; a++) {
+                    result.add(input.substring(indexes.get(a), indexes.get(a + 1)));
+                }
+                String leftover=input.substring(indexes.get(indexes.size() - 1));
+                if( !leftover.isEmpty())
+                    result.add(leftover);
+                return result.toString();
+            }catch( ArrayIndexOutOfBoundsException e){
+                Logger.error("Failed to apply charsplit on "+input);
+            }
+            return input;
+        };
+        edits.add(edit);
+    }
     /**
      * Alter the formatting of a date field
      * @param from The original format
@@ -266,6 +327,13 @@ public class TextForward extends AbstractForward{
 
         int[] indexes = new int[is.length];
         ArrayList<String> fillers = new ArrayList<>();
+        String prefix;
+        if( resplit.indexOf(is[0])!=0) {
+            prefix = resplit.substring(0, resplit.indexOf(is[0]));
+        }else{
+            prefix="";
+        }
+
         for( int a=0;a<is.length;a++ ){
             // Get the indexes
             indexes[a] = Integer.parseInt(is[a].substring(1));
@@ -286,7 +354,7 @@ public class TextForward extends AbstractForward{
         Function<String,String> edit = input ->
         {
             String[] split = input.split(deli); // Get the source data
-            StringJoiner join = new StringJoiner("");
+            StringJoiner join = new StringJoiner("",prefix,"");
             for( int a=0;a<indexes.length;a++){
                 join.add(split[indexes[a]]).add(fill[a]);
                 split[indexes[a]]=null;
@@ -323,6 +391,10 @@ public class TextForward extends AbstractForward{
     public void addReplacement( String find, String replace){
         rulesString.add( new String[]{"","replace","from "+find+" -> "+replace} );
         edits.add( input -> input.replace(find,replace) );
+    }
+    public void addTrim( ){
+        rulesString.add( new String[]{"","Trim","Trim spaces "} );
+        edits.add( input -> input.trim() );
     }
     public void addRegexReplacement( String find, String replace){
         rulesString.add( new String[]{"","regexreplace","from "+find+" -> "+replace} );
