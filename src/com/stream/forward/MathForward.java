@@ -1,7 +1,9 @@
 package com.stream.forward;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.math.Calculations;
 import util.math.MathFab;
 import util.math.MathUtils;
 import util.tools.Tools;
@@ -11,6 +13,7 @@ import worker.Datagram;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
 import java.util.function.Function;
@@ -21,8 +24,9 @@ public class MathForward extends AbstractForward {
     private final ArrayList<Operation> ops = new ArrayList<>();
     private BigDecimal scratchpad = BigDecimal.ZERO;
     private boolean doCmd = false;
+    HashMap<String,String> defs = new HashMap<>();
 
-    public enum OP_TYPE{COMPLEX,SCALE}
+    public enum OP_TYPE{COMPLEX, SCALE, LN, SALINITY}
 
     public MathForward(String id, String source, BlockingQueue<Datagram> dQueue ){
         super(id,source,dQueue);
@@ -54,7 +58,7 @@ public class MathForward extends AbstractForward {
             badDataCount++;
             Logger.error("No valid numbers in the data: "+data+" after split on "+delimiter+ " "+badDataCount+"/"+MAX_BAD_COUNT);
             if( badDataCount>=MAX_BAD_COUNT) {
-                Logger.error("Too many bad data received, no longer accepting data");
+                Logger.error(id+" -> Too many bad data received, no longer accepting data");
                 return false;
             }else{
                 return true;
@@ -144,6 +148,9 @@ public class MathForward extends AbstractForward {
             fab.comment("Sources go here");
             sources.forEach( src -> fab.addChild("src", src) );
         }
+        if( !defs.isEmpty() ){
+            defs.entrySet().forEach( def -> fab.addChild("def",def.getValue()).attr("ref",def.getKey()));
+        }
         if( rulesString.size()==1 && sources.size()==1){
             fab.content("i"+rulesString.get(0)[1]+"="+rulesString.get(0)[2]);
         }else{
@@ -175,6 +182,10 @@ public class MathForward extends AbstractForward {
         if( content != null && !content.startsWith("\n") ){
             addComplex(content);
         }
+        defs.clear();
+        XMLtools.getChildElements(math, "def")
+                .forEach( def -> defs.put( def.getAttribute("ref"),def.getTextContent()));
+
         XMLtools.getChildElements(math, "op")
                     .forEach( ops -> addOperation(
                             Integer.parseInt(ops.getAttribute("index")),
@@ -186,7 +197,6 @@ public class MathForward extends AbstractForward {
         addSource( XMLtools.getStringAttribute( math, "src", ""));
         return true;
     }
-
     /**
      * Add an operation to this object
      * @param index Which index in the received array should the result be written to
@@ -204,11 +214,30 @@ public class MathForward extends AbstractForward {
         Operation op;
         switch( type ){
               case COMPLEX:
-                    op = new Operation( expression, new MathFab(expression.replace(",",".")),index);
+                    // Apply defs
+                    String exp = expression;
+                    for( var entry : defs.entrySet() ){
+                        exp = exp.replace(entry.getKey(),entry.getValue());
+                    }
+                    op = new Operation( expression, new MathFab(exp.replace(",",".")),index);
                     break;
             case SCALE: // round a number half up with the amount of digits specified
                     op = new Operation( expression, MathUtils.decodeBigDecimals("i"+index,expression,"scale",0),index);
                     break;
+            case LN:
+                op = new Operation( expression, MathUtils.decodeBigDecimals("i"+index,expression,"log",0),index);
+                break;
+            case SALINITY:
+                String[] indexes = expression.replace("i","").split(",");
+                if( indexes.length != 3 ){
+                    Logger.error("Not enough info for salinity calculation");
+                    return false;
+                }
+                op = new Operation(expression, Calculations.procSalinity(
+                        NumberUtils.toInt(indexes[0]),
+                        NumberUtils.toInt(indexes[1]),
+                        NumberUtils.toDouble(indexes[2])), index);
+                break;
             default:
                 return false;
         }
@@ -257,6 +286,8 @@ public class MathForward extends AbstractForward {
         switch(optype){
             case "complex": return OP_TYPE.COMPLEX;
             case "scale": return OP_TYPE.SCALE;
+            case "ln": return OP_TYPE.LN;
+            case "salinity": return OP_TYPE.SALINITY;
         }
         Logger.error("Invalid op type given, valid ones complex,scale");
         return null;
@@ -298,7 +329,7 @@ public class MathForward extends AbstractForward {
         Function<BigDecimal[],BigDecimal> op; // for the scale type
         MathFab fab;    // for the complex type
         int index;      // index for the result
-        String ori;  // The expression before it was decoded mainly for listing purposes
+        String ori;     // The expression before it was decoded mainly for listing purposes
         String cmd =""; // Command in which to replace the $ with the result
 
         public Operation(String ori, Function<BigDecimal[],BigDecimal> op, int index ){
