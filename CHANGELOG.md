@@ -23,6 +23,22 @@ From 0.5.0 onwards, this should be better documented...
   * Rework the TaskManager (will be trigger for 0.10.0)
 
 ## 0.9.5 (work in progress)
+### BaseWorker
+- Added the labels rtval:x and rttext:x, to directly store as rtval/rtext without generic
+the rtval part only works if the data = a number (so no delimiting etc)
+
+### MathForward
+- supports sqrt with ^0.5
+- added def node \<def ref="name">value\</def> to use defaults in a formula (type=complex only), useful
+for calibration coefficients that might otherwise be buried...
+- mf:reload now reloads all of them from the xml
+- Added type salinity to calculate salinity based on temp,cond and pressure
+
+### EditorForward
+- Renamed from TextForward
+- Started adding commands with ef:x
+- Added charsplit to split a string based on charposition (fe. ABCDEF -> 3 => ABC,DEF )
+- Added trim, to remove leading an trailing spaces (instead of remove ' ')
 
 ### TaskManager
 - Changed the default folder to tmscripts, this doesn't affect current installs
@@ -34,6 +50,7 @@ From 0.5.0 onwards, this should be better documented...
 - dbm:store command was missing from dbm:?
 - TransHandler: label containing a : wasn't processed properly
 - FilterForward: without rules had issues writing to xml
+- EditorForward: resplit now uses the chars in front of the first index (were forgotten)
 
 ## RELEASED
 ## 0.9.4 (11/05/2021)
