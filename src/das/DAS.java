@@ -85,8 +85,7 @@ public class DAS implements DeadThreadListener {
     boolean rebootOnShutDown = false;
 
     /* Threading */
-    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);// scheduler for the request data action
-    EventLoopGroup nettyGroup = new NioEventLoopGroup();
+    EventLoopGroup nettyGroup = new NioEventLoopGroup(); // Single group so telnet,trans and streampool can share it
 
     /* Database */
     private final DatabaseManager dbManager = new DatabaseManager();
@@ -117,8 +116,6 @@ public class DAS implements DeadThreadListener {
             Logger.warn("No Settings.xml file found, creating new one. Searched path: "
                     + settingsFile.toFile().getAbsolutePath());
             createXML();
-        } else {
-            Logger.info("Settings.xml found at " + settingsFile.toFile().getAbsolutePath());
         }
 
         xml = XMLtools.readXML(settingsFile);
@@ -133,6 +130,10 @@ public class DAS implements DeadThreadListener {
             if (settings != null) {
                 debug = XMLtools.getChildValueByTag(settings, "mode", "normal").equals("debug");
                 log = XMLtools.getChildValueByTag(settings, "mode", "normal").equals("log");
+
+                String tinylog = XMLtools.getChildValueByTag(settings,"tinylog",workPath);
+                System.setProperty("tinylog.directory", tinylog);
+
                 if (debug) {
                     Logger.info("Program booting in DEBUG mode");
                 } else {
@@ -263,16 +264,6 @@ public class DAS implements DeadThreadListener {
      */
     public LocalDateTime getBootupDateTime() {
         return bootup;
-    }
-
-    /**
-     * Get the scheduler created by das, used for the database manager, has two
-     * threads
-     * 
-     * @return
-     */
-    public ScheduledExecutorService getScheduler() {
-        return this.scheduler;
     }
 
     public String getUptime() {
