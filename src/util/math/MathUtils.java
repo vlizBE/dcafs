@@ -20,7 +20,15 @@ import java.util.function.Function;
 public class MathUtils {
     final static int DIV_SCALE = 8;
 
-    public static Function<BigDecimal[],BigDecimal> decodeBigDecimals(String first, String second, String op, int offset ){
+    /**
+     * Converts a simple operation (only two operands) on elements in an array to a function
+     * @param first The first element of the operation
+     * @param second The second element of the operation
+     * @param op The operator to apply
+     * @param offset The offset for the index in the array
+     * @return The result of the calculation
+     */
+    public static Function<BigDecimal[],BigDecimal> decodeBigDecimalsOp(String first, String second, String op, int offset ){
 
         final BigDecimal bd1;
         final int i1;
@@ -191,6 +199,110 @@ public class MathUtils {
         }
         return proc;
     }
+    /**
+     * Converts a simple operation (only two operands) on elements in an array to a function
+     * @param first The first element of the operation
+     * @param second The second element of the operation
+     * @param op The operator to apply
+     * @param offset The offset for the index in the array
+     * @return The function resulting from the above parameters
+     */
+    public static Function<Double[],Double> decodeDoublesOp(String first, String second, String op, int offset ){
+
+        final Double db1;
+        final int i1;
+        final Double db2 ;
+        final int i2;
+
+        try{
+            if(NumberUtils.isCreatable(first) ) {
+                db1 = NumberUtils.createDouble(first);
+                i1=-1;
+            }else{
+                db1=null;
+                int index = NumberUtils.createInteger( first.substring(1));
+                i1 = first.startsWith("o")?index:index+offset;
+            }
+            if(NumberUtils.isCreatable(second) ) {
+                db2 = NumberUtils.createDouble(second);
+                i2=-1;
+            }else{
+                db2=null;
+                int index = NumberUtils.createInteger( second.substring(1));
+                i2 = second.startsWith("o")?index:index+offset;
+            }
+        }catch( NumberFormatException e){
+            Logger.error("Something went wrong decoding: "+first+" or "+second);
+            return null;
+        }
+
+        Function<Double[],Double> proc=null;
+        switch( op ){
+            case "+":
+                try {
+                    if (db1 != null && db2 != null) { // meaning both numbers
+                        proc = x -> db1+db2;
+                    } else if (db1 == null && db2 != null) { // meaning first is an index and second a number
+                        proc = x -> x[i1]+db2;
+                    } else if (db1 != null && db2 == null) { // meaning first is a number and second an index
+                        proc = x -> db1+x[i2];
+                    } else { // meaning both indexes
+                        proc = x -> x[i1]+x[i2];
+                    }
+                }catch (IndexOutOfBoundsException | NullPointerException e){
+                    Logger.error("Bad things when "+first+" "+op+" "+second+ " was processed");
+                    Logger.error(e);
+                }
+                break;
+            case "-":
+                try{
+                    if( db1!=null && db2!=null ){ // meaning both numbers
+                        proc = x -> db1-db2;
+                    }else if( db1==null && db2!=null){ // meaning first is an index and second a number
+                        proc = x -> x[i1]-db2;
+                    }else if( db1!=null && db2==null ){ // meaning first is a number and second an index
+                        proc = x -> db1-x[i2];
+                    }else{ // meaning both indexes
+                        proc = x -> x[i1]-x[i2];
+                    }
+                }catch (IndexOutOfBoundsException | NullPointerException e){
+                    Logger.error("Bad things when "+first+" "+op+" "+second+ " was processed");
+                    Logger.error(e);
+                }
+                break;
+            case "*":
+                try{
+                    if( db1!=null && db2!=null ){ // meaning both numbers
+                        proc = x -> db1*db2;
+                    }else if( db1==null && db2!=null){ // meaning first is an index and second a number
+                        proc = x -> x[i1]*db2;
+                    }else if( db1!=null && db2==null ){ // meaning first is a number and second an index
+                        proc = x -> db1*x[i2];
+                    }else{ // meaning both indexes
+                        proc = x -> x[i1]*x[i2];
+                    }
+                }catch (IndexOutOfBoundsException | NullPointerException e){
+                    Logger.error("Bad things when "+first+" "+op+" "+second+ " was processed");
+                    Logger.error(e);
+                }
+                break;
+
+            case "/": // i0/25
+                try {
+                    if (db1 != null && db2 != null) { // meaning both numbers
+                        proc = x -> db1/db2;
+                    } else if (db1 == null && db2 != null) { // meaning first is an index and second a number
+                        proc = x -> x[i1]/db2;
+                    } else if (db1 != null && db2 == null) { //  meaning first is a number and second an index
+                        proc = x -> db1/x[i2];
+                    } else { // meaning both indexes
+                        proc = x ->x[i1]/x[i2];
+                    }
+                }catch (IndexOutOfBoundsException | NullPointerException e){
+                    Logger.error("Bad things when "+first+" "+op+" "+second+ " was processed");
+                    Logger.error(e);
+                }
+                break;
 
     public static BigDecimal[] toBigDecimals(String list, String delimiter ){
         String[] split = list.split(delimiter);
@@ -212,6 +324,32 @@ public class MathUtils {
         return nulls==bds.length?null:bds;
     }
 
+    /**
+     * Convert a delimited string to an array of doubles, inserting null where conversion is not possible
+     * @param list The delimited string
+     * @param delimiter The delimiter to use
+     * @return The resulting array
+     */
+    public static Double[] toDoubles(String list, String delimiter ){
+        String[] split = list.split(delimiter);
+        var dbs = new Double[split.length];
+        int nulls=0;
+
+        for( int a=0;a<split.length;a++){
+            if( NumberUtils.isCreatable(split[a])) {
+                try {
+                    dbs[a] = NumberUtils.createDouble(split[a]);
+                }catch(NumberFormatException e) {
+                    // hex doesn't go wel to double...
+                    dbs[a] = NumberUtils.createBigInteger(split[a]).doubleValue();
+                }
+            }else{
+                dbs[a] = null;
+                nulls++;
+            }
+        }
+        return nulls==dbs.length?null:dbs;
+    }
     /**
      * Convert a 12bit 2's complement value to an actual signed int
      * @param ori The value to convert
