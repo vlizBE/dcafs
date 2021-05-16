@@ -304,6 +304,87 @@ public class MathUtils {
                 }
                 break;
 
+            case "%": // i0%25
+                try{
+                    if( db1!=null && db2!=null ){ // meaning both numbers
+                        proc = x -> db1%db2;
+                    }else if( db1==null && db2!=null){ // meaning first is an index and second a number
+                        proc = x -> x[i1]%db2;
+                    }else if( db1!=null && db2==null ){ //  meaning first is a number and second an index
+                        proc = x -> db1%x[i2];
+                    }else{ // meaning both indexes
+                        proc = x -> x[i1]%x[i2];
+                    }
+                }catch (IndexOutOfBoundsException | NullPointerException e){
+                    Logger.error("Bad things when "+first+" "+op+" "+second+ " was processed");
+                    Logger.error(e);
+                }
+                break;
+            case "^": // i0^2
+                try{
+                    if( db1!=null && db2!=null ){ // meaning both numbers
+                        proc = x -> Math.pow(db1,db2);
+                    }else if( db1==null && db2!=null){ // meaning first is an index and second a number
+                        if( db2.compareTo(0.5) == 0){ // root
+                            proc = x -> Math.sqrt(x[i1]);
+                        }else{
+                            proc = x -> Math.pow(x[i1],db2);
+                        }
+
+                    }else if( db1!=null && db2==null ){ //  meaning first is a number and second an index
+                        proc = x -> Math.pow(db1,x[i2]);
+                    }else{ // meaning both indexes
+                        proc = x -> Math.pow(x[i1],x[i2]);
+                    }
+                }catch (IndexOutOfBoundsException | NullPointerException e){
+                    Logger.error("Bad things when "+first+" "+op+" "+second+ " was processed");
+                    Logger.error(e);
+                }
+                break;
+            case "scale": // i0/25
+                try{
+                    if( db1!=null && db2!=null ){ // meaning both numbers
+                        proc = x -> Tools.roundDouble(db1,db2.intValue());
+                    }else if( db1==null && db2!=null){ // meaning first is an index and second a number
+                        proc = x -> Tools.roundDouble(x[i1],db2.intValue());
+                    }else if( db1!=null && db2==null ){ //  meaning first is a number and second an index
+                        proc = x -> Tools.roundDouble(db1,x[i2].intValue());
+                    }else{ // meaning both indexes
+                        proc = x -> Tools.roundDouble(x[i1],x[i2].intValue());
+                    }
+                }catch (IndexOutOfBoundsException | NullPointerException e){
+                    Logger.error("Bad things when "+first+" "+op+" "+second+ " was processed");
+                    Logger.error(e);
+                }
+                break;
+            case "ln":
+                try{
+                    if( db1!=null && db2!=null ){ // meaning both numbers
+                        Logger.error("Todo - ln bd,bd");
+                        proc = x -> Math.log(db2);
+                    }else if( db1==null && db2!=null){ // meaning first is an index and second a number
+                        proc = x -> Math.log(db2);
+                    }else if( db1!=null && db2==null ){ //  meaning first is a number and second an index
+                        proc = x -> Math.log(x[i2]);
+                    }else{ // meaning both indexes
+                        proc = x -> Math.log(x[i2]);
+                    }
+                }catch (IndexOutOfBoundsException | NullPointerException e){
+                    Logger.error("Bad things when "+first+" "+op+" "+second+ " was processed");
+                    Logger.error(e);
+                }
+                break;
+            default:Logger.error("Unknown operand: "+op); break;
+        }
+        return proc;
+    }
+
+    /**
+     * Convert a delimited string to BigDecimals arra where possible, fills in null if not
+     * @param list The delimited string
+     * @param delimiter The delimiter to use
+     * @return The resulting array
+     */
     public static BigDecimal[] toBigDecimals(String list, String delimiter ){
         String[] split = list.split(delimiter);
         var bds = new BigDecimal[split.length];

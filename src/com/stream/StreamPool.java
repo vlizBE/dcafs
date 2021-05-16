@@ -689,6 +689,10 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				streams.values().stream().filter( base -> base.getRequestsSize() !=0 )
 								.forEach( x -> join.add( x.getID()+" -> "+x.listTargets() ) );
 				return join.toString();
+			case "cleartargets":
+				if( cmds.length != 2 ) // Make sure we got the correct amount of arguments
+					return "Bad amount of arguments, need 2 ss:clearrequests,id";
+				return "Targets cleared:"+getStream(cmds[1]).map( b -> b.clearTargets()).orElse(0);
 			case "recon":
 				if( cmds.length != 2 ) // Make sure we got the correct amount of arguments
 					return "Bad amount of arguments, need 2 (recon,id)";
@@ -1105,6 +1109,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 							));
 					return "Math reloaded: "+cmds[1];
 				}else{ //reload all
+					maths.values().forEach( MathForward::setInvalid );
 					maths.clear();
 					readMathsFromXML(XMLfab.withRoot(xmlPath, "dcafs", "maths").getChildren("math"));
 					return "Maths reloaded";
@@ -1199,6 +1204,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 						return "No such editor, " + cmds[1];
 					}
 				}else{ //reload all
+					editors.values().forEach( EditorForward::setInvalid );
 					editors.clear();
 					readEditorsFromXML(XMLfab.withRoot(xmlPath, "dcafs", "editors").getChildren("editor"));
 				}
@@ -1377,6 +1383,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 						return "No such filter, " + cmds[1];
 					}
 				}else{ //reload all
+					filters.values().forEach( FilterForward::setInvalid);
 					filters.clear();
 					readFiltersFromXML(XMLfab.withRoot(xmlPath, "dcafs", "filters").getChildren("filter"));
 				}

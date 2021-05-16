@@ -98,7 +98,7 @@ public class MathFab {
         }
         offset=subFormulas.size()+1; // To store the intermediate results, the array needs to hold space
         for( String[] sub : subFormulas ){ // now convert the subformulas into lambda's
-            steps.add( MathUtils.decodeBigDecimals(sub[0],sub[1],sub[2],offset)); // and add it to the steps list
+            steps.add( MathUtils.decodeBigDecimalsOp(sub[0],sub[1],sub[2],offset)); // and add it to the steps list
         }
         resultIndex = subFormulas.size();// note that the result of the formula will be in the that position
         return this;

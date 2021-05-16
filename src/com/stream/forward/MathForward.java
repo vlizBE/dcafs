@@ -1,6 +1,5 @@
 package com.stream.forward;
 
-import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.math.Calculations;
@@ -223,10 +222,10 @@ public class MathForward extends AbstractForward {
                     op = new Operation( expression, new MathFab(exp.replace(",",".")),index);
                     break;
             case SCALE: // round a number half up with the amount of digits specified
-                    op = new Operation( expression, MathUtils.decodeBigDecimals("i"+index,expression,"scale",0),index);
+                    op = new Operation( expression, MathUtils.decodeBigDecimalsOp("i"+index,expression,"scale",0),index);
                     break;
             case LN:
-                op = new Operation( expression, MathUtils.decodeBigDecimals("i"+index,expression,"ln",0),index);
+                op = new Operation( expression, MathUtils.decodeBigDecimalsOp("i"+index,expression,"ln",0),index);
                 break;
             case SALINITY:
                 indexes = expression.split(",");
@@ -363,7 +362,7 @@ public class MathForward extends AbstractForward {
                 fab.setDebug(debug);
                 try {
                     bd = fab.solve(data, scratchpad);
-                }catch ( ArrayIndexOutOfBoundsException | ArithmeticException e){
+                }catch ( ArrayIndexOutOfBoundsException | ArithmeticException | NullPointerException e){
                     Logger.error(id+" -> "+e.getMessage());
                     return null;
                 }

@@ -148,6 +148,7 @@ public abstract class AbstractForward implements Writable {
         Logger.info(id+" -> Reading from xml");
         return true;
     }
+    public void setInvalid(){valid=false;}
     /* *********************** Abstract Methods ***********************************/
     /**
      * This is called when data is received through the writable
@@ -169,6 +170,7 @@ public abstract class AbstractForward implements Writable {
      */
     public abstract boolean readFromXML( Element fwElement );
     protected abstract String getXmlChildTag();
+
     /* **********************Writable implementation ****************************/
     @Override
     public boolean writeString(String data) {
