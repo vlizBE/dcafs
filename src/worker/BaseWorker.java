@@ -148,7 +148,7 @@ public class BaseWorker implements Runnable {
 	}
 
 	public void clearGenerics() {
-		mappers.clear();
+		generics.clear();
 	}
 
 	public Generic addGeneric(String id) {
