@@ -28,18 +28,41 @@ public class EditorForward extends AbstractForward{
         readFromXML(ele);
     }
 
+    /**
+     * Get an overview of all the available edit types
+     * @param eol The end of line to use for the overview
+     * @return A listing aof all the types with examples
+     */
     public static String getHelp(String eol) {
         StringJoiner join = new StringJoiner(eol);
-        join.add(">Standard edits");
-        join.add("  remove -> Remove all occurrences of the value given");
-        join.add("  trim -> Remove leading an trailing spaces");
-        join.add("  retime -> Reformat a time field");
-        join.add("  redate -> Reformat a date field");
-        join.add("  replace -> Replace the occurrences of find attribute with the value given");
-        join.add(">Regex based edits");
-        join.add("  rexkeep -> Only keep the result of the regex given");
-        join.add("  rexsplit -> Split the data according to regex value given and use the delim attribute for the result");
-        join.add("  rexreplace -> Replace the occurrences of the result of the find attribute regex with the value given");
+        join.add("All examples will start from 16:25:12 as base data");
+        join.add("resplit -> Use the delimiter to split the data and combine according to the value")
+                .add("    fe. <edit type='resplit' delimiter=':' leftover='append'>i0-i1</edit>  --> 16-25:12")
+                .add("    fe. <edit type='resplit' delimiter=':' leftover='remove'>i0-i1</edit>  --> 16-25")
+                .add("    fe. <edit type='resplit' delimiter=':' leftover='remove'>i2-i1-i0</edit>  --> 12-25-16")
+                .add("rexsplit -> Use the value as a regex to split the data and combine again with the delimiter")
+                .add("    fe. <edit type='rexsplit' delimiter='-'>\\d*</edit>  --> 16-25-12")
+                .add("redate -> Get the value at index according to delimiter, then go 'from' one date(time) format to the format in the value given")
+                .add("retime -> Same as redate but for only time")
+                .add("    fe. <edit type='retime' from='HH:mm:ss' >HH-mm</edit>  --> 16-25")
+                .add("replace -> Replace 'find' with the value given")
+                .add("    fe. <edit type='replace' find='1'>4</edit>  --> 46:25:42")
+                .add("rexreplace -> Use a regex based on 'find' and replace it with the value given")
+                .add("    fe. <edit type='rexplace' find='\\d*'>x</edit>  --> x:x:x")
+                .add("remove -> Remove all occurrences of the value given")
+                .add("    fe. <edit type='remove' >1</edit>  --> 6:25:2")
+                .add("rexremove -> Remove all matches of the value as a regex ")
+                .add("    fe. <edit type='rexremove' >\\d*</edit>  --> ::")
+                .add("rexkeep -> Only retain the result of the regex given as value")
+                .add("    fe. <edit type='rexkeep' >\\d*</edit>  --> 162512")
+                .add("prepend -> Add the given data to the front")
+                .add("    fe. <edit type='prepend' >time=</edit>  --> time=16:25:12")
+                .add("append -> Add the given data at the end")
+                .add("    fe. <edit type='append' > (UTC)</edit>  --> time=16:25:12 (UTC)")
+                .add("cutstart -> Cut the given amount of characters from the front")
+                .add("    fe. <edit type='cutstart' >2</edit>  --> time=:25:12")
+                .add("cutend -> Cut the given amount of characters from the end")
+                .add("    fe. <edit type='cutend' >2</edit>  --> time=16:25:");
         return join.toString();
     }
 
