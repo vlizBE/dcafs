@@ -206,6 +206,7 @@ public abstract class BaseStream {
             Logger.info(id +" -> Already has "+writable.getID()+" as target, not adding.");
             return false;
         }
+        targets.removeIf( x -> x.getID().equals(writable.getID())&&writable.getID().contains(":")); // if updated
         targets.add( writable );
         Logger.info("Added request from "+writable.getID()+ " to "+id);
         return true;
@@ -216,6 +217,11 @@ public abstract class BaseStream {
     public boolean removeTarget(Writable wr ){
 		return targets.remove(wr);
 	}
+	public int clearTargets(){
+        int total=targets.size();
+        targets.clear();
+        return total;
+    }
 	public int getRequestsSize(){
 		return targets.size();
     }
