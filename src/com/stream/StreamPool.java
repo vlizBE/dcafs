@@ -1436,7 +1436,11 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				}
 				return true;
 			case "filter":
-				return getFilter(search).map( ff -> {ff.addTarget(writable);return true;} ).orElse(false);
+				if( search.startsWith("!")){
+					return getFilter(search.substring(1)).map( ff -> {ff.addReverseTarget(writable);return true;} ).orElse(false);
+				}else{
+					return getFilter(search).map( ff -> {ff.addTarget(writable);return true;} ).orElse(false);
+				}
 			case "math":
 				return getMath(search).map( mf -> { mf.addTarget(writable); return true;} ).orElse(false);
 			case "editor":

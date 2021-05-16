@@ -1,5 +1,6 @@
 package com.stream.forward;
 
+import com.stream.Writable;
 import org.apache.commons.lang3.StringUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
@@ -18,6 +19,7 @@ import java.util.stream.Stream;
 public class FilterForward extends AbstractForward {
 
     protected ArrayList<Predicate<String>> rules = new ArrayList<>();// Rules that define the filters
+    protected final ArrayList<Writable> reversed = new ArrayList<>();
 
     public FilterForward(String id, String source, BlockingQueue<Datagram> dQueue ){
         super(id,source,dQueue);
@@ -31,7 +33,8 @@ public class FilterForward extends AbstractForward {
     protected boolean addData(String data) {
 
         if( doFilter(data)){
-            targets.removeIf( t-> !t.writeLine(data) );
+            targets.stream().forEach(wr -> wr.writeLine( data ) );
+            targets.removeIf(wr -> !wr.isConnectionValid() );
             if( !label.isEmpty() ){
                 var d = new Datagram(this,label,data);
                 d.setOriginID("ff:"+id);
@@ -39,9 +42,11 @@ public class FilterForward extends AbstractForward {
             }
             if( log )
                 Logger.tag("RAW").info( "1\t" + (label.isEmpty()?"void":label)+"|"+getID() + "\t" + data);
+        }else{
+            reversed.removeIf( t-> !t.writeLine(data) );
         }
 
-        if( targets.isEmpty() && label.isEmpty() && !log ){
+        if( targets.isEmpty() && label.isEmpty() && !log && reversed.isEmpty() ){
             valid=false;
             if( deleteNoTargets )
                 dQueue.add( new Datagram("ff:remove,"+id,1,"system") );
@@ -49,7 +54,14 @@ public class FilterForward extends AbstractForward {
         }
         return true;
     }
-
+    public void addReverseTarget(Writable wr ){
+        reversed.add(wr);
+        valid=true;
+    }
+    @Override
+    public boolean removeTarget( Writable target ){
+        return targets.remove(target)||reversed.remove(target);
+    }
     /**
      * Read a filter from an element in the xml
      * @param ele The element containing the filter info
