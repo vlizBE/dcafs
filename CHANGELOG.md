@@ -24,6 +24,21 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.9.6 (work in progress)
 
+### General
+- Added check for \<tinylog> node in settings.xml to override the path to the logs
+
+### FilterForward
+- Added option to get the discarded data instead (could be used to chain filters mor efficiently)
+used with filter:!id.
+
+### EditorForward
+- replace type now works with hex and escape chars
+
+### BugFixes
+- clearGenerics actually cleared another map (hurray for copy paste)
+- Before a full reload of forwards, the current once are first set to invalid (because 
+  clearing the map only removes those references not the ones in other objects) 
+
 ## 0.9.5 (15/05/2021)
 
 ### Breaking changes
