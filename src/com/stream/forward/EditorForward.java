@@ -389,8 +389,8 @@ public class EditorForward extends AbstractForward{
         edits.add(  input -> input+addition );
     }
     public void addReplacement( String find, String replace){
+        edits.add( input -> input.replace(Tools.fromEscapedStringToBytes(find),Tools.fromEscapedStringToBytes(replace)) );
         rulesString.add( new String[]{"","replace","from "+find+" -> "+replace} );
-        edits.add( input -> input.replace(find,replace) );
     }
     public void addTrim( ){
         rulesString.add( new String[]{"","Trim","Trim spaces "} );
