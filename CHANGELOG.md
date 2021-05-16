@@ -22,7 +22,9 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamPool)   
   * Rework the TaskManager (will be trigger for 0.10.0)
 
-## 0.9.5 (work in progress)
+## 0.9.6 (work in progress)
+
+## 0.9.5 (15/05/2021)
 
 ### Breaking changes
 - default path for i2c xml is moved from devices to i2cscripts
