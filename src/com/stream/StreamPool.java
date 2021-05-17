@@ -1268,6 +1268,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				join.add( "  ff:test,id,data -> Test if the data would pass the filter");
 				join.add( "  ff:list or ff -> Get a list of all the currently existing filters.");
 				join.add( "  ff:delrule,id,index -> Remove a rule from the filter based on the index given in ff:list");
+				join.add( "  ff:swaprawsrc,id,ori,new -> Swap the raw ori source of the given filter with the new raw one, mimick redundancy");
 				join.add( "  filter:id -> Receive the data in the telnet window, also the source reference");
 
 				return join.toString();
@@ -1374,6 +1375,24 @@ public class StreamPool implements StreamListener, CollectorFuture {
 						return fab.build()!=null?"Label changed":"Label change failed";
 					default:return "No valid alter target: "+param;
 				}
+			case "swaprawsrc":
+				if( cmds.length<4)
+					return "Not enough arguments, needs to be ff:swaprawsrc,id,ori,new";
+				var fopt = getFilter(cmds[1]);
+				if( fopt.isEmpty() ) {
+					Logger.error("swaprawsrc - No valid filter id given");
+					return "No valid id given";
+				}
+				ff=fopt.get();
+				var oriopt = getStream(cmds[2]);
+				if( oriopt.isEmpty() )
+					return "No valid ori given";
+				if( getStream(cmds[3]).isEmpty() )
+					return "No valid new given";
+				oriopt.get().removeTarget(ff.getID());
+				ff.removeSource("raw:"+cmds[2]);
+				ff.addSource("raw:"+cmds[3]);
+				return "Swapped source of "+cmds[1]+" from "+cmds[2]+" to "+cmds[3];
 			case "reload":
 				if( cmds.length == 2) {
 					Optional<Element> x = XMLfab.withRoot(xmlPath, "dcafs", "filters").getChild("filter", "id", cmds[1]);
@@ -1426,7 +1445,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 							.forEach( x -> x.addTarget(writable) ); // add it, don't care about duplicates
 				}
 				break;
-			case "title": case "id":
+			case "id":
 				if( !getStream(search).map( bs -> bs.addTarget(writable) ).orElse(false) ) {
 					var stream = streams.entrySet().stream().filter(set -> set.getKey().startsWith(search))
 							.map(Map.Entry::getValue).findFirst();
@@ -1445,9 +1464,6 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				return getMath(search).map( mf -> { mf.addTarget(writable); return true;} ).orElse(false);
 			case "editor":
 				return getEditor(search).map( tf -> { tf.addTarget(writable); return true;} ).orElse(false);
-			case "start":
-				// Connect to all streams... but remove some? How to inform...
-				break;
 			default:
 				Logger.warn("Unknown type: "+type+ " possible ones: title/id, label/ll, generic/gen, filter, math");
 				return false;

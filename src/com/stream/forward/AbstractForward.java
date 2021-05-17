@@ -70,6 +70,9 @@ public abstract class AbstractForward implements Writable {
         }
         return false;
     }
+    public void removeSource( String source ){
+        sources.remove(source);
+    }
     /**
      * Add a writable that the result of the filter should be written to
      * @param target The writable the result of the filter will be written to
@@ -85,6 +88,7 @@ public abstract class AbstractForward implements Writable {
             Logger.info(id+" -> Trying to add duplicate target "+target.getID());
         }
     }
+
     public boolean removeTarget( Writable target ){
         return targets.remove(target);
     }
