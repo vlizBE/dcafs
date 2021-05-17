@@ -31,7 +31,7 @@ public class EditorForward extends AbstractForward{
     /**
      * Get an overview of all the available edit types
      * @param eol The end of line to use for the overview
-     * @return A listing aof all the types with examples
+     * @return A listing of all the types with examples
      */
     public static String getHelp(String eol) {
         StringJoiner join = new StringJoiner(eol);
@@ -40,29 +40,34 @@ public class EditorForward extends AbstractForward{
                 .add("    fe. <edit type='resplit' delimiter=':' leftover='append'>i0-i1</edit>  --> 16-25:12")
                 .add("    fe. <edit type='resplit' delimiter=':' leftover='remove'>i0-i1</edit>  --> 16-25")
                 .add("    fe. <edit type='resplit' delimiter=':' leftover='remove'>i2-i1-i0</edit>  --> 12-25-16")
-                .add("rexsplit -> Use the value as a regex to split the data and combine again with the delimiter")
-                .add("    fe. <edit type='rexsplit' delimiter='-'>\\d*</edit>  --> 16-25-12")
+                .add("charsplit -> Splits the given data on the char positions and combines with first used delimiter")
+                .add("    fe. <edit type='charsplit'>1,4,7 </edit>  --> 1,6:2,5:1,2")
                 .add("redate -> Get the value at index according to delimiter, then go 'from' one date(time) format to the format in the value given")
                 .add("retime -> Same as redate but for only time")
                 .add("    fe. <edit type='retime' from='HH:mm:ss' >HH-mm</edit>  --> 16-25")
                 .add("replace -> Replace 'find' with the value given")
                 .add("    fe. <edit type='replace' find='1'>4</edit>  --> 46:25:42")
-                .add("rexreplace -> Use a regex based on 'find' and replace it with the value given")
-                .add("    fe. <edit type='rexplace' find='\\d*'>x</edit>  --> x:x:x")
-                .add("remove -> Remove all occurrences of the value given")
-                .add("    fe. <edit type='remove' >1</edit>  --> 6:25:2")
-                .add("rexremove -> Remove all matches of the value as a regex ")
-                .add("    fe. <edit type='rexremove' >\\d*</edit>  --> ::")
-                .add("rexkeep -> Only retain the result of the regex given as value")
-                .add("    fe. <edit type='rexkeep' >\\d*</edit>  --> 162512")
                 .add("prepend -> Add the given data to the front")
                 .add("    fe. <edit type='prepend' >time=</edit>  --> time=16:25:12")
                 .add("append -> Add the given data at the end")
-                .add("    fe. <edit type='append' > (UTC)</edit>  --> time=16:25:12 (UTC)")
+                .add("    fe. <edit type='append' > (UTC)</edit>  --> time=16:25:12 (UTC)").add("")
+                .add("--REMOVE--")
+                .add("remove -> Remove all occurrences of the value given")
+                .add("    fe. <edit type='remove' >1</edit>  --> 6:25:2")
                 .add("cutstart -> Cut the given amount of characters from the front")
                 .add("    fe. <edit type='cutstart' >2</edit>  --> time=:25:12")
                 .add("cutend -> Cut the given amount of characters from the end")
-                .add("    fe. <edit type='cutend' >2</edit>  --> time=16:25:");
+                .add("    fe. <edit type='cutend' >2</edit>  --> time=16:25:").add("")
+                .add("--REGEX BASED--")
+                .add("rexsplit -> Use the value as a regex to split the data and combine again with the delimiter")
+                .add("    fe. <edit type='rexsplit' delimiter='-'>\\d*</edit>  --> 16-25-12")
+                .add("rexreplace -> Use a regex based on 'find' and replace it with the value given")
+                .add("    fe. <edit type='rexplace' find='\\d*'>x</edit>  --> x:x:x")
+                .add("rexremove -> Remove all matches of the value as a regex ")
+                .add("    fe. <edit type='rexremove' >\\d*</edit>  --> ::")
+                .add("rexkeep -> Only retain the result of the regex given as value")
+                .add("    fe. <edit type='rexkeep' >\\d*</edit>  --> 162512");
+
         return join.toString();
     }
 
