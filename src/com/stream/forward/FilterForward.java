@@ -55,8 +55,17 @@ public class FilterForward extends AbstractForward {
         return true;
     }
     public void addReverseTarget(Writable wr ){
-        reversed.add(wr);
-        valid=true;
+        if( !reversed.contains(wr)) {
+            reversed.add(wr);
+            Logger.info(getID() + " -> Adding reverse target to " + wr.getID());
+            if (!valid) {
+                valid = true;
+                sources.forEach(source -> dQueue.add(new Datagram(this, source, 1, "system")));
+            }
+        }else{
+            Logger.info(id+" -> Trying to add duplicate reverse target "+wr.getID());
+        }
+
     }
     @Override
     public boolean removeTarget( Writable target ){
