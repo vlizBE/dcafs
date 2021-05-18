@@ -326,6 +326,10 @@ public class BaseReq {
 		if(m==null) {
 			Logger.warn("Not defined:" + question + " because no method named " + find + ".");
 		}
+		if( wr!=null ) {
+			if (!wr.getID().equalsIgnoreCase("telnet"))
+				Logger.warn("Hidden response for " + wr.getID() + ": " + result);
+		}
 		return result + (html ? "<br>" : "\r\n");
 	}
 

@@ -10,7 +10,7 @@ From 0.5.0 onwards, this should be better documented...
 - Writable comparable on id?
 - ConfirmCollector give ok on no reply or nok on certain reply?
 - Trans as output in taskmanager?
-- Trans command >>>identify:id to claim to be a certain id and pass the ip test
+- Trans command >>>signin:id to claim to be a certain id and pass the ip test
 - Wildcard to email sending to an instance group?
 
 ## Work in progress
@@ -30,7 +30,9 @@ From 0.5.0 onwards, this should be better documented...
 ### FilterForward
 - Added option to get the discarded data instead (could be used to chain filters mor efficiently)
 used with filter:!id.
-
+- Added ff:swaprawsrc,id,ori,new to swap from one raw source to another. Can be used in combination
+with the idle trigger to swap to secondary device and back to primary on !idle
+  
 ### EditorForward
 - replace type now works with hex and escape chars
 

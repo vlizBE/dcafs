@@ -61,7 +61,9 @@ public abstract class AbstractForward implements Writable {
     public boolean addSource( String source ){
         if( !sources.contains(source) && !source.isEmpty()){
             sources.add(source);
+            Logger.info(getID() +" -> Adding source "+source);
             if( valid ){
+                Logger.info(getID() +" -> Requesting data from "+source);
                 dQueue.add( new Datagram(this,source,1,"system") );
             }
             if( xmlOk )
