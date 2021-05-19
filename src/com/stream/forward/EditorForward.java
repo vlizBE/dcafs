@@ -27,7 +27,14 @@ public class EditorForward extends AbstractForward{
         super(dQueue);
         readFromXML(ele);
     }
-
+    /**
+     * Read an editor from an element in the xml
+     * @param ele The element containing the editor info
+     * @return The EditorForward created based on the xml element
+     */
+    public static EditorForward readXML(Element ele, BlockingQueue<Datagram> dQueue ){
+        return new EditorForward( ele,dQueue );
+    }
     /**
      * Get an overview of all the available edit types
      * @param eol The end of line to use for the overview

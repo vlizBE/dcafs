@@ -34,7 +34,14 @@ public class MathForward extends AbstractForward {
         super(dQueue);
         readFromXML(ele);
     }
-
+    /**
+     * Read a mathforward from an element in the xml
+     * @param ele The element containing the math info
+     * @return The MathForward created based on the xml element
+     */
+    public static MathForward readXML(Element ele, BlockingQueue<Datagram> dQueue ){
+        return new MathForward( ele,dQueue );
+    }
     /**
      * Get the tag that is used for the child nodes, this way the abstract class can refer to it
      * @return The child tag for this forward, parent tag is same with added s

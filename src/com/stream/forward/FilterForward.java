@@ -74,7 +74,7 @@ public class FilterForward extends AbstractForward {
     /**
      * Read a filter from an element in the xml
      * @param ele The element containing the filter info
-     * @return The FilterWritable created based on the xml element
+     * @return The FilterForward created based on the xml element
      */
     public static FilterForward readXML(Element ele, BlockingQueue<Datagram> dQueue ){
         return new FilterForward( ele,dQueue );
@@ -132,9 +132,7 @@ public class FilterForward extends AbstractForward {
         if( !readBasicsFromXml(filter) )
             return false;
 
-
         rules.clear();
-
 
         addSource(XMLtools.getStringAttribute( filter, "src", ""));
 

@@ -121,7 +121,7 @@ public abstract class AbstractForward implements Writable {
         StringJoiner join = new StringJoiner("\r\n");
         join.setEmptyValue(" -> No rules yet.");
         for( String[] x : rulesString ){
-            join.add("\t"+(index++) +" : "+x[2]+" -> "+x[1]);
+            join.add("\t"+(index++) +" : "+x[1]+" -> "+x[2]);
         }
 
         return join.toString();

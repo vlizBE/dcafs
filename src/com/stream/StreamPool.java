@@ -2,6 +2,7 @@ package com.stream;
 
 import com.stream.collector.CollectorFuture;
 import com.stream.collector.ConfirmCollector;
+import com.stream.forward.AbstractForward;
 import com.stream.forward.EditorForward;
 import com.stream.forward.FilterForward;
 import com.stream.forward.MathForward;
@@ -1109,10 +1110,27 @@ public class StreamPool implements StreamListener, CollectorFuture {
 							));
 					return "Math reloaded: "+cmds[1];
 				}else{ //reload all
-					maths.values().forEach( MathForward::setInvalid );
-					maths.clear();
-					readMathsFromXML(XMLfab.withRoot(xmlPath, "dcafs", "maths").getChildren("math"));
-					return "Maths reloaded";
+					var mEle = XMLfab.withRoot(xmlPath, "dcafs", "maths").getChildren("math");
+					ArrayList<String> altered=new ArrayList<>();
+					mEle.forEach(
+							ee ->{
+								var id = ee.getAttribute("id");
+								var mOp = getMath(id);
+								if( mOp.isPresent()){ // If already exists
+									mOp.get().readFromXML(ee);
+									altered.add(id);
+								}else{ //if doesn't exist yet
+									maths.put(id,MathForward.readXML(ee,dQueue));
+								}
+							}
+					);
+					// Remove the ones that no longer exist
+					if( mEle.size() != maths.size() ){ // Meaning filters has more
+						// First mark them as invalid, so references also get deleted
+						maths.entrySet().stream().filter(e -> !altered.contains(e.getKey()) ).forEach( e->e.getValue().setInvalid());
+						//then remove then safely
+						maths.entrySet().removeIf( ee -> !ee.getValue().isConnectionValid());
+					}
 				}
 			case "list":
 				join.setEmptyValue("No maths yet");
@@ -1204,9 +1222,27 @@ public class StreamPool implements StreamListener, CollectorFuture {
 						return "No such editor, " + cmds[1];
 					}
 				}else{ //reload all
-					editors.values().forEach( EditorForward::setInvalid );
-					editors.clear();
-					readEditorsFromXML(XMLfab.withRoot(xmlPath, "dcafs", "editors").getChildren("editor"));
+					var eEle = XMLfab.withRoot(xmlPath, "dcafs", "editors").getChildren("editor");
+					ArrayList<String> altered=new ArrayList<>();
+					eEle.forEach(
+							ee ->{
+								var id = ee.getAttribute("id");
+								var fOp = getFilter(id);
+								if( fOp.isPresent()){ // If already exists
+									fOp.get().readFromXML(ee);
+									altered.add(id);
+								}else{ //if doesn't exist yet
+									editors.put(id,EditorForward.readXML(ee,dQueue));
+								}
+							}
+					);
+					// Remove the ones that no longer exist
+					if( eEle.size() != editors.size() ){ // Meaning filters has more
+						// First mark them as invalid, so references also get deleted
+						editors.entrySet().stream().filter(e -> !altered.contains(e.getKey()) ).forEach( e->e.getValue().setInvalid());
+						//then remove then safely
+						editors.entrySet().removeIf( ee -> !ee.getValue().isConnectionValid());
+					}
 				}
 				return "Editor reloaded.";
 			case "list":
@@ -1402,9 +1438,30 @@ public class StreamPool implements StreamListener, CollectorFuture {
 						return "No such filter, " + cmds[1];
 					}
 				}else{ //reload all
-					filters.values().forEach( FilterForward::setInvalid);
-					filters.clear();
-					readFiltersFromXML(XMLfab.withRoot(xmlPath, "dcafs", "filters").getChildren("filter"));
+					var fEle = XMLfab.withRoot(xmlPath, "dcafs", "filters").getChildren("filter");
+					ArrayList<String> altered=new ArrayList<>();
+					fEle.forEach(
+							fe ->{
+								var id = fe.getAttribute("id");
+								var fOp = getFilter(id);
+								if( fOp.isPresent()){ // If already exists
+									fOp.get().readFromXML(fe);
+									altered.add(id);
+									Logger.info("Altered filter: "+id);
+								}else{ //if doesn't exist yet
+									filters.put(id,FilterForward.readXML(fe,dQueue));
+									Logger.info("Added filter: "+id);
+								}
+							}
+					);
+					// Remove the ones that no longer exist
+					if( fEle.size() != filters.size() ){ // Meaning filters has more
+						// First mark them as invalid, so references also get deleted
+						filters.entrySet().stream().filter(f -> !altered.contains(f.getKey()) ).forEach( f->f.getValue().setInvalid());
+						//then remove then safely
+						filters.entrySet().removeIf( fe -> !fe.getValue().isConnectionValid());
+						Logger.info("Removed filter...");
+					}
 				}
 				return "Filter reloaded.";
 			case "test":
