@@ -1227,7 +1227,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 					eEle.forEach(
 							ee ->{
 								var id = ee.getAttribute("id");
-								var fOp = getFilter(id);
+								var fOp = getEditor(id);
 								if( fOp.isPresent()){ // If already exists
 									fOp.get().readFromXML(ee);
 									altered.add(id);
