@@ -125,18 +125,7 @@ public class SQLiteDB extends SQLDB{
         }
 
         // Make sure to use the proper path
-        String path = dbPath.toString();
-        if( format !=null ){
-            if( path.endsWith(".sqlite") ){
-                path =path.substring(0, path.length()-7);
-            }
-            String delimit = "";
-            path += delimit;
-        }
-        if( !path.endsWith(".sqlite") )
-            path+=currentForm+".sqlite";
-
-        String irl = "jdbc:sqlite:"+path;  
+        String irl = "jdbc:sqlite:"+getPath();
 
         try{
             state = STATE.CON_BUSY;
