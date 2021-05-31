@@ -24,6 +24,10 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.9.7 (work in progress)
 
+### Streampool
+- When connecting to TCP stream, the stream is only added if connection was established.
+- Give feedback to user if TCP connection was established or not
+
 ## 0.9.6 (31/05/2021)
 
 ### General
