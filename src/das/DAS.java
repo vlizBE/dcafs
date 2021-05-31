@@ -15,7 +15,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.commons.lang3.SystemUtils;
 import org.tinylog.Logger;
-import org.tinylog.configuration.Configuration;
 import org.tinylog.provider.ProviderRegistry;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -40,7 +39,7 @@ import java.util.concurrent.*;
 
 public class DAS implements DeadThreadListener {
 
-    private static final String version = "0.9.6";
+    private static final String version = "0.9.7";
 
     // Last date that changes were made
     Path settingsFile = Path.of("settings.xml");

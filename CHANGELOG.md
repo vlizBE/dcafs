@@ -22,7 +22,9 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamPool)   
   * Rework the TaskManager (will be trigger for 0.10.0)
 
-## 0.9.6 (work in progress)
+## 0.9.7 (work in progress)
+
+## 0.9.6 (31/05/2021)
 
 ### General
 - Added check for \<tinylog> node in settings.xml to override the path to the logs
@@ -40,6 +42,7 @@ with the idle trigger to swap to secondary device and back to primary on !idle
 - clearGenerics actually cleared another map (hurray for copy paste)
 - Before a full reload of forwards, the current once are first set to invalid (because 
   clearing the map only removes those references not the ones in other objects) 
+- SQLite got double extension if user provided it, then didn't work with rollover...
 
 ## 0.9.5 (15/05/2021)
 
