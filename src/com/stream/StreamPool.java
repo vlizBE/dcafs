@@ -33,10 +33,7 @@ import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * The class holds all the information required about a datasource to acquire
@@ -549,7 +546,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 	/**
 	 * Class that handles making a connection to a channel
 	 */
-	public class DoConnection implements Runnable {	
+	public class DoConnection implements Runnable {
 		
 		BaseStream base;
 
@@ -621,7 +618,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 
 		String nl = html?"<br>":"\r\n";
 
-		String[] cmds = request.split(",");		
+		String[] cmds = request.replace(" ","").split(",");
 
 		String device="";
 		if( cmds.length > 1 ){				
@@ -859,12 +856,17 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				tcp.addListener(this);
 				tcp.setEventLoopGroup(group);
 				tcp.setBootstrap(bootstrapTCP);
-				
-				streams.put( cmds[1], tcp );
+
 
 				if( addStreamToXML(cmds[1],false) ){
 					tcp.reconnectFuture = scheduler.schedule( new DoConnection( tcp ), 0, TimeUnit.SECONDS );
-					return "Trying to connect...";
+					try{
+						tcp.reconnectFuture.get(2,TimeUnit.SECONDS);
+						streams.put( cmds[1], tcp );
+					}catch(CancellationException | ExecutionException | InterruptedException | TimeoutException e){
+						return "Failed to connect.";
+					}
+					return "Connected to "+cmds[1]+", use 'raw:"+cmds[1]+"' to see incoming data.";
 				}
 				return "Failed to update XML! Entry might exist already";
 			case "addudp":
