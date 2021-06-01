@@ -6,6 +6,7 @@ import util.tools.TimeTools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -38,24 +39,17 @@ public class SQLiteDB extends SQLDB{
     private LocalDateTime rolloverTimestamp;
 
     private String currentForm = "";
-
+    private String workPath="";
     /**
      * Create an instance of a database with rollover
      * @param db Path to the database
-     * @param dateFormat Format to use in the filename to show the rollover
-     * @param rollCount How many of the unit are between rollovers
-     * @param unit The unit of the rollover period
      */
-    public SQLiteDB(String id, Path db, String dateFormat, int rollCount, RollUnit unit) {
+    public SQLiteDB( String id,String workPath, Path db ) {
 
-        this.dbPath = db;
+        this.workPath = workPath+(workPath.endsWith(File.separator)?"":File.separator);
         this.id=id;
+        this.dbPath = db;
 
-        if( db.getParent()==null){            
-            dbPath = db.toAbsolutePath();
-            Logger.info( getID() + " -> No parent given, so using absolute path: "+dbPath.toString());
-        }
-        
         try {
             Files.createDirectories(dbPath.getParent());
         } catch (IOException e) {
@@ -63,17 +57,11 @@ public class SQLiteDB extends SQLDB{
         } catch (NullPointerException e ){
             Logger.error( getID() + " -> Issue trying to create db, path is null");
         }
-        setRollOver(dateFormat,rollCount,unit);
-    }    
-    public SQLiteDB( String id,Path db ) {
-        this( id,db,"",0,RollUnit.NONE);
+
     }
     /* **************************************************************************************************/
-    public static SQLiteDB createDB( String id, Path db ){
-        return new SQLiteDB( id, db );
-    }
-    public static SQLiteDB createDB( String id,Path db, String format,int count,  RollUnit unit ){
-        return new SQLiteDB( id,db, format,count, unit );
+    public static SQLiteDB createDB( String id, String workPath, Path db ){
+        return new SQLiteDB( id, workPath, db );
     }
     /* **************************************************************************************************/
     @Override
@@ -94,7 +82,7 @@ public class SQLiteDB extends SQLDB{
      * @return The path to the database as a string
      */
     public String getPath(){
-        return currentForm.isEmpty()?dbPath.toString():(dbPath.toString().replace(".sqlite", "")+currentForm+".sqlite");
+        return currentForm.isEmpty()?workPath+dbPath.toString():(workPath+dbPath.toString().replace(".sqlite", "")+currentForm+".sqlite");
     }
     /**
      * Open the connection to the database
@@ -244,10 +232,12 @@ public class SQLiteDB extends SQLDB{
 
         String id = XMLtools.getStringAttribute(dbe,"id","");
         var p = Path.of(dbe.getAttribute("path"));
-        if( !p.isAbsolute() ){
-            p = Path.of(workPath).resolve(p);
-        }
         SQLiteDB db;
+        if( p.isAbsolute() ){
+            db = SQLiteDB.createDB(id,"",p);
+        }else{
+            db = SQLiteDB.createDB(id,workPath,p);
+        }
         
         /* RollOver */
         Element roll = XMLtools.getFirstChildByTag(dbe, "rollover");
@@ -267,13 +257,11 @@ public class SQLiteDB extends SQLDB{
             }
             if( rollUnit !=null){
                 Logger.info("Setting rollover: "+format+" "+rollCount+" "+rollUnit);
-                db = SQLiteDB.createDB(id,p,format,rollCount,rollUnit);
+                db.setRollOver(format,rollCount,rollUnit);
             }else{
                 Logger.error(id+" -> Bad Rollover given" );
                 return null;
             }
-        }else{
-            db = SQLiteDB.createDB(id,p);
         }
         /* Setup */
         db.readBatchSetup(XMLtools.getFirstChildByTag(dbe, "setup"));
@@ -287,6 +275,7 @@ public class SQLiteDB extends SQLDB{
 
         /* Tables */
         XMLtools.getChildElements(dbe,"table").stream().forEach( x -> SqlTable.readFromXml(x).ifPresent(table -> db.tables.put(table.name,table)));
+
         /* Create the content */
         db.getCurrentTables(false);
         db.lastError=db.createContent(false);
