@@ -325,7 +325,7 @@ public class SQLiteDB extends SQLDB{
         updateRolloverTimestamp(false);
         long next = Duration.between(LocalDateTime.now(ZoneOffset.UTC),rolloverTimestamp).toMillis();
         if( next > 1000) {
-            rollOverFuture = scheduler.schedule(new DoRollOver(), next, TimeUnit.MILLISECONDS);
+            rollOverFuture = scheduler.schedule(new DoRollOver(true), next, TimeUnit.MILLISECONDS);
             Logger.info(id+" -> Next rollover in "+TimeTools.convertPeriodtoString(rollOverFuture.getDelay(TimeUnit.SECONDS),TimeUnit.SECONDS));
         }else{
             Logger.error(id+" -> Bad rollover for "+rollCount+" counts and unit "+unit);
@@ -352,8 +352,43 @@ public class SQLiteDB extends SQLDB{
             rollOverFuture.cancel(true);
     }
     public void forceRollover(){
-        rollOverFuture.cancel(true);
-        scheduler.submit(new DoRollOver());
+        scheduler.submit(new DoRollOver(false));
+    }
+    @Override
+    public boolean disconnect(){
+        if (con != null) {
+            try {
+                if (con.isClosed())
+                    return false;
+
+                if( hasRecords() ){
+                    Logger.info(getID()+" has queries, flushing those first");
+                    state = STATE.FLUSH_REQ;
+                    try {
+                        checkState(0);
+                    } catch (Exception e) {
+                        Logger.error(e);
+                    }
+                    int max=50;
+                    while(hasRecords()&& max>=0){
+                        try {
+                            Thread.sleep(200);
+                            max--;
+                        } catch (InterruptedException e) {
+                            Logger.error(e);
+                        }
+                    }
+                }
+
+                con.close();
+                Logger.info(id+" -> Closed connection");
+                return true;
+            } catch (SQLException e) {
+                Logger.error(e);
+                return false;
+            }
+        }
+        return false;
     }
     /**
      * Update the filename of the database currently used
@@ -442,42 +477,33 @@ public class SQLiteDB extends SQLDB{
      * the tables - if the rollover is every x months, schedule the next one
      */
     private class DoRollOver implements Runnable {
+        boolean renew=true;
 
+        public DoRollOver( boolean renew ){
+            this.renew=renew;
+        }
         @Override
         public void run() {
             Logger.info(id+" -> Doing rollover");
             if (!isValid(1)) {
                 connect(false);
             }
+            if(renew)
+                updateFileName(rolloverTimestamp); // first update the filename
 
-            if( hasRecords() ){
-                Logger.info(getID()+" has queries, flushing those first");
-                state = STATE.FLUSH_REQ;
-                try {
-                    checkState(0);
-                } catch (Exception e) {
-                    Logger.error(e);
-                }
-                int max=50;
-                while(hasRecords()&& max>=0){
-                    try {
-                        Thread.sleep(200);
-                        max--;
-                    } catch (InterruptedException e) {
-                        Logger.error(e);
-                    }
-                }
-            }
-            updateFileName(rolloverTimestamp); // first update the filename
             getTables().forEach( t -> t.clearReadFromDB()); // Otherwise they won't get generated
+
             disconnect();// then disconnect, to be sure it doesn't reconnect to the wrong one...
             Logger.info("Disconnected to connect to new one...");
+
             if( !createContent(true).isEmpty() ){
                 Logger.error(id+" -> Failed to create the database");
             }
-            updateRolloverTimestamp(false); // figure out the next rollover moment
-            long next = Duration.between(LocalDateTime.now(ZoneOffset.UTC),rolloverTimestamp).toMillis();
-            rollOverFuture = scheduler.schedule( new DoRollOver(),next,TimeUnit.MILLISECONDS);
+            if( renew ) {
+                updateRolloverTimestamp(false); // figure out the next rollover moment
+                long next = Duration.between(LocalDateTime.now(ZoneOffset.UTC), rolloverTimestamp).toMillis();
+                rollOverFuture = scheduler.schedule(new DoRollOver(true), next, TimeUnit.MILLISECONDS);
+            }
         }
     }
     /**
