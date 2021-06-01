@@ -1724,7 +1724,15 @@ public class BaseReq {
 					dbName = "db"+File.separator+(dbName.isEmpty()?id:dbName);
 					if(!dbName.endsWith(".sqlite"))
 						dbName+=".sqlite";
-				var sqlite = SQLiteDB.createDB(id,Path.of(workPath,dbName));
+
+				SQLiteDB sqlite;
+				String abs = Path.of(dbName).toAbsolutePath().toString();
+				if( abs.startsWith(workPath) || Path.of(dbName).toString().equalsIgnoreCase(abs)){
+					//meaning if using the current workpath or an absolute path is given
+					sqlite = SQLiteDB.createDB(id,Path.of(dbName));
+				}else{
+					sqlite = SQLiteDB.createDB(id,Path.of(workPath,dbName));
+				}
 				if( sqlite.connect(false) ){
 					das.getDatabaseManager().addSQLiteDB(id,sqlite);
 					sqlite.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"dcafs","settings","databases") );
