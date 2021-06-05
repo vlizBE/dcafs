@@ -28,6 +28,13 @@ From 0.5.0 onwards, this should be better documented...
 - When connecting to TCP stream, the stream is only added if connection was established.
 - Give feedback to user if TCP connection was established or not
 
+### FileCollector
+- Allows src to be written to a file with custom header and flush settings
+
+### SQLite
+- Fixed absolute versus relative path
+- Fixed rollover again... wasn't used correctly when added through telnet
+
 ## 0.9.6 (31/05/2021)
 
 ### General

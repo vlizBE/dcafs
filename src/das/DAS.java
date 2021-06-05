@@ -7,6 +7,7 @@ import com.mqtt.MqttWorker;
 import com.sms.DigiWorker;
 import com.stream.StreamPool;
 import com.stream.Writable;
+import com.stream.collector.FileCollector;
 import com.stream.collector.MathCollector;
 import com.stream.tcp.TcpServer;
 import com.telnet.TelnetCodes;
@@ -216,7 +217,15 @@ public class DAS implements DeadThreadListener {
                     dQueue.add( new Datagram(mc,"system",mc.getSource()) ); // request the data
                 }
             );
-
+            /* File Collectors */
+            FileCollector.createFromXml( XMLfab.getRootChildren(xml,"dcafs","filecollectors","*"), nettyGroup ).forEach(
+                    fc ->
+                    {
+                        //rtvals.addMathCollector(fc);
+                        Logger.info("Created "+fc.getID());
+                        dQueue.add( new Datagram(fc,"system",fc.getSource()) ); // request the data
+                    }
+            );
         }
         baseReq.setDAS(this);
         this.attachShutDownHook();

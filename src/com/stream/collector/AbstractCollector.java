@@ -11,11 +11,12 @@ import java.util.concurrent.TimeUnit;
 
 public abstract class AbstractCollector implements Writable {
 
-    final String id;                                             // unique identifier
+    final String id;                                                   // unique identifier
     final ArrayList<CollectorFuture> listeners = new ArrayList<>();    // collection of the listeners
-    protected String source;                                     // The command that provide the data to the collector
-    boolean valid=true;                                          // boolean to indicate that this collector wants to collect
-    protected ScheduledFuture<?> timeoutFuture;                  // the future of the timeout submit in order to cancel it
+    protected String source;                                           // The command that provide the data to the collector
+    boolean valid=true;                                                // boolean to indicate that this collector wants to collect
+    protected ScheduledFuture<?> timeoutFuture;                        // the future of the timeout submit in order to cancel it
+    long secondsTimeout=0;
 
     public AbstractCollector( String id ){
         this.id=id;
@@ -83,9 +84,9 @@ public abstract class AbstractCollector implements Writable {
      * @return The future for this timeout
      */
     public ScheduledFuture<?> withTimeOut(String timoutPeriod, ScheduledExecutorService scheduler ){
-        int seconds = TimeTools.parsePeriodStringToSeconds(timoutPeriod);
-        Logger.info(id+" -> Collector started with timeout of "+seconds+"s");
-        timeoutFuture = scheduler.schedule(new TimeOut(), seconds, TimeUnit.SECONDS );
+        secondsTimeout = TimeTools.parsePeriodStringToSeconds(timoutPeriod);
+        Logger.info(id+" -> Collector started with timeout of "+secondsTimeout+"s");
+        timeoutFuture = scheduler.schedule(new TimeOut(), secondsTimeout, TimeUnit.SECONDS );
         return timeoutFuture;
     }
 
