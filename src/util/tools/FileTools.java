@@ -252,9 +252,7 @@ public class FileTools {
             });
         }
     }
-    /************************************************************************************************************/
-    /************************************* F T P ****************************************************************/
-    /************************************************************************************************************/
+    /* ************************************ F T P *************************************************************** */
     /**
      * Retrieve a file from an FTP server
      * 
@@ -273,7 +271,7 @@ public class FileTools {
             InputStream inputStream = urlConnection.getInputStream();
             Files.copy(inputStream, destination); // StandardCopyOption.REPLACE_EXISTING
             inputStream.close();         
-            Logger.error("File copied succesfully: "+source);
+            Logger.error("File copied successfully: "+source);
             return true;
         }catch( FileNotFoundException e ){ 
             Logger.error("No such file: "+source);
