@@ -2,8 +2,8 @@ package com.stream.collector;
 
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
-import util.tools.FileTools;
 import util.tools.TimeTools;
+import util.tools.Tools;
 import util.xml.XMLtools;
 
 import java.io.IOException;
@@ -68,7 +68,7 @@ public class FileCollector extends AbstractCollector{
             fc.addSource( XMLtools.getStringAttribute(fcEle,"src",""));
             String path = XMLtools.getChildValueByTag(fcEle,"destination","");
             if( path.isEmpty() ){
-                Logger.error(id+" -> No valid destination given");
+                Logger.error(id+"(fc) -> No valid destination given");
                 continue;
             }
             fc.setPath(Path.of(path));
@@ -77,6 +77,10 @@ public class FileCollector extends AbstractCollector{
             for( var ele : XMLtools.getChildElements(fcEle,"header") ){
                 fc.addHeaderLine(ele.getTextContent());
             }
+
+            // Changing defaults
+            fc.setLineSeparator( Tools.fromEscapedStringToBytes( XMLtools.getStringAttribute(fcEle,"eol",System.lineSeparator())) );
+
             fcs.add(fc);
         }
         return fcs;
@@ -90,11 +94,15 @@ public class FileCollector extends AbstractCollector{
     public void setTimeOut( String timeoutPeriod, ScheduledExecutorService scheduler ){
         secondsTimeout = TimeTools.parsePeriodStringToSeconds(timeoutPeriod);
         this.scheduler=scheduler;
-        Logger.info(id+" -> Setting flush period to "+secondsTimeout+"s");
+        Logger.info(id+"(fc) -> Setting flush period to "+secondsTimeout+"s");
     }
     public void addHeaderLine(String header){
         headers.add(header);
     }
+    public void setLineSeparator( String eol ){
+        this.lineSeparator=eol;
+    }
+
     @Override
     protected synchronized boolean addData(String data) {
         dataBuffer.add(data);
@@ -125,7 +133,7 @@ public class FileCollector extends AbstractCollector{
 
     private void appendData(){
         Logger.info("Appending data?");
-        StringJoiner join = new StringJoiner( lineSeparator );
+        StringJoiner join;
         if( destination==null) {
             Logger.error(id+" -> No valid destination path");
             return;
@@ -136,9 +144,10 @@ public class FileCollector extends AbstractCollector{
             } catch (IOException e) {
                 Logger.error(e);
             }
+            join = new StringJoiner( lineSeparator );
             headers.forEach( join::add ); // Add the headers
         }else{
-            join = new StringJoiner( lineSeparator );
+            join = new StringJoiner( lineSeparator,lineSeparator,"" );
         }
         String line;
         while((line=dataBuffer.poll()) !=null ) {
