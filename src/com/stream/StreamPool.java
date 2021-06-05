@@ -857,12 +857,12 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				tcp.setEventLoopGroup(group);
 				tcp.setBootstrap(bootstrapTCP);
 
-
-				if( addStreamToXML(cmds[1],false) ){
+				if( !addStreamToXML(cmds[1],false) ){
 					tcp.reconnectFuture = scheduler.schedule( new DoConnection( tcp ), 0, TimeUnit.SECONDS );
 					try{
 						tcp.reconnectFuture.get(2,TimeUnit.SECONDS);
 						streams.put( cmds[1], tcp );
+						addStreamToXML(cmds[1],true);
 					}catch(CancellationException | ExecutionException | InterruptedException | TimeoutException e){
 						return "Failed to connect.";
 					}
