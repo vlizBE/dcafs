@@ -77,7 +77,7 @@ public class BaseWorker implements Runnable {
 		this();
 		this.dQueue = dQueue;
 		Logger.info("Using " + Math.min(3, Runtime.getRuntime().availableProcessors()) + " threads");
-		debug.scheduleAtFixedRate(new SelfCheck(),5,10,TimeUnit.MINUTES);
+		debug.scheduleAtFixedRate(new SelfCheck(),5,30,TimeUnit.MINUTES);
 	}
 
 	/**
