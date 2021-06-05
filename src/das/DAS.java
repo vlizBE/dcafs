@@ -218,7 +218,7 @@ public class DAS implements DeadThreadListener {
                 }
             );
             /* File Collectors */
-            FileCollector.createFromXml( XMLfab.getRootChildren(xml,"dcafs","filecollectors","*"), nettyGroup ).forEach(
+            FileCollector.createFromXml( XMLfab.getRootChildren(xml,"dcafs","filecollectors","*"), nettyGroup, workPath ).forEach(
                     fc ->
                     {
                         //rtvals.addMathCollector(fc);

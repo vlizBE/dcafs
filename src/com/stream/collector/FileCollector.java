@@ -41,7 +41,7 @@ public class FileCollector extends AbstractCollector{
     public FileCollector(String id){
         super(id);
     }
-    public static List<FileCollector> createFromXml(Stream<Element> fcEles, ScheduledExecutorService scheduler ) {
+    public static List<FileCollector> createFromXml(Stream<Element> fcEles, ScheduledExecutorService scheduler, String workpath ) {
         var fcs = new ArrayList<FileCollector>();
         if( scheduler==null){
             Logger.error("Need a valid scheduler to use FileCollectors");
@@ -71,7 +71,12 @@ public class FileCollector extends AbstractCollector{
                 Logger.error(id+"(fc) -> No valid destination given");
                 continue;
             }
-            fc.setPath(Path.of(path));
+            Path dest = Path.of(path);
+            if( !dest.isAbsolute()) {
+                dest = Path.of(workpath).resolve(path);
+                Logger.info( id+"(fc) -> Relative path given, adding default workpath");
+            }
+            fc.setPath(dest);
 
             //Headers
             for( var ele : XMLtools.getChildElements(fcEle,"header") ){
