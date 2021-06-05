@@ -25,11 +25,12 @@ From 0.5.0 onwards, this should be better documented...
 ## 0.9.7 (work in progress)
 
 ### Streampool
-- When connecting to TCP stream, the stream is only added if connection was established.
-- Give feedback to user if TCP connection was established or not
+- When connecting to TCP stream, the stream is only added if connected.
+- Give feedback to user if a TCP connection was a success
 
 ### FileCollector
 - Allows src to be written to a file with custom header and flush settings
+- Still todo: telnet/command interface
 
 ### SQLite
 - Fixed absolute versus relative path
