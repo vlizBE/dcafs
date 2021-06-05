@@ -66,7 +66,7 @@ public class FileCollector extends AbstractCollector{
             }
             // Source and destination
             fc.addSource( XMLtools.getStringAttribute(fcEle,"src",""));
-            String path = XMLtools.getChildValueByTag(fcEle,"destination","");
+            String path = XMLtools.getChildValueByTag(fcEle,"path","");
             if( path.isEmpty() ){
                 Logger.error(id+"(fc) -> No valid destination given");
                 continue;
