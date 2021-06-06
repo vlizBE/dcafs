@@ -86,7 +86,7 @@ public class FileCollector extends AbstractCollector{
             if( flush != null ){
                 fc.setBatchsize( XMLtools.getIntAttribute(flush,"batchsize",Integer.MAX_VALUE));
                 if( scheduler != null ) {
-                    String timeout = XMLtools.getStringAttribute(flush, "period", "-1");
+                    String timeout = XMLtools.getStringAttribute(flush, "age", "-1");
                     if (!timeout.equalsIgnoreCase("-1")) {
                         fc.setTimeOut(timeout, scheduler);
                     }
