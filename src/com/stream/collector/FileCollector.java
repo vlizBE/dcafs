@@ -356,16 +356,21 @@ public class FileCollector extends AbstractCollector{
             }
 
             try {
-                if( zippedRoll && fut.get()==null){ // if zipping and append is finished
-                    Path zip = FileTools.zipFile(old);
-                    if( zip != null ){
-                        Files.deleteIfExists(old);
-                        Logger.info(id+"(fc) -> Zipped "+old.toAbsolutePath());
-                    }else{
-                        Logger.error(id+"(fc) -> Failed to zip "+old.toString());
+                if( zippedRoll ){
+                    var res = fut.get(5,TimeUnit.SECONDS); // Writing should be done in 5 seconds...
+                    if( res==null) { // if zipping and append is finished
+                        Path zip = FileTools.zipFile(old);
+                        if (zip != null) {
+                            Files.deleteIfExists(old);
+                            Logger.info(id + "(fc) -> Zipped " + old.toAbsolutePath());
+                        } else {
+                            Logger.error(id + "(fc) -> Failed to zip " + old.toString());
+                        }
                     }
+                }else{
+                    Logger.info("Not zipping");
                 }
-            } catch (InterruptedException | ExecutionException | IOException e) {
+            } catch (InterruptedException | ExecutionException | IOException | TimeoutException e) {
                 Logger.error(e);
             }
         }
