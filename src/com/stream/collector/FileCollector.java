@@ -143,10 +143,10 @@ public class FileCollector extends AbstractCollector{
 
         //with rollover and on a specific position
         if( path.contains("{rollover}"))
-            return Path.of(destPath.toString().replace("{rollover}", currentForm));
+            return Path.of(path.replace("{rollover}", currentForm));
 
         // with rollover but on default position
-        return Path.of(destPath.toString().replace("\\.", currentForm+"."));
+        return Path.of(path.replace(".", currentForm+'.'));
     }
     public void setWorkPath( String workPath ){
         this.workPath=workPath;
