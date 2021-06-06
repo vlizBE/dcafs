@@ -31,6 +31,7 @@ import java.util.stream.Stream;
 public class FileCollector extends AbstractCollector{
 
     ScheduledExecutorService scheduler;
+
     Queue<String> dataBuffer = new ConcurrentLinkedQueue<String>();
     private int byteCount=0;
     private Path destPath;
@@ -61,6 +62,14 @@ public class FileCollector extends AbstractCollector{
     public FileCollector(String id){
         super(id);
     }
+
+    /**
+     * Read the elements and build the FileCollectors based on the content
+     * @param fcEles The filecollector elements
+     * @param scheduler A Scheduler used for timeouts, writes etc
+     * @param workpath The current workpath
+     * @return A list of the found filecollectors
+     */
     public static List<FileCollector> createFromXml(Stream<Element> fcEles, ScheduledExecutorService scheduler, String workpath ) {
         var fcs = new ArrayList<FileCollector>();
         if( scheduler==null){
@@ -112,7 +121,7 @@ public class FileCollector extends AbstractCollector{
 
                 TimeTools.RolloverUnit rollUnit = TimeTools.convertToRolloverUnit( unit );
                 if( rollUnit !=null){
-                    Logger.info(id+"(fc) ->Setting rollover: "+format+" "+rollCount+" "+rollUnit);
+                    Logger.info(id+"(fc) -> Setting rollover: "+format+" "+rollCount+" "+rollUnit);
                     fc.setRollOver(format,rollCount,rollUnit);
                 }else{
                     Logger.error(id+"(fc) -> Bad Rollover given" );
@@ -127,8 +136,13 @@ public class FileCollector extends AbstractCollector{
         }
         return fcs;
     }
-    public void setPath( Path destination ){
-        this.destPath =destination;
+
+    /**
+     * Set the the full path (relative of absolute) to the file
+     * @param path the path to the file
+     */
+    public void setPath( Path path ){
+        this.destPath =path;
     }
     /**
      * Get the current path this database can be found at
@@ -148,20 +162,46 @@ public class FileCollector extends AbstractCollector{
         // with rollover but on default position
         return Path.of(path.replace(".", currentForm+'.'));
     }
+
+    /**
+     * Alter the work path used
+     * @param workPath The new path
+     */
     public void setWorkPath( String workPath ){
         this.workPath=workPath;
     }
+
+    /**
+     * Set the amount of messages in the batch before it's flushed to disk
+     * @param batch The amount
+     */
     public void setBatchsize( int batch ){
         this.batchSize=batch;
     }
+
+    /**
+     * Set a maximum age of data before a flush is initiated
+     * @param timeoutPeriod The period (fe. 5m or 63s etc)
+     * @param scheduler A scheduler to use for this
+     */
     public void setTimeOut( String timeoutPeriod, ScheduledExecutorService scheduler ){
         secondsTimeout = TimeTools.parsePeriodStringToSeconds(timeoutPeriod);
         this.scheduler=scheduler;
         Logger.info(id+"(fc) -> Setting flush period to "+secondsTimeout+"s");
     }
+
+    /**
+     * Add a line that will we added first to a new file
+     * @param header A line to add at the top, the standard line separator will be appended
+     */
     public void addHeaderLine(String header){
         headers.add(header);
     }
+
+    /**
+     * Change the line separator, by default this is the system one
+     * @param eol Alter the line separater/eol characters
+     */
     public void setLineSeparator( String eol ){
         this.lineSeparator=eol;
     }
@@ -177,17 +217,21 @@ public class FileCollector extends AbstractCollector{
         }
 
         if( dataBuffer.size() > batchSize ){
-            Logger.debug("Buffer matches batchsize");
+            Logger.debug(id+ "(fc) -> Buffer matches batchsize");
             scheduler.submit(()->appendData(getPath()));
         }
         return true;
     }
+
+    /**
+     * Force the collector to flush the data, used in case of urgent flushing
+     */
     public void flushNow(){
         scheduler.submit(()->appendData(getPath()));
     }
     @Override
     protected void timedOut() {
-        Logger.debug("TimeOut expired");
+        Logger.debug(id+ "(fc) -> TimeOut expired");
 
         if( dataBuffer.isEmpty() ){
             // Timed out with empty buffer
@@ -203,10 +247,14 @@ public class FileCollector extends AbstractCollector{
         }
     }
 
+    /**
+     * Write data to the chosen file
+     * @param dest The path to write to
+     */
     private void appendData( Path dest ){
        StringJoiner join;
         if( dest ==null) {
-            Logger.error(id+" -> No valid destination path");
+            Logger.error(id+"(fc) -> No valid destination path");
             return;
         }
         if(Files.notExists(dest) ){ // the file doesn't exist yet
@@ -229,7 +277,7 @@ public class FileCollector extends AbstractCollector{
             Files.write(dest, join.toString().getBytes(charSet) , StandardOpenOption.CREATE, StandardOpenOption.APPEND );
             Logger.debug("Written "+join.toString().length()+" bytes to "+ dest.getFileName().toString());
         } catch (IOException e) {
-            Logger.error(id + " -> Failed to write to "+ dest.toString());
+            Logger.error(id + "(fc) -> Failed to write to "+ dest.toString());
         }
     }
 
