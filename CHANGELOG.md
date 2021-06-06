@@ -22,7 +22,19 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamPool)   
   * Rework the TaskManager (will be trigger for 0.10.0)
 
-## 0.9.7 (work in progress)
+## 0.9.8 (work in progress)
+
+### FileCollector
+- Added rollover (like sqlite)
+- Added flush on shutdown
+- Improved timeout write to take in account last write attempt
+- 
+
+### SQLiteDB
+- Moved the rollover timestamp update code to TimeTools, so FileCollector can use it
+- Added option to put {rollover} in the path to have this replaced with the timestamp
+
+## 0.9.7 (05/06/21)
 
 ### Streampool
 - When connecting to TCP stream, the stream is only added if connected.
