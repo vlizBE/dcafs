@@ -2,10 +2,12 @@ package com.stream.collector;
 
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLtools;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -21,10 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.StringJoiner;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -46,8 +45,8 @@ public class FileCollector extends AbstractCollector{
     private ScheduledFuture<?> rollOverFuture;
     private TimeTools.RolloverUnit rollUnit = TimeTools.RolloverUnit.NONE;
     private int rollCount = 0;
-
     private LocalDateTime rolloverTimestamp;
+    private boolean zippedRoll=false;
 
     private String currentForm = "";
     private String workPath="";
@@ -116,13 +115,14 @@ public class FileCollector extends AbstractCollector{
             Element roll = XMLtools.getFirstChildByTag(fcEle, "rollover");
             if( roll != null ){
                 int rollCount = XMLtools.getIntAttribute(roll, "count", 1);
-                String unit = XMLtools.getStringAttribute(roll, "unit", "").toLowerCase();
+                String unit = XMLtools.getStringAttribute(roll, "unit", "none").toLowerCase();
+                boolean zip = XMLtools.getBooleanAttribute(roll,"zip",false);
                 String format = roll.getTextContent();
 
                 TimeTools.RolloverUnit rollUnit = TimeTools.convertToRolloverUnit( unit );
                 if( rollUnit !=null){
                     Logger.info(id+"(fc) -> Setting rollover: "+format+" "+rollCount+" "+rollUnit);
-                    fc.setRollOver(format,rollCount,rollUnit);
+                    fc.setRollOver(format,rollCount,rollUnit,zip);
                 }else{
                     Logger.error(id+"(fc) -> Bad Rollover given" );
                     continue;
@@ -168,6 +168,8 @@ public class FileCollector extends AbstractCollector{
      * @param workPath The new path
      */
     public void setWorkPath( String workPath ){
+        if( !workPath.endsWith(File.separator)&&!workPath.isEmpty())
+            workPath+= File.separator;
         this.workPath=workPath;
     }
 
@@ -282,7 +284,7 @@ public class FileCollector extends AbstractCollector{
     }
 
     /* ***************************** RollOver stuff *************************************************************** */
-    public void setRollOver(String dateFormat, int rollCount, TimeTools.RolloverUnit unit ) {
+    public void setRollOver(String dateFormat, int rollCount, TimeTools.RolloverUnit unit, boolean zip ) {
 
         if(  unit == TimeTools.RolloverUnit.NONE || unit == null) {
             Logger.warn(id+"(fc) -> Bad rollover given");
@@ -291,6 +293,7 @@ public class FileCollector extends AbstractCollector{
         this.rollCount=rollCount;
         rollUnit=unit;
         oriFormat=dateFormat;
+        zippedRoll=zip;
 
         format = DateTimeFormatter.ofPattern(dateFormat);
         rolloverTimestamp = LocalDateTime.now(ZoneOffset.UTC).withNano(0);
@@ -338,7 +341,8 @@ public class FileCollector extends AbstractCollector{
         public void run() {
             Logger.info(id+"(fc) -> Doing rollover");
 
-            scheduler.submit(()->appendData(getPath())); // First flush the data
+            Path old = getPath();
+            var fut = scheduler.submit(()->appendData(getPath())); // First flush the data
 
             if(renew)
                 updateFileName(rolloverTimestamp); // first update the filename
@@ -349,6 +353,20 @@ public class FileCollector extends AbstractCollector{
                 Logger.info(id+"(fc) -> Next rollover date: "+ rolloverTimestamp.format(TimeTools.LONGDATE_FORMATTER));
                 long next = Duration.between(LocalDateTime.now(ZoneOffset.UTC), rolloverTimestamp).toMillis();
                 rollOverFuture = scheduler.schedule(new DoRollOver(true), next, TimeUnit.MILLISECONDS);
+            }
+
+            try {
+                if( zippedRoll && fut.get()==null){ // if zipping and append is finished
+                    Path zip = FileTools.zipFile(old);
+                    if( zip != null ){
+                        Files.deleteIfExists(old);
+                        Logger.info(id+"(fc) -> Zipped "+old.toAbsolutePath());
+                    }else{
+                        Logger.error(id+"(fc) -> Failed to zip "+old.toString());
+                    }
+                }
+            } catch (InterruptedException | ExecutionException | IOException e) {
+                Logger.error(e);
             }
         }
     }

@@ -181,7 +181,7 @@ public class FileTools {
             zos.putNextEntry(new ZipEntry(filePath.getFileName().toString()));                                               
             zos.write( Files.readAllBytes(filePath), 0, (int)Files.size(filePath));
             zos.closeEntry();
-            Logger.info("Created ZIP: "+filePath.getFileName()+".zip");
+            Logger.debug("Created ZIP: "+filePath.getFileName()+".zip");
             if(filePath.getParent()!=null)
                 return Path.of( filePath.getParent().toString(),filePath.getFileName()+".zip").toAbsolutePath();
             return Path.of( filePath.getFileName()+".zip").toAbsolutePath();
