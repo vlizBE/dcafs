@@ -89,10 +89,10 @@ public class SQLiteDB extends SQLDB{
 
         //with rollover and on a specific position
         if( path.contains("{rollover}"))
-            return dbPath.toString().replace("{rollover}", currentForm);
+            return path.replace("{rollover}", currentForm);
 
         // with rollover but on default position
-        return dbPath.toString().replace(".sqlite", "")+currentForm+".sqlite";
+        return path.replace(".sqlite", currentForm+".sqlite");
     }
     /**
      * Open the connection to the database
