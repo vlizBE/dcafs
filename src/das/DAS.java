@@ -70,6 +70,7 @@ public class DAS implements DeadThreadListener {
     // Other
     HashMap<String, TaskManager> taskManagers = new HashMap<>();
     Map<String, MqttWorker> mqttWorkers = new HashMap<>();
+    Map<String, FileCollector> fileCollectors = new HashMap<>();
 
     IssueCollector issues;
 
@@ -223,6 +224,7 @@ public class DAS implements DeadThreadListener {
                     {
                         //rtvals.addMathCollector(fc);
                         Logger.info("Created "+fc.getID());
+                        fileCollectors.put(fc.getID(),fc);
                         dQueue.add( new Datagram(fc,"system",fc.getSource()) ); // request the data
                     }
             );
@@ -984,6 +986,9 @@ public class DAS implements DeadThreadListener {
                 // SQLite & SQLDB
                 Logger.info("Flushing database buffers");
                 dbManager.flushAll();
+
+                // Filecollectors
+                fileCollectors.values().forEach(FileCollector::flushNow);
 
                 // Try to send email...
                 if (emailWorker != null) {
