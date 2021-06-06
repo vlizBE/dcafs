@@ -2,6 +2,7 @@ package util.tools;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.tinylog.Logger;
+import util.database.SQLiteDB;
 
 import java.sql.Date;
 import java.text.DateFormat;
@@ -23,7 +24,7 @@ public class TimeTools {
 	static final String NMEASHORT_STRING = "yyyy-MM-dd HHmmss";
     static final DateTimeFormatter NMEA_FORMATTER = DateTimeFormatter.ofPattern(NMEADATE_STRING);
     static final TimeZone UTC = TimeZone.getTimeZone("UTC");
-    
+    public enum RolloverUnit{NONE,MINUTES,HOURS,DAYS,WEEKS,MONTHS,YEARS}
 
     private TimeTools(){
         throw new IllegalStateException("Utility class");
@@ -479,5 +480,75 @@ public class TimeTools {
     public static long secondsToMidnight(){
         OffsetTime midnight = OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC);
         return Duration.between( OffsetTime.now(ZoneOffset.UTC),midnight).toSeconds()+1;
+    }
+
+    /**
+     * Takes a timestamp and adds a rollCount amount of unit to it after first resetting it to the previous value
+     * Meaning if it's 1 MONTH, the timestamp is first reset to the first day of the month etc.
+     * @param init True only does the reset, for the initial timestamp (so the one to use now, not when to rollover)
+     * @param rolloverTimestamp The timestamp to update
+     * @param rollCount the amount of units to apply
+     * @param rollUnit the unit to apply (MINUTES, HOURS, DAYS, WEEKS, MONTHS, YEARS) (TimeUnit doesn't contains weeks...)
+     */
+    public static LocalDateTime applyTimestampRollover(boolean init, LocalDateTime rolloverTimestamp, int rollCount, RolloverUnit rollUnit){
+        Logger.debug(" -> Original date: "+ rolloverTimestamp.format(TimeTools.LONGDATE_FORMATTER));
+        rolloverTimestamp = rolloverTimestamp.withSecond(0).withNano(0);
+        int count = init?0:rollCount;
+
+        if(rollUnit== RolloverUnit.MINUTES){
+            if( init ) {
+                rolloverTimestamp = rolloverTimestamp.minusMinutes( rolloverTimestamp.getMinute()%rollCount );//make sure it's not zero
+            }else{
+                int min = rollCount-rolloverTimestamp.getMinute()%rollCount; // So that 'every 5 min is at 0 5 10 15 etc
+                rolloverTimestamp = rolloverTimestamp.plusMinutes(min == 0 ? rollCount : min);//make sure it's not zero
+            }
+        }else{
+            rolloverTimestamp = rolloverTimestamp.withMinute(0);
+            if(rollUnit== RolloverUnit.HOURS){
+                rolloverTimestamp = rolloverTimestamp.plusHours( count );
+            }else{
+                rolloverTimestamp = rolloverTimestamp.withHour(0);
+                if(rollUnit== RolloverUnit.DAYS){
+                    rolloverTimestamp = rolloverTimestamp.plusDays( count );
+                }else{
+                    if(rollUnit== RolloverUnit.WEEKS){
+                        rolloverTimestamp = rolloverTimestamp.minusDays(rolloverTimestamp.getDayOfWeek().getValue()-1);
+                        rolloverTimestamp = rolloverTimestamp.plusWeeks(count);
+                    }else{
+                        rolloverTimestamp = rolloverTimestamp.withDayOfMonth(1);
+                        if(rollUnit== RolloverUnit.MONTHS){
+                            rolloverTimestamp=rolloverTimestamp.plusMonths(count);
+                        }else{
+                            rolloverTimestamp = rolloverTimestamp.withMonth(1);
+                            if(rollUnit== RolloverUnit.YEARS){
+                                rolloverTimestamp=rolloverTimestamp.plusMonths(count);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Logger.debug(" -> Next rollover date: "+ rolloverTimestamp.format(TimeTools.LONGDATE_FORMATTER));
+        return rolloverTimestamp;
+    }
+
+    /**
+     * Convert the string representation of a rolloverunit to the object
+     * @param unit The string the convert
+     * @return The resulting Rolloverunit or NONE if no valid string was given
+     */
+    public static RolloverUnit convertToRolloverUnit( String unit ){
+        RolloverUnit rollUnit=RolloverUnit.NONE;
+        switch(unit){
+            case "minute":case "min": rollUnit=RolloverUnit.MINUTES; break;
+            case "hour": rollUnit=RolloverUnit.HOURS; break;
+            case "day": rollUnit=RolloverUnit.DAYS; break;
+            case "week": rollUnit=RolloverUnit.WEEKS; break;
+            case "month": rollUnit=RolloverUnit.MONTHS; break;
+            case "year": rollUnit=RolloverUnit.YEARS; break;
+        }
+        if( rollUnit==RolloverUnit.NONE)
+            Logger.error("Invalid unit given "+unit);
+        return rollUnit;
     }
 }

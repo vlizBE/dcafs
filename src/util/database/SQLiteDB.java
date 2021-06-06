@@ -31,9 +31,8 @@ public class SQLiteDB extends SQLDB{
     /* Variables related to the rollover */
     private DateTimeFormatter format = null;
     private String oriFormat="";
-    public enum RollUnit{NONE,MINUTE,HOUR,DAY,WEEK,MONTH,YEAR}
     private ScheduledFuture<?> rollOverFuture;
-    private RollUnit rollUnit = RollUnit.NONE;
+    private TimeTools.RolloverUnit rollUnit = TimeTools.RolloverUnit.NONE;
     private int rollCount = 0;
 
     private LocalDateTime rolloverTimestamp;
@@ -67,7 +66,7 @@ public class SQLiteDB extends SQLDB{
     @Override
     public String toString(){
         String status = getPath() +" -> " +getRecordsCount()+"/"+maxQueries;
-        if( rollUnit!=RollUnit.NONE){
+        if( rollUnit!=TimeTools.RolloverUnit.NONE){
             if( rollOverFuture==null ){
                 status += " -> No proper rollover determined...";
             }else {
@@ -82,7 +81,18 @@ public class SQLiteDB extends SQLDB{
      * @return The path to the database as a string
      */
     public String getPath(){
-        return currentForm.isEmpty()?workPath+dbPath.toString():(workPath+dbPath.toString().replace(".sqlite", "")+currentForm+".sqlite");
+        String path = workPath+dbPath.toString();
+
+        //without rollover
+        if( currentForm.isEmpty() )
+            return path;
+
+        //with rollover and on a specific position
+        if( path.contains("{rollover}"))
+            return dbPath.toString().replace("{rollover}", currentForm);
+
+        // with rollover but on default position
+        return dbPath.toString().replace(".sqlite", "")+currentForm+".sqlite";
     }
     /**
      * Open the connection to the database
@@ -246,15 +256,7 @@ public class SQLiteDB extends SQLDB{
             String unit = XMLtools.getStringAttribute(roll, "unit", "").toLowerCase();
             String format = roll.getTextContent();
             
-            RollUnit rollUnit=null;
-            switch(unit){
-                case "minute":case "min": rollUnit=RollUnit.MINUTE; break;
-                case "hour": rollUnit=RollUnit.HOUR; break;
-                case "day": rollUnit=RollUnit.DAY; break;
-                case "week": rollUnit=RollUnit.WEEK; break;
-                case "month": rollUnit=RollUnit.MONTH; break;
-                case "year": rollUnit=RollUnit.YEAR; break;
-            }
+            TimeTools.RolloverUnit rollUnit = TimeTools.convertToRolloverUnit( unit );
             if( rollUnit !=null){
                 Logger.info("Setting rollover: "+format+" "+rollCount+" "+rollUnit);
                 db.setRollOver(format,rollCount,rollUnit);
@@ -308,11 +310,12 @@ public class SQLiteDB extends SQLDB{
      * @param unit The unit for the rollover, options: MIN,HOUR,DAY,WEEK,MONTH,YEAR
      * @return This database
      */
-    public SQLiteDB setRollOver( String dateFormat, int rollCount, RollUnit unit ){
+    public SQLiteDB setRollOver( String dateFormat, int rollCount, TimeTools.RolloverUnit unit ){
 
-        if(  unit == RollUnit.NONE )
+        if(  unit == TimeTools.RolloverUnit.NONE || unit == null) {
+            Logger.warn(id+" -> Bad rollover given");
             return this;
-
+        }
         this.rollCount=rollCount;
         rollUnit=unit;
         oriFormat=dateFormat;
@@ -320,9 +323,12 @@ public class SQLiteDB extends SQLDB{
         format = DateTimeFormatter.ofPattern(dateFormat);
         rolloverTimestamp = LocalDateTime.now(ZoneOffset.UTC).withNano(0);
 
-        updateRolloverTimestamp(true);
+        rolloverTimestamp = TimeTools.applyTimestampRollover(true,rolloverTimestamp,rollCount,rollUnit);// figure out the next rollover moment
+        Logger.info(id+" -> Current rollover date: "+ rolloverTimestamp.format(TimeTools.LONGDATE_FORMATTER));
         updateFileName(rolloverTimestamp);
-        updateRolloverTimestamp(false);
+        rolloverTimestamp = TimeTools.applyTimestampRollover(false,rolloverTimestamp,rollCount,rollUnit);// figure out the next rollover moment
+        Logger.info(id+" -> Next rollover date: "+ rolloverTimestamp.format(TimeTools.LONGDATE_FORMATTER));
+
         long next = Duration.between(LocalDateTime.now(ZoneOffset.UTC),rolloverTimestamp).toMillis();
         if( next > 1000) {
             rollOverFuture = scheduler.schedule(new DoRollOver(true), next, TimeUnit.MILLISECONDS);
@@ -333,16 +339,7 @@ public class SQLiteDB extends SQLDB{
         return this;
     }
     public SQLiteDB setRollOver( String dateFormat, int rollCount, String unit ){
-         RollUnit rollUnit=null;
-            switch(unit){
-                case "minute":case "min": rollUnit=RollUnit.MINUTE; break;
-                case "hour": rollUnit=RollUnit.HOUR; break;
-                case "day": rollUnit=RollUnit.DAY; break;
-                case "week": rollUnit=RollUnit.WEEK; break;
-                case "month": rollUnit=RollUnit.MONTH; break;
-                case "year": rollUnit=RollUnit.YEAR; break;
-        }
-        return setRollOver(dateFormat,rollCount,rollUnit);
+        return setRollOver(dateFormat,rollCount, TimeTools.convertToRolloverUnit(unit));
     }
     /**
      * Cancel the next rollover events
@@ -421,55 +418,11 @@ public class SQLiteDB extends SQLDB{
     }
 
     /**
-     * Alter the rollover timestamp to the next rollover moment
-     */
-    private void updateRolloverTimestamp(boolean init){
-        Logger.info(id+" -> Original date: "+ rolloverTimestamp.format(TimeTools.LONGDATE_FORMATTER));
-        rolloverTimestamp = rolloverTimestamp.withSecond(0).withNano(0);
-        int count = init?0:rollCount;
-
-        if(rollUnit==RollUnit.MINUTE){
-            if( init ) {
-                rolloverTimestamp = rolloverTimestamp.minusMinutes( rolloverTimestamp.getMinute()%rollCount );//make sure it's not zero
-            }else{
-                int min = rollCount-rolloverTimestamp.getMinute()%rollCount; // So that 'every 5 min is at 0 5 10 15 etc
-                rolloverTimestamp = rolloverTimestamp.plusMinutes(min == 0 ? rollCount : min);//make sure it's not zero
-            }
-        }else{
-            rolloverTimestamp = rolloverTimestamp.withMinute(0);
-            if(rollUnit==RollUnit.HOUR){
-                rolloverTimestamp = rolloverTimestamp.plusHours( count );
-            }else{
-                rolloverTimestamp = rolloverTimestamp.withHour(0);
-                if(rollUnit==RollUnit.DAY){
-                    rolloverTimestamp = rolloverTimestamp.plusDays( count );
-                }else{
-                    if(rollUnit==RollUnit.WEEK){
-                        rolloverTimestamp = rolloverTimestamp.minusDays(rolloverTimestamp.getDayOfWeek().getValue()-1);
-                        rolloverTimestamp = rolloverTimestamp.plusWeeks(count);
-                    }else{
-                        rolloverTimestamp = rolloverTimestamp.withDayOfMonth(1);
-                        if(rollUnit==RollUnit.MONTH){
-                            rolloverTimestamp=rolloverTimestamp.plusMonths(count);
-                        }else{
-                            rolloverTimestamp = rolloverTimestamp.withMonth(1);
-                            if(rollUnit==RollUnit.YEAR){
-                                rolloverTimestamp=rolloverTimestamp.plusMonths(count);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        Logger.info(id+" -> Next rollover date: "+ rolloverTimestamp.format(TimeTools.LONGDATE_FORMATTER));
-    }
-
-    /**
      * Check if this SQLite uses rollover
      * @return True if it has rollover
      */
     public boolean hasRollOver(){
-        return rollUnit != RollUnit.NONE;
+        return rollUnit != TimeTools.RolloverUnit.NONE;
     }
     /**
      * After executing any queries still in the buffer: - closes the current
@@ -493,14 +446,16 @@ public class SQLiteDB extends SQLDB{
 
             getTables().forEach( t -> t.clearReadFromDB()); // Otherwise they won't get generated
 
-            disconnect();// then disconnect, to be sure it doesn't reconnect to the wrong one...
+            disconnect();// then disconnect, this also flushes the queries first
             Logger.info("Disconnected to connect to new one...");
 
             if( !createContent(true).isEmpty() ){
                 Logger.error(id+" -> Failed to create the database");
             }
             if( renew ) {
-                updateRolloverTimestamp(false); // figure out the next rollover moment
+                Logger.info(id+" -> Current rollover date: "+ rolloverTimestamp.format(TimeTools.LONGDATE_FORMATTER));
+                rolloverTimestamp = TimeTools.applyTimestampRollover(false,rolloverTimestamp,rollCount,rollUnit);// figure out the next rollover moment
+                Logger.info(id+" -> Next rollover date: "+ rolloverTimestamp.format(TimeTools.LONGDATE_FORMATTER));
                 long next = Duration.between(LocalDateTime.now(ZoneOffset.UTC), rolloverTimestamp).toMillis();
                 rollOverFuture = scheduler.schedule(new DoRollOver(true), next, TimeUnit.MILLISECONDS);
             }
