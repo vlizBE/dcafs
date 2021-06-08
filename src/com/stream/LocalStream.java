@@ -46,11 +46,8 @@ public class LocalStream extends BaseStream implements Writable {
 		    listeners.forEach( l-> l.notifyActive(id));
 	   }	
        if (msg != null && !(msg.isBlank() && clean)) { //make sure that the received data is not 'null' or an empty string           
-
-            Datagram d = new Datagram( this, msg, priority, label );	// Build a datagram, based on known information
-            d.setOriginID(id);
-            d.setTimestamp(Instant.now().toEpochMilli());
-            dQueue.add(d);
+            var d = Datagram.build(msg).priority(priority).label(label).writable(this).timestamp(Instant.now().toEpochMilli());
+            dQueue.add( d );
            
 		    if(debug)
 			    Logger.info( d.getTitle()+" -> " + d.getMessage());

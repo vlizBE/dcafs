@@ -73,18 +73,14 @@ public class ModbusStream extends SerialStream{
                 Logger.debug(id+"-->"+Tools.fromBytesToHexString(rec,0,index));
 
             if( verifyCRC( rec, index ) ){
-    
-                d = new Datagram( rec, priority, label );
-            
-                d.setOriginID(id);
-                d.setTimestamp( Instant.now().toEpochMilli() );
-                dQueue.add(d);
+
+                dQueue.add( Datagram.build(rec).label(label).priority(priority).origin(id).timestamp());
                 readyForWorker=false;
                 if(debug)
-                    Logger.info( d.getTitle()+" -> " + d.getMessage());
+                    Logger.info( id+" -> " + new String(rec));
                 // Log anything and everything (except empty strings)    
                 if( log )		// If the message isn't an empty string and logging is enabled, store the data with logback
-                    Logger.tag("RAW").warn( priority + "\t" + label + "\t[hex] " + Tools.fromBytesToHexString(d.getRawMessage()) );
+                    Logger.tag("RAW").warn( priority + "\t" + label + "\t[hex] " + Tools.fromBytesToHexString(rec) );
                 
             }else{
                 Logger.error("Message failed CRC check: "+Tools.fromBytesToHexString(rec,0,index));

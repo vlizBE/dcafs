@@ -98,15 +98,13 @@ public class EditorForward extends AbstractForward{
             Logger.tag("RAW").info( "1\t" + (label.isEmpty()?"void":label)+"|"+getID() + "\t" + data);
 
         if( !label.isEmpty() ){ // If the object has a label associated
-            var d = new Datagram(this,label,data); // build a datagram with it
-            d.setOriginID("editor:"+id);
-            dQueue.add( d ); // add it to the queue
+            dQueue.add( Datagram.build(data).label(label).writable(this) ); // add it to the queue
         }
         // If there are no target, no label, this no longer needs to be a target
         if( targets.isEmpty() && label.isEmpty() && !log){
             valid=false;
             if( deleteNoTargets )
-                dQueue.add( new Datagram("editor:remove,"+id,1,"system") ); // todo
+                dQueue.add( Datagram.system("ef:remove,"+id) ); // todo
             return false;
         }
         return true;

@@ -36,9 +36,7 @@ public class FilterForward extends AbstractForward {
             targets.stream().forEach(wr -> wr.writeLine( data ) );
             targets.removeIf(wr -> !wr.isConnectionValid() );
             if( !label.isEmpty() ){
-                var d = new Datagram(this,label,data);
-                d.setOriginID("ff:"+id);
-                dQueue.add( d );
+                dQueue.add( Datagram.build(data).writable(this).label(label) );
             }
             if( log )
                 Logger.tag("RAW").info( "1\t" + (label.isEmpty()?"void":label)+"|"+getID() + "\t" + data);
@@ -49,7 +47,7 @@ public class FilterForward extends AbstractForward {
         if( targets.isEmpty() && label.isEmpty() && !log && reversed.isEmpty() ){
             valid=false;
             if( deleteNoTargets )
-                dQueue.add( new Datagram("ff:remove,"+id,1,"system") );
+                dQueue.add( Datagram.system("ff:remove,"+id));
             return false;
         }
         return true;
@@ -60,7 +58,7 @@ public class FilterForward extends AbstractForward {
             Logger.info(getID() + " -> Adding reverse target to " + wr.getID());
             if (!valid) {
                 valid = true;
-                sources.forEach(source -> dQueue.add(new Datagram(this, source, 1, "system")));
+                sources.forEach(source -> dQueue.add( Datagram.system(source).writable(this)) );
             }
         }else{
             Logger.info(id+" -> Trying to add duplicate reverse target "+wr.getID());

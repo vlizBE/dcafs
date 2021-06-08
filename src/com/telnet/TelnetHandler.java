@@ -111,27 +111,22 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 				last = data;
 			}
 		}
-		Datagram d = new Datagram( data, 1, LABEL );	// Build a datagram, based on known information
-		d.setOriginID("telnet:"+channel.remoteAddress().toString());
-		d.setTimestamp(Instant.now().toEpochMilli());		   
-		d.setWritable(this);
 
-		distributeMessage( d );	// What needs to be done with the received data
+		distributeMessage( Datagram.build(data).label(LABEL).writable(this).origin("telnet:"+channel.remoteAddress().toString()).timestamp() );	// What needs to be done with the received data
 	}
 	public void distributeMessage( Datagram d ){
-		d.setLabel( LABEL+":"+repeat );
-		d.setWritable(this);
+		d.label( LABEL+":"+repeat );
 
 		if( d.getMessage().endsWith("!!") ) {
 			if( d.getMessage().length()>2) {
 				repeat = d.getMessage().replace("!!", "");
-				d.setLabel( "telnet:"+repeat);	
+				d.label( "telnet:"+repeat);
 				this.writeString("Mode changed to '"+repeat+"'\r\n");
 				return;
 			}else {
-				d.setLabel(LABEL);
+				d.label(LABEL);
 				repeat="";
-				this.writeString("Mode cleared!\r\n>");
+				writeString("Mode cleared!\r\n>");
 				return;
 			}
 		}else {

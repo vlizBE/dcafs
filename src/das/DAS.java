@@ -52,7 +52,7 @@ public class DAS implements DeadThreadListener {
 
     // Workers
     private EmailWorker emailWorker;
-    private BaseWorker dataWorker;
+    private LabelWorker dataWorker;
     private DigiWorker digiWorker;
     private DebugWorker debugWorker;
 
@@ -215,7 +215,7 @@ public class DAS implements DeadThreadListener {
                 mc ->
                 {
                     rtvals.addMathCollector(mc);
-                    dQueue.add( new Datagram(mc,"system",mc.getSource()) ); // request the data
+                    dQueue.add( Datagram.system(mc.getSource()).writable(mc) ); // request the data
                 }
             );
             /* File Collectors */
@@ -224,7 +224,7 @@ public class DAS implements DeadThreadListener {
                     {
                         Logger.info("Created "+fc.getID());
                         fileCollectors.put(fc.getID(),fc);
-                        dQueue.add( new Datagram(fc,"system",fc.getSource()) ); // request the data
+                        dQueue.add( Datagram.system(fc.getSource()).writable(fc) ); // request the data
                     }
             );
         }
@@ -601,14 +601,14 @@ public class DAS implements DeadThreadListener {
      */
     public void addBaseWorker() {
         if (this.dataWorker == null)
-            dataWorker = new BaseWorker(dQueue);
+            dataWorker = new LabelWorker(dQueue);
         dataWorker.setReqData(baseReq);
         dataWorker.setRealtimeValues(rtvals);
         dataWorker.setDebugging(debug);
         dataWorker.setEventListener(this);
     }
 
-    public void alterBaseWorker(BaseWorker altered) {
+    public void alterBaseWorker(LabelWorker altered) {
         Logger.info("Using alternate BaseWorker");
         if ( dataWorker != null)
             dataWorker.stopWorker();
@@ -626,7 +626,7 @@ public class DAS implements DeadThreadListener {
         return dQueue;
     }
 
-    public BaseWorker getBaseWorker() {
+    public LabelWorker getLabelWorker() {
         return dataWorker;
     }
 

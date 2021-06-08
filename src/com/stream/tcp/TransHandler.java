@@ -185,9 +185,7 @@ public class TransHandler extends SimpleChannelInboundHandler<byte[]> implements
 			return;
 		}
 
-		Datagram d = new Datagram( this, data, repeat+msg, 1, tempLabel );	// Build a datagram, based on known information
-		d.setOriginID(id);
-		dQueue.put(d);
+		dQueue.put( Datagram.build(repeat+msg).label(tempLabel).writable(this).raw(data) );
 
 		if( !targets.isEmpty() && !tempLabel.equals("system")){
 			targets.stream().forEach(dt -> dt.writeLine( repeat+new String(data) ) );
@@ -281,11 +279,7 @@ public class TransHandler extends SimpleChannelInboundHandler<byte[]> implements
 	 * @param cmd The command to execute
 	 */
 	private void useQueue(String cmd){
-		Datagram d = new Datagram( cmd, 1, "system" );	// Build a datagram, based on known information
-		d.setOriginID(id);
-		d.setWritable(this);
-		d.toggleSilent();
-		dQueue.add(d);
+		dQueue.add( Datagram.system(cmd).writable(this).toggleSilent() );
 	}
 	@Override
 	public Writable getWritable() {

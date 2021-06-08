@@ -25,10 +25,9 @@ From 0.5.0 onwards, this should be better documented...
 ## 0.9.8 (work in progress)
 
 ### FileCollector
-- Added rollover (like sqlite)
+- Added rollover (like SQLite), which also allows zipping the file
 - Added flush on shutdown
 - Improved timeout write to take in account last write attempt
-- 
 
 ### SQLiteDB
 - Moved the rollover timestamp update code to TimeTools, so FileCollector can use it

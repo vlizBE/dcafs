@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
  *
  * @author Michiel TJampens @vliz
  */
-public class BaseWorker implements Runnable {
+public class LabelWorker implements Runnable, Labeller {
 
 	Map<String, Method> nmeaMetMap = null;
 	Map<String, Method> regMetMap = null;
@@ -58,6 +58,7 @@ public class BaseWorker implements Runnable {
 			new LinkedBlockingQueue<Runnable>());
 
 	ScheduledExecutorService debug = Executors.newSingleThreadScheduledExecutor();
+
 	public enum FAILreason { // Used by the nmea processing to return the result
 		NONE, PRIORITY, LENGTH, SYNTAX, INVALID, TODO, IGNORED, DISABLED, EMPTY
 	}
@@ -73,7 +74,7 @@ public class BaseWorker implements Runnable {
 	 *
 	 * @param dQueue The queue to use
 	 */
-	public BaseWorker(BlockingQueue<Datagram> dQueue) {
+	public LabelWorker(BlockingQueue<Datagram> dQueue) {
 		this();
 		this.dQueue = dQueue;
 		Logger.info("Using " + Math.min(3, Runtime.getRuntime().availableProcessors()) + " threads");
@@ -83,7 +84,7 @@ public class BaseWorker implements Runnable {
 	/**
 	 * Constructor to use its own queue
 	 */
-	public BaseWorker() {
+	public LabelWorker() {
 		getMethodMapping(this.getClass());
 	}
 
@@ -206,7 +207,7 @@ public class BaseWorker implements Runnable {
 
 			ArrayList<Method> methods = new ArrayList<>(Arrays.asList(baseworker.getDeclaredMethods()));
 
-			if (baseworker.getSuperclass() == BaseWorker.class) {
+			if (baseworker.getSuperclass() == LabelWorker.class) {
 				methods.addAll(Arrays.asList(baseworker.getSuperclass().getDeclaredMethods()));
 			}
 			for (Method method : methods) {
@@ -368,7 +369,7 @@ public class BaseWorker implements Runnable {
 
 						lastUsage.put(nmea, times);
 						/* *************************************************************************/
-						fail = (FAILreason) nmeaMetMap.get(nmea).invoke(BaseWorker.this, split, d.priority);
+						fail = (FAILreason) nmeaMetMap.get(nmea).invoke(LabelWorker.this, split, d.priority);
 					} else {
 						Logger.error("Can't process the message: " + d.getMessage());
 					}
@@ -439,7 +440,7 @@ public class BaseWorker implements Runnable {
 				Method m = regMetMap.get(what);
 				if (m != null) {
 					try {
-						m.invoke(BaseWorker.this, d);
+						m.invoke(LabelWorker.this, d);
 						if (debugMode)
 							Logger.debug("Processing:" + d.getMessage() + " for " + d.label + " from " + d.getOriginID());
 					} catch (IllegalAccessException | IllegalArgumentException e) {
@@ -505,8 +506,13 @@ public class BaseWorker implements Runnable {
 	public void stopWorker() {
 		goOn = false;
 	}
+	/* ******************************* Labeller ********************************************************* */
 
-	/* ******************************* D E F A U L T   S T U F F *****************************************/
+	@Override
+	public void addDatagram(Datagram d){
+		dQueue.add(d);
+	}
+	/* ******************************* D E F A U L T   S T U F F **************************************** */
 
 	public void doFILTER( Datagram d ){
 		String[] filter = d.label.split(":");

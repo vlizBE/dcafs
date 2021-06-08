@@ -268,9 +268,9 @@ public abstract class BaseStream {
             Logger.info(id+" -> "+cmd.trigger+" => "+cmd.command);
             if( this instanceof Writable ){
 
-                dQueue.add( new Datagram((Writable)this,"system",cmd.command));
+                dQueue.add( Datagram.system(cmd.command).writable((Writable)this) );
             }else{
-                dQueue.add( new Datagram(cmd.command,1,"system"));
+                dQueue.add( Datagram.system(cmd.command) );
             }
         }
     }

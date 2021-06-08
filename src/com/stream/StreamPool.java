@@ -831,7 +831,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 					return "Bad amount of arguments, need 3 (link,fromid,toid)";
 				var wr = getWritable(cmds[2]);
 				if(wr.isPresent()){
-					dQueue.add(new Datagram(wr.get(),"system",cmds[1]));
+					dQueue.add( Datagram.system(cmds[1]).writable(wr.get()) );
 					return "Tried enabling the forward from "+cmds[1]+" to "+cmds[2];
 				}else{
 					return "No such stream: "+cmds[2];
@@ -1566,7 +1566,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 					Logger.info("Confirm tasks are empty");
 				break;
 			case "math":
-				dQueue.add( new Datagram( "store:"+message+","+result,1,"system") );
+				dQueue.add( Datagram.system( "store:"+message+","+result) );
 				break;
 			default:
 				Logger.error("Unknown Collector type: "+id);

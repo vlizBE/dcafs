@@ -395,30 +395,31 @@ public class DcafsTest{
 Labels are build in the BaseWorker class. In order to add a label this class needs to be extended.
 
 So create a blank java class with a suitable name. For the example this will be Worker.
+
 ````java
-package core; 
+package core;
 
-import worker.BaseWorker; // It will use BaseWorker
-import worker.Datagram;   /* Data arrives in the BaseWorker in the form of Datagram's which is an object to 
-                           * transport data between classes as a single object */
+import worker.LabelWorker; // It will use BaseWorker
+import worker.Datagram;   /* Data arrives in the BaseWorker in the form of Datagram's which is an object to
+ * transport data between classes as a single object */
 
-public class Worker extends BaseWorker { // The class Worker extends the functionality of BaseWorker
+public class Worker extends LabelWorker { // The class Worker extends the functionality of BaseWorker
 
-   /**
-    * Labels are added by creating a method which name starts with 'do' and  the remaining text will 
-    * be considered the label. 
-    * 
-    * Nothing should be returned but public isn't a requirement, can be private.
-    * @param d It should accept a single Datagram
-    */
-   public void doSOMETHING( Datagram d ){
-      // Processing code goes here, the content of datagram
-      d.getMessage(); // Get the data from the datagram as a string
-      d.getLabel(); // get the label 
-      d.getOriginID(); // get the ID of the object that created the datagram
-      d.getRawMessage(); // the raw data bytes
-      // A datagram contains more but those are less used
-   }
+    /**
+     * Labels are added by creating a method which name starts with 'do' and  the remaining text will 
+     * be considered the label. 
+     *
+     * Nothing should be returned but public isn't a requirement, can be private.
+     * @param d It should accept a single Datagram
+     */
+    public void doSOMETHING(Datagram d) {
+        // Processing code goes here, the content of datagram
+        d.getMessage(); // Get the data from the datagram as a string
+        d.getLabel(); // get the label 
+        d.getOriginID(); // get the ID of the object that created the datagram
+        d.getRawMessage(); // the raw data bytes
+        // A datagram contains more but those are less used
+    }
 }
 ````
 That's it for the extended BaseWorker. 
@@ -458,30 +459,27 @@ public class DcafsTest{
 In order to add a command, BaseReq needs to be extended.
 
 ````java
-package core; 
+package core;
 
-import worker.BaseWorker; // It will use BaseWorker
-import worker.Datagram;   /* Data arrives in the BaseWorker in the form of Datagram's which is an object to 
-                           * transport data between classes as a single object */
 
 public class ExtReq extends BaseReq { // The class Worker extends the functionality of BaseWorker
 
-   /**
-    * The name of the method should start with 'do' (same as a label) but the following text can be a mix of up
-    * and lowercase. The full word will be the long command and the uppercase part the abbreviation.
-    * So both the command something and st will call this method.
-    * 
-    * Parameters can be passed along with the command by separating them with a : and delimiting multiple with ,.
-    * The : is mandatory, the , is recommended.
-    * @param request An array container the command in [0] and the parameter(s) in [1] if : was used
-    * @param wr The writable if the origin of the command has it
-    * @param html Whether the reply is preferably in html or not
-    */
-   public String doSomeThing( String[] request, Writable wr, boolean html ){
-      // Do something
-      // BaseReq gives access to the DAS object, so pretty much everything is accessible.
-      return "Something was done, or wasn't it?";
-   }
+    /**
+     * The name of the method should start with 'do' (same as a label) but the following text can be a mix of up
+     * and lowercase. The full word will be the long command and the uppercase part the abbreviation.
+     * So both the command something and st will call this method.
+     *
+     * Parameters can be passed along with the command by separating them with a : and delimiting multiple with ,.
+     * The : is mandatory, the , is recommended.
+     * @param request An array container the command in [0] and the parameter(s) in [1] if : was used
+     * @param wr The writable if the origin of the command has it
+     * @param html Whether the reply is preferably in html or not
+     */
+    public String doSomeThing(String[] request, Writable wr, boolean html) {
+        // Do something
+        // BaseReq gives access to the DAS object, so pretty much everything is accessible.
+        return "Something was done, or wasn't it?";
+    }
 }
 ````
 Same as worker, applying it requires passing to the DAS object.
@@ -1325,15 +1323,12 @@ Given that this is a class to process internal message streams, this has no setu
 
 #### Class
 A blank extended class looks like this:
+
 ```java
 package core;
 
-import org.tinylog.Logger; // To log debug/error messages
-import worker.BaseWorker;  // The class to extend
-import worker.Datagram;    // Needed for the methods
-
 public Worker extends BaseWorker{
-}
+        }
 ```
 To make sure Dcafs uses the extended version of this class, there are two options:
 
