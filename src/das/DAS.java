@@ -219,12 +219,11 @@ public class DAS implements DeadThreadListener {
                 }
             );
             /* File Collectors */
-            FileCollector.createFromXml( XMLfab.getRootChildren(xml,"dcafs","collectors","file"), nettyGroup, workPath ).forEach(
+            FileCollector.createFromXml( XMLfab.getRootChildren(xml,"dcafs","collectors","file"), nettyGroup,dQueue, workPath ).forEach(
                     fc ->
                     {
                         Logger.info("Created "+fc.getID());
                         fileCollectors.put(fc.getID(),fc);
-                        dQueue.add( new Datagram(fc,"system",fc.getSource()) ); // request the data
                     }
             );
         }

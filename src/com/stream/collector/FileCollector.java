@@ -6,6 +6,7 @@ import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLtools;
+import worker.Datagram;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,6 +33,8 @@ public class FileCollector extends AbstractCollector{
     ScheduledExecutorService scheduler;
 
     Queue<String> dataBuffer = new ConcurrentLinkedQueue<String>();
+    private BlockingQueue<Datagram> dQueue;                        // Queue to send commands
+
     private int byteCount=0;
     private Path destPath;
     private String lineSeparator = System.lineSeparator();
@@ -53,13 +56,19 @@ public class FileCollector extends AbstractCollector{
 
     long lastData=-1;
 
-    public FileCollector(String id, String timeoutPeriod, ScheduledExecutorService scheduler) {
+    /* Triggers */
+    enum TRIGGERS { EMPTY_TIMEOUT, ROLLOVER };
+    ArrayList<TriggeredCommand> trigCmds = new ArrayList<>();
+
+    public FileCollector(String id, String timeoutPeriod, ScheduledExecutorService scheduler,BlockingQueue<Datagram> dQueue) {
         super(id);
+        this.dQueue=dQueue;
         secondsTimeout = TimeTools.parsePeriodStringToSeconds(timeoutPeriod);
         this.scheduler=scheduler;
     }
-    public FileCollector(String id){
+    public FileCollector(String id,BlockingQueue<Datagram> dQueue ){
         super(id);
+        this.dQueue=dQueue;
     }
 
     /**
@@ -69,7 +78,7 @@ public class FileCollector extends AbstractCollector{
      * @param workpath The current workpath
      * @return A list of the found filecollectors
      */
-    public static List<FileCollector> createFromXml(Stream<Element> fcEles, ScheduledExecutorService scheduler, String workpath ) {
+    public static List<FileCollector> createFromXml(Stream<Element> fcEles, ScheduledExecutorService scheduler, BlockingQueue<Datagram> dQueue, String workpath ) {
         var fcs = new ArrayList<FileCollector>();
         if( scheduler==null){
             Logger.error("Need a valid scheduler to use FileCollectors");
@@ -79,7 +88,7 @@ public class FileCollector extends AbstractCollector{
             String id = XMLtools.getStringAttribute(fcEle, "id", "");
             if( id.isEmpty() )
                 continue;
-            var fc = new FileCollector(id);
+            var fc = new FileCollector(id,dQueue);
 
             // Flush settings
             Element flush = XMLtools.getFirstChildByTag(fcEle,"flush");
@@ -129,6 +138,15 @@ public class FileCollector extends AbstractCollector{
                 }
             }
 
+            /* Triggered */
+            for( var ele : XMLtools.getChildElements(fcEle,"cmd") ){
+                String cmd = ele.getTextContent();
+                switch(XMLtools.getStringAttribute(ele,"trigger","none").toLowerCase()){
+                    case "rollover": fc.addTriggerCommand(TRIGGERS.ROLLOVER,cmd);
+                    case "empty_timeout": fc.addTriggerCommand(TRIGGERS.EMPTY_TIMEOUT,cmd);
+                }
+            }
+
             // Changing defaults
             fc.setLineSeparator( Tools.fromEscapedStringToBytes( XMLtools.getStringAttribute(fcEle,"eol",System.lineSeparator())) );
 
@@ -136,7 +154,9 @@ public class FileCollector extends AbstractCollector{
         }
         return fcs;
     }
-
+    public void addTriggerCommand( TRIGGERS trigger, String command ){
+        trigCmds.add( new TriggeredCommand(trigger,command) );
+    }
     /**
      * Set the the full path (relative of absolute) to the file
      * @param path the path to the file
@@ -237,6 +257,8 @@ public class FileCollector extends AbstractCollector{
 
         if( dataBuffer.isEmpty() ){
             // Timed out with empty buffer
+            trigCmds.stream().filter( tc -> tc.trigger==TRIGGERS.EMPTY_TIMEOUT)
+                             .forEach(tc->dQueue.add(new Datagram(tc.cmd,1,"system")));
         }else{
             long dif = Instant.now().getEpochSecond() - lastData;
            if( dif >= secondsTimeout-1 ) {
@@ -282,7 +304,12 @@ public class FileCollector extends AbstractCollector{
             Logger.error(id + "(fc) -> Failed to write to "+ dest.toString());
         }
     }
-
+    /* ***************************** Overrides  ******************************************************************* */
+    @Override
+    public void addSource( String source ){
+        this.source=source;
+        dQueue.add( new Datagram(this,"system",source) ); // request the data
+    }
     /* ***************************** RollOver stuff *************************************************************** */
     public void setRollOver(String dateFormat, int rollCount, TimeTools.RolloverUnit unit, boolean zip ) {
 
@@ -373,6 +400,18 @@ public class FileCollector extends AbstractCollector{
             } catch (InterruptedException | ExecutionException | IOException | TimeoutException e) {
                 Logger.error(e);
             }
+            // Triggered commands
+            trigCmds.stream().filter( tc -> tc.trigger==TRIGGERS.ROLLOVER)
+                    .forEach(tc->dQueue.add(new Datagram(tc.cmd,1,"system")));
+        }
+    }
+    private class TriggeredCommand {
+        TRIGGERS trigger;
+        String cmd;
+
+        public TriggeredCommand(TRIGGERS trigger, String cmd){
+            this.trigger=trigger;
+            this.cmd=cmd;
         }
     }
 }
