@@ -57,7 +57,7 @@ public class FileCollector extends AbstractCollector{
     long lastData=-1;
 
     /* Triggers */
-    enum TRIGGERS { EMPTY_TIMEOUT, ROLLOVER };
+    enum TRIGGERS {IDLE, ROLLOVER };
     ArrayList<TriggeredCommand> trigCmds = new ArrayList<>();
 
     public FileCollector(String id, String timeoutPeriod, ScheduledExecutorService scheduler,BlockingQueue<Datagram> dQueue) {
@@ -143,7 +143,7 @@ public class FileCollector extends AbstractCollector{
                 String cmd = ele.getTextContent();
                 switch(XMLtools.getStringAttribute(ele,"trigger","none").toLowerCase()){
                     case "rollover": fc.addTriggerCommand(TRIGGERS.ROLLOVER,cmd);
-                    case "empty_timeout": fc.addTriggerCommand(TRIGGERS.EMPTY_TIMEOUT,cmd);
+                    case "idle": fc.addTriggerCommand(TRIGGERS.IDLE,cmd);
                 }
             }
 
@@ -257,7 +257,7 @@ public class FileCollector extends AbstractCollector{
 
         if( dataBuffer.isEmpty() ){
             // Timed out with empty buffer
-            trigCmds.stream().filter( tc -> tc.trigger==TRIGGERS.EMPTY_TIMEOUT)
+            trigCmds.stream().filter( tc -> tc.trigger==TRIGGERS.IDLE)
                              .forEach(tc->dQueue.add(new Datagram(tc.cmd,1,"system")));
         }else{
             long dif = Instant.now().getEpochSecond() - lastData;
