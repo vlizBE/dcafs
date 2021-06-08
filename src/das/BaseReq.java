@@ -1015,7 +1015,7 @@ public class BaseReq {
 					return "Invalid amount of parameters";
 				return "Matches? "+cmd[1].matches(cmd[2]);
 			case "methodcall":
-				return das.getBaseWorker().getMethodCallAge( html?"<br>":"\r\n" );
+				return das.getLabelWorker().getMethodCallAge( html?"<br>":"\r\n" );
 			case "ipv4": return Tools.getIP("", true);
 			case "ipv6": return Tools.getIP("", false);
 			case "gc":
@@ -1525,7 +1525,7 @@ public class BaseReq {
 				return join.toString();
 			case "reload": 
 				das.loadGenerics(true);
-				return das.getBaseWorker().getGenericInfo();
+				return das.getLabelWorker().getGenericInfo();
 			case "fromtable": 
 				if(cmd.length < 4 )
 					return "To few parameters, gens:fromtable,dbid,table,gen id,delimiter";
@@ -1554,7 +1554,7 @@ public class BaseReq {
 					return "Not enough arguments, must be generics:addblank,id,format[,delimiter]";
 				return Generic.addBlankToXML(das.getXMLdoc(), cmd[1], cmd[2],cmd.length==4?cmd[3]:",");
 			case "list": 
-				return das.getBaseWorker().getGenericInfo();
+				return das.getLabelWorker().getGenericInfo();
 			default:
 				return UNKNOWN_CMD+": "+cmd[0];
 		}

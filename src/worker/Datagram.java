@@ -45,9 +45,6 @@ public class Datagram {
     public void setTimestamp( long timestamp ){
         this.timestamp = timestamp;
     }
-    public String getTitle(){
-        return originID;
-    }
     public byte[] getRaw(){
         return raw;
     }

@@ -50,7 +50,7 @@ public class LocalStream extends BaseStream implements Writable {
             dQueue.add( d );
            
 		    if(debug)
-			    Logger.info( d.getTitle()+" -> " + d.getData());
+			    Logger.info( d.getOriginID()+" -> " + d.getData());
 				   
             // Log anything and everything (except empty strings)
             if( !msg.isBlank() && log )		// If the message isn't an empty string and logging is enabled, store the data with logback
