@@ -10,7 +10,7 @@ import com.stream.Readable;
  */
 public class Datagram {
 	
-    String message;     // The received data
+    String data;             // The received data
     byte[] raw;              // Raw received data
     double messValue = 0;    // Alternative data
     int priority = 1;        // The priority of the data source
@@ -22,12 +22,11 @@ public class Datagram {
     Readable readable;
     boolean silent = false;     
 
-    public Datagram(String message){
-        this.message=message;
-        raw = message.getBytes();
+    public Datagram(String data){
+        this.data = data;
+        raw = data.getBytes();
     }
     public Datagram(){
-
     }
 
     public Writable getWritable(){
@@ -35,11 +34,11 @@ public class Datagram {
     }
     public String getOriginID(){ return originID;}
 
-    public String getMessage(){
-        return message==null?"":message;
+    public String getData(){
+        return data ==null?"": data;
     }
-    public void setMessage( String msg ){
-        this.message=msg;
+    public void setData(String msg ){
+        this.data =msg;
         raw = msg.getBytes();
     }
     public int getPriority(){ return priority; }
@@ -49,7 +48,7 @@ public class Datagram {
     public String getTitle(){
         return originID;
     }
-    public byte[] getRawMessage(){
+    public byte[] getRaw(){
         return raw;
     }
     public Readable getReadable(){
@@ -79,11 +78,22 @@ public class Datagram {
         this.priority=priority;
         return this;
     }
+
+    /**
+     * Set the writable in this datagram, also overwrites the origin with id from writable
+     * @param writable The writable to set
+     * @return The datagram with updated writable
+     */
     public Datagram writable(Writable writable){
         this.writable=writable;
-        this.originID= writable.getID();
+        this.originID=writable.getID();
         return this;
     }
+    /**
+     * Set the readable in this datagram, also overwrites the origin with id from readable
+     * @param readable The readable to set
+     * @return The datagram with updated writable
+     */
     public Datagram readable( Readable readable ){
         this.readable=readable;
         this.originID=readable.getID();
@@ -97,15 +107,26 @@ public class Datagram {
         this.timeOffset = offset ;
         return this;
     }
-    public Datagram timestamp( long timestamp){
+
+    /**
+     * Set the timestamp associated with this datagram
+     * @param timestamp The epoch millis for this datagram
+     * @return The datagram with set timestamp
+     */
+    public Datagram timestamp( long timestamp ){
         this.timestamp=timestamp;
         return this;
     }
+
+    /**
+     * Set the timestamp of this datagram to the current epoch millis
+     * @return The datagram with current epoch millis as timestamp
+     */
     public Datagram timestamp(){
         this.timestamp=Instant.now().toEpochMilli();
         return this;
     }
-    public Datagram raw( byte[] raw){
+    public Datagram raw( byte[] raw ){
         this.raw=raw;
         return this;
     }

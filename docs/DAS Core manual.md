@@ -414,10 +414,10 @@ public class Worker extends LabelWorker { // The class Worker extends the functi
      */
     public void doSOMETHING(Datagram d) {
         // Processing code goes here, the content of datagram
-        d.getMessage(); // Get the data from the datagram as a string
+        d.getData(); // Get the data from the datagram as a string
         d.getLabel(); // get the label 
         d.getOriginID(); // get the ID of the object that created the datagram
-        d.getRawMessage(); // the raw data bytes
+        d.getRaw(); // the raw data bytes
         // A datagram contains more but those are less used
     }
 }

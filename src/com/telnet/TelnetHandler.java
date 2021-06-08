@@ -7,7 +7,6 @@ import org.tinylog.Logger;
 import util.tools.Tools;
 import worker.Datagram;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -117,9 +116,9 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 	public void distributeMessage( Datagram d ){
 		d.label( LABEL+":"+repeat );
 
-		if( d.getMessage().endsWith("!!") ) {
-			if( d.getMessage().length()>2) {
-				repeat = d.getMessage().replace("!!", "");
+		if( d.getData().endsWith("!!") ) {
+			if( d.getData().length()>2) {
+				repeat = d.getData().replace("!!", "");
 				d.label( "telnet:"+repeat);
 				this.writeString("Mode changed to '"+repeat+"'\r\n");
 				return;
@@ -130,10 +129,10 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 				return;
 			}
 		}else {
-			d.setMessage(repeat+d.getMessage());
+			d.setData(repeat+d.getData());
 		}
 		
-		if ( d.getMessage().equalsIgnoreCase("bye")||d.getMessage().equalsIgnoreCase("exit")) {
+		if ( d.getData().equalsIgnoreCase("bye")||d.getData().equalsIgnoreCase("exit")) {
 			// Close the connection after sending 'Have a good day!' if the client has sent 'bye' or 'exit'.
 			ChannelFuture future = channel.writeAndFlush( "Have a good day!\r\n");   			
 			future.addListener(ChannelFutureListener.CLOSE);

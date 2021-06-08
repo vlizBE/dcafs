@@ -247,7 +247,7 @@ public class LabelWorker implements Runnable, Labeller {
 				}
 				lastOrigin=d.originID;
 				if (d.label == null) {
-					Logger.error("Invalid label received along with message :" + d.getMessage());
+					Logger.error("Invalid label received along with message :" + d.getData());
 					continue;
 				}
 				d.label = d.label.toLowerCase();
@@ -261,9 +261,9 @@ public class LabelWorker implements Runnable, Labeller {
 				} else if (d.label.startsWith("valmap")) {
 					executor.execute(new ProcessValmap(d));
 				} else if (d.label.startsWith("rtval:")) {
-					executor.execute(() -> storeRtval(readID,d.getMessage(),d.getOriginID()));
+					executor.execute(() -> storeRtval(readID,d.getData(),d.getOriginID()));
 				} else if (d.label.startsWith("rttext:")) {
-					executor.execute(() -> rtvals.setRealtimeText(readID,d.message));
+					executor.execute(() -> rtvals.setRealtimeText(readID,d.data));
 				} else if (d.label.startsWith("read:")) {
 					if( d.getWritable()!=null){
 						if (d.label.split(":").length >= 2) {
@@ -290,13 +290,13 @@ public class LabelWorker implements Runnable, Labeller {
 							readables.entrySet().removeIf( entry -> entry.getValue().isInvalid()); // cleanup
 							break;
 						case "test":
-							executor.execute(() -> Logger.info(d.originID + "|" + d.label + " -> " + d.getMessage()));
+							executor.execute(() -> Logger.info(d.originID + "|" + d.label + " -> " + d.getData()));
 							break;
 						case "email":
 							executor.execute(() -> reqData.emailResponse(d));
 							break;
 						case "system":
-							executor.execute(() -> reqData.createResponse(d.getMessage(), d.getWritable(), false));
+							executor.execute(() -> reqData.createResponse(d.getData(), d.getWritable(), false));
 							break;
 						case "void":
 							break;
@@ -351,8 +351,8 @@ public class LabelWorker implements Runnable, Labeller {
 
 		public void run() {
 
-			if (MathUtils.doNMEAChecksum(d.getMessage())) {// Either checksum was ok or test was skipped
-				String[] split = d.getMessage().substring(0, d.getMessage().length() - 3).split(",");// remove the checksum and split the nmea string in its components
+			if (MathUtils.doNMEAChecksum(d.getData())) {// Either checksum was ok or test was skipped
+				String[] split = d.getData().substring(0, d.getData().length() - 3).split(",");// remove the checksum and split the nmea string in its components
 				FAILreason fail = FAILreason.IGNORED;
 
 				try {
@@ -371,25 +371,25 @@ public class LabelWorker implements Runnable, Labeller {
 						/* *************************************************************************/
 						fail = (FAILreason) nmeaMetMap.get(nmea).invoke(LabelWorker.this, split, d.priority);
 					} else {
-						Logger.error("Can't process the message: " + d.getMessage());
+						Logger.error("Can't process the message: " + d.getData());
 					}
 				} catch (IllegalAccessException | IllegalArgumentException e) {
-					Logger.error("Something wrong in the processing method for: " + d.getMessage() + " -> " + e.getMessage());
+					Logger.error("Something wrong in the processing method for: " + d.getData() + " -> " + e.getMessage());
 				} catch (java.lang.NullPointerException np) {
-					Logger.error("Nullpointer when processing: " + d.getMessage());
+					Logger.error("Nullpointer when processing: " + d.getData());
 				} catch (InvocationTargetException e) {
 					Throwable originalException = e.getTargetException();
-					Logger.error("'" + originalException + "' at " + originalException.getStackTrace()[0].toString() + " when processing: " + d.getMessage());
+					Logger.error("'" + originalException + "' at " + originalException.getStackTrace()[0].toString() + " when processing: " + d.getData());
 				}
 
 				switch (fail) {
 					case NONE:
 						break; // Most common result
 					case SYNTAX:// The process failed because of a syntax error, eg. the string doesn't contain the right amount of parts
-						Logger.warn("Bad NMEA String Syntax: " + d.getMessage());
+						Logger.warn("Bad NMEA String Syntax: " + d.getData());
 						break;
 					case LENGTH:// The string was longer or shorter then expected
-						Logger.warn("Bad NMEA String Length: " + d.getMessage() + " (length:" + split.length + ") from " + d.getOriginID());
+						Logger.warn("Bad NMEA String Length: " + d.getData() + " (length:" + split.length + ") from " + d.getOriginID());
 						break;
 					case PRIORITY:
 									/* The datagram didn't have the right priority to use it (highest priority = 1,
@@ -397,11 +397,11 @@ public class LabelWorker implements Runnable, Labeller {
 									   Logger.debug("SKIPPED (priority): " +  d.getMessage())*/
 						break;
 					case INVALID:
-						Logger.warn("Invalid NMEA String: " + d.getMessage(), true);
+						Logger.warn("Invalid NMEA String: " + d.getData(), true);
 						break;
 					case TODO:// A NMEA string was received that hasn't got
 						// any processing code yet.
-						Logger.warn("TODO: " + d.priority + "\t" + d.getMessage() + "\t From:" + d.getOriginID());
+						Logger.warn("TODO: " + d.priority + "\t" + d.getData() + "\t From:" + d.getOriginID());
 						break;
 					case IGNORED: // For some reason the string was ignored
 					case DISABLED:
@@ -409,9 +409,9 @@ public class LabelWorker implements Runnable, Labeller {
 						break;
 				}
 			} else {
-				if (d.getMessage().length() > 250)
-					d.setMessage(d.getMessage().substring(0, 250));
-				Logger.warn("NMEA message from " + d.getOriginID() + " failed checksum " + d.getMessage().replace("\r", "<cr>").replace("\n", "<lf>"));
+				if (d.getData().length() > 250)
+					d.setData(d.getData().substring(0, 250));
+				Logger.warn("NMEA message from " + d.getOriginID() + " failed checksum " + d.getData().replace("\r", "<cr>").replace("\n", "<lf>"));
 			}
 			procCount.incrementAndGet();
 		}
@@ -442,23 +442,23 @@ public class LabelWorker implements Runnable, Labeller {
 					try {
 						m.invoke(LabelWorker.this, d);
 						if (debugMode)
-							Logger.debug("Processing:" + d.getMessage() + " for " + d.label + " from " + d.getOriginID());
+							Logger.debug("Processing:" + d.getData() + " for " + d.label + " from " + d.getOriginID());
 					} catch (IllegalAccessException | IllegalArgumentException e) {
-						Logger.warn("Invoke Failed:'" + d.label + "'>" + d.getMessage() + "<");
+						Logger.warn("Invoke Failed:'" + d.label + "'>" + d.getData() + "<");
 						Logger.error(e);
 					} catch (InvocationTargetException e) {
 						Throwable originalException = e.getTargetException();
-						Logger.error("'" + originalException + "' at " + originalException.getStackTrace()[0].toString() + " when processing: " + d.getMessage());
+						Logger.error("'" + originalException + "' at " + originalException.getStackTrace()[0].toString() + " when processing: " + d.getData());
 					} catch (Exception e) {
 						Logger.error(e);
 					}
 				} else {
-					Logger.warn("Not defined:" + d.getOriginID() + "|" + d.label + " >" + d.getMessage() + "< raw: " + Tools.fromBytesToHexString(d.raw));
+					Logger.warn("Not defined:" + d.getOriginID() + "|" + d.label + " >" + d.getData() + "< raw: " + Tools.fromBytesToHexString(d.raw));
 				}
 				// Debug information
 				procCount.incrementAndGet();
 			} catch (java.lang.ArrayIndexOutOfBoundsException f) {
-				Logger.error("Interrupted because out ArrayIndexOut" + f + " while processing: " + d.getMessage() + " Label: " + d.label);
+				Logger.error("Interrupted because out ArrayIndexOut" + f + " while processing: " + d.getData() + " Label: " + d.label);
 			} catch( Exception e){
 				Logger.error(e);
 			}
@@ -520,12 +520,12 @@ public class LabelWorker implements Runnable, Labeller {
 		for( var f : filter[1].split(",")) {
 			var wr = writables.get(filter[0]+":"+f);
 			if (wr != null) {
-				wr.writeLine(d.getMessage());
+				wr.writeLine(d.getData());
 			} else {
 				var filterOpt = reqData.getFilter(f);
 				if (filterOpt.isPresent()) {
 					writables.put(d.label, filterOpt.get().getWritable());
-					filterOpt.get().getWritable().writeLine(d.getMessage());
+					filterOpt.get().getWritable().writeLine(d.getData());
 				}
 			}
 		}
@@ -533,16 +533,16 @@ public class LabelWorker implements Runnable, Labeller {
 	}
 	public void doTELNET(Datagram d) {
 		Writable dt = d.getWritable();
-		if (!d.getMessage().equals("status")) {
+		if (!d.getData().equals("status")) {
 			String from = " for ";
 
 			if (dt != null) {
 				from += dt.getID();
 			}
-			if (!d.getMessage().isBlank())
-				Logger.info("Executing telnet command [" + d.getMessage() + "]" + from);
+			if (!d.getData().isBlank())
+				Logger.info("Executing telnet command [" + d.getData() + "]" + from);
 		}
-		String response = reqData.createResponse(d.getMessage(), dt, false);
+		String response = reqData.createResponse(d.getData(), dt, false);
 		String[] split = d.label.split(":");
 		if (dt != null) {
 			if (!d.silent) {
@@ -581,7 +581,7 @@ public class LabelWorker implements Runnable, Labeller {
 		public void run() {
 			try {
 				String valMapIDs = d.label.split(":")[1];
-				String mes = d.getMessage();
+				String mes = d.getData();
 
 				if (mes.isBlank()) {
 					Logger.warn(valMapIDs + " -> Ignoring blank line");
@@ -592,7 +592,7 @@ public class LabelWorker implements Runnable, Labeller {
 					if (map != null) {
 						map.apply(mes, rtvals);
 					}else{
-						Logger.error("ValMap requested but unknown id: " + valmapID + " -> Message: " + d.getMessage());
+						Logger.error("ValMap requested but unknown id: " + valmapID + " -> Message: " + d.getData());
 					}
 				}
 			} catch (ArrayIndexOutOfBoundsException l) {
@@ -617,7 +617,7 @@ public class LabelWorker implements Runnable, Labeller {
 		public void run(){
 			try{
 
-				String mes = d.getMessage();
+				String mes = d.getData();
 				if( mes.isBlank() ){
 					Logger.warn( d.getOriginID() + " -> Ignoring blank line" );
 					return;
@@ -640,7 +640,7 @@ public class LabelWorker implements Runnable, Labeller {
 									}
 								} else {
 									if (gen == null) {
-										Logger.error("Generic requested but unknown id: " + genericID + " -> Message: " + d.getMessage());
+										Logger.error("Generic requested but unknown id: " + genericID + " -> Message: " + d.getData());
 									}
 								}
 							}
@@ -649,7 +649,7 @@ public class LabelWorker implements Runnable, Labeller {
 			}catch( ArrayIndexOutOfBoundsException e ){
 				Logger.error("Generic requested ("+d.label+") but no valid id given.");
 			} catch( Exception e){
-				Logger.error("Caught an exception when processing "+d.getMessage()+" from "+d.getOriginID());
+				Logger.error("Caught an exception when processing "+d.getData()+" from "+d.getOriginID());
 				Logger.error(e);
 			}
 			procCount.incrementAndGet();

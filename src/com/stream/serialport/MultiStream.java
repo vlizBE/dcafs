@@ -60,11 +60,11 @@ public class MultiStream extends SerialStream{
                                          .label(label)
                                          .origin(id+":"+(char)rec[idPosition]);
                     recBuffer.position(0); // reset position to start of buffer
-                    Logger.info("Message found and forwarded: "+d.getMessage()+" from "+d.getOriginID()); // debug info
+                    Logger.info("Message found and forwarded: "+d.getData()+" from "+d.getOriginID()); // debug info
 
                     if( !targets.isEmpty() ){ // If there are targets
                         try {
-                            targets.stream().forEach(dt -> dt.writeLine(d.getMessage())); // send the payload
+                            targets.stream().forEach(dt -> dt.writeLine(d.getData())); // send the payload
                             targets.removeIf(wr -> !wr.isConnectionValid()); // Clear inactive
                         }catch(Exception e){
                             Logger.error(id+" -> Something bad in multiplexer");

@@ -182,7 +182,7 @@ public class TcpHandler extends SimpleChannelInboundHandler<byte[]>{
             }
 
 		    if(debug)
-			    Logger.info( d.getTitle()+" -> " + d.getMessage());
+			    Logger.info( d.getTitle()+" -> " + d.getData());
 				   
             // Log anything and everything (except empty strings)
             if( !msg.isBlank() && log ) {        // If the message isn't an empty string and logging is enabled, store the data with logback

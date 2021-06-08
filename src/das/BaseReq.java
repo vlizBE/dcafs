@@ -27,7 +27,6 @@ import worker.Datagram;
 import worker.DebugWorker;
 import worker.Generic;
 
-import javax.swing.text.html.Option;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -212,7 +211,7 @@ public class BaseReq {
 	}
 	
 	public void emailResponse( Datagram d ) {
-		Logger.info( "Executing email command ["+d.getMessage()+"], origin: " + d.getOriginID() );
+		Logger.info( "Executing email command ["+d.getData()+"], origin: " + d.getOriginID() );
 		emailResponse( d, "Bot Reply" );
 	}
 
@@ -224,20 +223,20 @@ public class BaseReq {
 		}
 		/* Notification to know if anyone uses the bot. */
 		if ( (!d.getOriginID().startsWith("admin") && !emailWorker.isAddressInRef("admin",d.getOriginID()) ) && header.equalsIgnoreCase("Bot Reply")  ) {
-			emailWorker.sendEmail("admin", "DASbot", "Received '" + d.getMessage() + "' command from " + d.getOriginID() );			
+			emailWorker.sendEmail("admin", "DASbot", "Received '" + d.getData() + "' command from " + d.getOriginID() );
 		}
 		/* Processing of the question */
-		d.setMessage( d.getMessage().toLowerCase());
+		d.setData( d.getData().toLowerCase());
 
 		/* Writable is in case the question is for realtime received data */
-		String response = createResponse( d.getMessage(), d.getWritable(), false, true );
+		String response = createResponse( d.getData(), d.getWritable(), false, true );
 
 		if (!response.toLowerCase().contains(UNKNOWN_CMD)) {
 			response = response.replace("[33m ", "");
 			emailWorker.sendEmail(d.getOriginID(), header, response.replace("\r\n", "<br>"));
 		} else {
 			emailWorker.sendEmail(d.getOriginID(), header,
-					"Euh " + d.getOriginID().substring(0, d.getOriginID().indexOf(".")) + ", no idea what to do with '" + d.getMessage() + "'...");
+					"Euh " + d.getOriginID().substring(0, d.getOriginID().indexOf(".")) + ", no idea what to do with '" + d.getData() + "'...");
 		}
 	}
 
