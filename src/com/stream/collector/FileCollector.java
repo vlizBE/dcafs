@@ -344,13 +344,18 @@ public class FileCollector extends AbstractCollector{
                     if( renamed !=null) {
                         Logger.debug("Renamed to "+renamed.toString());
                         Files.move(dest, dest.resolveSibling(renamed)); // rename the file
+                        String path ;
                         if (zipMaxBytes) { // if wanted, zip it
                             FileTools.zipFile(renamed);
                             Files.deleteIfExists(renamed);
+                            path = renamed+".zip";
+                        }else{
+                            path = renamed.toString();
                         }
+
                         // run the triggered commands
                         trigCmds.stream().filter( tc -> tc.trigger==TRIGGERS.MAXSIZE)
-                                .forEach(tc->dQueue.add(new Datagram(tc.cmd,1,"system")));
+                                .forEach(tc->dQueue.add(new Datagram(tc.cmd.replace("{path}",path),1,"system")));
                     }else{
                         Logger.error("Couldn't create another file "+dest.toString());
                     }
@@ -440,6 +445,7 @@ public class FileCollector extends AbstractCollector{
             }
 
             try {
+                String path;
                 if( zippedRoll ){
                     var res = fut.get(5,TimeUnit.SECONDS); // Writing should be done in 5 seconds...
                     if( res==null) { // if zipping and append is finished
@@ -447,19 +453,25 @@ public class FileCollector extends AbstractCollector{
                         if (zip != null) {
                             Files.deleteIfExists(old);
                             Logger.info(id + "(fc) -> Zipped " + old.toAbsolutePath());
+                            path = zip.toString();
                         } else {
                             Logger.error(id + "(fc) -> Failed to zip " + old.toString());
+                            path=old.toString();
                         }
+                    }else{
+                        path=old.toString();
                     }
                 }else{
                     Logger.info("Not zipping");
+                    path=old.toString();
                 }
+                // Triggered commands
+                trigCmds.stream().filter( tc -> tc.trigger==TRIGGERS.ROLLOVER)
+                        .forEach(tc->dQueue.add(new Datagram(tc.cmd.replace("{path}",path),1,"system")));
+
             } catch (InterruptedException | ExecutionException | IOException | TimeoutException e) {
                 Logger.error(e);
             }
-            // Triggered commands
-            trigCmds.stream().filter( tc -> tc.trigger==TRIGGERS.ROLLOVER)
-                    .forEach(tc->dQueue.add(new Datagram(tc.cmd,1,"system")));
         }
     }
     private class TriggeredCommand {
