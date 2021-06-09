@@ -25,10 +25,12 @@ From 0.5.0 onwards, this should be better documented...
 ## 0.9.8 (work in progress)
 
 ### FileCollector
-- Added rollover (like sqlite)
+- Added rollover (like sqlite) but with possible zipping
+- Added max size limit. When going over file gets renamed to oldname.x.ext where x is 1-1000, with option to zip  
 - Added flush on shutdown
 - Improved timeout write to take in account last write attempt
-- 
+- Added possibility to execute commands on idle, rollover and max size reached.
+- Added macro {path} for the commands that gets replaced with the path
 
 ### SQLiteDB
 - Moved the rollover timestamp update code to TimeTools, so FileCollector can use it
