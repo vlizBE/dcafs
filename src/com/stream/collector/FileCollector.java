@@ -330,25 +330,25 @@ public class FileCollector extends AbstractCollector{
             Logger.debug("Written "+join.toString().length()+" bytes to "+ dest.getFileName().toString());
 
             if( maxBytes!=-1 ){
-                Logger.info("Current File size: "+Files.size(dest)+" max:"+maxBytes);
+
                 if( Files.size(dest) >= maxBytes ){
-                    Logger.info("Max filesize reached");
+                    Logger.debug("Max filesize reached");
 
                     Path renamed=null;
-
                     for( int a=1;a<1000;a++){
-
                         renamed = Path.of(dest.toString().replace(".", "."+a+"."));
+                        // Check if the desired name or zipped version already is available
                         if( Files.notExists(renamed) && Files.notExists(Path.of(renamed+".zip")) )
                             break;
                     }
                     if( renamed !=null) {
-                        Logger.info("Renamed to "+renamed.toString());
-                        Files.move(dest, dest.resolveSibling(renamed));
-                        if (zipMaxBytes) {
+                        Logger.debug("Renamed to "+renamed.toString());
+                        Files.move(dest, dest.resolveSibling(renamed)); // rename the file
+                        if (zipMaxBytes) { // if wanted, zip it
                             FileTools.zipFile(renamed);
                             Files.deleteIfExists(renamed);
                         }
+                        // run the triggered commands
                         trigCmds.stream().filter( tc -> tc.trigger==TRIGGERS.MAXSIZE)
                                 .forEach(tc->dQueue.add(new Datagram(tc.cmd,1,"system")));
                     }else{
