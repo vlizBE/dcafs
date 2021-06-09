@@ -57,7 +57,7 @@ Once running and after opening a telnet connection to it, you'll be greeted with
 In the background, a fresh settings.xml was generated.
 ````xml
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<das>
+<dcafs>
   <settings>
     <mode>normal</mode>
     <!-- Settings related to the telnet server -->
@@ -66,7 +66,7 @@ In the background, a fresh settings.xml was generated.
   <streams>
     <!-- Defining the various streams that need to be read -->
   </streams>
-</das>
+</dcafs>
 ````
 Back in the telnet client, add a data source:
 * `ss:addserial,serialsensor,COM1:19200`  --> adds a serial connection to a sensor called serialsensor that runs at 19200 Baud
