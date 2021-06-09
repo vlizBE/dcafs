@@ -1,5 +1,6 @@
 package com.stream.collector;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.tools.FileTools;
@@ -57,8 +58,12 @@ public class FileCollector extends AbstractCollector{
     long lastData=-1;
 
     /* Triggers */
-    enum TRIGGERS {IDLE, ROLLOVER };
+    enum TRIGGERS {IDLE, ROLLOVER, MAXSIZE };
     ArrayList<TriggeredCommand> trigCmds = new ArrayList<>();
+
+    /* Size limit */
+    long maxBytes=-1;
+    boolean zipMaxBytes=false;
 
     public FileCollector(String id, String timeoutPeriod, ScheduledExecutorService scheduler,BlockingQueue<Datagram> dQueue) {
         super(id);
@@ -137,13 +142,22 @@ public class FileCollector extends AbstractCollector{
                     continue;
                 }
             }
-
+            /* Size limit */
+            Element sizeEle = XMLtools.getFirstChildByTag(fcEle, "sizelimit");
+            if( sizeEle != null ){
+                boolean zip = XMLtools.getBooleanAttribute(fcEle,"zip",false);
+                String size = sizeEle.getTextContent();
+                if( size!=null){
+                    fc.setMaxFileSize(size.toLowerCase(),zip);
+                }
+            }
             /* Triggered */
             for( var ele : XMLtools.getChildElements(fcEle,"cmd") ){
                 String cmd = ele.getTextContent();
                 switch(XMLtools.getStringAttribute(ele,"trigger","none").toLowerCase()){
                     case "rollover": fc.addTriggerCommand(TRIGGERS.ROLLOVER,cmd);
                     case "idle": fc.addTriggerCommand(TRIGGERS.IDLE,cmd);
+                    case "maxsize": fc.addTriggerCommand(TRIGGERS.MAXSIZE,cmd);
                 }
             }
 
@@ -153,6 +167,20 @@ public class FileCollector extends AbstractCollector{
             fcs.add(fc);
         }
         return fcs;
+    }
+    public void setMaxFileSize( String size,boolean zip ){
+        long multiplier=1;
+        size=size.replace("b","");
+        if( size.endsWith("k"))
+            multiplier=1024;
+        if( size.endsWith("m"))
+            multiplier=1024*1024;
+        if( size.endsWith("g"))
+            multiplier=1024*1024*1024;
+
+        maxBytes=NumberUtils.toLong(size.substring(0,size.length()-1))*multiplier;
+        zipMaxBytes=zip;
+        Logger.info("Maximum size set to "+maxBytes);
     }
     public void addTriggerCommand( TRIGGERS trigger, String command ){
         trigCmds.add( new TriggeredCommand(trigger,command) );
@@ -300,6 +328,35 @@ public class FileCollector extends AbstractCollector{
         try {
             Files.write(dest, join.toString().getBytes(charSet) , StandardOpenOption.CREATE, StandardOpenOption.APPEND );
             Logger.debug("Written "+join.toString().length()+" bytes to "+ dest.getFileName().toString());
+
+            if( maxBytes!=-1 ){
+                Logger.info("Current File size: "+Files.size(dest)+" max:"+maxBytes);
+                if( Files.size(dest) >= maxBytes ){
+                    Logger.info("Max filesize reached");
+
+                    Path renamed=null;
+
+                    for( int a=1;a<1000;a++){
+
+                        renamed = Path.of(dest.toString().replace(".", "."+a+"."));
+                        if( Files.notExists(renamed) && Files.notExists(Path.of(renamed+".zip")) )
+                            break;
+                    }
+                    if( renamed !=null) {
+                        Logger.info("Renamed to "+renamed.toString());
+                        Files.move(dest, dest.resolveSibling(renamed));
+                        if (zipMaxBytes) {
+                            FileTools.zipFile(renamed);
+                            Files.deleteIfExists(renamed);
+                        }
+                        trigCmds.stream().filter( tc -> tc.trigger==TRIGGERS.MAXSIZE)
+                                .forEach(tc->dQueue.add(new Datagram(tc.cmd,1,"system")));
+                    }else{
+                        Logger.error("Couldn't create another file "+dest.toString());
+                    }
+                }
+            }
+
         } catch (IOException e) {
             Logger.error(id + "(fc) -> Failed to write to "+ dest.toString());
         }
