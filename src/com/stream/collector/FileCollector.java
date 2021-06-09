@@ -286,7 +286,7 @@ public class FileCollector extends AbstractCollector{
         if( dataBuffer.isEmpty() ){
             // Timed out with empty buffer
             trigCmds.stream().filter( tc -> tc.trigger==TRIGGERS.IDLE)
-                             .forEach(tc->dQueue.add(new Datagram(tc.cmd,1,"system")));
+                             .forEach(tc->dQueue.add(new Datagram(tc.cmd.replace("{path}",getPath().toString()),1,"system")));
         }else{
             long dif = Instant.now().getEpochSecond() - lastData;
            if( dif >= secondsTimeout-1 ) {
