@@ -952,8 +952,22 @@ public class DAS implements DeadThreadListener {
     public String detectI2Cdevices(int controller) {
         return I2CWorker.detectI2Cdevices(controller);
     }
-
-    /* ******************************** * S H U T D O W N S T U F F ******************************************/
+    /* *************************************** F I L E C O L L E C T O R ************************************ */
+    public Optional<FileCollector> getFileCollector(String id){
+        return Optional.ofNullable(fileCollectors.get(id));
+    }
+    public String getFileCollectorsList( String eol ){
+        StringJoiner join = new StringJoiner(eol);
+        join.setEmptyValue("None yet");
+        fileCollectors.keySet().forEach(join::add);
+        return join.toString();
+    }
+    public FileCollector addFileCollector( String id ){
+        var fc=new FileCollector(id,"1m",nettyGroup,dQueue);
+        fileCollectors.put(id, fc);
+        return fc;
+    }
+    /* ******************************** * S H U T D O W N S T U F F ***************************************** */
     /**
      * Set the reason for shutting down
      * 

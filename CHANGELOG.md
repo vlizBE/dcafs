@@ -22,7 +22,7 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamPool)   
   * Rework the TaskManager (will be trigger for 0.10.0)
 
-## 0.9.8 (work in progress)
+## 0.9.8 (09/06/21)
 
 ### FileCollector
 - Added rollover (like sqlite) but with possible zipping
@@ -31,10 +31,14 @@ From 0.5.0 onwards, this should be better documented...
 - Improved timeout write to take in account last write attempt
 - Added possibility to execute commands on idle, rollover and max size reached.
 - Added macro {path} for the commands that gets replaced with the path
+- Added telnet/cmd interface see fc:?
 
 ### SQLiteDB
 - Moved the rollover timestamp update code to TimeTools, so FileCollector can use it
 - Added option to put {rollover} in the path to have this replaced with the timestamp
+
+### Other
+- Added command 'stop', wil cause all src to stop sending to the writable
 
 ## 0.9.7 (05/06/21)
 

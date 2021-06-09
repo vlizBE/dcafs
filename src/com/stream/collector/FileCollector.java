@@ -6,6 +6,7 @@ import org.w3c.dom.Element;
 import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.tools.Tools;
+import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
@@ -56,6 +57,7 @@ public class FileCollector extends AbstractCollector{
     private String workPath="";
 
     long lastData=-1;
+    long firstData=-1;
 
     /* Triggers */
     enum TRIGGERS {IDLE, ROLLOVER, MAXSIZE };
@@ -75,7 +77,9 @@ public class FileCollector extends AbstractCollector{
         super(id);
         this.dQueue=dQueue;
     }
-
+    public void setScheduler( ScheduledExecutorService scheduler ){
+        this.scheduler=scheduler;
+    }
     /**
      * Read the elements and build the FileCollectors based on the content
      * @param fcEles The filecollector elements
@@ -94,79 +98,86 @@ public class FileCollector extends AbstractCollector{
             if( id.isEmpty() )
                 continue;
             var fc = new FileCollector(id,dQueue);
-
-            // Flush settings
-            Element flush = XMLtools.getFirstChildByTag(fcEle,"flush");
-            if( flush != null ){
-                fc.setBatchsize( XMLtools.getIntAttribute(flush,"batchsize",Integer.MAX_VALUE));
-                if( scheduler != null ) {
-                    String timeout = XMLtools.getStringAttribute(flush, "age", "-1");
-                    if (!timeout.equalsIgnoreCase("-1")) {
-                        fc.setTimeOut(timeout, scheduler);
-                    }
-                }
-            }
-            // Source and destination
-            fc.addSource( XMLtools.getStringAttribute(fcEle,"src",""));
-            fc.setWorkPath(workpath);
-            String path = XMLtools.getChildValueByTag(fcEle,"path","");
-            if( path.isEmpty() ){
-                Logger.error(id+"(fc) -> No valid destination given");
-                continue;
-            }
-            Path dest = Path.of(path);
-            if( !dest.isAbsolute()) {
-                fc.setWorkPath(workpath);
-            }
-            fc.setPath(dest);
-
-            //Headers
-            for( var ele : XMLtools.getChildElements(fcEle,"header") ){
-                fc.addHeaderLine(ele.getTextContent());
-            }
-
-            /* RollOver */
-            Element roll = XMLtools.getFirstChildByTag(fcEle, "rollover");
-            if( roll != null ){
-                int rollCount = XMLtools.getIntAttribute(roll, "count", 1);
-                String unit = XMLtools.getStringAttribute(roll, "unit", "none").toLowerCase();
-                boolean zip = XMLtools.getBooleanAttribute(roll,"zip",false);
-                String format = roll.getTextContent();
-
-                TimeTools.RolloverUnit rollUnit = TimeTools.convertToRolloverUnit( unit );
-                if( rollUnit !=null){
-                    Logger.info(id+"(fc) -> Setting rollover: "+format+" "+rollCount+" "+rollUnit);
-                    fc.setRollOver(format,rollCount,rollUnit,zip);
-                }else{
-                    Logger.error(id+"(fc) -> Bad Rollover given" );
-                    continue;
-                }
-            }
-            /* Size limit */
-            Element sizeEle = XMLtools.getFirstChildByTag(fcEle, "sizelimit");
-            if( sizeEle != null ){
-                boolean zip = XMLtools.getBooleanAttribute(fcEle,"zip",false);
-                String size = sizeEle.getTextContent();
-                if( size!=null){
-                    fc.setMaxFileSize(size.toLowerCase(),zip);
-                }
-            }
-            /* Triggered */
-            for( var ele : XMLtools.getChildElements(fcEle,"cmd") ){
-                String cmd = ele.getTextContent();
-                switch(XMLtools.getStringAttribute(ele,"trigger","none").toLowerCase()){
-                    case "rollover": fc.addTriggerCommand(TRIGGERS.ROLLOVER,cmd);
-                    case "idle": fc.addTriggerCommand(TRIGGERS.IDLE,cmd);
-                    case "maxsize": fc.addTriggerCommand(TRIGGERS.MAXSIZE,cmd);
-                }
-            }
-
-            // Changing defaults
-            fc.setLineSeparator( Tools.fromEscapedStringToBytes( XMLtools.getStringAttribute(fcEle,"eol",System.lineSeparator())) );
-
+            fc.setScheduler(scheduler);
+            fc.readFromXML(fcEle,workpath);
             fcs.add(fc);
         }
         return fcs;
+    }
+    public void readFromXML( Element fcEle, String workpath ){
+        // Flush settings
+        Element flush = XMLtools.getFirstChildByTag(fcEle,"flush");
+        if( flush != null ){
+            setBatchsize( XMLtools.getIntAttribute(flush,"batchsize",Integer.MAX_VALUE));
+            if( scheduler != null ) {
+                String timeout = XMLtools.getStringAttribute(flush, "age", "-1");
+                if (!timeout.equalsIgnoreCase("-1")) {
+                    setTimeOut(timeout, scheduler);
+                }
+            }
+        }
+        // Source and destination
+        addSource( XMLtools.getStringAttribute(fcEle,"src",""));
+        setWorkPath(workpath);
+        String path = XMLtools.getChildValueByTag(fcEle,"path","");
+        if( path.isEmpty() ){
+            Logger.error(id+"(fc) -> No valid destination given");
+            return;
+        }
+        Path dest = Path.of(path);
+        if( !dest.isAbsolute()) {
+            setWorkPath(workpath);
+        }
+        setPath(dest);
+
+        //Headers
+        for( var ele : XMLtools.getChildElements(fcEle,"header") ){
+            addHeaderLine(ele.getTextContent());
+        }
+
+        /* RollOver */
+        Element roll = XMLtools.getFirstChildByTag(fcEle, "rollover");
+        if( roll != null ){
+            int rollCount = XMLtools.getIntAttribute(roll, "count", 1);
+            String unit = XMLtools.getStringAttribute(roll, "unit", "none").toLowerCase();
+            boolean zip = XMLtools.getBooleanAttribute(roll,"zip",false);
+            String format = roll.getTextContent();
+
+            TimeTools.RolloverUnit rollUnit = TimeTools.convertToRolloverUnit( unit );
+            if( rollUnit !=null){
+                Logger.info(id+"(fc) -> Setting rollover: "+format+" "+rollCount+" "+rollUnit);
+                setRollOver(format,rollCount,rollUnit,zip);
+            }else{
+                Logger.error(id+"(fc) -> Bad Rollover given" );
+                return;
+            }
+        }
+        /* Size limit */
+        Element sizeEle = XMLtools.getFirstChildByTag(fcEle, "sizelimit");
+        if( sizeEle != null ){
+            boolean zip = XMLtools.getBooleanAttribute(fcEle,"zip",false);
+            String size = sizeEle.getTextContent();
+            if( size!=null){
+                setMaxFileSize(size.toLowerCase(),zip);
+            }
+        }
+        /* Triggered */
+        for( var ele : XMLtools.getChildElements(fcEle,"cmd") ){
+            String cmd = ele.getTextContent();
+            addTriggerCommand(XMLtools.getStringAttribute(ele,"trigger","none").toLowerCase(),cmd);
+        }
+
+        // Changing defaults
+        setLineSeparator( Tools.fromEscapedStringToBytes( XMLtools.getStringAttribute(fcEle,"eol",System.lineSeparator())) );
+    }
+    public static void addBlankToXML(XMLfab fab, String id, String source, String path ){
+        fab.selectOrCreateParent("collectors")
+                .addChild("file").attr("id",id).attr("src",source)
+                    .down()
+                    .addChild("path",path)
+                    .addChild("flush").attr("batchsize","-1").attr("age","1m")
+                .build();
+
     }
     public void setMaxFileSize( String size,boolean zip ){
         long multiplier=1;
@@ -180,7 +191,22 @@ public class FileCollector extends AbstractCollector{
 
         maxBytes=NumberUtils.toLong(size.substring(0,size.length()-1))*multiplier;
         zipMaxBytes=zip;
-        Logger.info("Maximum size set to "+maxBytes);
+        Logger.info(id+"(fc) -> Maximum size set to "+maxBytes);
+    }
+    public void setMaxFileSize( String size ){
+        setMaxFileSize(size,zipMaxBytes);
+    }
+    public boolean addTriggerCommand( String trigger, String cmd ){
+        if(cmd==null)
+            return false;
+
+        switch(trigger){
+            case "rollover": addTriggerCommand(TRIGGERS.ROLLOVER,cmd);break;
+            case "idle": addTriggerCommand(TRIGGERS.IDLE,cmd);break;
+            case "maxsize": addTriggerCommand(TRIGGERS.MAXSIZE,cmd);break;
+            default:return false;
+        }
+        return true;
     }
     public void addTriggerCommand( TRIGGERS trigger, String command ){
         trigCmds.add( new TriggeredCommand(trigger,command) );
@@ -191,6 +217,11 @@ public class FileCollector extends AbstractCollector{
      */
     public void setPath( Path path ){
         this.destPath =path;
+    }
+    public void setPath( Path path, String workPath ){
+        this.destPath =path;
+        if( !path.isAbsolute())
+            this.workPath=workPath;
     }
     /**
      * Get the current path this database can be found at
@@ -258,6 +289,9 @@ public class FileCollector extends AbstractCollector{
 
     @Override
     protected synchronized boolean addData(String data) {
+        if( dataBuffer.isEmpty())
+            firstData=Instant.now().getEpochSecond();
+
         dataBuffer.add(data);
         byteCount += data.length();
         lastData = Instant.now().getEpochSecond();
@@ -288,14 +322,20 @@ public class FileCollector extends AbstractCollector{
             trigCmds.stream().filter( tc -> tc.trigger==TRIGGERS.IDLE)
                              .forEach(tc->dQueue.add(new Datagram(tc.cmd.replace("{path}",getPath().toString()),1,"system")));
         }else{
-            long dif = Instant.now().getEpochSecond() - lastData;
-           if( dif >= secondsTimeout-1 ) {
-               scheduler.submit(() -> appendData(getPath()));
-               timeoutFuture = scheduler.schedule(new TimeOut(), secondsTimeout, TimeUnit.SECONDS );
-           }else{
-               long next = secondsTimeout - dif;
-               timeoutFuture = scheduler.schedule(new TimeOut(), next, TimeUnit.SECONDS );
-           }
+            if(batchSize!=-1){
+                long dif = Instant.now().getEpochSecond() - lastData; // if there's a batchsize, that is primary
+
+                if( batchSize==-1 )
+                    dif = Instant.now().getEpochSecond() - firstData; // if there's no batchsize
+
+                if( dif >= secondsTimeout-1 ) {
+                    scheduler.submit(() -> appendData(getPath()));
+                    timeoutFuture = scheduler.schedule(new TimeOut(), secondsTimeout, TimeUnit.SECONDS );
+                }else{
+                    long next = secondsTimeout - dif;
+                    timeoutFuture = scheduler.schedule(new TimeOut(), next, TimeUnit.SECONDS );
+                }
+            }
         }
     }
 
@@ -369,15 +409,18 @@ public class FileCollector extends AbstractCollector{
     /* ***************************** Overrides  ******************************************************************* */
     @Override
     public void addSource( String source ){
+        if( !this.source.isEmpty() ){
+            dQueue.add( new Datagram(this,"system","stop:"+this.source) );
+        }
         this.source=source;
         dQueue.add( new Datagram(this,"system",source) ); // request the data
     }
     /* ***************************** RollOver stuff *************************************************************** */
-    public void setRollOver(String dateFormat, int rollCount, TimeTools.RolloverUnit unit, boolean zip ) {
+    public boolean setRollOver(String dateFormat, int rollCount, TimeTools.RolloverUnit unit, boolean zip ) {
 
         if(  unit == TimeTools.RolloverUnit.NONE || unit == null) {
             Logger.warn(id+"(fc) -> Bad rollover given");
-            return;
+            return false;
         }
         this.rollCount=rollCount;
         rollUnit=unit;
@@ -400,7 +443,7 @@ public class FileCollector extends AbstractCollector{
         }else{
             Logger.error(id+"(fc) -> Bad rollover for "+rollCount+" counts and unit "+unit+" because next is "+next);
         }
-        return;
+        return true;
     }
     /**
      * Update the filename of the database currently used

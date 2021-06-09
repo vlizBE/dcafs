@@ -539,6 +539,7 @@ public class TimeTools {
      */
     public static RolloverUnit convertToRolloverUnit( String unit ){
         RolloverUnit rollUnit=RolloverUnit.NONE;
+        unit=unit.replace("s","");
         switch(unit){
             case "minute":case "min": rollUnit=RolloverUnit.MINUTES; break;
             case "hour": rollUnit=RolloverUnit.HOURS; break;
