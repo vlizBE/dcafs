@@ -18,9 +18,11 @@ From 0.5.0 onwards, this should be better documented...
 - Goals for this version series (removed when as they are done)
   * Code cleanup
     * Bring javadoc up to date
-    * Try to improve memory usage (somehow)
     * Decide on final class structure (mainly StreamPool)   
   * Rework the TaskManager (will be trigger for 0.10.0)
+
+## 0.9.9 (work in progress)
+
 
 ## 0.9.8 (09/06/21)
 

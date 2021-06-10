@@ -40,7 +40,7 @@ import java.util.concurrent.*;
 
 public class DAS implements DeadThreadListener {
 
-    private static final String version = "0.9.8";
+    private static final String version = "0.9.9";
 
     // Last date that changes were made
     Path settingsFile = Path.of("settings.xml");
