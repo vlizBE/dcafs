@@ -21,6 +21,7 @@ public class ModbusStream extends SerialStream{
     }
     public ModbusStream(BlockingQueue<Datagram> dQueue, Element stream) {
         super(dQueue,stream);
+        eol="";
     }
     @Override
     public String getType(){
@@ -41,7 +42,7 @@ public class ModbusStream extends SerialStream{
             if( debug )
                 Logger.info("delay passed: "+passed+" rec:"+data.length);
             index=0;
-        }                 
+        }
         timestamp = Instant.now().toEpochMilli();    		    // Store the timestamp of the received message
         
         for( byte b : data ){
@@ -65,29 +66,50 @@ public class ModbusStream extends SerialStream{
             case 0x10:
 
             break;
-            default: Logger.warn("Received unknown type"); break;
+            default: Logger.warn(id+"(mb) -> Received unknown type");
+                Logger.info(Tools.fromBytesToHexString(rec));
+            break;
         }
         
         if( readyForWorker ){
             if(debug)
-                Logger.debug(id+"-->"+Tools.fromBytesToHexString(rec,0,index));
+                Logger.debug(id+"(mb) -> "+Tools.fromBytesToHexString(rec,0,index));
 
             if( verifyCRC( rec, index ) ){
-    
+
                 d = new Datagram( rec, priority, label );
-            
+
                 d.setOriginID(id);
                 d.setTimestamp( Instant.now().toEpochMilli() );
                 dQueue.add(d);
+
+                if( !targets.isEmpty() ){
+                    try {
+                        targets.stream().forEach(dt -> {
+                            try{
+                                dt.writeLine(Tools.fromBytesToHexString(rec,0,index-2));
+                            }catch(Exception e){
+                                Logger.error(id+"(mb) -> Something bad while writeLine to "+dt.getID());
+                                Logger.error(e);
+                            }
+                        });
+                        targets.removeIf(wr -> !wr.isConnectionValid()); // Clear inactive
+                    }catch(Exception e){
+                        Logger.error(id+"(mb) -> Something bad in serialport");
+                        Logger.error(e);
+                    }
+                }
+
+
                 readyForWorker=false;
                 if(debug)
-                    Logger.info( d.getTitle()+" -> " + d.getMessage());
+                    Logger.info( d.getTitle()+"(mb) -> " + d.getMessage());
                 // Log anything and everything (except empty strings)    
                 if( log )		// If the message isn't an empty string and logging is enabled, store the data with logback
                     Logger.tag("RAW").warn( priority + "\t" + label + "\t[hex] " + Tools.fromBytesToHexString(d.getRawMessage()) );
                 
             }else{
-                Logger.error("Message failed CRC check: "+Tools.fromBytesToHexString(rec,0,index));
+                Logger.error(id+"(mb) -> Message failed CRC check: "+Tools.fromBytesToHexString(rec,0,index));
             }
             index=0;
         }
