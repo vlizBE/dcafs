@@ -23,6 +23,12 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.9.9 (work in progress)
 
+### Modbus
+- Added support for being a src
+
+### Fixes 
+- FileCollector: didn't reset headers,cmds before reading xml (only relevant on a reload)
+- Modbus: Set the eol to empty on default instead of crlf
 
 ## 0.9.8 (09/06/21)
 
