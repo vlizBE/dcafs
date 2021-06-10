@@ -131,6 +131,7 @@ public class FileCollector extends AbstractCollector{
         setPath(dest);
 
         //Headers
+        headers.clear();
         for( var ele : XMLtools.getChildElements(fcEle,"header") ){
             addHeaderLine(ele.getTextContent());
         }
@@ -153,6 +154,7 @@ public class FileCollector extends AbstractCollector{
             }
         }
         /* Size limit */
+        trigCmds.clear();
         Element sizeEle = XMLtools.getFirstChildByTag(fcEle, "sizelimit");
         if( sizeEle != null ){
             boolean zip = XMLtools.getBooleanAttribute(fcEle,"zip",false);
