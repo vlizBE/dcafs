@@ -561,9 +561,9 @@ public class MathUtils {
         if (!append)
             return crc;
 
-        return ByteBuffer.allocate(data.length+1)
+        return ByteBuffer.allocate(data.length+crc.length)
                 .put( data )
-                .put(crc,0,1)
+                .put(crc,0,crc.length)
                 .array();
     }
 
