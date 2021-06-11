@@ -787,7 +787,7 @@ public class BaseReq {
 		if( nr >= 0 && nr <= streampool.getStreamCount()){
 			String channel = streampool.getStreamID(nr);
 			
-			boolean ok = !streampool.writeBytesToStream(channel, Tools.fromHexStringToBytes(request[1]),true ).isEmpty();
+			boolean ok = !streampool.writeBytesToStream(channel, Tools.fromHexStringToBytes(request[1]) ).isEmpty();
 
 			if( !ok )
 				return "Failed to send "+request[1]+" to "+channel;

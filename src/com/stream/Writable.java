@@ -16,6 +16,12 @@ public interface Writable {
     boolean writeLine(String data);
 
     /**
+     * Write the given data bytes
+     * @param data The bytes to write
+     * @return True if successful
+     */
+    boolean writeBytes( byte[] data);
+    /**
      * Get the id of the object implementing Writable
      * @return The (preferably unique) id for the implementing object
      */

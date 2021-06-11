@@ -302,9 +302,18 @@ public class SerialStream extends BaseStream implements Writable {
      */
     @Override
     public synchronized boolean writeString(String message) {
-        return writeBytes(message.getBytes());
+        return write(message.getBytes());
     }
 
+    /**
+     * Sending raw data
+     * @param data The bytes to write
+     * @return True if succeeded
+     */
+    @Override
+    public synchronized boolean writeBytes(byte[] data) {
+        return write(data);
+    }
     /**
      * Sending a hexidecimal value
      * 
@@ -313,7 +322,7 @@ public class SerialStream extends BaseStream implements Writable {
      */
     public synchronized boolean writeHex(int value) {
         byte[] ar = { (byte) value };
-        return writeBytes(ar);
+        return write(ar);
     }
 
     /**
@@ -322,7 +331,7 @@ public class SerialStream extends BaseStream implements Writable {
      * @param data The data to send.
      * @return True If nothing was wrong with the connection
      */
-    public synchronized boolean writeBytes(byte[] data) {
+    public synchronized boolean write(byte[] data) {
         if (serialPort != null && serialPort.isOpen() && serialPort.bytesAwaitingWrite()<8000) {
             var res=-1;
             try{

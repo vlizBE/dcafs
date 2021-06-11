@@ -62,6 +62,10 @@ public abstract class AbstractCollector implements Writable {
     public boolean writeLine(String data) {
         return addData(data);
     }
+    @Override
+    public boolean writeBytes(byte[] data) {
+        return addData(new String(data));
+    }
 
     @Override
     public String getID() {

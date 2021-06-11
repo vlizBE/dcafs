@@ -23,12 +23,20 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.9.9 (work in progress)
 
+
 ### Modbus
 - Added support for being a src
+- Improved writing support, will calculate and append the crc16 by default
+
+### Streampool
+- Added writeBytes to the Writable interface
+- Writebytestostream no longer allows appending eol
 
 ### Fixes 
 - FileCollector: didn't reset headers,cmds before reading xml (only relevant on a reload)
 - Modbus: Set the eol to empty on default instead of crlf
+- MathUtils: modbus crc append only appended the first byte
+- TaskManager: when creating a blank the path given to the object was still the old scripts instead of tmscripts
 
 ## 0.9.8 (09/06/21)
 

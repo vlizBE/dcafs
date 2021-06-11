@@ -220,10 +220,9 @@ public class StreamPool implements StreamListener, CollectorFuture {
 	 * Send bytes over a specified stream
 	 * @param id The name/title of the stream
 	 * @param txt The data to transmit
-	 * @param addDelimiter True if the default delimiter for that stream needs to be appended
 	 * @return True if it was written
 	 */
-	public String writeBytesToStream(String id, byte[] txt, boolean addDelimiter ) {
+	public String writeBytesToStream( String id, byte[] txt ) {
 		Optional<BaseStream> streamOpt = getStream(id.toLowerCase());
 		if ( streamOpt.isPresent() ) {
 			BaseStream stream = streamOpt.get();
@@ -240,13 +239,8 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				Logger.info("Sending '"+Tools.fromBytesToHexString(txt) + "' to " + stream );
 
 			Writable wr = (Writable)stream;
-			var r = new String(txt);
-			if( addDelimiter ){
-				wr.writeLine( r );
-			}else{
-				wr.writeString( r );
-			}
-			return r;
+			wr.writeBytes( txt );
+			return new String(txt);
 		}else{
 			Logger.error("Didn't find stream named " + id);
 			return "";
@@ -291,7 +285,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 
 		if( txt.startsWith("\\h(") ){
 			txt = txt.substring( 3, txt.indexOf(")") ); //remove the \h(...)
-			return writeBytesToStream( id, Tools.fromHexStringToBytes(txt),false );
+			return writeBytesToStream( id, Tools.fromHexStringToBytes(txt) );
 		}
 
 		Optional<BaseStream> streamOptional = getWritableStream(id);

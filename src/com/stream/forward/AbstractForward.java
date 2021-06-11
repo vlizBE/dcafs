@@ -187,6 +187,10 @@ public abstract class AbstractForward implements Writable {
         return addData(data);
     }
     @Override
+    public boolean writeBytes(byte[] data) {
+        return addData(new String(data));
+    }
+    @Override
     public String getID() {
         return getXmlChildTag()+":"+id;
     }

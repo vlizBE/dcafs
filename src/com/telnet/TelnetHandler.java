@@ -186,6 +186,14 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 		}
 		return false;
 	}
+	public synchronized boolean writeBytes( byte[] data ){
+		if( channel != null && channel.isActive()){
+			channel.writeAndFlush(data);
+			lastSendMessage = new String(data);	// Store the message for future reference
+			return true;
+		}
+		return false;
+	}
 	/************************************************************************************************************/
 	/******************************************* I N H E R I T A N C E ******************************************/
 	/************************************************************************************************************/

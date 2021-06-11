@@ -35,7 +35,10 @@ public class LocalStream extends BaseStream implements Writable {
     public boolean writeString(String data) {
         return processData(data);
     }
-
+    @Override
+    public boolean writeBytes(byte[] data) {
+        return processData(new String(data));
+    }
     @Override
     public boolean writeLine(String data) {
         return processData(data);

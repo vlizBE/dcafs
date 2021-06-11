@@ -218,6 +218,12 @@ public class TcpStream extends BaseStream implements Writable{
         return handler.writeLine(data);
     }
     @Override
+    public boolean writeBytes( byte[] data){
+        if( handler==null || !isConnectionValid())
+            return false;
+        return handler.writeBytes(data);
+    }
+    @Override
     public Writable getWritable(){
         return this;
     }

@@ -59,7 +59,7 @@ public class ModbusStream extends SerialStream{
                 if( index == 5+rec[2] ) // Received all the data
                     readyForWorker=true;
             break;
-            case 0x06:
+            case 0x06: // reply?
                 if(index == 8 )
                     readyForWorker=true;
             break;
@@ -100,7 +100,6 @@ public class ModbusStream extends SerialStream{
                     }
                 }
 
-
                 readyForWorker=false;
                 if(debug)
                     Logger.info( d.getTitle()+"(mb) -> " + d.getMessage());
@@ -113,6 +112,11 @@ public class ModbusStream extends SerialStream{
             }
             index=0;
         }
+    }
+    @Override
+    public synchronized boolean write(byte[] data) {
+        data = MathUtils.calcCRC16_modbus(data,true);
+        return write(data);
     }
     private boolean verifyCRC( byte[] data,int length){
         byte[] crc = MathUtils.calcCRC16_modbus( ArrayUtils.subarray(data,0,length-2), false);

@@ -105,6 +105,6 @@ public class MultiStream extends SerialStream{
         head[idPosition]=deviceId;  // fill in the id
         head[payloadPosition]= (byte)message.length(); //fill in the payload size
 
-        return writeBytes(ArrayUtils.addAll(head,message.getBytes())); //write it
+        return write(ArrayUtils.addAll(head,message.getBytes())); //write it
     }
 }

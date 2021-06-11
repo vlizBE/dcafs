@@ -1227,14 +1227,14 @@ public class TaskManager implements CollectorFuture {
 	}
 	/**
 	 * Reload the tasks previously loaded.
-	 * @return The result,true if succesful or false if something went wrong
+	 * @return The result,true if successful or false if something went wrong
 	 */
 	public boolean reloadTasks() {
 		return loadTasks(xmlPath,true,false);
 	}
 		/**
 	 * Reload the tasks previously loaded.
-	 * @return The result,true if succesful or false if something went wrong
+	 * @return The result,true if successful or false if something went wrong
 	 */
 	public boolean forceReloadTasks() {
 		return loadTasks(xmlPath,true,true);

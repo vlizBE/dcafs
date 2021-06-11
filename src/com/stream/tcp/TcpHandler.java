@@ -209,6 +209,12 @@ public class TcpHandler extends SimpleChannelInboundHandler<byte[]>{
         channel.writeAndFlush((data+eol).getBytes()); 
         return true;
     }
+    public boolean writeBytes(byte[] data) {
+        if( channel==null || !channel.isActive() )
+            return false;
+        channel.writeAndFlush(data);
+        return true;
+    }
     public boolean disconnect(){
         if( channel != null ){
            // channel.close();

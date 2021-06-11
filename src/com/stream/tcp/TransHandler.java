@@ -218,7 +218,17 @@ public class TransHandler extends SimpleChannelInboundHandler<byte[]> implements
         channel.writeAndFlush((data+eol).getBytes());
         return true;
     }
-
+	/**
+	 * Write the given binary data
+	 * @param data The data to write
+	 * @return True if the channel was ok
+	 */
+	public boolean writeBytes(byte[] data) {
+		if( channel==null)
+			return false;
+		channel.writeAndFlush(data);
+		return true;
+	}
 	/**
 	 * Disconnect the handler
 	 * @return True if disconnected
