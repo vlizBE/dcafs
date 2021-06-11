@@ -114,7 +114,7 @@ public class ModbusStream extends SerialStream{
         }
     }
     @Override
-    public synchronized boolean write(byte[] data) {
+    public synchronized boolean writeBytes(byte[] data) {
         data = MathUtils.calcCRC16_modbus(data,true);
         return write(data);
     }
