@@ -1156,7 +1156,7 @@ public class BaseReq {
 						.build();
 
 				// Add it to das		
-				das.addTaskManager(cmd[1], Path.of(workPath,"scripts",cmd[1]+".xml"));
+				das.addTaskManager(cmd[1], Path.of(workPath,"tmscripts",cmd[1]+".xml"));
 				
 				return "Tasks script created, use tm:reload,"+cmd[1]+" to run it.";
 			case "reload":
