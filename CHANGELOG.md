@@ -21,8 +21,10 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamPool)   
   * Rework the TaskManager (will be trigger for 0.10.0)
 
-## 0.9.9 (work in progress)
+## 0.9.10 (work in progress)
 
+
+## 0.9.9 (11/06/21)
 
 ### Modbus
 - Added support for being a src
