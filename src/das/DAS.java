@@ -42,13 +42,12 @@ public class DAS implements DeadThreadListener {
 
     private static final String version = "0.9.10";
 
-    // Last date that changes were made
-    Path settingsFile = Path.of("settings.xml");
+    Path settingsPath = Path.of("settings.xml");
     String workPath=Path.of("").toString();
 
-    private Document xml;
+    private Document settingsDoc;
 
-    LocalDateTime bootup = LocalDateTime.now(); // Store timestamp at boot up to calculate uptime
+    LocalDateTime bootupTimestamp = LocalDateTime.now(); // Store timestamp at boot up to calculate uptime
 
     // Workers
     private EmailWorker emailWorker;
@@ -107,26 +106,25 @@ public class DAS implements DeadThreadListener {
                 // Re set the paths for the file writers to use the same path as the rest of the program
                 System.setProperty("tinylog.directory", workPath); // Set work path as system property
             }
-            settingsFile = Path.of(workPath, "settings.xml");
+            settingsPath = Path.of(workPath, "settings.xml");
         } catch (URISyntaxException e) {
             Logger.error(e);
         }
 
-
-        if (Files.notExists(settingsFile)) {
+        if (Files.notExists(settingsPath)) {
             Logger.warn("No Settings.xml file found, creating new one. Searched path: "
-                    + settingsFile.toFile().getAbsolutePath());
+                    + settingsPath.toFile().getAbsolutePath());
             createXML();
         }
 
-        xml = XMLtools.readXML(settingsFile);
+        settingsDoc = XMLtools.readXML(settingsPath);
 
-        if (xml == null) {
-            Logger.error("No Settings.xml file found, aborting. Searched path: " + settingsFile.toString());
+        if (settingsDoc == null) {
+            Logger.error("No Settings.xml file found, aborting. Searched path: " + settingsPath.toString());
         } else {
             bootOK = true;
 
-            Element settings = XMLtools.getFirstElementByTag(xml, "settings");
+            Element settings = XMLtools.getFirstElementByTag(settingsDoc, "settings");
 
             if (settings != null) {
                 debug = XMLtools.getChildValueByTag(settings, "mode", "normal").equals("debug");
@@ -154,9 +152,10 @@ public class DAS implements DeadThreadListener {
             baseReq.setSQLitesManager(dbManager);
 
             /* TransServer */
-            if (TcpServer.inXML(xml)) {
+            if (TcpServer.inXML(settingsDoc)) {
                 this.addTransServer();
             }
+
             /* Base Worker */
             addBaseWorker();
 
@@ -170,21 +169,21 @@ public class DAS implements DeadThreadListener {
             addStreamPool();
 
             /* EmailWorker */
-            if (XMLtools.hasElementByTag(xml, "email") ) {
+            if (XMLtools.hasElementByTag(settingsDoc, "email") ) {
                 this.addEmailWorker();
             }
             /* DigiWorker */
-            if (XMLtools.hasElementByTag(xml, "digi") ) {
+            if (XMLtools.hasElementByTag(settingsDoc, "digi") ) {
                 this.addDigiWorker();
             }
             /* DebugWorker */
-            if (DebugWorker.inXML(xml)) {
+            if (DebugWorker.inXML(settingsDoc)) {
                 this.addDebugWorker();
             }
 
             /* MQTT worker */
             Element mqtt;
-            if ((mqtt = XMLtools.getFirstElementByTag(xml, "mqtt")) != null) {
+            if ((mqtt = XMLtools.getFirstElementByTag(settingsDoc, "mqtt")) != null) {
                 for (Element broker : XMLtools.getChildElements(mqtt, "broker")) {
                     String id = XMLtools.getStringAttribute(broker, "id", "general");
                     Logger.info("Adding MQTT broker called " + id);
@@ -192,8 +191,9 @@ public class DAS implements DeadThreadListener {
                     rtvals.addMQTTworker(id, mqttWorkers.get(id));
                 }
             }
+
             /* I2C */
-            if (XMLtools.hasElementByTag(xml, "i2c") ) {
+            if (XMLtools.hasElementByTag(settingsDoc, "i2c") ) {
                 this.addI2CWorker();
             }
 
@@ -201,25 +201,26 @@ public class DAS implements DeadThreadListener {
             this.addTelnetServer();
 
             /* TaskManager */
-            loadTaskManagersFromXML(xml);
+            loadTaskManagersFromXML(settingsDoc);
 
             /* Waypoints */
-            if (Waypoints.inXML(xml)) {
-                rtvals.getWaypoints().loadWaypointsFromXML(xml, true);
+            if (Waypoints.inXML(settingsDoc)) {
+                rtvals.getWaypoints().loadWaypointsFromXML(settingsDoc, true);
             } else {
-                rtvals.getWaypoints().setXML(xml);
+                rtvals.getWaypoints().setXML(settingsDoc);
             }
 
             /* Math Collectors */
-            MathCollector.createFromXml( XMLfab.getRootChildren(xml,"dcafs","maths","*") ).forEach(
+            MathCollector.createFromXml( XMLfab.getRootChildren(settingsDoc,"dcafs","maths","*") ).forEach(
                 mc ->
                 {
                     rtvals.addMathCollector(mc);
                     dQueue.add( new Datagram(mc,"system",mc.getSource()) ); // request the data
                 }
             );
+
             /* File Collectors */
-            FileCollector.createFromXml( XMLfab.getRootChildren(xml,"dcafs","collectors","file"), nettyGroup,dQueue, workPath ).forEach(
+            FileCollector.createFromXml( XMLfab.getRootChildren(settingsDoc,"dcafs","collectors","file"), nettyGroup,dQueue, workPath ).forEach(
                     fc ->
                     {
                         Logger.info("Created "+fc.getID());
@@ -265,24 +266,15 @@ public class DAS implements DeadThreadListener {
         return version;
     }
 
-    /**
-     * Get the timestamp DAS was started
-     * 
-     * @return Boot timestamp
-     */
-    public LocalDateTime getBootupDateTime() {
-        return bootup;
-    }
-
     public String getUptime() {
-        return TimeTools.convertPeriodtoString(Duration.between(bootup, LocalDateTime.now()).getSeconds(),
+        return TimeTools.convertPeriodtoString(Duration.between(bootupTimestamp, LocalDateTime.now()).getSeconds(),
                 TimeUnit.SECONDS);
     }
 
     /* ************************************  X M L *****************************************************/
     public void createXML() {
        
-       XMLfab.withRoot(settingsFile, "dcafs")
+       XMLfab.withRoot(settingsPath, "dcafs")
                 .addParent("settings")
                     .addChild("mode","normal")
                 .addParent("streams")
@@ -290,8 +282,8 @@ public class DAS implements DeadThreadListener {
                 .build();
     }
 
-    public Document getXMLdoc() {        
-        return XMLtools.readXML(settingsFile);
+    public Document getSettingsDoc() {
+        return XMLtools.readXML(settingsPath);
     }
 
     /* **************************************  R E A L T I M E V A L U E S ********************************************/
@@ -389,14 +381,14 @@ public class DAS implements DeadThreadListener {
     public boolean updateMQTTsettings(String id) {
         Element mqtt;
 
-        if ((mqtt = XMLtools.getFirstElementByTag(xml, "mqtt")) == null)
+        if ((mqtt = XMLtools.getFirstElementByTag(settingsDoc, "mqtt")) == null)
             return false; // No valid node, nothing to update
 
         for (Element broker : XMLtools.getChildElements(mqtt, "broker")) {
             if (XMLtools.getStringAttribute(broker, "id", "general").equals(id)) {
                 MqttWorker worker = mqttWorkers.get(id);
-                if (worker != null && worker.updateXMLsettings(xml, broker))
-                    return XMLtools.updateXML(xml);                
+                if (worker != null && worker.updateXMLsettings(settingsDoc, broker))
+                    return XMLtools.updateXML(settingsDoc);
             }
         }
         return false;
@@ -414,8 +406,8 @@ public class DAS implements DeadThreadListener {
             return false;
 
         Element mqtt;
-        xml = XMLtools.readXML(settingsFile);// make sure the xml is up to date
-        if ((mqtt = XMLtools.getFirstElementByTag(xml, "mqtt")) != null) {
+        settingsDoc = XMLtools.readXML(settingsPath);// make sure the xml is up to date
+        if ((mqtt = XMLtools.getFirstElementByTag(settingsDoc, "mqtt")) != null) {
             for (Element broker : XMLtools.getChildElements(mqtt, "broker")) {
                 if (XMLtools.getStringAttribute(broker, "id", "general").equals(id)) {
                     worker.readSettings(broker);
@@ -479,72 +471,12 @@ public class DAS implements DeadThreadListener {
     }
 
     /**
-     * Start a taskset from a specific TaskManager
-     * 
-     * @param manager   The manager
-     * @param shortName The name of the taskset
-     * @return Descriptive result
-     */
-    public String startTaskset(String manager, String shortName) {        
-        TaskManager tm = taskManagers.get(manager);
-        if (tm == null)
-            return "Unknown manager: " + manager;
-        return tm.startTaskset(shortName);
-    }
-
-    /**
-     * Check if the interval tasks are still allowed to run
-     */
-    public void recheckIntervalTasks() {
-        taskManagers.values().forEach(TaskManager::recheckIntervalTasks);
-    }
-
-    /**
      * Change a state stored by the TaskManagers
      * 
      * @param state The format needs to be identifier:state
      */
     public void changeManagersState(String state) {
         taskManagers.values().forEach(v -> v.changeState(state));
-    }
-
-    /**
-     * Get a listing of all the states of all the TaskManagers
-     * 
-     * @return Descriptive listing of the current states.
-     */
-    public String getTaskManagerStates() {
-        StringJoiner join = new StringJoiner("\r\n");
-        join.setEmptyValue("No TaskManagers defined yet.");
-
-        taskManagers.forEach((id, manager) -> join.add(id).add(manager.getStatesListing()));
-        return join.toString();
-    }
-
-    /**
-     * Get a descriptive listing of all the tasks of a certain manager
-     * 
-     * @param id      The id of the manager
-     * @param newline Which character to use as newline
-     * @return Descriptive listing of all the tasks managed or Unknown manager if id
-     *         wasn't recognize
-     */
-    public String getTasksListing(String id, String newline) {
-        TaskManager tm = taskManagers.get(id);
-        return tm==null?"Unknown manager":tm.getTaskListing(newline);
-    }
-
-    /**
-     * Get a descriptive listing of all the tasksets of a certain manager
-     * 
-     * @param id      The id of the manager
-     * @param newline Which character to use as newline
-     * @return Descriptive listing of all the tasksets managed or Unknown manager if
-     *         id wasn't recognize
-     */
-    public String getTaskSetsListing(String id, String newline) {
-        TaskManager tm = taskManagers.get(id);
-        return tm==null?"Unknown manager":tm.getTaskSetListing(newline);
     }
 
     /**
@@ -583,7 +515,7 @@ public class DAS implements DeadThreadListener {
             Logger.info("Connecting to streams once because in debug.");
             streampool.enableDebug();
         }
-        streampool.readSettingsFromXML(xml);
+        streampool.readSettingsFromXML(settingsDoc);
     }
 
     public StreamPool getStreamPool() {
@@ -631,18 +563,18 @@ public class DAS implements DeadThreadListener {
 
     public void loadGenerics(boolean clear) {
         if (clear) {
-            xml = XMLtools.readXML(settingsFile);
+            settingsDoc = XMLtools.readXML(settingsPath);
             dataWorker.clearGenerics();
         }        
-        XMLfab.getRootChildren( xml, "dcafs","generics","generic")
+        XMLfab.getRootChildren(settingsDoc, "dcafs","generics","generic")
                 .forEach( ele ->  dataWorker.addGeneric( Generic.readFromXML(ele) ) );
     }
     public void loadValMaps(boolean clear){
         if( clear ){
-            xml = XMLtools.readXML(settingsFile);
+            settingsDoc = XMLtools.readXML(settingsPath);
             dataWorker.clearValMaps();
         }
-        XMLfab.getRootChildren( xml, "dcafs","valmaps","valmap")
+        XMLfab.getRootChildren(settingsDoc, "dcafs","valmaps","valmap")
                 .forEach( ele ->  dataWorker.addValMap( ValMap.readFromXML(ele) ) );
     }
     /* *****************************************  T R A N S S E R V E R ******************************************/
@@ -658,7 +590,7 @@ public class DAS implements DeadThreadListener {
             return;
         }
         Logger.info("Adding TransServer");
-        trans = new TcpServer( settingsFile, nettyGroup);
+        trans = new TcpServer(settingsPath, nettyGroup);
         trans.setServerPort(port);
         trans.setDataQueue(dQueue);
         baseReq.setTcpServer(trans);
@@ -671,23 +603,6 @@ public class DAS implements DeadThreadListener {
         addTcpServer(-1);
     }
 
-    /**
-     * Check if there's already a server defined
-     * 
-     * @return True if there's one active
-     */
-    public boolean hasTransServer() {
-        return trans != null;
-    }
-
-    /**
-     * Start the TransServer with the current settings
-     */
-    public void startTransServer() {
-        if (this.trans != null) {
-            trans.run(); // Start the server
-        }
-    }
     /* **********************************  E M A I L W O R K E R *********************************************/
     /**
      * Adds an EmailWorker
@@ -695,7 +610,7 @@ public class DAS implements DeadThreadListener {
     public void addEmailWorker() {
         Logger.info("Adding EmailWorker");
         addBaseWorker();
-        emailWorker = new EmailWorker(xml, dQueue);
+        emailWorker = new EmailWorker(settingsDoc, dQueue);
         emailWorker.setEventListener(this);
         baseReq.setEmailWorker(emailWorker);
     }
@@ -709,7 +624,7 @@ public class DAS implements DeadThreadListener {
      */
     public void addDigiWorker() {
         Logger.info("Adding DigiWorker");
-        this.digiWorker = new DigiWorker(xml);
+        this.digiWorker = new DigiWorker(settingsDoc);
         this.digiWorker.setEventListener(this);
     }
 
@@ -773,7 +688,7 @@ public class DAS implements DeadThreadListener {
         return dbManager;
     }
     public Database reloadDatabase( String id ){
-        Element root = XMLtools.getFirstElementByTag(getXMLdoc(), "databases");
+        Element root = XMLtools.getFirstElementByTag(getSettingsDoc(), "databases");
         
         Optional<Element> sqlite = XMLtools.getChildElements(root, "sqlite").stream()
                         .filter( db -> db.getAttribute("id").equals(id)).findFirst();
@@ -795,7 +710,7 @@ public class DAS implements DeadThreadListener {
 
     }
     private void readDatabasesFromXML() {
-        Element root = XMLtools.getFirstElementByTag(xml, "databases");
+        Element root = XMLtools.getFirstElementByTag(settingsDoc, "databases");
         XMLtools.getChildElements(root, "sqlite").stream()
                     .filter( db -> !db.getAttribute("id").isEmpty() ) // Can't do anything without id
                     .forEach( db -> addSQLiteDB( SQLiteDB.readFromXML(db,workPath) ) );
@@ -824,7 +739,7 @@ public class DAS implements DeadThreadListener {
         Logger.info("Adding DebugWorker");
         addBaseWorker();
 
-        debugWorker = new DebugWorker(dataWorker.getQueue(), dbManager, xml);
+        debugWorker = new DebugWorker(dataWorker.getQueue(), dbManager, settingsDoc);
 
         if (this.inDebug() && emailWorker != null) 
             emailWorker.setSending(debugWorker.doEmails());            
@@ -888,7 +803,7 @@ public class DAS implements DeadThreadListener {
      * Create the telnetserver
      */
     public void addTelnetServer() {
-        telnet = new TelnetServer(this.getDataQueue(), xml, nettyGroup);
+        telnet = new TelnetServer(this.getDataQueue(), settingsDoc, nettyGroup);
     }
 
     /**
@@ -914,7 +829,7 @@ public class DAS implements DeadThreadListener {
             return;
         }
 
-        i2cWorker = new I2CWorker(xml, dQueue);
+        i2cWorker = new I2CWorker(settingsDoc, dQueue);
     }
     public Optional<I2CWorker> getI2CWorker() {
         return Optional.ofNullable(i2cWorker);
@@ -948,9 +863,6 @@ public class DAS implements DeadThreadListener {
     }
     public String getI2CListeners(){
         return i2cWorker.getListeners();
-    }
-    public String detectI2Cdevices(int controller) {
-        return I2CWorker.detectI2Cdevices(controller);
     }
     /* *************************************** F I L E C O L L E C T O R ************************************ */
     public Optional<FileCollector> getFileCollector(String id){
@@ -1060,9 +972,9 @@ public class DAS implements DeadThreadListener {
             Logger.info("Starting DigiWorker...");
             new Thread(digiWorker, "DigiWorker").start();// Start the thread
         }
-        if (debug && this.debugWorker == null) {
+        if (debug && debugWorker == null) {
             Logger.info("Debug mode but no debugworker created...");
-        } else if (this.debugWorker != null) {
+        } else if (debugWorker != null) {
             if (debug || log) {
                 Logger.info("Starting DebugWorker...");
                 debugWorker.start();// Start the thread
@@ -1070,19 +982,19 @@ public class DAS implements DeadThreadListener {
                 Logger.info("Not in debug mode, not starting debugworker...");
             }
         }
-        if (this.trans != null) {
+        if (trans != null) {
             trans.run(); // Start the server
         }
-        if (this.telnet != null) {
+        if (telnet != null) {
             telnet.run(); // Start the server
         }
-        if (this.i2cWorker != null) {
+        if (i2cWorker != null) {
             Logger.info("Starting I2CWorker...");
             new Thread(i2cWorker, "i2cWorker").start();// Start the thread
         }
 
         // TaskManager
-        for (TaskManager tm : this.taskManagers.values())
+        for (TaskManager tm : taskManagers.values())
             tm.reloadTasks();
 
         Logger.debug("Finished");
@@ -1273,6 +1185,6 @@ public class DAS implements DeadThreadListener {
         }
         das.startAll();   
 
-        Logger.info("Dcafs boot finished!");
+        Logger.info("Dcafs "+version+" boot finished!");
     }
 }

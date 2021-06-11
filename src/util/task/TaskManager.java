@@ -1348,8 +1348,8 @@ public class TaskManager implements CollectorFuture {
 			case "reload":case "reloadtasks":     return this.reloadTasks()?"Reloaded tasks...":"Reload Failed";
 			case "forcereload": return this.forceReloadTasks()?"Reloaded tasks":"Reload failed";
 			case "listtasks": case "tasks": return getTaskListing(html?"<br>":"\r\n");
-			case "listsets": case "sets":  return this.getTaskSetListing(html?"<br>":"\r\n");
-			case "states": case "flags":    return this.getStatesListing();
+			case "listsets": case "sets":  return getTaskSetListing(html?"<br>":"\r\n");
+			case "states": case "flags":    return getStatesListing();
 			case "stop":	  return "Cancelled "+this.stopAll("doTaskManager")+ " futures.";
 			case "run":		
 				if( parts.length==2){

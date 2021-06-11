@@ -28,7 +28,6 @@ import worker.Datagram;
 import worker.DebugWorker;
 import worker.Generic;
 
-import javax.swing.text.html.Option;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -1007,7 +1006,7 @@ public class BaseReq {
 					return "Something went wrong trying to get the file";
 				}
 			case "adddebugnode":
-				DebugWorker.addBlank(XMLfab.withRoot(das.getXMLdoc(),"dcafs","settings"));
+				DebugWorker.addBlank(XMLfab.withRoot(das.getSettingsDoc(),"dcafs","settings"));
 				return "Tried to add node";
 			case "sms":
 				das.sendSMS("admin", "Test");
@@ -1054,7 +1053,7 @@ public class BaseReq {
 	public String doEMAIL( String[] request, Writable wr, boolean html ){	
 		
 		if( request[1].equalsIgnoreCase("addblank") ){
-			if( EmailWorker.addBlankEmailToXML( das.getXMLdoc(), true,true) )
+			if( EmailWorker.addBlankEmailToXML( das.getSettingsDoc(), true,true) )
 				return "Adding default email settings";
 			return "Failed to add default email settings";
 		}
@@ -1127,7 +1126,7 @@ public class BaseReq {
 					} catch (IOException e) {
 						Logger.error(e);
 					}
-					XMLfab tmFab = XMLfab.withRoot(das.getXMLdoc(), "dcafs","settings");
+					XMLfab tmFab = XMLfab.withRoot(das.getSettingsDoc(), "dcafs","settings");
 					tmFab.addChild("taskmanager","tmscripts"+File.separator+cmd[1]+".xml").attr("id",cmd[1]).build();
 					tmFab.build();
 
@@ -1341,7 +1340,7 @@ public class BaseReq {
 					return "Incorrect number of variables: i2c:adddevice,id,bus,address,script";
 				if( das.getI2CWorker().isEmpty()) // if no worker yet, make it
 					das.addI2CWorker();
-				if( I2CWorker.addDeviceToXML(XMLfab.withRoot(das.getXMLdoc(),"dcafs","settings"),
+				if( I2CWorker.addDeviceToXML(XMLfab.withRoot(das.getSettingsDoc(),"dcafs","settings"),
 						cmd[1], //id
 						Integer.parseInt(cmd[2]), //bus
 						cmd[3], //address in hex
@@ -1355,7 +1354,7 @@ public class BaseReq {
 									.attr("id","cmdname").attr("info","what this does")
 								.build();
 						das.getI2CWorker().ifPresent(
-								worker -> worker.readSettingsFromXML(das.getXMLdoc())
+								worker -> worker.readSettingsFromXML(das.getSettingsDoc())
 						);
 						return "Device added, created blank script at "+p;
 					}else{
@@ -1538,7 +1537,7 @@ public class BaseReq {
 				var db = das.getDatabase(cmd[1]);
 				if( db ==null)
 					return "No such database found "+cmd[1];
-				if( db.buildGenericFromTable(XMLfab.withRoot(das.getXMLdoc(), "dcafs","generics"),cmd[2],cmd[3],cmd.length>4?cmd[4]:",") ){
+				if( db.buildGenericFromTable(XMLfab.withRoot(das.getSettingsDoc(), "dcafs","generics"),cmd[2],cmd[3],cmd.length>4?cmd[4]:",") ){
 					return "Generic written";
 				}else{
 					return "Failed to write to xml";
@@ -1550,7 +1549,7 @@ public class BaseReq {
 				if( dbs ==null)
 					return "No such database found "+cmd[1];
 
-				if( dbs.buildGenericFromTables(XMLfab.withRoot(das.getXMLdoc(), "dcafs","generics"),false,cmd.length>2?cmd[2]:",") >0 ){
+				if( dbs.buildGenericFromTables(XMLfab.withRoot(das.getSettingsDoc(), "dcafs","generics"),false,cmd.length>2?cmd[2]:",") >0 ){
 					return "Generic(s) written";
 				}else{
 					return "No generics written";
@@ -1558,7 +1557,7 @@ public class BaseReq {
 			case "addblank":
 				if( cmd.length < 3 )
 					return "Not enough arguments, must be generics:addblank,id,format[,delimiter]";
-				return Generic.addBlankToXML(das.getXMLdoc(), cmd[1], cmd[2],cmd.length==4?cmd[3]:",");
+				return Generic.addBlankToXML(das.getSettingsDoc(), cmd[1], cmd[2],cmd.length==4?cmd[3]:",");
 			case "list": 
 				return das.getBaseWorker().getGenericInfo();
 			default:
@@ -1675,14 +1674,14 @@ public class BaseReq {
 				}
 				return "No such database found";
 			case "addserver":
-					DatabaseManager.addBlankServerToXML( das.getXMLdoc(), "mysql", cmds.length>=2?cmds[1]:"" );
+					DatabaseManager.addBlankServerToXML( das.getSettingsDoc(), "mysql", cmds.length>=2?cmds[1]:"" );
 					return "Added blank database server node to the settings.xml";
 			case "addmysql":
 				var mysql = SQLDB.asMYSQL(address,dbName,user,pass);
 				mysql.setID(id);
 				if( mysql.connect(false) ){
 					mysql.getCurrentTables(false);
-					mysql.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"dcafs","settings","databases"));
+					mysql.writeToXml( XMLfab.withRoot(das.getSettingsDoc(),"dcafs","settings","databases"));
 					das.getDatabaseManager().addSQLDB(id,mysql);
 					return "Connected to MYSQL database and stored in xml as id "+id;
 				}else{
@@ -1693,7 +1692,7 @@ public class BaseReq {
 				mssql.setID(id);
 				if( mssql.connect(false) ){
 					mssql.getCurrentTables(false);
-					mssql.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"dcafs","settings","databases"));
+					mssql.writeToXml( XMLfab.withRoot(das.getSettingsDoc(),"dcafs","settings","databases"));
 					das.getDatabaseManager().addSQLDB(id,mssql);
 					return "Connected to MYSQL database and stored in xml as id "+id;
 				}else{
@@ -1706,7 +1705,7 @@ public class BaseReq {
 				mariadb.setID(id);
 				if( mariadb.connect(false) ){
 					mariadb.getCurrentTables(false);
-					mariadb.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"dcafs","settings","databases"));
+					mariadb.writeToXml( XMLfab.withRoot(das.getSettingsDoc(),"dcafs","settings","databases"));
 					das.getDatabaseManager().addSQLDB(id,mariadb);
 					return "Connected to MariaDB database and stored in xml with id "+id;
 				}else{
@@ -1719,7 +1718,7 @@ public class BaseReq {
 				postgres.setID(id);
 				if( postgres.connect(false) ){
 					postgres.getCurrentTables(false);
-					postgres.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"dcafs","settings","databases"));
+					postgres.writeToXml( XMLfab.withRoot(das.getSettingsDoc(),"dcafs","settings","databases"));
 					das.getDatabaseManager().addSQLDB(id,postgres);
 					return "Connected to PostgreSQL database and stored in xml with id "+id;
 				}else{
@@ -1734,7 +1733,7 @@ public class BaseReq {
 				var sqlite = SQLiteDB.createDB(id,Path.of(dbName).isAbsolute()?"":workPath,Path.of(dbName));
 				if( sqlite.connect(false) ){
 					das.getDatabaseManager().addSQLiteDB(id,sqlite);
-					sqlite.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"dcafs","settings","databases") );
+					sqlite.writeToXml( XMLfab.withRoot(das.getSettingsDoc(),"dcafs","settings","databases") );
 					return "Created SQLite at "+dbName+" and wrote to settings.xml";
 				}else{
 					return "Failed to create SQLite";
@@ -1746,7 +1745,7 @@ public class BaseReq {
 				if( dbOpt == null)
 					return "No such database "+cmds[1];
 				// Select the correct server node
-				var fab = XMLfab.withRoot(das.getXMLdoc(),"dcafs","settings","databases");
+				var fab = XMLfab.withRoot(das.getSettingsDoc(),"dcafs","settings","databases");
 				if( fab.selectParent("server","id",cmds[1]).isEmpty())
 					fab.selectParent("sqlite","id",cmds[1]);
 				if( fab.hasChild("table","name",cmds[2]))
@@ -1766,14 +1765,14 @@ public class BaseReq {
 				if( s == null)
 					return cmds[1] +" is not an SQLite";
 				s.setRollOver(cmds[4],NumberUtils.createInteger(cmds[2]),cmds[3]);
-				s.writeToXml(XMLfab.withRoot(das.getXMLdoc(),"dcafs","settings","databases"));
+				s.writeToXml(XMLfab.withRoot(das.getSettingsDoc(),"dcafs","settings","databases"));
 				s.forceRollover();
 				return "Rollover added";
 			case "addinfluxdb": case "addinflux":
 				var influx = new Influx(address,dbName,user,pass);
 				if( influx.connect(false)){
 					das.getDatabaseManager().addInfluxDB(id,influx);
-					influx.writeToXml( XMLfab.withRoot(das.getXMLdoc(),"dcafs","settings","databases") );
+					influx.writeToXml( XMLfab.withRoot(das.getSettingsDoc(),"dcafs","settings","databases") );
 					return "Connected to InfluxDB and stored it in xml with id "+id;
 				}else{
 					return "Failed to connect to InfluxDB";
@@ -1781,7 +1780,7 @@ public class BaseReq {
 			case "addtable":
 				if( cmds.length < 4 )
 					return "Not enough arguments, needs to be dbm:addtable,dbId,tableName,format";
-				if( DatabaseManager.addBlankTableToXML( das.getXMLdoc(), cmds[1], cmds[2], cmds[3] ) )
+				if( DatabaseManager.addBlankTableToXML( das.getSettingsDoc(), cmds[1], cmds[2], cmds[3] ) )
 					return "Added a partially setup table to "+cmds[1]+" in the settings.xml, edit it to set column names etc";
 				return "No such database found or influxDB.";
 			case "fetch": 
@@ -1837,7 +1836,7 @@ public class BaseReq {
 			case "addnew":
 				if( cmds.length<4)
 					return "Not enough arguments given: fc:addblank,id,src,path";
-				FileCollector.addBlankToXML(XMLfab.withRoot(das.getXMLdoc(),"dcafs"),cmds[1],cmds[2],cmds[3]);
+				FileCollector.addBlankToXML(XMLfab.withRoot(das.getSettingsDoc(),"dcafs"),cmds[1],cmds[2],cmds[3]);
 				var fc = das.addFileCollector(cmds[1]);
 				fc.addSource(cmds[2]);
 				fc.setPath( Path.of(cmds[3]), workPath );
@@ -1853,7 +1852,7 @@ public class BaseReq {
 					return "No such fc: "+cmds[1];
 
 				if( fco.get().setRollOver(cmds[4],NumberUtils.toInt(cmds[2]),TimeTools.convertToRolloverUnit(cmds[3]),Tools.parseBool(cmds[5],false)) ) {
-					XMLfab.withRoot(das.getXMLdoc(), "dcafs", "collectors")
+					XMLfab.withRoot(das.getSettingsDoc(), "dcafs", "collectors")
 							.selectOrCreateParent("file", "id", cmds[1])
 							.alterChild("rollover",cmds[4]).attr("count",cmds[2]).attr("unit",cmds[3]).attr("zip",cmds[5]).build();
 					return "Rollover added";
@@ -1868,7 +1867,7 @@ public class BaseReq {
 					return "No such fc: "+cmds[1];
 
 				fco.get().addHeaderLine(cmds[2]);
-				XMLfab.withRoot(das.getXMLdoc(), "dcafs", "collectors")
+				XMLfab.withRoot(das.getSettingsDoc(), "dcafs", "collectors")
 						.selectOrCreateParent("file", "id", cmds[1])
 						.addChild("header", cmds[2]).build();
 				return "Header line added to "+cmds[1];
@@ -1881,7 +1880,7 @@ public class BaseReq {
 
 				String[] cmd = cmds[2].split(":");
 				if( fco.get().addTriggerCommand(cmd[0],cmd[1]) ) {
-					XMLfab.withRoot(das.getXMLdoc(), "dcafs", "collectors")
+					XMLfab.withRoot(das.getSettingsDoc(), "dcafs", "collectors")
 							.selectOrCreateParent("file", "id", cmds[1])
 							.addChild("cmd", cmd[1]).attr("trigger", cmd[0]).build();
 					return "Triggered command added to "+cmds[1];
@@ -1896,7 +1895,7 @@ public class BaseReq {
 					return "No such fc: "+cmds[1];
 
 				fco.get().setMaxFileSize(cmds[2],Tools.parseBool(cmds[3],false));
-				XMLfab.withRoot(das.getXMLdoc(), "dcafs", "collectors")
+				XMLfab.withRoot(das.getSettingsDoc(), "dcafs", "collectors")
 						.selectOrCreateParent("file", "id", cmds[1])
 						.addChild("sizelimit", cmds[2]).attr("zip", cmds[3]).build();
 				return "Size limit added to "+cmds[1];
@@ -1913,7 +1912,7 @@ public class BaseReq {
 				if( fco.isEmpty() )
 					return "No such fc: "+cmds[1];
 
-				var fab = XMLfab.withRoot(das.getXMLdoc(), "dcafs", "collectors")
+				var fab = XMLfab.withRoot(das.getSettingsDoc(), "dcafs", "collectors")
 										.selectOrCreateParent("file", "id", cmds[1]);
 
 				switch(alter[0]){
@@ -1948,7 +1947,7 @@ public class BaseReq {
 				if( fco.isEmpty() )
 					return "No such fc: "+cmds[1];
 
-				var opt = XMLfab.withRoot(das.getXMLdoc(), "dcafs", "collectors")
+				var opt = XMLfab.withRoot(das.getSettingsDoc(), "dcafs", "collectors")
 						.getChild("file", "id", cmds[1]);
 				if( opt.isPresent() )
 					fco.get().readFromXML(opt.get(),workPath);
