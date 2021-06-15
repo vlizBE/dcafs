@@ -23,6 +23,14 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.9.10 (work in progress)
 
+### Other
+- cmds command now supports regex, uses startswith by default (meaning appends .*)
+- Changed `update:setup` to `update:settings` because it's the settings file
+
+### Bugfixes
+- update command still referred to scripts instead of tmscripts, now also looks up the path instead of assuming default 
+so `update:scripts,scriptfilename` is now `update:tmscript,taskmanager id`
+- Same for retrieve command
 
 ## 0.9.9 (11/06/21)
 

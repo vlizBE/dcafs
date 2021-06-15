@@ -383,12 +383,12 @@ public class BaseReq {
 		String nl = html ? "<br>" : "\r\n";
 		
 		StringJoiner join = new StringJoiner( nl, "List of base commands:"+nl,"");
-		
-		boolean wildcard = request[1].startsWith("*")&&request[1].endsWith("*");
-		String filter = wildcard?"":request[1];
+
+		if( !request[1].contains("*"))
+			request[1]+=".*";
 
 		ArrayList<String> titles = new ArrayList<>();
-		methodMapping.keySet().stream().filter( x -> x.startsWith(filter))
+		methodMapping.keySet().stream().filter( x -> x.matches(request[1]))
 									   .forEach( titles::add );
 
 		Collections.sort(titles); // Sort it so that the list is alphabetical
@@ -491,17 +491,20 @@ public class BaseReq {
 		switch (spl[0]) {
 			case "?":
 				StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
-				join.add( "update:das -> Try to update DAS Core")
-					.add( "update:script,<script name> -> Try to update the given script")
+				join.add( "update:dcafs -> Try to update dcafs (todo)")
+					.add( "update:tmscript,tm id -> Try to update the given taskmanagers script")
 					.add( "update:settings -> Try to update the settings.xml");
 				return join.toString();			
 			case "dcafs":
 				return "todo";
-			case "script"://fe. update:script,tasks.xml
-				if( !spl[1].endsWith(".xml"))
-					spl[1] += ".xml";
-				p = Path.of(workPath,"scripts",spl[1]);
-				to = Path.of(workPath,"scripts",spl[1].replace(".xml", "")+"_" + TimeTools.formatUTCNow("yyMMdd_HHmm") + ".xml");
+			case "tmscript"://fe. update:script,tmid
+
+				var tm = das.taskManagers.get(spl[1]);
+				if( tm == null )
+					return "No such taskmanager "+spl[1];
+
+				p = tm.getXMLPath();
+				to = Path.of(tm.toString().replace(".xml", "")+"_" + TimeTools.formatUTCNow("yyMMdd_HHmm") + ".xml");
 				refr = Path.of(workPath,"attachments",spl[1]);
 				try {
 					if( Files.exists(p) && Files.exists(refr) ){
@@ -509,7 +512,7 @@ public class BaseReq {
 						Files.move(refr, p , StandardCopyOption.REPLACE_EXISTING );// Overwrite
 						
 						// somehow reload the script
-						return das.reloadTaskmanager(spl[1]);// Reloads based on filename OR id
+						return das.reloadTaskmanager(spl[1]);// Reloads based on id
 					}else{
 						Logger.warn("Didn't find the needed files.");
 						return "Couldn't find the correct files. (maybe check spelling?)";
@@ -518,10 +521,10 @@ public class BaseReq {
 					Logger.error(e);
 				}
 				break;
-			case "setup":
+			case "settings":
 				p = Path.of(workPath,"settings.xml");
 
-				to = Path.of( workPath,"settings"+"_" + TimeTools.formatNow("yyMMdd_HHmm") + ".xml");
+				to = Path.of( workPath,"settings_" + TimeTools.formatNow("yyMMdd_HHmm") + ".xml");
 				refr = Path.of( workPath,"attachments"+File.separator+"settings.xml");
 				try {
 
@@ -562,21 +565,20 @@ public class BaseReq {
 		switch( spl[0] ){
 			case "?":
 				StringJoiner join = new StringJoiner(html?"<br>":"\r\n","",html?"<br>":"\r\n");
-				join.add( "retrieve:script,<scriptname>,<email/ref> -> Request the given script through email")
-					.add( "retrieve:setup,<email/ref> -> Request the current settings.xml through email");
+				join.add( "retrieve:tmscript,tm id,<email/ref> -> Request the given taskmanager script through email")
+					.add( "retrieve:settings,<email/ref> -> Request the current settings.xml through email");
 				return join.toString();
-			case "script":case "scripts":
+			case "tmscript":case "tmscripts":
 				if( spl.length < 3 )
-					return "Not enough arguments retrieve:type,filename,email in "+request[0]+":"+request[1];
-				if( !spl[1].endsWith(".xml"))
-					spl[1] += ".xml";		
+					return "Not enough arguments retrieve:type,tmid,email in "+request[0]+":"+request[1];
 
-				Path p = Path.of(workPath,"scripts",spl[1]);
-				if( Files.notExists(p) ){
-					return "No such file: "+ p;
-				}
+				var tm = das.taskManagers.get(spl[1]);
+				if( tm == null )
+					return "No such taskmanager "+spl[1];
 
-				emailWorker.sendEmail(spl[2], "Requested file: "+spl[1], "Nothing to say", p.toString(),false);
+				Path p = tm.getXMLPath();
+
+				emailWorker.sendEmail(spl[2], "Requested tm script: "+spl[1], "Nothing to say", p.toString(),false);
 				return "Tried sending "+spl[1]+" to "+spl[2];
 			case "setup":
 			case "settings":
@@ -972,8 +974,7 @@ public class BaseReq {
 					.add("admin:sms -> Send a test SMS to the admin number")
 					.add("admin:haw -> Stop all workers")
 					.add("admin:clock -> Get the current timestamp")
-					.add("admin:regix,<regex>,<match> -> Test a regex")
-					.add("admin:sqlfile,yes/no -> Start/stop logging queries to raw/yyyy-MM/SQL_queries.log")
+					.add("admin:regex,<regex>,<match> -> Test a regex")
 					.add("admin:ipv4 -> Get the IPv4 and MAC of all network interfaces")
 					.add("admin:ipv6 -> Get the IPv6 and MAC of all network interfaces")
 					.add("admin:gc -> Fore a java garbage collection")
