@@ -79,7 +79,7 @@ Assuming the data has the default eol sequence (check this by using: TODO), you'
 Meanwhile, in the background, the settings.xml was updated as follows:
 ````xml
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<das>
+<dcafs>
   <settings>
     <mode>normal</mode>
     <!-- Settings related to the telnet server -->
@@ -97,7 +97,7 @@ Meanwhile, in the background, the settings.xml was updated as follows:
       <address>localhost:4000</address>
     </stream>
   </streams>
-</das>
+</dcafs>
 ````
 Sending 'help' in the telnet interface should provide enough information for the next recommended steps but for more indepth and extensive information, check the docs/wiki.   
 
