@@ -8,7 +8,7 @@ A Java tool (or can also be used as a library) that takes care of all the nitty-
 * Collect data from TCP, UDP, MQTT broker, serial/tty, I2C, SPI, email
 * Alter with string and math operations, or filter out lines
 * Forward back to source/origin, to any other source, a hosted TCP server or email (ie. create a serial to tcp converter)
-* Store processed data in SQLite (dcafs will create the db), MariaDB, MySQL, InfluxDB, PostgreSQL and MSSQL (dcafs can create/read the table structure) while additionally raw data can be kept in timestamped .log files
+* Store processed data in SQLite (dcafs will create the db), MariaDB, MySQL, InfluxDB, PostgreSQL and MSSQL (dcafs can create/read the table structure) while additionally raw/altered data can be kept in (timestamped) .log files
 * XML based scheduling engine capabable of interacting with all connected sources and respond to realtime data
 * Single control pipeline that can be accessed via telnet, email or the earlier mentioned scheduling engine
 * Update itself via email (linux only for now)
