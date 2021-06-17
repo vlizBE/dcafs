@@ -322,7 +322,7 @@ public class FileCollector extends AbstractCollector{
         if( dataBuffer.isEmpty() ){
             // Timed out with empty buffer
             trigCmds.stream().filter( tc -> tc.trigger==TRIGGERS.IDLE)
-                             .forEach( tc->dQueue.add( Datagram.system(tc.cmd.replace("{path}",getPath().toString()))) );
+                             .forEach( tc->dQueue.add( Datagram.system(tc.cmd.replace("{path}",getPath().toString())).writable(this)) );
         }else{
             if(batchSize!=-1){
                 long dif = Instant.now().getEpochSecond() - lastData; // if there's a batchsize, that is primary
@@ -397,7 +397,7 @@ public class FileCollector extends AbstractCollector{
 
                         // run the triggered commands
                         trigCmds.stream().filter( tc -> tc.trigger==TRIGGERS.MAXSIZE)
-                                .forEach(tc->dQueue.add(Datagram.system(tc.cmd.replace("{path}",path))));
+                                .forEach(tc->dQueue.add(Datagram.system(tc.cmd.replace("{path}",path)).writable(this)));
                     }else{
                         Logger.error("Couldn't create another file "+dest.toString());
                     }
@@ -512,7 +512,7 @@ public class FileCollector extends AbstractCollector{
                 }
                 // Triggered commands
                 trigCmds.stream().filter( tc -> tc.trigger==TRIGGERS.ROLLOVER)
-                        .forEach(tc->dQueue.add(Datagram.system(tc.cmd.replace("{path}",path))));
+                        .forEach(tc->dQueue.add(Datagram.system(tc.cmd.replace("{path}",path)).writable(FileCollector.this)));
 
             } catch (InterruptedException | ExecutionException | IOException | TimeoutException e) {
                 Logger.error(e);

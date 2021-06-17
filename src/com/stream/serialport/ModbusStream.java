@@ -77,7 +77,7 @@ public class ModbusStream extends SerialStream{
 
             if( verifyCRC( rec, index ) ){
 
-                dQueue.add(Datagram.build(rec).label(label).priority(priority).origin(id).timestamp());
+                dQueue.add(Datagram.build(rec).label(label).priority(priority).origin(id).timestamp().writable(this));
 
                 if( !targets.isEmpty() ){
                     try {
