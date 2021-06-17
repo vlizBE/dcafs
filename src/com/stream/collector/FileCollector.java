@@ -322,7 +322,7 @@ public class FileCollector extends AbstractCollector{
         if( dataBuffer.isEmpty() ){
             // Timed out with empty buffer
             trigCmds.stream().filter( tc -> tc.trigger==TRIGGERS.IDLE)
-                             .forEach(tc->dQueue.add(new Datagram(tc.cmd.replace("{path}",getPath().toString()),1,"system")));
+                             .forEach( tc->dQueue.add( Datagram.system(tc.cmd.replace("{path}",getPath().toString()))) );
         }else{
             if(batchSize!=-1){
                 long dif = Instant.now().getEpochSecond() - lastData; // if there's a batchsize, that is primary
@@ -397,7 +397,7 @@ public class FileCollector extends AbstractCollector{
 
                         // run the triggered commands
                         trigCmds.stream().filter( tc -> tc.trigger==TRIGGERS.MAXSIZE)
-                                .forEach(tc->dQueue.add(new Datagram(tc.cmd.replace("{path}",path),1,"system")));
+                                .forEach(tc->dQueue.add(Datagram.system(tc.cmd.replace("{path}",path))));
                     }else{
                         Logger.error("Couldn't create another file "+dest.toString());
                     }
@@ -412,10 +412,10 @@ public class FileCollector extends AbstractCollector{
     @Override
     public void addSource( String source ){
         if( !this.source.isEmpty() ){
-            dQueue.add( new Datagram(this,"system","stop:"+this.source) );
+            dQueue.add( Datagram.system("stop:"+this.source).writable(this) );
         }
         this.source=source;
-        dQueue.add( new Datagram(this,"system",source) ); // request the data
+        dQueue.add( Datagram.system(source).writable(this) ); // request the data
     }
     /* ***************************** RollOver stuff *************************************************************** */
     public boolean setRollOver(String dateFormat, int rollCount, TimeTools.RolloverUnit unit, boolean zip ) {
@@ -512,7 +512,7 @@ public class FileCollector extends AbstractCollector{
                 }
                 // Triggered commands
                 trigCmds.stream().filter( tc -> tc.trigger==TRIGGERS.ROLLOVER)
-                        .forEach(tc->dQueue.add(new Datagram(tc.cmd.replace("{path}",path),1,"system")));
+                        .forEach(tc->dQueue.add(Datagram.system(tc.cmd.replace("{path}",path))));
 
             } catch (InterruptedException | ExecutionException | IOException | TimeoutException e) {
                 Logger.error(e);
