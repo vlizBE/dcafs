@@ -1252,7 +1252,8 @@ public class StreamPool implements StreamListener, CollectorFuture {
 	/*    ------------------------ Filter ---------------------------------    */
 	public FilterForward addFilter(String id, String source, String rule ){
 		var ff = new FilterForward( id, source, dQueue);
-		ff.addRule(rule);
+		if( ff.addRule(rule) < 0 )
+			return null;
 		filters.put( id, ff);
 		return ff;
 	}
@@ -1294,6 +1295,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				join.add( "  ff:addrule,id,rule:value -> Add a rule to the given filter");
 
 				join.add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW);
+				join.add( "  ff:alter,id,param:value -> Alter a parameter, for now only altering the label is possible");
 				join.add( "  ff:reload,id -> Reload the filter with the given id");
 				join.add( "  ff:reload -> Clear the list and reload all the filters");
 				join.add( "  ff:remove,id -> Remove the filter with the given id");
@@ -1362,16 +1364,22 @@ public class StreamPool implements StreamListener, CollectorFuture {
 					src.add(cmds[a]);
 				}
 
-				addFilter(cmds[1].toLowerCase(),src.toString(),"")
-						.writeToXML( XMLfab.withRoot(xmlPath, "dcafs") );
+				ff = addFilter(cmds[1].toLowerCase(),src.toString(),"");
+				if( ff == null)
+					return "Something wrong with the command, filter not created";
+				ff.writeToXML( XMLfab.withRoot(xmlPath, "dcafs") );
 				return "Blank filter with id "+cmds[1]+ " created"+(cmds.length>2?", with source "+cmds[2]:"")+".";
 			case "addshort":
 				if( cmds.length<4)
 					return "Not enough arguments, needs to be ff:addshort,id,src,type:value";
 				if( getFilter(cmds[1]).isPresent() )
 					return "Already filter with that id";
-				addFilter(cmds[1].toLowerCase(),cmds[2],cmds[3])
-						.writeToXML( XMLfab.withRoot(xmlPath, "dcafs") );
+
+				ff = addFilter(cmds[1].toLowerCase(),cmds[2],cmds[3]);
+				if( ff == null )
+					return "Something wrong with the command, filter not created";
+
+				ff.writeToXML( XMLfab.withRoot(xmlPath, "dcafs") );
 				return "Filter with id "+cmds[1]+ " created, with source "+cmds[2]+" and rule "+cmds[3];
 			case "addtemp":
 				if( getFilter(cmds[1]).isPresent() ){
@@ -1433,6 +1441,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 					} else {
 						return "No such filter, " + cmds[1];
 					}
+					return "Filter reloaded.";
 				}else{ //reload all
 					var fEle = XMLfab.withRoot(xmlPath, "dcafs", "filters").getChildren("filter");
 					ArrayList<String> altered=new ArrayList<>();
@@ -1458,8 +1467,8 @@ public class StreamPool implements StreamListener, CollectorFuture {
 						filters.entrySet().removeIf( fe -> !fe.getValue().isConnectionValid());
 						Logger.info("Removed filter...");
 					}
+					return "Filters reloaded.";
 				}
-				return "Filter reloaded.";
 			case "test":
 				if( cmds.length != 2)
 					return "Not enough arguments, ff:test,id,data";
