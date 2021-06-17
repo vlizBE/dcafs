@@ -23,6 +23,22 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.9.10 (work in progress)
 
+### Datagram
+- Renamed DataWorker to LabelWorker, fits a bit better... i think
+- Replaced the Datagram constructors with a fluid api, should make them easier to read
+````java
+// For example
+var d = new Datagram( "message", 1, "system");
+d.setWritable(this)
+d.setOriginID(id);
+// Became
+var d = Datagram.build("message").label("system").priority(1).origin(id).writable(this);
+// But priority is 1 by default, id is taken from the writable, so this does the same
+var d = Datagram.build("message").label("system").writable(this);
+//or even shorter, system is build with system label (default label is void)
+var d = Datagram.system("message").writable(this);
+````
+
 ### Other
 - cmds command now supports regex, uses startswith by default (meaning appends .*)
 - Changed `update:setup` to `update:settings` because it's the settings file
@@ -31,6 +47,7 @@ From 0.5.0 onwards, this should be better documented...
 - update command still referred to scripts instead of tmscripts, now also looks up the path instead of assuming default 
 so `update:scripts,scriptfilename` is now `update:tmscript,taskmanager id`
 - Same for retrieve command
+- `ff:addblank` and `ff:addshort` didn't notify on errors but claimed 'ok'
 
 ## 0.9.9 (11/06/21)
 
