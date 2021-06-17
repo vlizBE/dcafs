@@ -212,7 +212,7 @@ public class BaseReq {
 	}
 	
 	public void emailResponse( Datagram d ) {
-		Logger.info( "Executing email command ["+d.getMessage()+"], origin: " + d.getOriginID() );
+		Logger.info( "Executing email command ["+d.getData()+"], origin: " + d.getOriginID() );
 		emailResponse( d, "Bot Reply" );
 	}
 
@@ -224,20 +224,20 @@ public class BaseReq {
 		}
 		/* Notification to know if anyone uses the bot. */
 		if ( (!d.getOriginID().startsWith("admin") && !emailWorker.isAddressInRef("admin",d.getOriginID()) ) && header.equalsIgnoreCase("Bot Reply")  ) {
-			emailWorker.sendEmail("admin", "DASbot", "Received '" + d.getMessage() + "' command from " + d.getOriginID() );			
+			emailWorker.sendEmail("admin", "DASbot", "Received '" + d.getData() + "' command from " + d.getOriginID() );
 		}
 		/* Processing of the question */
-		d.setMessage( d.getMessage().toLowerCase());
+		d.setData( d.getData().toLowerCase());
 
 		/* Writable is in case the question is for realtime received data */
-		String response = createResponse( d.getMessage(), d.getWritable(), false, true );
+		String response = createResponse( d.getData(), d.getWritable(), false, true );
 
 		if (!response.toLowerCase().contains(UNKNOWN_CMD)) {
 			response = response.replace("[33m ", "");
 			emailWorker.sendEmail(d.getOriginID(), header, response.replace("\r\n", "<br>"));
 		} else {
 			emailWorker.sendEmail(d.getOriginID(), header,
-					"Euh " + d.getOriginID().substring(0, d.getOriginID().indexOf(".")) + ", no idea what to do with '" + d.getMessage() + "'...");
+					"Euh " + d.getOriginID().substring(0, d.getOriginID().indexOf(".")) + ", no idea what to do with '" + d.getData() + "'...");
 		}
 	}
 
@@ -959,7 +959,8 @@ public class BaseReq {
 		return response.toString();   
 	}
 	public String doREAD( String[] request, Writable wr, boolean html ){
-		das.getDataQueue().add( new Datagram(wr,"",1,"read:"+request[1]));
+		Datagram.build("").writable(wr).label("read:"+request[1]);
+		das.getDataQueue().add( Datagram.build("").writable(wr).label("read:"+request[1]) ); //new Datagram(wr,"",1,"read:"+request[1]));
 		return "Request for readable "+request[1]+" from "+wr.getID()+" issued";
 	}
 	public String doADMIN( String[] request, Writable wr, boolean html ){	
@@ -1021,7 +1022,7 @@ public class BaseReq {
 					return "Invalid amount of parameters";
 				return "Matches? "+cmd[1].matches(cmd[2]);
 			case "methodcall":
-				return das.getBaseWorker().getMethodCallAge( html?"<br>":"\r\n" );
+				return das.getLabelWorker().getMethodCallAge( html?"<br>":"\r\n" );
 			case "ipv4": return Tools.getIP("", true);
 			case "ipv6": return Tools.getIP("", false);
 			case "gc":
@@ -1531,7 +1532,7 @@ public class BaseReq {
 				return join.toString();
 			case "reload": 
 				das.loadGenerics(true);
-				return das.getBaseWorker().getGenericInfo();
+				return das.getLabelWorker().getGenericInfo();
 			case "fromtable": 
 				if(cmd.length < 4 )
 					return "To few parameters, gens:fromtable,dbid,table,gen id,delimiter";
@@ -1560,7 +1561,7 @@ public class BaseReq {
 					return "Not enough arguments, must be generics:addblank,id,format[,delimiter]";
 				return Generic.addBlankToXML(das.getSettingsDoc(), cmd[1], cmd[2],cmd.length==4?cmd[3]:",");
 			case "list": 
-				return das.getBaseWorker().getGenericInfo();
+				return das.getLabelWorker().getGenericInfo();
 			default:
 				return UNKNOWN_CMD+": "+cmd[0];
 		}

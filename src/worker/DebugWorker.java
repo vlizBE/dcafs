@@ -85,7 +85,7 @@ public class DebugWorker implements Readable {
 	public DebugWorker(BlockingQueue<Datagram> dQueue,
 			DatabaseManager dbm, Document xml) {
 		this.dQueue = dQueue;
-		dQueue.add(new Datagram("readable",this)); // register debugworker as a readable in the baseworker
+		dQueue.add( Datagram.build().label("readable").readable(this) ); // register debugworker as a readable in the baseworker
 		this.dbm = dbm;
 		readSettingsFromXML(xml);
 
@@ -299,7 +299,7 @@ public class DebugWorker implements Readable {
 								}
 								break;
 							case NMEA:
-								dQueue.add(new Datagram(r, 1, "nmea", 1));
+								dQueue.add( Datagram.build(r).label("nmea").timeOffset(1));
 								send = r;
 								break;
 							default:
@@ -345,11 +345,12 @@ public class DebugWorker implements Readable {
 			String[] labid = split[2].split("\\|");
 			if( !label.isEmpty())
 				labid[0]=label;
-			Datagram d = new Datagram(split[3], prio, labid[0], 0);
-			d.setOriginID( labid.length==2?labid[1]:"debugworker");
-			d.raw = split[3].getBytes();
-			d.setTimestamp(dt.toInstant(ZoneOffset.UTC).toEpochMilli());
-			return d;
+
+			return Datagram.build(split[3])
+					       .label(labid[0])
+					       .priority(prio)
+					       .origin(labid.length==2?labid[1]:"debugworker")
+					       .timestamp(dt.toInstant(ZoneOffset.UTC).toEpochMilli());
 		} catch (java.lang.OutOfMemoryError e) { // if an out of memory error occurs, output the buffer size
 			// to see which one caused it
 			Logger.info("Out of Memory: Dqueue size: " + dQueue.size());
@@ -417,7 +418,7 @@ public class DebugWorker implements Readable {
 								}
 							break;
 						case NMEA:
-							dQueue.add(new Datagram(r, 1, "nmea", 1));
+							dQueue.add( Datagram.build(r).label("nmea").timeOffset(1));
 							break;
 						case GAPS:case FILTER:
 							if( r.startsWith("<<") ) {
@@ -429,9 +430,9 @@ public class DebugWorker implements Readable {
 										Thread.currentThread().interrupt();
 									}
 								}
-								dQueue.add(new Datagram(r.substring(3), 1, label, 1));
+								dQueue.add( Datagram.build(r.substring(3)).label(label).timeOffset(1));
 							}else{
-								dQueue.add(new Datagram(r, 1, label, 1));
+								dQueue.add( Datagram.build(r).label(label).timeOffset(1));
 							}
 							break;
 					}

@@ -87,9 +87,7 @@ public class MathForward extends AbstractForward {
         targets.removeIf( t-> !t.writeLine(join.toString()) ); // Send this data to the targets, remove those that refuse it
 
         if( !label.isEmpty() ){ // If the object has a label associated
-            var d = new Datagram(this,label,join.toString()); // build a datagram with it
-            d.setOriginID("math:"+id);
-            dQueue.add( d ); // add it to the queue
+            dQueue.add( Datagram.build(join.toString()).label(label).writable(this) ); // add it to the queue
         }
         if( log )
             Logger.tag("RAW").info( "1\t" + (label.isEmpty()?"void":label)+"|"+getID() + "\t" + join);
@@ -98,7 +96,7 @@ public class MathForward extends AbstractForward {
         if( targets.isEmpty() && label.isEmpty() && !doCmd && !log){
             valid=false;
             if( deleteNoTargets )
-                dQueue.add( new Datagram("maths:remove,"+id,1,"system") );
+                dQueue.add( Datagram.system("mf:remove,"+id) );
             return false;
         }
         return true;
@@ -382,7 +380,7 @@ public class MathForward extends AbstractForward {
                 data[index]=bd;
 
             if( !cmd.isEmpty()){
-                dQueue.add(new Datagram(cmd.replace("$",bd.toString()),1,"system"));
+                dQueue.add( Datagram.system(cmd.replace("$",bd.toString())) );
             }
             return bd;
         }

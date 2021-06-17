@@ -4,12 +4,13 @@ import com.stream.Writable;
 
 import java.time.Instant;
 import com.stream.Readable;
+
 /**
  * Simple storage class that holds the raw data before processing
  */
 public class Datagram {
 	
-    String message;     // The received data
+    String data;             // The received data
     byte[] raw;              // Raw received data
     double messValue = 0;    // Alternative data
     int priority = 1;        // The priority of the data source
@@ -21,84 +22,113 @@ public class Datagram {
     Readable readable;
     boolean silent = false;     
 
-    public Datagram(String message, int priority, String label ){
-        this.message=message;
-        this.priority=priority;
-        this.label=label;
+    public Datagram(String data){
+        this.data = data;
+        raw = data.getBytes();
     }
-    public Datagram(byte[] raw, int priority, String label ){
-        this( new String(raw),priority,label);
-        this.raw=raw;
-        this.timestamp = Instant.now().toEpochMilli();
+    public Datagram(){
     }
-    public Datagram( Writable dataTrans, String label, String message ){
-        this.writable=dataTrans;
-        this.label=label;
-        this.message=message;
-    }
-    public Datagram(Writable dt, byte[] raw, String message, int priority, String label ){
-    	this( dt,message,priority,label);
-    	this.raw=raw;
-    }
-    public Datagram(Writable dt, String message, int priority, String label ){
-    	this(message,priority,label);
-    	this.writable=dt;
-    }
-    public Datagram( String label, Readable readable ){
-        this.readable=readable;
-        this.label=label;
-        this.originID=readable.getID();
-    }
-    public Datagram(String message, double val, int priority, String label ){
-    	this(message,priority,label);
-        this.messValue = val;
-    }
-    public Datagram(String message, int priority, String label, int offset){
-    	this(message, priority, label );
-    	this.timeOffset=offset;
-    }
-    public void setWritable( Writable wr ){
-        this.writable = wr;
-    }
+
     public Writable getWritable(){
         return writable;
     }
-    public void setOriginID(String id ){
-        this.originID =id;
-    }
     public String getOriginID(){ return originID;}
-    /**
-     * Set the offset this message was received at, only used during debug mode. 
-     * So the worker nows how much time passed between this datagram and the previous one.
-     * @param offset The offset in millis
-     */
-    public void setTimeOffset(int offset){
-    	this.timeOffset = offset ;
+
+    public String getData(){
+        return data ==null?"": data;
     }
-    public String getMessage(){
-        return message==null?"":message;
-    }
-    public void setMessage( String msg ){
-        this.message=msg;
+    public void setData(String msg ){
+        this.data =msg;
         raw = msg.getBytes();
     }
     public int getPriority(){ return priority; }
-    public void setLabel( String label ){
-        this.label=label;
-    }
     public void setTimestamp( long timestamp ){
         this.timestamp = timestamp;
     }
-    public String getTitle(){
-        return originID;
-    }
-    public byte[] getRawMessage(){
+    public byte[] getRaw(){
         return raw;
-    }
-    public void toggleSilent(){
-        silent = !silent;
     }
     public Readable getReadable(){
         return readable;
+    }
+
+    /* ***************************** Fluid API ******************************************* */
+    public static Datagram build(String message){
+        return new Datagram(message);
+    }
+    public static Datagram build(byte[] message){
+        var d = new Datagram( new String(message));
+        d.raw=message;
+        return d;
+    }
+    public static Datagram build(){
+        return new Datagram();
+    }
+    public static Datagram system(String message){
+        return Datagram.build(message).label("system");
+    }
+    public Datagram label(String label){
+        this.label=label;
+        return this;
+    }
+    public Datagram priority(int priority){
+        this.priority=priority;
+        return this;
+    }
+
+    /**
+     * Set the writable in this datagram, also overwrites the origin with id from writable
+     * @param writable The writable to set
+     * @return The datagram with updated writable
+     */
+    public Datagram writable(Writable writable){
+        this.writable=writable;
+        this.originID=writable.getID();
+        return this;
+    }
+    /**
+     * Set the readable in this datagram, also overwrites the origin with id from readable
+     * @param readable The readable to set
+     * @return The datagram with updated writable
+     */
+    public Datagram readable( Readable readable ){
+        this.readable=readable;
+        this.originID=readable.getID();
+        return this;
+    }
+    public Datagram origin( String origin ){
+        this.originID=origin;
+        return this;
+    }
+    public Datagram timeOffset( int offset ){
+        this.timeOffset = offset ;
+        return this;
+    }
+
+    /**
+     * Set the timestamp associated with this datagram
+     * @param timestamp The epoch millis for this datagram
+     * @return The datagram with set timestamp
+     */
+    public Datagram timestamp( long timestamp ){
+        this.timestamp=timestamp;
+        return this;
+    }
+
+    /**
+     * Set the timestamp of this datagram to the current epoch millis
+     * @return The datagram with current epoch millis as timestamp
+     */
+    public Datagram timestamp(){
+        this.timestamp=Instant.now().toEpochMilli();
+        return this;
+    }
+    public Datagram raw( byte[] raw ){
+        this.raw=raw;
+        return this;
+    }
+    public Datagram toggleSilent(){
+        silent = !silent;
+        return this;
     }
 }

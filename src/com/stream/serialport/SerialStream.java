@@ -139,8 +139,7 @@ public class SerialStream extends BaseStream implements Writable {
             Logger.tag("RAW").warn(priority + "\t" + label+"|"+id + "\t" + message);
         }
 
-        Datagram d = new Datagram(message, priority, label);
-        d.setOriginID(id);
+        dQueue.add( Datagram.build(message).label(label).priority(priority).origin(id) );
 
         if (debug) {
             Logger.info(id + " -> " + message);
@@ -162,8 +161,6 @@ public class SerialStream extends BaseStream implements Writable {
                 Logger.error(e);
             }
         }
-
-        dQueue.add(d);
 
         long p = Instant.now().toEpochMilli() - timestamp; // Calculate the time between 'now' and when the previous
         // message was received

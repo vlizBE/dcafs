@@ -327,9 +327,7 @@ public class I2CWorker implements Runnable {
                 altRes.forEach( x -> output.add(""+x));
 
                 if( !device.getLabel().equalsIgnoreCase("void") ){
-                    Datagram d = new Datagram( output.toString(),1,label);
-                    d.setOriginID( job.getLeft() );
-                    dQueue.add( d );
+                    dQueue.add( Datagram.build(output.toString()).label(label).origin(job.getLeft()) );
                 }
                  try {
                      device.getTargets().forEach(wr -> wr.writeLine(output.toString()));

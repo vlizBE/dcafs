@@ -326,10 +326,7 @@ public class MqttWorker implements MqttCallbackExtended {
 		Logger.tag("RAW").warn("1\t"+label+"\t"+load);  // Store it like any other received data
 
 		if( dQueue != null ){	// If there's a valid BaseWorker queue
-			Datagram d = new Datagram( load, 1,label );
-
-			d.setOriginID(id);
-			dQueue.add( d );
+			dQueue.add( Datagram.build(load).label(label).origin(id) );
 
 			if( !targets.isEmpty() ){
                 targets.removeIf(dt -> !dt.writeLine( load ) );

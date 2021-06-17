@@ -177,6 +177,7 @@ public class I2CCommand{
                 case READ:     b.add("Read "+(cmd.readCount==1?"a single byte":cmd.readCount+" bytes")+" from reg "+Tools.fromBytesToHexString(cmd.write) ); break;
                 case WRITE:    b.add("Write "+Tools.fromBytesToHexString(cmd.write,1, cmd.write.length)+" to reg 0x"+Integer.toHexString(cmd.write[0]) ); break;
                 case WAIT_ACK: b.add("Do "+cmd.write[0]+" attempts at addressing the device."); break;
+     //           case PING:      break;
                 default:
                     break;
             }

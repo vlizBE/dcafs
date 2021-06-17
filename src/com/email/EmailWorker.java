@@ -954,22 +954,21 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 							if( line.isEmpty()){
 								break;
 							}
-							var d = new Datagram(line, 1, cmd.split(":")[1]);
-							d.setOriginID(from);
-							dQueue.add(d);
+							dQueue.add( Datagram.build(line).label(cmd.split(":")[1]).origin(from) );
 						}
 					}else{
 						// Retrieve asks files to be emailed, if this command is without email append from address
 						if( cmd.startsWith("retrieve:") && !cmd.contains(",")){
 							cmd += ","+from;
 						}
-						Datagram d = new Datagram( cmd, 1, "email");
+						//Datagram d = new Datagram( cmd, 1, "email");
+						var d = Datagram.build(cmd).label("email").origin(from);
 						if( cmd.contains(":")) { // only relevant for commands that contain :
 							DataRequest req = new DataRequest(from, cmd);
-							d.setWritable(req.getWritable());
+							d.writable(req.getWritable());
 							buffered.put(req.getID(), req);
 						}
-						d.setOriginID(from);
+						d.origin(from);
 						dQueue.add( d );
 					}
 					if(delete)
@@ -1064,12 +1063,11 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 	 * Test if the BufferCollector construction works
 	 */
 	public void testCollector(){
-		Datagram d = new Datagram( "calc:clock", 1, "email");
-		d.setOriginID("admin");
+
 		DataRequest req = new DataRequest("admin","calc:clock");
-		d.setWritable(req.getWritable());
+
 		buffered.put(req.getID(), req);
-		dQueue.add( d );
+		dQueue.add( Datagram.build("calc:clock").label("email").writable(req.getWritable()).origin("admin") );
 	}
 	public class DataRequest{
 		BufferCollector bwr;

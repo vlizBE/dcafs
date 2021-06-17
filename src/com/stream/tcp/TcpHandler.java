@@ -170,16 +170,19 @@ public class TcpHandler extends SimpleChannelInboundHandler<byte[]>{
                 msg = msg.replace("\0","");    // Remove null characters
                 //msg = msg.trim();
             }
-            Datagram d = new Datagram( writable,data, msg, priority, label );	// Build a datagram, based on known information
-            d.setOriginID(id);
-            d.setTimestamp(Instant.now().toEpochMilli());
+
+            var d = Datagram.build(msg)
+                                      .label(label)
+                                      .priority(priority)
+                                      .writable(writable)
+                                      .timestamp();
 
             if( !dQueue.add(d) ){
                 Logger.error(id +" -> Failed to add data to the queue");
             }
 
 		    if(debug)
-			    Logger.info( d.getTitle()+" -> " + d.getMessage());
+			    Logger.info( d.getOriginID()+" -> " + d.getData());
 				   
             // Log anything and everything (except empty strings)
             if( !msg.isBlank() && log ) {        // If the message isn't an empty string and logging is enabled, store the data with logback
