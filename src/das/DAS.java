@@ -51,7 +51,7 @@ public class DAS implements DeadThreadListener {
 
     // Workers
     private EmailWorker emailWorker;
-    private LabelWorker dataWorker;
+    private LabelWorker labelWorker;
     private DigiWorker digiWorker;
     private DebugWorker debugWorker;
 
@@ -300,7 +300,7 @@ public class DAS implements DeadThreadListener {
 
         baseReq.setRealtimeValues(rtvals);
         rtvals.setIssueCollector(issues);
-        dataWorker.setRealtimeValues(rtvals);
+        labelWorker.setRealtimeValues(rtvals);
     }
 
     public RealtimeValues getRealtimeValues() {
@@ -532,24 +532,24 @@ public class DAS implements DeadThreadListener {
      * Adds the BaseWorker
      */
     public void addBaseWorker() {
-        if (this.dataWorker == null)
-            dataWorker = new LabelWorker(dQueue);
-        dataWorker.setReqData(baseReq);
-        dataWorker.setRealtimeValues(rtvals);
-        dataWorker.setDebugging(debug);
-        dataWorker.setEventListener(this);
+        if (this.labelWorker == null)
+            labelWorker = new LabelWorker(dQueue);
+        labelWorker.setReqData(baseReq);
+        labelWorker.setRealtimeValues(rtvals);
+        labelWorker.setDebugging(debug);
+        labelWorker.setEventListener(this);
     }
 
     public void alterBaseWorker(LabelWorker altered) {
         Logger.info("Using alternate BaseWorker");
-        if ( dataWorker != null)
-            dataWorker.stopWorker();
+        if ( labelWorker != null)
+            labelWorker.stopWorker();
         altered.setQueue(dQueue);
-        dataWorker = altered;
-        dataWorker.setReqData(baseReq);
-        dataWorker.setRealtimeValues(rtvals);
-        dataWorker.setDebugging(debug);
-        dataWorker.setEventListener(this);
+        labelWorker = altered;
+        labelWorker.setReqData(baseReq);
+        labelWorker.setRealtimeValues(rtvals);
+        labelWorker.setDebugging(debug);
+        labelWorker.setEventListener(this);
         loadGenerics(true);
     }
 
@@ -559,24 +559,24 @@ public class DAS implements DeadThreadListener {
     }
 
     public LabelWorker getLabelWorker() {
-        return dataWorker;
+        return labelWorker;
     }
 
     public void loadGenerics(boolean clear) {
         if (clear) {
             settingsDoc = XMLtools.readXML(settingsPath);
-            dataWorker.clearGenerics();
+            labelWorker.clearGenerics();
         }        
         XMLfab.getRootChildren(settingsDoc, "dcafs","generics","generic")
-                .forEach( ele ->  dataWorker.addGeneric( Generic.readFromXML(ele) ) );
+                .forEach( ele ->  labelWorker.addGeneric( Generic.readFromXML(ele) ) );
     }
     public void loadValMaps(boolean clear){
         if( clear ){
             settingsDoc = XMLtools.readXML(settingsPath);
-            dataWorker.clearValMaps();
+            labelWorker.clearValMaps();
         }
         XMLfab.getRootChildren(settingsDoc, "dcafs","valmaps","valmap")
-                .forEach( ele ->  dataWorker.addValMap( ValMap.readFromXML(ele) ) );
+                .forEach( ele ->  labelWorker.addValMap( ValMap.readFromXML(ele) ) );
     }
     /* *****************************************  T R A N S S E R V E R ******************************************/
     /**
@@ -740,7 +740,7 @@ public class DAS implements DeadThreadListener {
         Logger.info("Adding DebugWorker");
         addBaseWorker();
 
-        debugWorker = new DebugWorker(dataWorker.getQueue(), dbManager, settingsDoc);
+        debugWorker = new DebugWorker(labelWorker.getQueue(), dbManager, settingsDoc);
 
         if (this.inDebug() && emailWorker != null) 
             emailWorker.setSending(debugWorker.doEmails());            
@@ -786,7 +786,7 @@ public class DAS implements DeadThreadListener {
             baseReq.setIssues(issues);
         baseReq.setDAS(this);
 
-        dataWorker.setReqData(baseReq);
+        labelWorker.setReqData(baseReq);
         if (trans != null)
             baseReq.setTcpServer(trans);
         if (dbManager != null)
@@ -965,9 +965,9 @@ public class DAS implements DeadThreadListener {
 
         this.baseReq.getMethodMapping();
 
-        if (this.dataWorker != null) {
+        if (this.labelWorker != null) {
             Logger.info("Starting BaseWorker...");
-            new Thread(dataWorker, "BaseWorker").start();// Start the thread
+            new Thread(labelWorker, "BaseWorker").start();// Start the thread
         }
         if (this.digiWorker != null) {
             Logger.info("Starting DigiWorker...");
@@ -1002,8 +1002,8 @@ public class DAS implements DeadThreadListener {
     }
 
     public void haltWorkers() {
-        if (dataWorker != null)
-            dataWorker.stopWorker();
+        if (labelWorker != null)
+            labelWorker.stopWorker();
     }
 
     /* **************************** * S T A T U S S T U F F *********************************************************/
@@ -1112,7 +1112,7 @@ public class DAS implements DeadThreadListener {
      */
     public String getQueueSizes() {
         StringJoiner join = new StringJoiner("\r\n", "", "\r\n");
-        join.add("Data buffer: " + this.dQueue.size() + " in receive buffer and "+dataWorker.getWaitingQueueSize()+" waiting...");
+        join.add("Data buffer: " + this.dQueue.size() + " in receive buffer and "+ labelWorker.getWaitingQueueSize()+" waiting...");
 
         if (emailWorker != null)
             join.add("Email backlog: " + emailWorker.getRetryQueueSize() );
@@ -1158,9 +1158,9 @@ public class DAS implements DeadThreadListener {
         switch (thread) {
             case "BaseWorker": // done
                 int retries = issues.getIssueTriggerCount("thread died:" + thread);
-                if (dataWorker != null && retries < 50) {
+                if (labelWorker != null && retries < 50) {
                     Logger.error("BaseWorker not alive, trying to restart...");
-                    new Thread(dataWorker, "BaseWorker").start();// Start the thread
+                    new Thread(labelWorker, "BaseWorker").start();// Start the thread
                 } else {
                     Logger.error("BaseWorker died 50 times, giving up reviving.");
                     issues.triggerIssue("fatal:" + thread, thread + " permanently dead.", LocalDateTime.now());
