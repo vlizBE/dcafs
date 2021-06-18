@@ -523,6 +523,8 @@ public class SQLDB extends Database{
 
         /* Setup */
         db.readFlushSetup(XMLtools.getFirstChildByTag(dbe, "flush"));
+        // How many seconds before the connection is considered idle (and closed)
+        db.idleTime = TimeTools.parsePeriodStringToSeconds(XMLtools.getChildValueByTag(dbe,"idleclose","5m"));
 
         /* Tables */
         XMLtools.getChildElements(dbe,"table").stream().forEach( x -> SqlTable.readFromXml(x).ifPresent(table ->
