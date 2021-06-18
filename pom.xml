@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>vlizBE</groupId>
   <artifactId>dcafs</artifactId>
-  <version>0.9.10</version>
+  <version>0.10.0</version>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
@@ -108,7 +108,7 @@
 	<dependency>
 		<groupId>io.netty</groupId>
 		<artifactId>netty-all</artifactId>
-		<version>4.1.63.Final</version>
+		<version>4.1.65.Final</version>
 	</dependency>
 	  <!-- https://mvnrepository.com/artifact/com.microsoft.sqlserver/mssql-jdbc -->
 	  <dependency>
@@ -120,7 +120,7 @@
 	<dependency>
 		<groupId>mysql</groupId>
 		<artifactId>mysql-connector-java</artifactId>
-		<version>8.0.24</version>
+		<version>8.0.25</version>
 	</dependency>
 	<!-- https://mvnrepository.com/artifact/org.xerial/sqlite-jdbc -->
 	<dependency>
@@ -132,25 +132,25 @@
 	<dependency>
 		<groupId>com.fazecast</groupId>
 		<artifactId>jSerialComm</artifactId>
-		<version>2.6.2</version>
+		<version>2.7.0</version>
 	</dependency>
 	  <!-- https://mvnrepository.com/artifact/com.diozero/diozero-core -->
 	  <dependency>
 		  <groupId>com.diozero</groupId>
 		  <artifactId>diozero-core</artifactId>
-		  <version>1.1.9</version>
+		  <version>1.3.0</version>
 	  </dependency>
 	<!-- https://mvnrepository.com/artifact/org.tinylog/tinylog-api -->
 	<dependency>
 		<groupId>org.tinylog</groupId>
 		<artifactId>tinylog-api</artifactId>
-		<version>2.3.0</version>
+		<version>2.3.2</version>
 	</dependency>
 	<!-- https://mvnrepository.com/artifact/org.tinylog/tinylog-impl -->
 	<dependency>
 		<groupId>org.tinylog</groupId>
 		<artifactId>tinylog-impl</artifactId>
-		<version>2.3.0</version>
+		<version>2.3.2</version>
 	</dependency>
 	<!-- https://mvnrepository.com/artifact/javax.xml.bind/jaxb-api -->
 	<dependency>
@@ -168,7 +168,7 @@
 	<dependency>
 		<groupId>org.mariadb.jdbc</groupId>
 		<artifactId>mariadb-java-client</artifactId>
-		<version>2.7.2</version>
+		<version>2.7.3</version>
 	</dependency>
 	<!-- https://mvnrepository.com/artifact/org.eclipse.paho/org.eclipse.paho.client.mqttv3 -->
 	<dependency>
@@ -180,7 +180,7 @@
 	  <dependency>
 		  <groupId>org.postgresql</groupId>
 		  <artifactId>postgresql</artifactId>
-		  <version>42.2.20</version>
+		  <version>42.2.22</version>
 	  </dependency>
 
   </dependencies>
