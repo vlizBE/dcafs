@@ -21,7 +21,13 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamPool)   
   * Rework the TaskManager (will be trigger for 0.10.0)
 
-## 0.9.10 (work in progress)
+## 0.10.0 (work in progress)
+
+## Update guide from 0.9.x
+- databases node: replace 'setup' with 'flush' and 'flushtime' with 'age'
+
+## DatabaseManager
+- BREAKING: renamed the setup node to flush and flushtime to age
 
 ### Datagram
 - Renamed DataWorker to LabelWorker, fits a bit better... i think
@@ -42,6 +48,7 @@ var d = Datagram.system("message").writable(this);
 ### Other
 - cmds command now supports regex, uses startswith by default (meaning appends .*)
 - Changed `update:setup` to `update:settings` because it's the settings file
+- Updated dependencies
 
 ### Bugfixes
 - update command still referred to scripts instead of tmscripts, now also looks up the path instead of assuming default 

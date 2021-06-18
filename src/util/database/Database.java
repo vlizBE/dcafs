@@ -59,11 +59,11 @@ public abstract class Database {
         lastError="";
         return l;
     }
-    protected boolean readBatchSetup(Element set){
+    protected boolean readFlushSetup(Element set){
         if( set != null ){
-            String age = XMLtools.getStringAttribute( set, "flushtime", "30s");	    // How many check before data is flushed (if not reached batch size)
+            String age = XMLtools.getStringAttribute( set, "age", "30s");	    // How many time before data is flushed (if not reached batch size)
             maxAge = TimeTools.parsePeriodStringToSeconds(age);
-            String idle = XMLtools.getStringAttribute( set, "idletime", "5m");        // How many seconds before the connection is considered idle (and closed)
+            String idle = XMLtools.getStringAttribute( set, "idletime", "5m");   // How many seconds before the connection is considered idle (and closed)
             idleTime = TimeTools.parsePeriodStringToSeconds(idle);
             maxQueries = XMLtools.getIntAttribute( set, "batchsize", 30);		// Minimum amount of queries before a flush unless checks till flush is reached
             Logger.debug( id+" -> Idle:"+idleTime+"s Flush:"+maxAge+"s maxQ:"+maxQueries);

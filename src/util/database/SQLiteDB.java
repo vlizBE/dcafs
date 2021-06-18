@@ -266,7 +266,7 @@ public class SQLiteDB extends SQLDB{
             }
         }
         /* Setup */
-        db.readBatchSetup(XMLtools.getFirstChildByTag(dbe, "setup"));
+        db.readFlushSetup(XMLtools.getFirstChildByTag(dbe, "flush"));
 
         /* Views */
         for( Element view : XMLtools.getChildElements(dbe, "view")){
@@ -297,7 +297,7 @@ public class SQLiteDB extends SQLDB{
         fab.selectOrCreateParent("sqlite","id", id).attr("path",dbPath.toString());
         if( hasRollOver() )
             fab.alterChild("rollover",oriFormat).attr("count",rollCount).attr("unit",rollUnit.toString().toLowerCase());
-        fab.alterChild("setup").attr("idletime",idle).attr("flushtime",flush).attr("batchsize",maxQueries)
+        fab.alterChild("flush").attr("idletime",idle).attr("age",flush).attr("batchsize",maxQueries)
            .build();
     }
 

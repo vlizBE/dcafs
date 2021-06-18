@@ -522,7 +522,7 @@ public class SQLDB extends Database{
         db.id = dbe.getAttribute("id");
 
         /* Setup */
-        db.readBatchSetup(XMLtools.getFirstChildByTag(dbe, "setup"));
+        db.readFlushSetup(XMLtools.getFirstChildByTag(dbe, "flush"));
 
         /* Tables */
         XMLtools.getChildElements(dbe,"table").stream().forEach( x -> SqlTable.readFromXml(x).ifPresent(table ->
@@ -551,7 +551,7 @@ public class SQLDB extends Database{
 
         fab.selectOrCreateParent("server","id", id.isEmpty()?"remote":id).attr("type",type.toString().toLowerCase())
                 .alterChild("db",dbName).attr("user",user).attr("pass",pass)
-                .alterChild("setup").attr("idletime",idle).attr("flushtime",flush).attr("batchsize",maxQueries)
+                .alterChild("flush").attr("idletime",idle).attr("age",flush).attr("batchsize",maxQueries)
                 .alterChild("address",address);
 
         fab.build();

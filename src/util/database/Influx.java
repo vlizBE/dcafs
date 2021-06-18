@@ -12,7 +12,6 @@ import util.tools.TimeTools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -60,7 +59,7 @@ public class Influx extends Database{
         }
         var db = new Influx(irl,dbname,user,pass);
 
-        db.readBatchSetup( XMLtools.getFirstChildByTag(dbe, "setup") );
+        db.readFlushSetup( XMLtools.getFirstChildByTag(dbe, "setup") );
         db.connect(false);
         return db;
     }
