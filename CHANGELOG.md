@@ -23,11 +23,15 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.10.0 (work in progress)
 
+To many breaking stuff, so version bump.
+
 ## Update guide from 0.9.x
 - databases node: replace 'setup' with 'flush' and 'flushtime' with 'age'
+- databases node: replace 'idle' attribute with 'idleclose' node
+- Tasklist: Replace the @fillin with {fillin}
 
 ## DatabaseManager
-- BREAKING: renamed the setup node to flush and flushtime to age
+- BREAKING: renamed the setup node to flush and flushtime to age, move idle out of it
 
 ### Datagram
 - Renamed DataWorker to LabelWorker, fits a bit better... i think
@@ -44,6 +48,24 @@ var d = Datagram.build("message").label("system").writable(this);
 //or even shorter, system is build with system label (default label is void)
 var d = Datagram.system("message").writable(this);
 ````
+### TaskManager
+- BREAKING: Replaced @fillin with {fillin}
+- Added the trigger 'waitfor', this can be used in a tasket to wait for a check to be correct a number of
+times with the given interval so trigger="waitfor:5s,5" will check 5 times with 5 seconds between each check (so 20s in total)
+- Bugfix: Not sure why the while actually worked... because fixed it. Runs never got reset
+- Added an alternative way to add while and waitfor:
+````xml
+<!-- This will wait till 5 check return ok, restarting the count on a failure -->
+<task trigger="waitfor:5s,5" req="value below 10"/>
+<!-- can now also be written as -->
+<waitfor interval="5" checks="5">value below 10</waitfor>
+<!-- This will wait till 5 checks return ok, stopping the taskset on a failure -->
+<while interval="5" checks="5">value is below 10</while>
+````
+### BaseReq
+- Renamed to CommandReq
+- Added interface commandable, these can be given to commandreq to use as custom commands
+- Removed option from DAS to extend CommandReq, should now use the interface
 
 ### Other
 - cmds command now supports regex, uses startswith by default (meaning appends .*)
