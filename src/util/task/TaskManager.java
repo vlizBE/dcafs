@@ -1,7 +1,6 @@
 package util.task;
 
 import com.email.EmailSending;
-import com.email.EmailWork;
 import com.stream.StreamPool;
 import com.stream.collector.CollectorFuture;
 import das.CommandReq;
@@ -365,7 +364,10 @@ public class TaskManager implements CollectorFuture {
 	 * @param task The task to check if it needs to be started or cancelled
 	 */
 	public void checkIntervalTask(Task task) {
-		if (task.triggerType != TRIGGERTYPE.INTERVAL && task.triggerType != TRIGGERTYPE.RETRY && task.triggerType != TRIGGERTYPE.WHILE)
+		if (task.triggerType != TRIGGERTYPE.INTERVAL
+				&& task.triggerType != TRIGGERTYPE.RETRY
+				&& task.triggerType != TRIGGERTYPE.WHILE
+				&& task.triggerType != TRIGGERTYPE.WAITFOR)
 			return;
 
 		if (checkState(task.when)) { // Check whether the state allows for the task to run
@@ -432,6 +434,7 @@ public class TaskManager implements CollectorFuture {
 				break;
 			case RETRY:
 			case INTERVAL:
+			case WAITFOR:
 			case WHILE:
 				checkIntervalTask(task);
 				break;
@@ -518,21 +521,23 @@ public class TaskManager implements CollectorFuture {
 							executed=false;
 							task.errorIncrement();
 							break;
-						default: Logger.error("Unexpected return from verifyRequiremet"); break;
+						default: Logger.error("Unexpected return from verify Requirement"); break;
 					}
-				} else if (task.triggerType == TRIGGERTYPE.WHILE) {
-					task.runs--;
-					if (task.runs == 0) {
+				} else if (task.triggerType == TRIGGERTYPE.WHILE || task.triggerType == TRIGGERTYPE.WAITFOR ) {
+					task.attempts++;
+					Logger.info("Attempts "+task.attempts+" of runs "+task.runs);
+					if (task.runs == task.attempts) {
 						task.reset();
+						Logger.info("Reset attempts to "+task.attempts+" and go to next task");
 						Task t = set.getNextTask(task.getIndexInTaskset());
 						if (t != null) {
 							startTask(t);
 						} else {
-							Logger.tag(TINY_TAG).info("[" + id + "] Executed last task in the tasket [" + set.getDescription() + "]");
+							Logger.tag(TINY_TAG).info("[" + id + "] Executed last task in the taskset [" + set.getDescription() + "]");
 						}
 					}
 				} else if (task.triggerType == TRIGGERTYPE.INTERVAL) {
-					task.runs = task.retries;
+					task.runs = task.retries; //so reset
 				}
 			}
 			if (!executed) { // If it wasn't executed
@@ -540,11 +545,15 @@ public class TaskManager implements CollectorFuture {
 				if (task.triggerType == TRIGGERTYPE.WHILE) {
 					Logger.tag(TINY_TAG).info("[" + id + "] " + set.getDescription() + " failed, cancelling.");
 					task.reset();
-				}
-				if (task.triggerType == TRIGGERTYPE.RETRY || task.triggerType == TRIGGERTYPE.INTERVAL) {
+				}else if (task.triggerType == TRIGGERTYPE.WAITFOR) {
+					failure = false;
+					Logger.info("Requirement not met, resetting counter");
+					task.attempts = 0; // reset the counter
+				}else if (task.triggerType == TRIGGERTYPE.RETRY || task.triggerType == TRIGGERTYPE.INTERVAL) {
 					failure = false;
 					if (task.runs == 0) {
 						task.reset();
+						task.runs=task.retries;
 						Logger.tag(TINY_TAG).error("[" + id + "] Maximum retries executed, aborting!\t" + task.toString());
 						if (!waitForRestore.contains(task.stream))
 							waitForRestore.add(task.stream);
@@ -606,7 +615,7 @@ public class TaskManager implements CollectorFuture {
 
 			executed = true; // First checks passed, so it will probably execute
 
-			if (task.triggerType == TRIGGERTYPE.WHILE) { // Doesn't do anything, just check
+			if (task.triggerType == TRIGGERTYPE.WHILE || task.triggerType == TRIGGERTYPE.WAITFOR) { // Doesn't do anything, just check
 				// Logger.tag(TINY_TAG).info("Trigger for while fired and ok")
 				return true;
 			}
@@ -911,7 +920,7 @@ public class TaskManager implements CollectorFuture {
 					if( t != null ){
 						startTask( t );
 					}else{
-						Logger.tag(TINY_TAG).info( "["+ id +"] Executed last task in the tasket ["+set.getDescription()+"]");
+						Logger.tag(TINY_TAG).info( "["+ id +"] Executed last task in the taskset ["+set.getDescription()+"]");
 					}
 				}
 			}
@@ -1023,14 +1032,14 @@ public class TaskManager implements CollectorFuture {
     public String fillIn( String line, String def ){
     	if( line.isBlank())
     		return def;
-    	line = line.replace("@localtime", TimeTools.formatNow("HH:mm"));
-    	line = line.replace("@utcstamp", TimeTools.formatUTCNow("dd/MM/YY HH:mm:ss"));
-		line = line.replace("@utcdate", TimeTools.formatUTCNow("yyMMdd"));
-    	line = line.replace("@localstamp", TimeTools.formatNow("dd/MM/YY HH:mm:ss"));
-		line = line.replace("@utcsync", TimeTools.formatNow("'DT'yyMMddHHmmssu"));
-		line = line.replace("@rand6", ""+(int)Math.rint(1+Math.random()*5));
-		line = line.replace("@rand20", ""+(int)Math.rint(1+Math.random()*19));
-		line = line.replace("@rand100", ""+(int)Math.rint(1+Math.random()*99));
+    	line = line.replace("{localtime}", TimeTools.formatNow("HH:mm"));
+    	line = line.replace("{utcstamp}", TimeTools.formatUTCNow("dd/MM/YY HH:mm:ss"));
+		line = line.replace("{utcdate}", TimeTools.formatUTCNow("yyMMdd"));
+    	line = line.replace("{localstamp}", TimeTools.formatNow("dd/MM/YY HH:mm:ss"));
+		line = line.replace("{utcsync}", TimeTools.formatNow("'DT'yyMMddHHmmssu"));
+		line = line.replace("{rand6}", ""+(int)Math.rint(1+Math.random()*5));
+		line = line.replace("{rand20}", ""+(int)Math.rint(1+Math.random()*19));
+		line = line.replace("{rand100}", ""+(int)Math.rint(1+Math.random()*99));
 
 		String[] ipmac = line.split("@");
 		for( int a=1;a<ipmac.length;a++){
@@ -1308,7 +1317,7 @@ public class TaskManager implements CollectorFuture {
 				set.interruptable = XMLtools.getBooleanAttribute(el, "interruptable", true);
 
 				sets++;
-				for( Element ll : XMLtools.getChildElements( el, "task" )){
+				for( Element ll : XMLtools.getChildElements( el )){
 					addTaskToSet( tasksetID, new Task(ll) );
 				}
 			 }

@@ -2,14 +2,14 @@ package util.tools;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.tinylog.Logger;
-import util.database.SQLiteDB;
 
-import java.sql.Date;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
@@ -551,5 +551,45 @@ public class TimeTools {
         if( rollUnit==RolloverUnit.NONE)
             Logger.error("Invalid unit given "+unit);
         return rollUnit;
+    }
+    /**
+     * Convert the string representation of the days for execution to objects
+     * @param day The string representation of the days
+     */
+    public static ArrayList<DayOfWeek> convertDAY( String day ){
+        ArrayList<DayOfWeek> daysList = new ArrayList<>();
+
+        if( day.isBlank() )
+            day = "all";
+
+        if( day.startsWith("weekday")||day.equals("all")||day.equals("always")){
+            daysList.add( DayOfWeek.MONDAY);
+            daysList.add( DayOfWeek.TUESDAY);
+            daysList.add( DayOfWeek.WEDNESDAY);
+            daysList.add( DayOfWeek.THURSDAY);
+            daysList.add( DayOfWeek.FRIDAY);
+        }
+        if(day.equals("all")||day.equals("always")) {
+            daysList.add(DayOfWeek.SATURDAY);
+            daysList.add(DayOfWeek.SUNDAY);
+        }
+        if( daysList.isEmpty()){
+            if( day.contains("mo"))
+                daysList.add(DayOfWeek.MONDAY);
+            if( day.contains("tu"))
+                daysList.add(DayOfWeek.TUESDAY);
+            if( day.contains("we"))
+                daysList.add(DayOfWeek.WEDNESDAY);
+            if( day.contains("th"))
+                daysList.add(DayOfWeek.THURSDAY);
+            if( day.contains("fr"))
+                daysList.add(DayOfWeek.FRIDAY);
+            if( day.contains("sa"))
+                daysList.add(DayOfWeek.SATURDAY);
+            if( day.contains("su"))
+                daysList.add(DayOfWeek.SUNDAY);
+        }
+        daysList.trimToSize();
+        return daysList;
     }
 }

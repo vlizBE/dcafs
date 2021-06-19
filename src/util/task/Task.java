@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 
 public class Task implements Comparable<Task>{
 
-	String value = "";			// Value of the task, the text that something will be done with if checks succeed
+	String value = "";					// Value of the task, the text that something will be done with if checks succeed
 	byte[] bytes;
 	String when;
 	
@@ -35,6 +35,7 @@ public class Task implements Comparable<Task>{
 	/* Retry and also channel in a way*/
 	int retries=-1;				// How many retries if allowed for a retry task
 	int runs = -1;
+	int attempts=0;
 
 	ScheduledFuture<?> future;	// The future if the task is scheduled, this way it can be cancelled
 	boolean enabled = false;	// Whether or not the task is currently enabled	
@@ -72,7 +73,7 @@ public class Task implements Comparable<Task>{
 	boolean doToday=true;				// If the task is allowed to be executed today
 	int skipExecutions=0;				// How many executions should be skipped
 
-	public enum TRIGGERTYPE {KEYWORD,CLOCK,INTERVAL,DELAY,EXECUTE,RETRY,WHILE} // The trigger possibilities
+	public enum TRIGGERTYPE {KEYWORD,CLOCK,INTERVAL,DELAY,EXECUTE,RETRY,WHILE,WAITFOR} // The trigger possibilities
 	TRIGGERTYPE triggerType = TRIGGERTYPE.EXECUTE;								  		// Default trigger type is execute (no trigger)
 
 	/* Verify */
@@ -81,7 +82,7 @@ public class Task implements Comparable<Task>{
 	enum MATHTYPE { NONE, DIFF, PLUS, MINUS}                                         // The operation to be executed on the variables
 
 	Verify preReq1=null;
-	Verify preReq2=null;				// The check to do before execution
+	Verify preReq2=null;							// The check to do before execution
 	VERIFYTYPE verifyType = VERIFYTYPE.NONE;		// How the two pre requirements are linked
 	
 	Verify postReq1=null;
@@ -98,58 +99,73 @@ public class Task implements Comparable<Task>{
 	 * @param tsk The element for a task
 	 */
 	public Task( Element tsk ){
-		
-		this.when  = XMLtools.getStringAttribute( tsk, "state", "always"); //The state that determines if it's done or not
-    	this.reply = XMLtools.getStringAttribute( tsk, "reply", "");
-		String[] rep = reply.split(",");
-		reply=rep[0];
-		if( rep.length==3){ // value,retries, interval?						
-			replyRetries=Tools.parseInt(rep[1], -1);
-			replyInterval= TimeTools.parsePeriodStringToSeconds(rep[2]);
-		}
 
-		link = XMLtools.getStringAttribute( tsk, "link", "");
-		Random r = new Random();
-    	id = XMLtools.getStringAttribute( tsk, "id", ""+r.nextLong()).toLowerCase();
-    	
-		splitReq( XMLtools.getStringAttribute( tsk, "req", ""), true );
-		splitReq( XMLtools.getStringAttribute( tsk, "check", ""), false );
+		when  = XMLtools.getStringAttribute( tsk, "state", "always"); //The state that determines if it's done or not
 
-		convertOUT( XMLtools.getStringAttribute( tsk, "output", "system") );  
-		convertTrigger( XMLtools.getStringAttribute( tsk, "trigger", "") );
+		if( tsk.getTagName().equalsIgnoreCase("while")||tsk.getTagName().equalsIgnoreCase("waitfor")){
+			Pair<Long,TimeUnit> period = TimeTools.parsePeriodString(XMLtools.getStringAttribute(tsk,"interval",""));
+			interval = period.getKey();
+			unit = period.getValue();
+			runs = XMLtools.getIntAttribute(tsk,"checks",-1);
 
-		if( tsk.getFirstChild() != null ){
-			this.value = tsk.getFirstChild().getTextContent(); // The control command to execute
-			if( this.value.startsWith("\\h(") ){
-				this.bytes=Tools.fromHexStringToBytes( value.substring(3, value.lastIndexOf(")") ) );
-			}else if( this.value.startsWith("\\d(") ){
-				this.bytes = Tools.fromDecStringToBytes( value.substring(3, value.indexOf(")")) );
-			}else{
-				this.bytes=this.value.getBytes();
+			switch( tsk.getTagName() ){
+				//case "retry": triggerType =TRIGGERTYPE.RETRY; break;
+				case "while": triggerType =TRIGGERTYPE.WHILE; break;
+				case "waitfor": triggerType =TRIGGERTYPE.WAITFOR; break;
 			}
-		}else{ 
-			Logger.tag("TASK").info("["+(taskset.isEmpty()?"noset":taskset)+"] Task of type "+ triggerType +" without value.");
-		}
-		/* Actions to take depending on the kind of output, meaning elements that are only present for certain outputs */
-		if( out == OUTPUT.EMAIL)
-			attachment = XMLtools.getStringAttribute( tsk, "attachment", "");
+			splitReq( tsk.getTextContent(), true ); // text content has the req
+		}else{
+			reply = XMLtools.getStringAttribute( tsk, "reply", "");
+			String[] rep = reply.split(",");
+			reply=rep[0];
+			if( rep.length==3){ // value,retries, interval?
+				replyRetries=Tools.parseInt(rep[1], -1);
+				replyInterval= TimeTools.parsePeriodStringToSeconds(rep[2]);
+			}
 
-		/* Link related items */
-    	if(!link.isBlank()) { // If link is actually mentioned
-	    	String[] linking = link.toLowerCase().split(":");
-	    	switch(linking[0]) {
-	    		case "disable24h": 		linktype=LINKTYPE.DISABLE_24H; 		break; // Disable for 24hours
-	    		case "nottoday": 		linktype=LINKTYPE.NOT_TODAY;  		break; // Disable for the rest of the day (UTC)
-	    		case "donow": 	   		linktype=LINKTYPE.DO_NOW; 	 		break; // Execute the linked task now
-	    		case "skipone":			linktype=LINKTYPE.SKIP_ONE; 	 		break; // Skip one execution of the linked task
-	    	}
-	    	link = linking[1];
-    	}
+			link = XMLtools.getStringAttribute( tsk, "link", "");
+			Random r = new Random();
+			id = XMLtools.getStringAttribute( tsk, "id", ""+r.nextLong()).toLowerCase();
+
+			splitReq( XMLtools.getStringAttribute( tsk, "req", ""), true );
+			splitReq( XMLtools.getStringAttribute( tsk, "check", ""), false );
+
+			convertOUT( XMLtools.getStringAttribute( tsk, "output", "system") );
+			convertTrigger( XMLtools.getStringAttribute( tsk, "trigger", "") );
+
+			if( tsk.getFirstChild() != null ){
+				this.value = tsk.getFirstChild().getTextContent(); // The control command to execute
+				if( this.value.startsWith("\\h(") ){
+					this.bytes=Tools.fromHexStringToBytes( value.substring(3, value.lastIndexOf(")") ) );
+				}else if( this.value.startsWith("\\d(") ){
+					this.bytes = Tools.fromDecStringToBytes( value.substring(3, value.indexOf(")")) );
+				}else{
+					this.bytes=this.value.getBytes();
+				}
+			}else{
+				Logger.tag("TASK").info("["+(taskset.isEmpty()?"noset":taskset)+"] Task of type "+ triggerType +" without value.");
+			}
+			/* Actions to take depending on the kind of output, meaning elements that are only present for certain outputs */
+			if( out == OUTPUT.EMAIL)
+				attachment = XMLtools.getStringAttribute( tsk, "attachment", "");
+
+			/* Link related items */
+			if(!link.isBlank()) { // If link is actually mentioned
+				String[] linking = link.toLowerCase().split(":");
+				switch(linking[0]) {
+					case "disable24h": 		linktype=LINKTYPE.DISABLE_24H; 		break; // Disable for 24hours
+					case "nottoday": 		linktype=LINKTYPE.NOT_TODAY;  		break; // Disable for the rest of the day (UTC)
+					case "donow": 	   		linktype=LINKTYPE.DO_NOW; 	 		break; // Execute the linked task now
+					case "skipone":			linktype=LINKTYPE.SKIP_ONE; 	 		break; // Skip one execution of the linked task
+				}
+				link = linking[1];
+			}
+		}
 	}
 	public boolean errorIncrement(){
 		errorOccurred++;
 		if( errorOccurred > 10 ){
-			Logger.error("Task caused to many failed rtval issues when looking for"+badReq+", cancelling.");
+			Logger.error("Task caused to many failed rtval issues when looking for "+badReq+", cancelling.");
 			cancelFuture(false);
 			return true;
 		}
@@ -166,7 +182,7 @@ public class Task implements Comparable<Task>{
 		return this.id;
 	}
 	public void reset(){
-		this.runs=retries;
+		attempts=0;
 		future.cancel( false );
 		Logger.tag("TASK").info("Reset executed for task in "+this.taskset);
 	}
@@ -205,34 +221,35 @@ public class Task implements Comparable<Task>{
 				case "localtime":
 					if( !cmd.startsWith("local"))
 						utc=true;
-					time = LocalTime.parse( items[0],DateTimeFormatter.ISO_LOCAL_TIME );								
-    				convertDAY(items.length==2?items[1]:"");
+					time = LocalTime.parse( items[0],DateTimeFormatter.ISO_LOCAL_TIME );
+					taskDays = TimeTools.convertDAY(items.length==2?items[1]:"");
     				triggerType =TRIGGERTYPE.CLOCK;
     				break;
 				case "retry":	/* retry:10s,-1 */
 				case "while":   /* while:10s,2 */
+				case "waitfor": /* waitfor:10s,1 */
 					Pair<Long,TimeUnit> period = TimeTools.parsePeriodString(items[0]); 
-					this.interval = period.getKey();
-					this.unit = period.getValue();
+					interval = period.getKey();
+					unit = period.getValue();
 					
     				if( items.length > 1 ) {
-						this.runs = Tools.parseInt(items[1], -1);
+						runs = Tools.parseInt(items[1], -1);
 					}
-					if( cmd.equals("retry")){
-						triggerType =TRIGGERTYPE.RETRY;
-					}else{
-						triggerType =TRIGGERTYPE.WHILE;
+    				switch( cmd ){
+						case "retry": triggerType =TRIGGERTYPE.RETRY; break;
+						case "while": triggerType =TRIGGERTYPE.WHILE; break;
+						case "waitfor": triggerType =TRIGGERTYPE.WAITFOR; break;
 					}
 					break;
 				case "delay":	/* delay:5m3s */
 					Pair<Long,TimeUnit> delay = TimeTools.parsePeriodString(items[0]); 
-					this.startDelay = delay.getKey();
-					this.unit=delay.getValue(); 
+					startDelay = delay.getKey();
+					unit=delay.getValue();
     				triggerType =TRIGGERTYPE.DELAY;
 					break;
     			case "interval": /* interval:5m3s or interval:10s,5m3s*/
-					this.retries=5;
-					this.runs=5;
+					retries=5;
+					runs=5;
 
 					if( items.length == 1 ){//Just interval
 						Pair<Long,TimeUnit> intervalPair = TimeTools.parsePeriodString(items[0]);
@@ -325,45 +342,6 @@ public class Task implements Comparable<Task>{
 
 	public void setWritable( Writable writable ){
 		this.writable=writable;
-	}
-	/* *********************************************************************************************************/
-	/**
-	 * Convert the string representation of the days for execution to objects
-	 * @param day The string represenation of the days
-	 */
-	private void convertDAY( String day ){
-		taskDays = new ArrayList<>();
-		if( day.isBlank() )
-			day = "all";
-
-		if( day.startsWith("weekday")||day.equals("all")||day.equals("always")){
-			taskDays.add( DayOfWeek.MONDAY);
-			taskDays.add( DayOfWeek.TUESDAY);
-			taskDays.add( DayOfWeek.WEDNESDAY);
-			taskDays.add( DayOfWeek.THURSDAY);
-			taskDays.add( DayOfWeek.FRIDAY);
-		}
-		if(day.equals("all")||day.equals("always")) {
-			taskDays.add(DayOfWeek.SATURDAY);
-			taskDays.add(DayOfWeek.SUNDAY);						
-		}
-		if( taskDays.isEmpty()){
-			if( day.contains("mo"))
-				taskDays.add(DayOfWeek.MONDAY);
-			if( day.contains("tu"))	
-				taskDays.add(DayOfWeek.TUESDAY);
-			if( day.contains("we"))	
-				taskDays.add(DayOfWeek.WEDNESDAY);
-			if( day.contains("th"))
-				taskDays.add(DayOfWeek.THURSDAY);
-			if( day.contains("fr"))
-				taskDays.add(DayOfWeek.FRIDAY);	
-			if( day.contains("sa"))
-				taskDays.add(DayOfWeek.SATURDAY);
-			if( day.contains("su"))
-				taskDays.add(DayOfWeek.SUNDAY);
-		}
-		taskDays.trimToSize();
 	}
 	/* *********************************************  V E R I F Y ****************************************************/
 	/**
@@ -494,14 +472,14 @@ public class Task implements Comparable<Task>{
 	 * @return True if the task is part of a taskset
 	 */
 	public boolean hasNext() {
-		return this.tasksetIndex !=-1;
+		return tasksetIndex !=-1;
 	}
 	/**
 	 * Get the short name of the taskset this task is part of
 	 * @return The short name of the taskset
 	 */
 	public String getTaskset( ){
-		return this.taskset;
+		return taskset;
 	}
 	/**
 	 * Get the index of this task in the taskset it is part of
