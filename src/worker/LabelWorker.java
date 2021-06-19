@@ -2,7 +2,7 @@ package worker;
 
 import com.stream.Readable;
 import com.stream.Writable;
-import das.BaseReq;
+import das.CommandReq;
 import das.RealtimeValues;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
@@ -40,7 +40,7 @@ public class LabelWorker implements Runnable, Labeller {
 	protected BlockingQueue<Datagram> dQueue = new LinkedBlockingQueue<>();      // The queue holding raw data for processing
 	private boolean goOn = true; // General process boolean, clean way of stopping thread
 
-	protected BaseReq reqData;
+	protected CommandReq reqData;
 
 	protected boolean debugMode = false;
 
@@ -100,10 +100,10 @@ public class LabelWorker implements Runnable, Labeller {
 	/**
 	 * Set the BaseReq for this worker to use
 	 *
-	 * @param baseReq The default BaseReq or extended one
+	 * @param commandReq The default BaseReq or extended one
 	 */
-	public void setReqData(BaseReq baseReq) {
-		this.reqData = baseReq;
+	public void setReqData(CommandReq commandReq) {
+		this.reqData = commandReq;
 	}
 
 	/**

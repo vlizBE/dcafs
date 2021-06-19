@@ -4,7 +4,7 @@ import com.email.EmailSending;
 import com.email.EmailWork;
 import com.stream.StreamPool;
 import com.stream.collector.CollectorFuture;
-import das.BaseReq;
+import das.CommandReq;
 import das.RealtimeValues;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
@@ -42,7 +42,7 @@ public class TaskManager implements CollectorFuture {
 	StreamPool streampool; // Reference to the streampool, so sensors can be talked to
 	RealtimeValues rtvals;
 
-	BaseReq baseReq; // Source to get the data from nexus
+	CommandReq commandReq; // Source to get the data from nexus
 	String id;
 
 	static final String TINY_TAG = "TASK";
@@ -59,8 +59,8 @@ public class TaskManager implements CollectorFuture {
 
 	/* ****************************** * C O N S T R U C T O R **************************************************/
 
-	public TaskManager(String id, RealtimeValues rtvals, BaseReq baseReq) {
-		this.baseReq =baseReq;
+	public TaskManager(String id, RealtimeValues rtvals, CommandReq commandReq) {
+		this.commandReq = commandReq;
 		this.rtvals = rtvals;
 		this.id = id;
 	}
@@ -108,9 +108,9 @@ public class TaskManager implements CollectorFuture {
 		this.streampool = streampool;
 	}
 
-	public void setBaseReq(BaseReq baseReq) {
-		this.baseReq = baseReq;
-		this.rtvals = baseReq.getRealtimeValues();
+	public void setCommandReq(CommandReq commandReq) {
+		this.commandReq = commandReq;
+		this.rtvals = commandReq.getRealtimeValues();
 	}
 
 	public void disableStartOnLoad() {
@@ -641,22 +641,22 @@ public class TaskManager implements CollectorFuture {
 				if (task.value.startsWith("cmd") || ( task.out != OUTPUT.MQTT && task.out != OUTPUT.STREAM && task.out != OUTPUT.MANAGER)) {
 					// This is not supposed to be used when the output is a channel or no reqdata defined
 
-					if (baseReq == null) {
+					if (commandReq == null) {
 						Logger.tag(TINY_TAG).warn("[" + id + "] No BaseReq (or child) defined.");
 						return false;
 					}
 					if (task.out == OUTPUT.SYSTEM || task.out == OUTPUT.STREAM ) {
-						response = baseReq.createResponse(fill.replace("cmd:", "").replace("\r\n", ""), null, true);
+						response = commandReq.createResponse(fill.replace("cmd:", "").replace("\r\n", ""), null, true);
 					} else if( task.out == OUTPUT.I2C ){
-						response = baseReq.createResponse( "i2c:"+task.value, null, true);
+						response = commandReq.createResponse( "i2c:"+task.value, null, true);
 					}else if( task.out == OUTPUT.EMAIL ){
 						if( splits.length==2){
 							String it = splits[1]+(splits[1].contains(":")?"":"html");
-							response = baseReq.createResponse( it, null, true);
+							response = commandReq.createResponse( it, null, true);
 						}
 					}else if( task.out != OUTPUT.LOG ){
 						String it = splits[splits.length - 1]+(splits[splits.length - 1].contains(":")?"":"html");
-						response = baseReq.createResponse( it, null, true);
+						response = commandReq.createResponse( it, null, true);
 					}
 					if (response.toLowerCase().startsWith("unknown")) {
 						response = splits[splits.length - 1];
@@ -1193,7 +1193,7 @@ public class TaskManager implements CollectorFuture {
 			return this.checkState(flag+":1")?1:0;
 		}else if( ref.startsWith("issue") ){
 			String issue = ref.split(":")[1];
-			return baseReq.checkIssue(issue)?1:0;
+			return commandReq.checkIssue(issue)?1:0;
 		}else{
 			return rtvals.getRealtimeValue(ref,bad);
 		}

@@ -44,9 +44,11 @@ import java.util.*;
  * Handles a server-side channel.
  */
 @SuppressWarnings("ALL")
-public class BaseReq {
+public class CommandReq {
 
 	protected static DateTimeFormatter secFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+	protected HashMap<String,Commandable> commandables = new HashMap<>();
 
 	protected RealtimeValues rtvals; // To have access to the current values
 	protected StreamPool streampool = null; // To be able to interact with attached devices
@@ -77,7 +79,7 @@ public class BaseReq {
 	 * Constructor requiring a link to the @see RealtimeValues for runtime values
 	 * @param rtvals The current RealtimeValues
 	 */
-	public BaseReq(RealtimeValues rtvals, String workPath){
+	public CommandReq(RealtimeValues rtvals, String workPath){
 		this.rtvals = rtvals;
 		this.name = this.getClass().getName().split("\\.")[1];
 		this.workPath=workPath;
@@ -89,9 +91,12 @@ public class BaseReq {
 	 * @param rtvals The current RealtimeValues
 	 * @param issues The collector for the issues created by the BaseReq
 	 */
-	public BaseReq(RealtimeValues rtvals, IssueCollector issues, String workPath) {
+	public CommandReq(RealtimeValues rtvals, IssueCollector issues, String workPath) {
 		this(rtvals,workPath);
 		this.issues = issues;
+	}
+	public void addCommandable( String id, Commandable cmdbl){
+		commandables.put(id,cmdbl);
 	}
 	/* ****************************  S E T U P - C H E C K U P: Adding different parts from DAS  *********************/
 	/**
@@ -136,7 +141,7 @@ public class BaseReq {
 	}
 	/**
 	 * To interact with streams/channels, access to the streampool is needed
-	 * 
+	 *
 	 * @param streampool  A reference to the streampool
 	 */
 	public void setStreamPool(StreamPool streampool) {
@@ -309,21 +314,26 @@ public class BaseReq {
 			 }
 		}
 		if( m == null || result.startsWith(UNKNOWN_CMD) ){
-			var tm = das.taskManagers.get(split[0]);
-			if( tm != null){
-				var nl = html ? "<br>" : "\r\n";
-				if( split[1].equals("?")||split[1].equals("list")){
-					return tm.getTaskSetListing(nl)+nl+tm.getTaskListing(nl);
-				}else{
-					if( tm.hasTaskset(split[1])){
-						return tm.startTaskset(split[1]);
+			var cmd = commandables.get(split[0]);
+			if( cmd!=null) {
+				result = cmd.replyToCommand(split, wr, html);
+			}else{
+				var tm = das.taskManagers.get(split[0]);
+				if( tm != null){
+					var nl = html ? "<br>" : "\r\n";
+					if( split[1].equals("?")||split[1].equals("list")){
+						return tm.getTaskSetListing(nl)+nl+tm.getTaskListing(nl);
 					}else{
-						return (tm.startTask(split[1])?"Task started ":"No such task(set) ")+split[1];
+						if( tm.hasTaskset(split[1])){
+							return tm.startTaskset(split[1]);
+						}else{
+							return (tm.startTask(split[1])?"Task started ":"No such task(set) ")+split[1];
+						}
 					}
 				}
 			}
 		}
-		if(m==null) {
+		if( result.startsWith(UNKNOWN_CMD) ) {
 			Logger.warn("Not defined:" + question + " because no method named " + find + ".");
 		}
 		if( wr!=null ) {
@@ -343,7 +353,7 @@ public class BaseReq {
 
 		ArrayList<Method> methods = new ArrayList<>(Arrays.asList(reqdata.getDeclaredMethods()));
 
-		if (reqdata.getSuperclass() == BaseReq.class) { // To make sure that both the child and the parent class are
+		if (reqdata.getSuperclass() == CommandReq.class) { // To make sure that both the child and the parent class are
 														// searched
 			methods.addAll(Arrays.asList(reqdata.getSuperclass().getDeclaredMethods()));
 		}
@@ -752,7 +762,7 @@ public class BaseReq {
 		if( streampool == null ){
 			return "No StreamPool defined.";
 		}
-		return streampool.replyToCmd(request[1], html);
+		return streampool.replyToStreamsCmd(request[1], wr, html);
 	}
 	public String doFilterForward( String[] request, Writable wr, boolean html ){
 		if( streampool == null ){

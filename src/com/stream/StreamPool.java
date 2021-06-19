@@ -2,7 +2,6 @@ package com.stream;
 
 import com.stream.collector.CollectorFuture;
 import com.stream.collector.ConfirmCollector;
-import com.stream.forward.AbstractForward;
 import com.stream.forward.EditorForward;
 import com.stream.forward.FilterForward;
 import com.stream.forward.MathForward;
@@ -608,7 +607,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 	 * @param html Whether or not the answer should use html or regular line endings
 	 * @return The answer or Unknown Command if the question wasn't understood
 	 */
-	public String replyToCmd(String request, boolean html ){
+	public String replyToStreamsCmd(String request, Writable wrOri, boolean html ){
 
 		String nl = html?"<br>":"\r\n";
 

@@ -61,7 +61,7 @@ public class DAS implements DeadThreadListener {
 
     // Storage
     RealtimeValues rtvals;
-    BaseReq baseReq;
+    CommandReq commandReq;
 
     // Telnet
     TelnetServer telnet;
@@ -148,8 +148,8 @@ public class DAS implements DeadThreadListener {
             rtvals = new RealtimeValues(issues);
             readDatabasesFromXML();
 
-            baseReq = new BaseReq(rtvals, issues, workPath);
-            baseReq.setSQLitesManager(dbManager);
+            commandReq = new CommandReq(rtvals, issues, workPath);
+            commandReq.setSQLitesManager(dbManager);
 
             /* TransServer */
             if (TcpServer.inXML(settingsDoc)) {
@@ -229,7 +229,7 @@ public class DAS implements DeadThreadListener {
                     }
             );
         }
-        baseReq.setDAS(this);
+        commandReq.setDAS(this);
         this.attachShutDownHook();
     }
     public DAS(boolean start) {
@@ -286,7 +286,15 @@ public class DAS implements DeadThreadListener {
     public Document getSettingsDoc() {
         return XMLtools.readXML(settingsPath);
     }
-
+    /* **************************************  C O M M A N D R E Q  ********************************************/
+    /**
+     * Add a commandable to the CommandReq, this is the same as adding commands to dcafs
+     * @param id The unique start command (so whatever is in front of the : )
+     * @param cmd The commandable to add
+     */
+    public void addCommandable( String id, Commandable cmd){
+        commandReq.addCommandable(id,cmd);
+    }
     /* **************************************  R E A L T I M E V A L U E S ********************************************/
     /**
      * Change the current RealtimeValues for the extended version
@@ -298,7 +306,7 @@ public class DAS implements DeadThreadListener {
         this.rtvals.copySetup(altered);
         this.rtvals = altered;
 
-        baseReq.setRealtimeValues(rtvals);
+        commandReq.setRealtimeValues(rtvals);
         rtvals.setIssueCollector(issues);
         labelWorker.setRealtimeValues(rtvals);
     }
@@ -430,7 +438,7 @@ public class DAS implements DeadThreadListener {
      */
     public TaskManager addTaskManager(String id, Path path) {
 
-        TaskManager tm = new TaskManager(id, rtvals, baseReq);
+        TaskManager tm = new TaskManager(id, rtvals, commandReq);
         tm.setXMLPath(path);
 
         Logger.info("Reading scripts for " + id + " at " + path.toString());
@@ -510,7 +518,7 @@ public class DAS implements DeadThreadListener {
     public void addStreamPool() {
 
         streampool = new StreamPool(dQueue, issues, nettyGroup);
-        baseReq.setStreamPool(streampool);
+        commandReq.setStreamPool(streampool);
 
         if (debug) {
             Logger.info("Connecting to streams once because in debug.");
@@ -534,7 +542,7 @@ public class DAS implements DeadThreadListener {
     public void addBaseWorker() {
         if (this.labelWorker == null)
             labelWorker = new LabelWorker(dQueue);
-        labelWorker.setReqData(baseReq);
+        labelWorker.setReqData(commandReq);
         labelWorker.setRealtimeValues(rtvals);
         labelWorker.setDebugging(debug);
         labelWorker.setEventListener(this);
@@ -546,7 +554,7 @@ public class DAS implements DeadThreadListener {
             labelWorker.stopWorker();
         altered.setQueue(dQueue);
         labelWorker = altered;
-        labelWorker.setReqData(baseReq);
+        labelWorker.setReqData(commandReq);
         labelWorker.setRealtimeValues(rtvals);
         labelWorker.setDebugging(debug);
         labelWorker.setEventListener(this);
@@ -594,7 +602,7 @@ public class DAS implements DeadThreadListener {
         trans = new TcpServer(settingsPath, nettyGroup);
         trans.setServerPort(port);
         trans.setDataQueue(dQueue);
-        baseReq.setTcpServer(trans);
+        commandReq.setTcpServer(trans);
     }
 
     /**
@@ -613,7 +621,7 @@ public class DAS implements DeadThreadListener {
         addBaseWorker();
         emailWorker = new EmailWorker(settingsDoc, dQueue);
         emailWorker.setEventListener(this);
-        baseReq.setEmailWorker(emailWorker);
+        commandReq.setEmailWorker(emailWorker);
     }
     public EmailWorker getEmailWorker() {
         return emailWorker;
@@ -766,39 +774,12 @@ public class DAS implements DeadThreadListener {
         } else {
             Logger.error("No valid streampool");
         }
-        baseReq.setIssues(this.issues);
+        commandReq.setIssues(this.issues);
         rtvals.setIssueCollector(issues);
     }
     public IssueCollector getIssueCollector(){
         return issues;
     }
-    /* ************************************ * R E Q D A T A ****************************************************/
-    /**
-     * Replace the BaseReq with the extended one
-     * 
-     * @param altered The extended BaseReq
-     */
-    public void alterBaseReq(BaseReq altered) {
-        if (altered.rtvals == null)
-            altered.rtvals = baseReq.rtvals;
-        baseReq = altered;
-        if (altered.issues == null) // don't overwrite it already provided
-            baseReq.setIssues(issues);
-        baseReq.setDAS(this);
-
-        labelWorker.setReqData(baseReq);
-        if (trans != null)
-            baseReq.setTcpServer(trans);
-        if (dbManager != null)
-            baseReq.setSQLitesManager(dbManager);
-        if (emailWorker != null)
-            baseReq.setEmailWorker(emailWorker);
-        if (streampool != null)
-            baseReq.setStreamPool(streampool);
-        for (TaskManager tm : taskManagers.values())
-            tm.setBaseReq(baseReq);
-    }
-
     /* ***************************************  T E L N E T S E R V E R ******************************************/
     /**
      * Create the telnetserver
@@ -963,7 +944,7 @@ public class DAS implements DeadThreadListener {
      */
     public void startAll() {
 
-        this.baseReq.getMethodMapping();
+        this.commandReq.getMethodMapping();
 
         if (this.labelWorker != null) {
             Logger.info("Starting BaseWorker...");
