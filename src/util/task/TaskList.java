@@ -30,15 +30,15 @@ import java.util.concurrent.TimeUnit;
 public class TaskList implements CollectorFuture {
 
 	ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(3);// scheduler for the request data action
-	ArrayList<Task> tasks = new ArrayList<>(); // Storage of the tasks
-	Map<String, TaskSet> tasksets = new HashMap<>(); // Storage of the tasksets
-	ArrayList<String> states = new ArrayList<>(); // Storage of the states/keywords
-	Path xmlPath = null; // Path to the xml file containing the tasks/tasksets
+	ArrayList<Task> tasks = new ArrayList<>(); 			// Storage of the tasks
+	Map<String, TaskSet> tasksets = new HashMap<>(); 	// Storage of the tasksets
+	ArrayList<String> states = new ArrayList<>(); 		// Storage of the states/keywords
+	Path xmlPath = null; 								// Path to the xml file containing the tasks/tasksets
 
 	/* The different outputs */
 	EmailSending emailQueue = null; // Reference to the email send, so emails can be send
-	SMSSending smsSender = null; // Reference to the sms queue, so sms's can be send
-	StreamPool streampool; // Reference to the streampool, so sensors can be talked to
+	SMSSending smsSender = null; 	// Reference to the sms queue, so sms's can be send
+	StreamPool streampool; 			// Reference to the streampool, so sensors can be talked to
 	RealtimeValues rtvals;
 
 	CommandReq commandReq; // Source to get the data from nexus
@@ -48,8 +48,7 @@ public class TaskList implements CollectorFuture {
 
 	enum RUNTYPE {
 		ONESHOT, STEP, NOT
-	} // Current ways of going through a taskset, either oneshot (all at once) or step
-		// (task by task)
+	} // Current ways of going through a taskset, either oneshot (all at once) or step (task by task)
 
 	String workPath = "";
 
@@ -138,7 +137,6 @@ public class TaskList implements CollectorFuture {
 				Logger.tag(TINY_TAG).info("[" + id + "] Changing state: " + states.get(index) + " to " + state);
 				states.set(index, state);
 				// State changed so we need to check if this affects anything?
-
 				return true;
 			}
 		}
@@ -266,7 +264,7 @@ public class TaskList implements CollectorFuture {
 		}
 		return null;
 	}
-	/* **************************** * WAYS OF ENABLING TASKS ***************************************************/
+	/* ***************************** WAYS OF ENABLING TASKS ***************************************************/
 	/**
 	 * Start a task that has the trigger based on a keyword
 	 * 
@@ -287,6 +285,11 @@ public class TaskList implements CollectorFuture {
 		}
 	}
 
+	/**
+	 * Cancel a scheduled task
+	 * @param id The id of the task to cancel
+	 * @return True if it exists and was cancelled
+	 */
 	public boolean cancelTask(String id) {
 		for (Task task : this.tasks) {
 			if (task.getID().equals(id)&&!task.getFuture().isDone()) {
@@ -298,6 +301,11 @@ public class TaskList implements CollectorFuture {
 		return false;
 	}
 
+	/**
+	 * Start a task with the given id
+	 * @param id The id of the task to start
+	 * @return True if the task was found and started
+	 */
 	public boolean startTask(String id) {
 		for (Task task : this.tasks) {
 			if (task.getID().equals(id)) {

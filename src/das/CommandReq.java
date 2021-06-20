@@ -1003,9 +1003,7 @@ public class CommandReq {
 			default: return UNKNOWN_CMD+" : "+request[1];
 		} 
 	}	
-
-
-	public String doEMAIL( String[] request, Writable wr, boolean html ){	
+	public String doEMAIL( String[] request, Writable wr, boolean html ){
 		
 		if( request[1].equalsIgnoreCase("addblank") ){
 			if( EmailWorker.addBlankEmailToXML( das.getSettingsDoc(), true,true) )

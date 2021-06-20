@@ -24,6 +24,8 @@ public class MQTTManager implements Commandable {
         this.settingsFile=settingsFile;
         this.rtvals=rtvals;
         this.dQueue=dQueue;
+
+        readXMLsettings();
     }
 
     /**

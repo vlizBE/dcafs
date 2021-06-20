@@ -21,7 +21,6 @@ import org.w3c.dom.Element;
 import util.DeadThreadListener;
 import util.database.*;
 import util.gis.Waypoints;
-import util.task.TaskList;
 import util.task.TaskManager;
 import util.tools.TimeTools;
 import util.tools.Tools;
@@ -189,7 +188,7 @@ public class DAS implements DeadThreadListener {
             addI2CWorker();
 
             /* Telnet */
-            this.addTelnetServer();
+            addTelnetServer();
 
             /* TaskManager */
             addTaskManager();
@@ -283,7 +282,7 @@ public class DAS implements DeadThreadListener {
      * @param id The unique start command (so whatever is in front of the : )
      * @param cmd The commandable to add
      */
-    public void addCommandable( String id, Commandable cmd){
+    public void addCommandable( String id, Commandable cmd ){
         commandReq.addCommandable(id,cmd);
     }
     /* **************************************  R E A L T I M E V A L U E S ********************************************/
@@ -359,7 +358,9 @@ public class DAS implements DeadThreadListener {
         labelWorker.setDebugging(debug);
         labelWorker.setEventListener(this);
     }
-
+    public LabelWorker getLabelWorker() {
+        return labelWorker;
+    }
     public void alterLabelWorker(LabelWorker altered) {
         Logger.info("Using alternate BaseWorker");
         if ( labelWorker != null)
@@ -377,11 +378,6 @@ public class DAS implements DeadThreadListener {
         addLabelWorker();
         return dQueue;
     }
-
-    public LabelWorker getLabelWorker() {
-        return labelWorker;
-    }
-
     public void loadGenerics(boolean clear) {
         if (clear) {
             settingsDoc = XMLtools.readXML(settingsPath);
@@ -402,9 +398,6 @@ public class DAS implements DeadThreadListener {
     public void addMQTTManager(){
         mqttManager = new MQTTManager(settingsPath,rtvals,dQueue);
         addCommandable("mqtt",mqttManager);
-        if (XMLtools.getFirstElementByTag(settingsDoc, "mqtt") != null) {
-            mqttManager.readXMLsettings();
-        }
     }
     /* *****************************************  T R A N S S E R V E R ***************************************** */
     /**
@@ -414,15 +407,11 @@ public class DAS implements DeadThreadListener {
      */
     public void addTransServer(int port) {
 
-        if (trans != null) {
-            trans.setServerPort(port);
-            return;
-        }
         Logger.info("Adding TransServer");
         trans = new TcpServer(settingsPath, nettyGroup);
-
         trans.setServerPort(port);
         trans.setDataQueue(dQueue);
+
         commandReq.setTcpServer(trans);
     }
 
@@ -447,8 +436,8 @@ public class DAS implements DeadThreadListener {
      */
     public void addDigiWorker() {
         Logger.info("Adding DigiWorker");
-        this.digiWorker = new DigiWorker(settingsDoc);
-        this.digiWorker.setEventListener(this);
+        digiWorker = new DigiWorker(settingsDoc);
+        digiWorker.setEventListener(this);
     }
 
     public BlockingQueue<String[]> getSMSQueue() {

@@ -67,6 +67,7 @@ public class TaskManager implements Commandable {
         tl.setCommandReq(cmdReq);
         tl.setWorkPath(workPath);
         tl.setEmailSending(emailSender);
+        tl.setSMSSending(smsSender);
 
         tasklists.put(id,tl);
     }
