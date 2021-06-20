@@ -41,39 +41,37 @@ public class DAS implements DeadThreadListener {
 
     private static final String version = "0.10.0";
 
-    Path settingsPath = Path.of("settings.xml");
-    String workPath=Path.of("").toString();
+    private Path settingsPath = Path.of("settings.xml");
+    private String workPath=Path.of("").toString();
 
     private Document settingsDoc;
 
-    LocalDateTime bootupTimestamp = LocalDateTime.now(); // Store timestamp at boot up to calculate uptime
+    private LocalDateTime bootupTimestamp = LocalDateTime.now(); // Store timestamp at boot up to calculate uptime
 
-    // Workers
+    /* Workers */
     private EmailWorker emailWorker;
     private LabelWorker labelWorker;
     private DigiWorker digiWorker;
     private DebugWorker debugWorker;
+    private I2CWorker i2cWorker;
 
-    // IO
-    StreamPool streampool;
-    TcpServer trans;
+    /* */
+    private StreamPool streampool;
+    private TcpServer trans;
+    private TelnetServer telnet;
 
-    // Storage
-    RealtimeValues rtvals;
-    CommandReq commandReq;
+    private RealtimeValues rtvals;
+    private CommandReq commandReq;
+    private IssueCollector issues;
 
-    // Telnet
-    TelnetServer telnet;
+    /* Managers */
+    private DatabaseManager dbManager;
+    private MQTTManager mqttManager;
+    private TaskManager taskManager;
 
-    // Other
-    TaskManager taskManager;
+    private Map<String, FileCollector> fileCollectors = new HashMap<>();
 
-    Map<String, FileCollector> fileCollectors = new HashMap<>();
 
-    IssueCollector issues;
-
-    // Hardware
-    I2CWorker i2cWorker;
 
     private boolean debug = false;
     private boolean log = false;
@@ -85,12 +83,6 @@ public class DAS implements DeadThreadListener {
 
     /* Threading */
     EventLoopGroup nettyGroup = new NioEventLoopGroup(); // Single group so telnet,trans and streampool can share it
-
-    /* Database */
-    private DatabaseManager dbManager;
-
-    /* MQTT */
-    private MQTTManager mqttManager;
 
     public DAS() {
 
@@ -150,7 +142,7 @@ public class DAS implements DeadThreadListener {
             dbManager = new DatabaseManager(workPath);
 
             rtvals = new RealtimeValues(issues);
-
+            rtvals.addQueryWriting(dbManager);
 
             commandReq = new CommandReq(rtvals, issues, workPath);
             commandReq.setDatabaseManager(dbManager);
@@ -232,11 +224,7 @@ public class DAS implements DeadThreadListener {
     public String getWorkPath(){
         return workPath;
     }
-    public Optional<EmailSending> getEmailSender(){
-        if(emailWorker!=null)
-            return Optional.ofNullable(emailWorker.getSender());
-        return Optional.empty();
-    }
+
     /**
      * Check if the boot up was successful
      * 
@@ -428,8 +416,10 @@ public class DAS implements DeadThreadListener {
         emailWorker.setEventListener(this);
         commandReq.setEmailWorker(emailWorker);
     }
-    public EmailWorker getEmailWorker() {
-        return emailWorker;
+    public Optional<EmailSending> getEmailSender(){
+        if(emailWorker!=null)
+            return Optional.ofNullable(emailWorker.getSender());
+        return Optional.empty();
     }
 
     /* *****************************************  D I G I W O R K E R **************************************************/
@@ -441,13 +431,6 @@ public class DAS implements DeadThreadListener {
         digiWorker = new DigiWorker(settingsDoc);
         digiWorker.setEventListener(this);
     }
-
-    public BlockingQueue<String[]> getSMSQueue() {
-        if (digiWorker == null)
-            return null;
-        return this.digiWorker.getQueue();
-    }
-
     /**
      * Send an SMS using the digi worker
      * 
