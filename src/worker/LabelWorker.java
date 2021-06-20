@@ -102,7 +102,7 @@ public class LabelWorker implements Runnable, Labeller {
 	 *
 	 * @param commandReq The default BaseReq or extended one
 	 */
-	public void setReqData(CommandReq commandReq) {
+	public void setCommandReq(CommandReq commandReq) {
 		this.reqData = commandReq;
 	}
 

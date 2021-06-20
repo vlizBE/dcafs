@@ -39,7 +39,8 @@ public class TcpStream extends BaseStream implements Writable{
     EventLoopGroup group;		    // Eventloop used by the netty stuff
 
     static int bufferSize = 2048; 	// How many bytes are stored before a dump
-    
+    private boolean writableValid = true;
+
     public TcpStream( String id, String ipport, BlockingQueue<Datagram> dQueue, String label, int priority ){
         super(id,label,dQueue);
         this.priority=priority;
@@ -227,6 +228,4 @@ public class TcpStream extends BaseStream implements Writable{
     public Writable getWritable(){
         return this;
     }
-
-
 }

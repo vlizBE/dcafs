@@ -2,7 +2,7 @@ package das;
 
 import com.email.EmailWork;
 import org.tinylog.Logger;
-import util.task.TaskManager;
+import util.task.TaskList;
 import util.tools.TimeTools;
 
 import java.time.Duration;
@@ -38,12 +38,12 @@ public class IssueCollector {
     
     public enum ALARM_TYPE {SMS,EMAIL}
 
-    TaskManager alarms;
+    TaskList alarms;
 
     public boolean hasAlarms(){
         return alarms!=null;
     }
-    public void setAlarmsTaskManager( TaskManager tm){
+    public void setAlarmsTaskManager( TaskList tm){
         alarms=tm;
         alarms.disableStartOnLoad(); // Don't start the tasks without an actual alarm
     }

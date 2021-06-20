@@ -1,7 +1,7 @@
 package util.task;
 
 import org.tinylog.Logger;
-import util.task.TaskManager.RUNTYPE;
+import util.task.TaskList.RUNTYPE;
 
 import java.util.ArrayList;
 import java.util.List;

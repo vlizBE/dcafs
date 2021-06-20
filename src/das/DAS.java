@@ -3,10 +3,9 @@ package das;
 import com.email.EmailSending;
 import com.email.EmailWorker;
 import com.hardware.i2c.I2CWorker;
-import com.mqtt.MqttWorker;
+import com.mqtt.MQTTManager;
 import com.sms.DigiWorker;
 import com.stream.StreamPool;
-import com.stream.Writable;
 import com.stream.collector.FileCollector;
 import com.stream.collector.MathCollector;
 import com.stream.tcp.TcpServer;
@@ -22,6 +21,7 @@ import org.w3c.dom.Element;
 import util.DeadThreadListener;
 import util.database.*;
 import util.gis.Waypoints;
+import util.task.TaskList;
 import util.task.TaskManager;
 import util.tools.TimeTools;
 import util.tools.Tools;
@@ -67,8 +67,8 @@ public class DAS implements DeadThreadListener {
     TelnetServer telnet;
 
     // Other
-    HashMap<String, TaskManager> taskManagers = new HashMap<>();
-    Map<String, MqttWorker> mqttWorkers = new HashMap<>();
+    TaskManager taskManager;
+
     Map<String, FileCollector> fileCollectors = new HashMap<>();
 
     IssueCollector issues;
@@ -89,6 +89,9 @@ public class DAS implements DeadThreadListener {
 
     /* Database */
     private final DatabaseManager dbManager = new DatabaseManager();
+
+    /* MQTT */
+    private MQTTManager mqttManager;
 
     public DAS() {
 
@@ -143,21 +146,19 @@ public class DAS implements DeadThreadListener {
             issues = new IssueCollector();
 
             if( issues.hasAlarms())
-                taskManagers.put("alarms",issues.alarms); // Make that manager available through general interface
+                taskManager.addTaskList("alarms",issues.alarms); // Make that manager available through general interface
 
             rtvals = new RealtimeValues(issues);
             readDatabasesFromXML();
 
             commandReq = new CommandReq(rtvals, issues, workPath);
-            commandReq.setSQLitesManager(dbManager);
+            commandReq.setDatabaseManager(dbManager);
 
             /* TransServer */
-            if (TcpServer.inXML(settingsDoc)) {
-                this.addTransServer();
-            }
+            addTransServer(-1);
 
             /* Base Worker */
-            addBaseWorker();
+            addLabelWorker();
 
             /* Generics */
             loadGenerics(true);
@@ -170,38 +171,28 @@ public class DAS implements DeadThreadListener {
 
             /* EmailWorker */
             if (XMLtools.hasElementByTag(settingsDoc, "email") ) {
-                this.addEmailWorker();
+                addEmailWorker();
             }
             /* DigiWorker */
             if (XMLtools.hasElementByTag(settingsDoc, "digi") ) {
-                this.addDigiWorker();
+                addDigiWorker();
             }
             /* DebugWorker */
             if (DebugWorker.inXML(settingsDoc)) {
-                this.addDebugWorker();
+                addDebugWorker();
             }
 
             /* MQTT worker */
-            Element mqtt;
-            if ((mqtt = XMLtools.getFirstElementByTag(settingsDoc, "mqtt")) != null) {
-                for (Element broker : XMLtools.getChildElements(mqtt, "broker")) {
-                    String id = XMLtools.getStringAttribute(broker, "id", "general");
-                    Logger.info("Adding MQTT broker called " + id);
-                    mqttWorkers.put(id, new MqttWorker(broker, dQueue));
-                    rtvals.addMQTTworker(id, mqttWorkers.get(id));
-                }
-            }
+            addMQTTManager();
 
             /* I2C */
-            if (XMLtools.hasElementByTag(settingsDoc, "i2c") ) {
-                this.addI2CWorker();
-            }
+            addI2CWorker();
 
             /* Telnet */
             this.addTelnetServer();
 
             /* TaskManager */
-            loadTaskManagersFromXML(settingsDoc);
+            addTaskManager();
 
             /* Waypoints */
             if (Waypoints.inXML(settingsDoc)) {
@@ -315,202 +306,23 @@ public class DAS implements DeadThreadListener {
         return rtvals;
     }
 
-    /* *****************************************  M Q T T **********************************************/
-    /**
-     * Get The @see MQTTWorker based on the given id
-     * 
-     * @param id The id of the MQTT worker requested
-     * @return The worder requested or null if not found
-     */
-    public Optional<MqttWorker> getMqttWorker(String id) {        
-        return Optional.ofNullable( mqttWorkers.get(id) );
-    }
-
-    /**
-     * Get a list of all the MQTTWorker id's
-     * 
-     * @return List of all the id's
-     */
-    public Set<String> getMqttWorkerIDs() {
-        return mqttWorkers.keySet();
-    }
-
-    /**
-     * Get a descriptive listing of the current brokers/workers and their
-     * subscriptions
-     * 
-     * @return The earlier mentioned descriptive listing
-     */
-    public String getMqttBrokersInfo() {
-        StringJoiner join = new StringJoiner("\r\n", "id -> broker -> online?", "");
-        join.add("");
-        mqttWorkers.forEach((id, worker) -> join
-                .add(id + " -> " + worker.getBroker() + " -> " + (worker.isConnected() ? "online" : "offline"))
-                .add(worker.getSubscriptions("\r\n")));
-        return join.toString();
-    }
-
-    /**
-     * Adds a subscription to a certain MQTTWorker
-     * 
-     * @param id    The id of the worker to add it to
-     * @param label The label associated wit the data, this will be given to @see
-     *              BaseWorker when data is recevied
-     * @param topic The topic to subscribe to
-     * @return True if a subscription was successfully added
-     */
-    public boolean addMQTTSubscription(String id, String label, String topic) {
-        MqttWorker worker = mqttWorkers.get(id);
-        if (worker == null)
-            return false;
-        return worker.addSubscription(topic, label);
-    }
-
-    /**
-     * Remove a subscription from a certain MQTTWorker
-     * 
-     * @param id    The id of the worker
-     * @param topic The topic to remove
-     * @return True if it was removed, false if it wasn't either because not found
-     *         or no such worker
-     */
-    public boolean removeMQTTSubscription(String id, String topic) {
-        MqttWorker worker = mqttWorkers.get(id);
-        if (worker == null)
-            return false;
-        return worker.removeSubscription(topic);
-    }
-
-    /**
-     * Update the settings in the xml for a certain MQTTWorker based on id
-     * 
-     * @param id The worker of which the settings need to be altered
-     * @return True if updated
-     */
-    public boolean updateMQTTsettings(String id) {
-        Element mqtt;
-
-        if ((mqtt = XMLtools.getFirstElementByTag(settingsDoc, "mqtt")) == null)
-            return false; // No valid node, nothing to update
-
-        for (Element broker : XMLtools.getChildElements(mqtt, "broker")) {
-            if (XMLtools.getStringAttribute(broker, "id", "general").equals(id)) {
-                MqttWorker worker = mqttWorkers.get(id);
-                if (worker != null && worker.updateXMLsettings(settingsDoc, broker))
-                    return XMLtools.updateXML(settingsDoc);
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Reload the settings for a certain MQTTWorker from the settings.xml
-     * 
-     * @param id The worker for which the settings need to be reloaded
-     * @return True if this was succesful
-     */
-    public boolean reloadMQTTsettings(String id) {
-        MqttWorker worker = mqttWorkers.get(id);
-        if (worker == null)
-            return false;
-
-        Element mqtt;
-        settingsDoc = XMLtools.readXML(settingsPath);// make sure the xml is up to date
-        if ((mqtt = XMLtools.getFirstElementByTag(settingsDoc, "mqtt")) != null) {
-            for (Element broker : XMLtools.getChildElements(mqtt, "broker")) {
-                if (XMLtools.getStringAttribute(broker, "id", "general").equals(id)) {
-                    worker.readSettings(broker);
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
 
     /* ***************************************  T A S K M A N A G E R ********************************************/
     /**
-     * Create a Taskmanager to handle a given script
-     * 
-     * @param id   The id with which the TaskManager will be referenced
-     * @param path The path to the script
-     * @return The created TaskManager
+     * Create a Taskmanager to handle tasklist scripts
      */
-    public TaskManager addTaskManager(String id, Path path) {
+    public void addTaskManager() {
 
-        TaskManager tm = new TaskManager(id, rtvals, commandReq);
-        tm.setXMLPath(path);
-
-        Logger.info("Reading scripts for " + id + " at " + path.toString());
+        taskManager = new TaskManager(workPath, rtvals, commandReq);
 
         if (streampool != null)
-            tm.setStreamPool(streampool);
+            taskManager.setStreamPool(streampool);
         if (emailWorker != null)
-            tm.setEmailSending(emailWorker.getSender());
+            taskManager.setEmailSending(emailWorker.getSender());
         if (digiWorker != null) {
-            tm.setSMSQueue(digiWorker.getQueue());
-        }
-        taskManagers.put(id, tm);
-        return tm;
-    }
-
-    public void loadTaskManagersFromXML(Document xml) {
-        for(Element e: XMLtools.getAllElementsByTag(xml, "taskmanager") ){
-            Logger.info("Found reference to TaskManager in xml.");
-            var p = Path.of(e.getTextContent());
-            if( !p.isAbsolute())
-                p = Path.of(workPath).resolve(p);
-
-            if (Files.exists(p)) {
-                addTaskManager(e.getAttribute("id"), p);
-            } else {
-                Logger.error("No such task xml: " + p);
-            }
+            taskManager.setSMSSending(digiWorker);
         }
     }
-
-    /**
-     * Check the TaskManager for tasks with the given keyword and start those
-     * 
-     * @param keyword The keyword to look for
-     */
-    public void startKeywordTask(String keyword) {
-        Logger.info("Checking for task with keyword " + keyword);
-        taskManagers.forEach( (k, v) -> v.startKeywordTask(keyword) );
-    }
-
-    /**
-     * Change a state stored by the TaskManagers
-     * 
-     * @param state The format needs to be identifier:state
-     */
-    public void changeManagersState(String state) {
-        taskManagers.values().forEach(v -> v.changeState(state));
-    }
-
-    /**
-     * Reload the script of a given TaskManager
-     * 
-     * @param id The id of the manager
-     * @return Result of the attempt
-     */
-    public String reloadTaskmanager(String id) {
-        if (id.endsWith(".xml")) {
-            for (TaskManager t : taskManagers.values()) {
-                if (t.getXMLPath().toString().endsWith(id)) {
-                    return t.reloadTasks() ? "Tasks loaded succesfully." : "Tasks loading failed.";
-                }
-            }
-
-            this.addTaskManager(id.replace(".xml", ""), Path.of(workPath,"scripts", id));
-            return "No TaskManager associated with the script, creating one.";
-        }
-        TaskManager tm = taskManagers.get(id);
-        if (tm == null)
-            return "Unknown manager.";
-        return tm.reloadTasks() ? "Tasks loaded successfully." : "Tasks loading failed.";
-    }
-
     /* ******************************************  S T R E A M P O O L ***********************************************/
     /**
      * Adds the streampool
@@ -535,26 +347,26 @@ public class DAS implements DeadThreadListener {
         return streampool;
     }
 
-    /* *************************************  B A S E W O R K E R **********************************************/
+    /* *************************************  L A B E L W O R K E R **********************************************/
     /**
      * Adds the BaseWorker
      */
-    public void addBaseWorker() {
+    public void addLabelWorker() {
         if (this.labelWorker == null)
             labelWorker = new LabelWorker(dQueue);
-        labelWorker.setReqData(commandReq);
+        labelWorker.setCommandReq(commandReq);
         labelWorker.setRealtimeValues(rtvals);
         labelWorker.setDebugging(debug);
         labelWorker.setEventListener(this);
     }
 
-    public void alterBaseWorker(LabelWorker altered) {
+    public void alterLabelWorker(LabelWorker altered) {
         Logger.info("Using alternate BaseWorker");
         if ( labelWorker != null)
             labelWorker.stopWorker();
         altered.setQueue(dQueue);
         labelWorker = altered;
-        labelWorker.setReqData(commandReq);
+        labelWorker.setCommandReq(commandReq);
         labelWorker.setRealtimeValues(rtvals);
         labelWorker.setDebugging(debug);
         labelWorker.setEventListener(this);
@@ -562,7 +374,7 @@ public class DAS implements DeadThreadListener {
     }
 
     public BlockingQueue<Datagram> getDataQueue() {
-        addBaseWorker();
+        addLabelWorker();
         return dQueue;
     }
 
@@ -586,13 +398,21 @@ public class DAS implements DeadThreadListener {
         XMLfab.getRootChildren(settingsDoc, "dcafs","valmaps","valmap")
                 .forEach( ele ->  labelWorker.addValMap( ValMap.readFromXML(ele) ) );
     }
-    /* *****************************************  T R A N S S E R V E R ******************************************/
+    /* ***************************************** M Q T T ******************************************************** */
+    public void addMQTTManager(){
+        mqttManager = new MQTTManager(settingsPath,rtvals,dQueue);
+        addCommandable("mqtt",mqttManager);
+        if (XMLtools.getFirstElementByTag(settingsDoc, "mqtt") != null) {
+            mqttManager.readXMLsettings();
+        }
+    }
+    /* *****************************************  T R A N S S E R V E R ***************************************** */
     /**
      * Adds the TransServer listening on the given port
      * 
      * @param port The port the server will be listening on
      */
-    public void addTcpServer(int port) {
+    public void addTransServer(int port) {
 
         if (trans != null) {
             trans.setServerPort(port);
@@ -600,16 +420,10 @@ public class DAS implements DeadThreadListener {
         }
         Logger.info("Adding TransServer");
         trans = new TcpServer(settingsPath, nettyGroup);
+
         trans.setServerPort(port);
         trans.setDataQueue(dQueue);
         commandReq.setTcpServer(trans);
-    }
-
-    /**
-     * Add Transserver with default port
-     */
-    public void addTransServer() {
-        addTcpServer(-1);
     }
 
     /* **********************************  E M A I L W O R K E R *********************************************/
@@ -618,7 +432,7 @@ public class DAS implements DeadThreadListener {
      */
     public void addEmailWorker() {
         Logger.info("Adding EmailWorker");
-        addBaseWorker();
+        addLabelWorker();
         emailWorker = new EmailWorker(settingsDoc, dQueue);
         emailWorker.setEventListener(this);
         commandReq.setEmailWorker(emailWorker);
@@ -746,7 +560,7 @@ public class DAS implements DeadThreadListener {
      */
     public void addDebugWorker() {
         Logger.info("Adding DebugWorker");
-        addBaseWorker();
+        addLabelWorker();
 
         debugWorker = new DebugWorker(labelWorker.getQueue(), dbManager, settingsDoc);
 
@@ -788,15 +602,6 @@ public class DAS implements DeadThreadListener {
         telnet = new TelnetServer(this.getDataQueue(), settingsDoc, nettyGroup);
     }
 
-    /**
-     * Check if there's already a telnet server
-     * 
-     * @return True if there isn't
-     */
-    public boolean hasTelnetServer() {
-        return telnet != null;
-    }
-
     /* ********************************   B U S ************************************************/
     /**
      * Create the I2CWorker
@@ -811,40 +616,8 @@ public class DAS implements DeadThreadListener {
             return;
         }
 
-        i2cWorker = new I2CWorker(settingsDoc, dQueue);
-    }
-    public Optional<I2CWorker> getI2CWorker() {
-        return Optional.ofNullable(i2cWorker);
-    }
-
-    public String getI2CDevices(boolean fullCmds) {
-        if (i2cWorker == null)
-            return "No I2CWorker active.";
-
-        return i2cWorker.getDeviceList(fullCmds);
-    }
-
-    public String reloadI2CCommands() {
-        if (i2cWorker == null) {
-            addI2CWorker();
-            return "No I2CWorker active.";
-        }
-        return i2cWorker.reloadCommands();
-    }
-
-    public boolean runI2Ccommand(String device, String command) {
-        if (i2cWorker != null) {
-            return i2cWorker.addWork(device, command);
-        } else {
-            Logger.warn("Can't execute i2c commands, worker not initialized.");
-            return false;
-        }
-    }
-    public boolean addI2CDataRequest( String id, Writable wr){
-        return i2cWorker.addTarget(id, wr);
-    }
-    public String getI2CListeners(){
-        return i2cWorker.getListeners();
+        i2cWorker = new I2CWorker(settingsDoc, dQueue, workPath);
+        addCommandable("i2c",i2cWorker);
     }
     /* *************************************** F I L E C O L L E C T O R ************************************ */
     public Optional<FileCollector> getFileCollector(String id){
@@ -885,9 +658,7 @@ public class DAS implements DeadThreadListener {
                 Logger.info("DAS Shutting down");
 
                 // Run shutdown tasks
-                for( var tm : taskManagers.values() ){
-                    tm.startTaskset("shutdown");
-                }
+                taskManager.startTaskset("shutdown");
 
                 // SQLite & SQLDB
                 Logger.info("Flushing database buffers");
@@ -944,13 +715,13 @@ public class DAS implements DeadThreadListener {
      */
     public void startAll() {
 
-        this.commandReq.getMethodMapping();
+        commandReq.getMethodMapping();
 
-        if (this.labelWorker != null) {
+        if (labelWorker != null) {
             Logger.info("Starting BaseWorker...");
             new Thread(labelWorker, "BaseWorker").start();// Start the thread
         }
-        if (this.digiWorker != null) {
+        if (digiWorker != null) {
             Logger.info("Starting DigiWorker...");
             new Thread(digiWorker, "DigiWorker").start();// Start the thread
         }
@@ -975,9 +746,9 @@ public class DAS implements DeadThreadListener {
             new Thread(i2cWorker, "i2cWorker").start();// Start the thread
         }
 
-        // TaskManager
-        for (TaskManager tm : taskManagers.values())
-            tm.reloadTasks();
+        // TaskList
+        taskManager.reloadAll();
+
 
         Logger.debug("Finished");
     }
@@ -1045,13 +816,13 @@ public class DAS implements DeadThreadListener {
                 }
             }
         }
-        if (!mqttWorkers.isEmpty()) {
+        if (mqttManager!=null) {
             if (html) {
                 b.append("<br><b>MQTT</b><br>");
             } else {
                 b.append(TEXT_YELLOW).append(TEXT_CYAN).append("\r\n").append("MQTT").append("\r\n").append(UNDERLINE_OFF).append(TEXT_YELLOW);
             }
-            b.append(this.getMqttBrokersInfo());
+            b.append(mqttManager.getMqttBrokersInfo());
         }
 
         try {
@@ -1123,9 +894,9 @@ public class DAS implements DeadThreadListener {
             join.add(digiWorker.getServerInfo());
             join.add(digiWorker.getSMSBook());
         }
-        if (!mqttWorkers.isEmpty()) {
+        if (mqttManager!=null) {
             join.add("\r\n----MQTT----");
-            join.add(this.getMqttBrokersInfo());
+            join.add(mqttManager.getMqttBrokersInfo());
         }
         return join.toString();
     }

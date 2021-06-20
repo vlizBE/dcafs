@@ -7,6 +7,7 @@ import com.diozero.api.RuntimeIOException;
 import com.hardware.i2c.I2CCommand.CommandStep;
 import com.stream.Writable;
 import com.telnet.TelnetCodes;
+import das.Commandable;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.tinylog.Logger;
@@ -28,7 +29,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class I2CWorker implements Runnable {
+public class I2CWorker implements Runnable, Commandable {
 
     private final BlockingQueue<Datagram> dQueue;
     private final HashMap<String, ExtI2CDevice> devices = new HashMap<>();
@@ -41,21 +42,20 @@ public class I2CWorker implements Runnable {
     private final LinkedHashMap<String,I2CCommand> commands = new LinkedHashMap<>();
     Path scriptsPath;
 
-    public I2CWorker(Document xml, BlockingQueue<Datagram> dQueue) {
+    public I2CWorker(Document xml, BlockingQueue<Datagram> dQueue, String workPath) {
         this.dQueue = dQueue;
-        scriptsPath = XMLtools.getXMLparent(xml).resolve("i2cscripts");
-        this.readSettingsFromXML(xml);
+        scriptsPath = Path.of(workPath).resolve("i2cscripts");
+        readSettingsFromXML(xml);
     }
     public boolean setDebug( boolean debug ){
         this.debug=debug;
         return debug;
     }
     /* ***************************************************************************************************** */
-    /* ***************************************************************************************************** */
     /**
      * Adds a device to the hashmap
      * 
-     * @param id         The name of the device, will be used to reference it from the TaskManager etc
+     * @param id         The name of the device, will be used to reference it from the TaskList etc
      * @param controller The controller the device is connected to
      * @param address    The address the device had
      * @return The created device
@@ -102,16 +102,14 @@ public class I2CWorker implements Runnable {
         }
         return join.toString();
     }
-    public boolean addTarget(String id, Writable wr){
+    public boolean registerWritable(String id, Writable wr){
         ExtI2CDevice device =  devices.get(id);
         if( device == null )
             return false;
         device.addTarget(wr);
         return true;
     }
-    public void removeTarget( Writable wr){
-        devices.forEach( (id,device) -> device.removeTarget(wr));
-    }
+
     public String getListeners(){
         StringJoiner join = new StringJoiner("\r\n");
         join.setEmptyValue("None yet");
@@ -539,4 +537,85 @@ public class I2CWorker implements Runnable {
 		String result = b.toString();
 		return result.isBlank()?"No devices found.\r\n":result;
 	}
+    /* ******************************* C O M M A N D A B L E ******************************************************** */
+    @Override
+    public boolean removeWritable( Writable wr ){
+        int cnt=0;
+        for( ExtI2CDevice device : devices.values() ){
+            cnt += device.removeTarget(wr)?1:0;
+        }
+        return cnt!=0;
+    }
+    @Override
+    public String replyToCommand(String[] request, Writable wr, boolean html) {
+            String[] cmd = request[1].split(",");
+
+            switch( cmd[0] ){
+                case "?":
+                    StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
+                    join.add("i2c:detect,<controller> -> Detect the devices connected to a certain controller")
+                            .add("i2c:list -> List all registered devices and their commands")
+                            .add("i2c:cmds -> List all registered devices and their commands including comms")
+                            .add("i2c:reload -> Reload the command file(s)")
+                            .add("i2c:forward,device -> Show the data received from the given device")
+                            .add("i2c:adddevice,id,bus,address,script -> Add a device on bus at hex addres that uses script")
+                            .add("i2c:<device>,<command> -> Send the given command to the given device");
+                    return join.toString();
+                case "list": return getDeviceList(false);
+                case "cmds": return getDeviceList(true);
+                case "reload": return reloadCommands();
+                case "forward": return registerWritable(cmd[1],wr)?"Added forward":"No such device";
+                case "listeners": return getListeners();
+                case "debug":
+                    if( cmd.length == 2){
+                        if( setDebug(cmd[1].equalsIgnoreCase("on")) )
+                            return "Debug"+cmd[1];
+                        return "Failed to set debug, maybe no i2cworker yet?";
+                    }else{
+                        return "Incorrect number of variables: i2c:debug,on/off";
+                    }
+                case "adddevice":
+                    if( cmd.length != 5)
+                        return "Incorrect number of variables: i2c:adddevice,id,bus,address,script";
+                    if( I2CWorker.addDeviceToXML(XMLfab.withRoot(scriptsPath.getParent().resolve("settings.xml"),"dcafs","settings"),
+                            cmd[1], //id
+                            Integer.parseInt(cmd[2]), //bus
+                            cmd[3], //address in hex
+                            cmd[4] //script
+                    )) {
+                        // Check if the script already exists, if not build it
+                        var p = scriptsPath.resolve(cmd[4]+".xml");
+                        if( !Files.exists(p)){
+                            XMLfab.withRoot(p,"commandset").attr("script",cmd[4])
+                                    .addParent("command","An empty command to start with")
+                                    .attr("id","cmdname").attr("info","what this does")
+                                    .build();
+                            readSettingsFromXML(XMLtools.readXML(scriptsPath.getParent().resolve("settings.xml")));
+                            return "Device added, created blank script at "+p;
+                        }else{
+                            return "Device added, using existing script";
+                        }
+
+                    }
+                    return "Failed to add device to XML";
+                case "detect":
+                    if( cmd.length == 2){
+                        return I2CWorker.detectI2Cdevices( Integer.parseInt(cmd[1]) );
+                    }else{
+                        return "Incorrect number of variables: i2c:detect,<bus>";
+                    }
+                default:
+                    if( cmd.length!=2)
+                        return "unknown command: "+request[0]+":"+request[1];
+
+                    if( wr!=null && wr.getID().equalsIgnoreCase("telnet") ){
+                        registerWritable(cmd[0],wr);
+                    }
+                    if( addWork(cmd[0], cmd[1]) ){
+                        return "Command added to the queue.";
+                    }else{
+                        return "Failed to add command to the queue, probably wrong device or command";
+                    }
+            }
+    }
 }

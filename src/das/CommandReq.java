@@ -3,7 +3,6 @@ package das;
 import com.email.EmailSending;
 import com.email.EmailWorker;
 import com.fazecast.jSerialComm.SerialPort;
-import com.hardware.i2c.I2CWorker;
 import com.stream.StreamPool;
 import com.stream.Writable;
 import com.stream.collector.FileCollector;
@@ -18,7 +17,6 @@ import org.w3c.dom.Element;
 import util.database.*;
 import util.gis.GisTools;
 import util.math.MathUtils;
-import util.task.TaskManager;
 import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.tools.Tools;
@@ -62,7 +60,6 @@ public class CommandReq {
 	protected DAS das;
 
 	Map<String, Method> methodMapping = new HashMap<>();
-	String name = "";
 	private int qState = 0;
 	private Element tempElement;
 	private XMLfab fab;
@@ -81,10 +78,9 @@ public class CommandReq {
 	 */
 	public CommandReq(RealtimeValues rtvals, String workPath){
 		this.rtvals = rtvals;
-		this.name = this.getClass().getName().split("\\.")[1];
 		this.workPath=workPath;
 
-		Logger.info("BaseReq started with workpath: "+workPath);
+		Logger.info("CommandReq started with workpath: "+workPath);
 	}
 	/**
 	 * Constructor requiring a link to the @see RealtimeValues for runtime values and @see IssueCollector to notify problems
@@ -95,6 +91,12 @@ public class CommandReq {
 		this(rtvals,workPath);
 		this.issues = issues;
 	}
+
+	/**
+	 * Add an implementation of the Commandable interface
+	 * @param id The first part of the command (so whatever is in front of the : )
+	 * @param cmdbl The implementation
+	 */
 	public void addCommandable( String id, Commandable cmdbl){
 		commandables.put(id,cmdbl);
 	}
@@ -107,14 +109,6 @@ public class CommandReq {
 	public void setDAS(DAS das) {
 		this.das = das;
 	}
-	/**
-	 * Set the current working directory
-	 * 
-	 * @param path Path to the application
-	 */
-	public void setWorkPath(String path) {
-		this.workPath = path;
-	}
 
 	/**
 	 * To be able to send emails, access to the emailQueue is needed
@@ -125,19 +119,6 @@ public class CommandReq {
 
 		this.emailWorker = emailWorker;
 		sendEmail = Optional.ofNullable(emailWorker.getSender());
-	}
-	protected boolean sendEmail( String to, String subject, String content,String attach,boolean delAttach){
-		return sendEmail.map( e -> {
-			e.sendEmail(to,subject,content,attach,delAttach);
-			return true;
-		}).orElse(false);
-	}
-	protected boolean sendEmail( String to, String subject, String content){
-		return sendEmail.map( e -> {
-			e.sendEmail(to,subject,content);
-			return true;
-		}).orElse(false);
-
 	}
 	/**
 	 * To interact with streams/channels, access to the streampool is needed
@@ -174,7 +155,7 @@ public class CommandReq {
 	 * @return The currently used RealtimeValues
 	 */
 	public RealtimeValues getRealtimeValues() {
-		return this.rtvals;
+		return rtvals;
 	}
 
 	/**
@@ -200,22 +181,12 @@ public class CommandReq {
 	 * 
 	 * @param manager The sqlitesManager currently used
 	 */
-	public void setSQLitesManager(DatabaseManager manager) {
-		this.dbManager = manager;
+	public void setDatabaseManager(DatabaseManager manager) {
+		dbManager = manager;
 	}
 
 	/* ************************************ * R E S P O N S E *************************************************/
-	/**
-	 * Request the current value of a parameter
-	 * 
-	 * @param parameter The parameter to receive
-	 * @param defaultVal The value to return if the parameter wasn't found
-	 * @return The requested parameter or defaultVal
-	 */
-	public String getRTval(String parameter, double defaultVal) {
-		return ""+rtvals.getRealtimeValue(parameter.toLowerCase(), defaultVal);
-	}
-	
+
 	public void emailResponse( Datagram d ) {
 		Logger.info( "Executing email command ["+d.getData()+"], origin: " + d.getOriginID() );
 		emailResponse( d, "Bot Reply" );
@@ -223,13 +194,13 @@ public class CommandReq {
 
 	public void emailResponse(Datagram d, String header) {
 		/* If there's no valid queue, can't do anything */
-		if (emailWorker == null) {
+		if ( sendEmail.isEmpty() ) {
 			Logger.info("Asked to email to " + d.getOriginID() + " but no worker defined.");
 			return;
 		}
 		/* Notification to know if anyone uses the bot. */
 		if ( (!d.getOriginID().startsWith("admin") && !emailWorker.isAddressInRef("admin",d.getOriginID()) ) && header.equalsIgnoreCase("Bot Reply")  ) {
-			emailWorker.sendEmail("admin", "DASbot", "Received '" + d.getData() + "' command from " + d.getOriginID() );
+			sendEmail.get().sendEmail("admin", "DASbot", "Received '" + d.getData() + "' command from " + d.getOriginID() );
 		}
 		/* Processing of the question */
 		d.setData( d.getData().toLowerCase());
@@ -239,9 +210,9 @@ public class CommandReq {
 
 		if (!response.toLowerCase().contains(UNKNOWN_CMD)) {
 			response = response.replace("[33m ", "");
-			emailWorker.sendEmail(d.getOriginID(), header, response.replace("\r\n", "<br>"));
+			sendEmail.get().sendEmail(d.getOriginID(), header, response.replace("\r\n", "<br>"));
 		} else {
-			emailWorker.sendEmail(d.getOriginID(), header,
+			sendEmail.get().sendEmail(d.getOriginID(), header,
 					"Euh " + d.getOriginID().substring(0, d.getOriginID().indexOf(".")) + ", no idea what to do with '" + d.getData() + "'...");
 		}
 	}
@@ -318,18 +289,11 @@ public class CommandReq {
 			if( cmd!=null) {
 				result = cmd.replyToCommand(split, wr, html);
 			}else{
-				var tm = das.taskManagers.get(split[0]);
-				if( tm != null){
+				if( split[1].equals("?")||split[1].equals("list")){
 					var nl = html ? "<br>" : "\r\n";
-					if( split[1].equals("?")||split[1].equals("list")){
-						return tm.getTaskSetListing(nl)+nl+tm.getTaskListing(nl);
-					}else{
-						if( tm.hasTaskset(split[1])){
-							return tm.startTaskset(split[1]);
-						}else{
-							return (tm.startTask(split[1])?"Task started ":"No such task(set) ")+split[1];
-						}
-					}
+					return doCmd("tm",split[0]+",sets",wr)+nl+doCmd("tm",split[0]+",tasks",wr);
+				}else{
+					doCmd("tm","run,"+split[0]+":"+split[1],wr);
 				}
 			}
 		}
@@ -378,7 +342,15 @@ public class CommandReq {
 		}
 		Logger.info("Found " + methodMapping.size() + " usable methods/commands.");
 	}
-
+	/* ****************************************** C O M M A N D A B L E ********************************************* */
+	private String doCmd( String id, String command, Writable wr){
+		var c = commandables.get(id);
+		if( c==null) {
+			Logger.error("No "+id+" available");
+			return "";
+		}
+		return c.replyToCommand(new String[]{id,command},wr,false);
+	}
 	/* ******************************************  C O M M A N D S ****************************************************/
 	/**
 	 * Command that creates a list of all available commands. Then execute a request
@@ -509,12 +481,12 @@ public class CommandReq {
 				return "todo";
 			case "tmscript"://fe. update:script,tmid
 
-				var tm = das.taskManagers.get(spl[1]);
-				if( tm == null )
-					return "No such taskmanager "+spl[1];
 
-				p = tm.getXMLPath();
-				to = Path.of(tm.toString().replace(".xml", "")+"_" + TimeTools.formatUTCNow("yyMMdd_HHmm") + ".xml");
+				var ori = doCmd("tm","getpath,"+spl[1],wr );
+				if( ori.isEmpty() )
+					return "No such script";
+
+				to = Path.of(ori.replace(".xml", "")+"_" + TimeTools.formatUTCNow("yyMMdd_HHmm") + ".xml");
 				refr = Path.of(workPath,"attachments",spl[1]);
 				try {
 					if( Files.exists(p) && Files.exists(refr) ){
@@ -522,7 +494,7 @@ public class CommandReq {
 						Files.move(refr, p , StandardCopyOption.REPLACE_EXISTING );// Overwrite
 						
 						// somehow reload the script
-						return das.reloadTaskmanager(spl[1]);// Reloads based on id
+						return doCmd("tm","reload,"+spl[1],wr);// Reloads based on id
 					}else{
 						Logger.warn("Didn't find the needed files.");
 						return "Couldn't find the correct files. (maybe check spelling?)";
@@ -567,7 +539,7 @@ public class CommandReq {
 	 */
 	public String doRETRIEVE(String[] request, Writable wr, boolean html) {
 		
-		if( emailWorker==null)
+		if( sendEmail.isEmpty())
 			return "Can't retrieve without EmailWorker";
 
 		String[] spl = request[1].split(",");
@@ -582,13 +554,11 @@ public class CommandReq {
 				if( spl.length < 3 )
 					return "Not enough arguments retrieve:type,tmid,email in "+request[0]+":"+request[1];
 
-				var tm = das.taskManagers.get(spl[1]);
-				if( tm == null )
-					return "No such taskmanager "+spl[1];
+				var p = doCmd("tm","getpath,"+spl[1],wr );
+				if( p.isEmpty() )
+					return "No such script";
 
-				Path p = tm.getXMLPath();
-
-				emailWorker.sendEmail(spl[2], "Requested tm script: "+spl[1], "Nothing to say", p.toString(),false);
+				sendEmail.get().sendEmail(spl[2], "Requested tm script: "+spl[1], "Nothing to say", p,false);
 				return "Tried sending "+spl[1]+" to "+spl[2];
 			case "setup":
 			case "settings":
@@ -598,41 +568,14 @@ public class CommandReq {
 				}
 				if( spl.length!=2)
 					return "Not enough arguments, expected retrieve:setup,email/ref";
-				emailWorker.sendEmail(spl[1], "Requested file: settings.xml", "Nothing to say", "settings.xml",false);
+				sendEmail.get().sendEmail(spl[1], "Requested file: settings.xml", "Nothing to say", "settings.xml",false);
 				return "Tried sending settings.xml to "+spl[1];
 			default: return UNKNOWN_CMD+":"+spl[0];
 		}
 	}
 	/* *******************************************************************************/
-	/**
-	 * Execute commands associated with the TransServer
-	 * 
-	 * @param request The full command split on the first :
-	 * @param wr The writable of the source of the command
-	 * @param html Whether or not to use html for newline etc
-	 * @return Descriptive result of the command, "Unknown command if not recognised
-	 */
-	public String doTransServer( String[] request, Writable wr, boolean html ){
-	
-		if( trans==null){
-			if( request[1].startsWith("create") ){
-				String[] split = request[1].split(",");				
-				int port = split.length==2?Integer.parseInt(split[1]):-1;
-				das.addTcpServer(port);
-				trans.alterXML();
-				trans.run();
-				return "Tried to create and start the TransServer";
-			}
-			return "No TransServer defined, create it with ts:create(,port) (only works once)";
-		}
-		return trans.replyToRequest(request[1], wr);
-	}
 	public String doTRANS(String[] request, Writable wr, boolean html ){
-		if( trans!=null){
-			return trans.replyToRequest("forward,"+request[1], wr);
-		}else{
-			return "No TransServer defined, create it with ts:create(,port) (only works once)";
-		}
+		return doCmd("tm","forward,"+request[1],wr);
 	}
 	public String doSTOP(String[] request, Writable wr, boolean html ) {
 		if( streampool.removeForwarding(wr) )
@@ -916,7 +859,7 @@ public class CommandReq {
 					join.add("  st -> Get the current status of das, lists streams, databases etc");
 					join.add("  cmds -> Get al list of all available commands").add("");
 					join.add(TelnetCodes.TEXT_RED+"General tips"+TelnetCodes.TEXT_YELLOW)
-						.add("   -> Look at settings.xml file (in das.jar folder) in a viewer to see what das does")
+						.add("   -> Look at settings.xml file (in dcafs.jar folder) in a viewer to see what dcafs does")
 						.add("   -> Open two or more telnet instances fe. one for commands and other for live data").add("");
 					join.add(TelnetCodes.TEXT_RED+"Recommended workflow:"+TelnetCodes.TEXT_YELLOW);
 					join.add(TelnetCodes.TEXT_GREEN+"1) Connect to a data source"+TelnetCodes.TEXT_YELLOW)
@@ -993,22 +936,22 @@ public class CommandReq {
 					.add("admin:methodcall -> Get the time passed since a certain BaseWorker method was called");
 				return join.toString();
 			case "getlogs":
-				if( emailWorker == null )
+				if( sendEmail.isEmpty() )
 					return "Failed to send logs to admin, no worker.";
-				emailWorker.sendEmail( "admin","Statuslog","File attached (probably)", workPath+"logs"+File.separator+"info.log", false );
-				emailWorker.sendEmail( "admin","Errorlog","File attached (probably)", workPath+"logs"+File.separator+"errors_"+TimeTools.formatUTCNow("yyMMdd")+".log", false );
+				sendEmail.get().sendEmail( "admin","Statuslog","File attached (probably)", workPath+"logs"+File.separator+"info.log", false );
+				sendEmail.get().sendEmail( "admin","Errorlog","File attached (probably)", workPath+"logs"+File.separator+"errors_"+TimeTools.formatUTCNow("yyMMdd")+".log", false );
 				return "Sending logs (info,errors) to admin...";
 			case "gettasklog":
-				if( emailWorker == null )
+				if( sendEmail.isEmpty() )
 					return "Failed to send logs to admin, no worker.";
-				emailWorker.sendEmail( "admin","Taskmanager.log","File attached (probably)", workPath+"logs"+File.separator+"taskmanager.log", false );
+				sendEmail.get().sendEmail( "admin","Taskmanager.log","File attached (probably)", workPath+"logs"+File.separator+"taskmanager.log", false );
 				return "Trying to send taskmanager log";
 			case "getlastraw":
 				Path it = Path.of(workPath,"raw",TimeTools.formatUTCNow("yyyy-MM"));
 				try {
 					var last = Files.list(it).filter( f -> !Files.isDirectory(f)).max( Comparator.comparingLong( f -> f.toFile().lastModified()));
 					if( last.isPresent() ){
-						emailWorker.sendEmail( "admin","Taskmanager.log","File attached (probably)", last.get().toString(), false );
+						sendEmail.get().sendEmail( "admin","Taskmanager.log","File attached (probably)", last.get().toString(), false );
 						return "Tried sending "+last.get();
 					}else{
 						return "File not found";
@@ -1089,154 +1032,20 @@ public class CommandReq {
 		if(  request[1].equals("") )
 			return "No recipient given.";
 		
-		if( emailWorker != null ){
-			emailWorker.sendEmail(request[1],"Executed tasksets","Nothing to add","logs/tasks.csv", false );
+		if( sendEmail.isEmpty() ){
+			sendEmail.get().sendEmail(request[1],"Executed tasksets","Nothing to add","logs/tasks.csv", false );
 			return "Sending log of taskset execution to "+request[1]; 
 		}
 		return "Failed to send Taskset Execution list.";
 	}
 
-
-	public String doTaskManager( String[] request, Writable wr, boolean html ){					
-		String nl = html?"<br>":"\r\n";
-		StringJoiner response = new StringJoiner(nl);
-		String[] cmd = request[1].split(",");
-
-		if( das.taskManagers.isEmpty() && !cmd[0].equalsIgnoreCase("addblank"))
-			return "No TaskManagers active, only tm:addblank available.";
-
-		TaskManager tm;
-
-		switch( cmd[0] ){
-			case "?":
-				response.add( "tm:reloadall -> Reload all the taskmanagers")
-						.add( "tm:stopall -> Stop all the taskmanagers")
-						.add( "tm:managers -> Get a list of currently active TaskManagers")
-						.add( "tm:remove,x -> Remove the manager with id x")
-						.add( "tm:run,id:task(set) -> Run the given task(set) from taskmanager id, taskset has priority if both exist")
-						.add( "tm:addblank,id -> Add a new taskmanager, creates a file etc")
-						.add( "tm:x,y -> Send command y to manager x");
-				return response.toString();
-				case "addtaskset":
-					if( cmd.length != 3)
-						return "Not enough parameters, need tm:addtaskset,id,tasksetid";
-					tm = das.taskManagers.get(cmd[1]);
-					if( tm !=null ) {
-						if( tm.addBlankTaskset(cmd[2]) ){
-							return "Taskset added";
-						}
-						return "Failed to add taskset";
-					}
-					return "No such TaskManager "+cmd[1];
-				case "addblank":
-					if( cmd.length != 2)
-						return "Not enough parameters, need tm:addblank,id";
-
-					// Add to the settings xml
-					try {
-						Files.createDirectories(Path.of(workPath,"tmscripts"));
-					} catch (IOException e) {
-						Logger.error(e);
-					}
-					XMLfab tmFab = XMLfab.withRoot(das.getSettingsDoc(), "dcafs","settings");
-					tmFab.addChild("taskmanager","tmscripts"+File.separator+cmd[1]+".xml").attr("id",cmd[1]).build();
-					tmFab.build();
-
-					// Create an empty file
-					XMLfab.withRoot(Path.of(workPath,"tmscripts",cmd[1]+".xml"), "tasklist")
-						.comment("Any id is case insensitive")
-						.comment("Reload the script using tm:reload,"+cmd[1])
-						.comment("If something is considered default, it can be omitted")
-						.comment("There's no hard limit to the amount of tasks or tasksets")
-						.comment("Task debug info has a separate log file, check logs/taskmanager.log")
-						.addParent("tasksets","Tasksets are sets of tasks")
-							.comment("Below is an example taskset")
-							.addChild("taskset").attr("run","oneshot").attr("id","example").attr("info","Example taskset that says hey and bye")
-							.comment("run can be either oneshot (start all at once) or step (one by one), default is oneshot")
-								.down().addChild("task","Hello World from "+cmd[1]).attr("output","log:info")
-										.addChild("task","Goodbye :(").attr("output","log:info").attr("trigger","delay:2s")
-								.up()
-						.addParent("tasks","Tasks are single commands to execute")
-							.comment("Below is an example task, this will be called on startup or if the script is reloaded")
-							.addChild("task","taskset:example").attr("output","system").attr("trigger","delay:1s")
-							.comment("This task will wait a second and then start the example taskset")
-							.comment("A task doesn't need an id but it's allowed to have one")
-							.comment("Possible outputs: stream:id , system (default), log:info, email:ref, manager")
-							.comment("Possible triggers: delay, interval, while,")
-							.comment("For more extensive info and examples, check Reference Guide - Taskmanager in the manual")
-						.build();
-
-				// Add it to das		
-				das.addTaskManager(cmd[1], Path.of(workPath,"tmscripts",cmd[1]+".xml"));
-				
-				return "Tasks script created, use tm:reload,"+cmd[1]+" to run it.";
-			case "reload":
-				if( cmd.length != 2)
-					return "Not enough parameters, missing id";
-				tm = das.taskManagers.get(cmd[1]);
-				if( tm == null)
-					return "No such TaskManager: "+cmd[1];
-				if( tm.reloadTasks() )
-					return "Tasks reloaded";
-				return "Tasks failed to reload";
-			case "reloadall": 
-				for(TaskManager tam : das.taskManagers.values() )
-					tam.reloadTasks();
-				return "Reloaded all TaskManagers.";
-			case "stopall":
-				for(TaskManager tam : das.taskManagers.values() )
-					tam.stopAll("baseReqManager");
-				return "Stopped all TaskManagers.";   
-			case "managers": case "list":
-				response.add("Currently active TaskManagers:");
-				das.taskManagers.keySet().forEach(response::add);
-				return response.toString();
-			case "run":
-				if( cmd.length != 2)
-					return "Not enough parameters, missing manager:taskset";
-				String[] task = cmd[1].split(":");
-				tm = das.taskManagers.get(task[0]);
-				if( tm == null)
-					return "No such taskmanager: "+task[0];
-				if( tm.hasTaskset(task[1])){
-					return tm.startTaskset(task[1]);
-				}else{
-					return tm.startTask(task[1])?"Task started":"No such task(set) "+task[1];
-				}
-			case "remove":
-				if( das.taskManagers.remove(cmd[1]) == null ){
-					return "Failed to remove the TaskManager, unknown key";
-				}else{
-					return "Removed the TaskManager";
-				}
-			default:				
-				if( cmd.length==1)
-					return UNKNOWN_CMD+": "+ Arrays.toString(request);
-
-				tm = das.taskManagers.get(cmd[0]);
-				if( tm != null ){
-					return tm.replyToCmd( request[1].substring(request[1].indexOf(",")+1), html);
-				}else{
-					return "No such TaskManager: "+cmd[0];
-				}				
-		}    
-	}
-
-	
-	public String doSEttings( String[] request, Writable wr, boolean html ){	
-		if( request[1].equals("?") )
-			return " -> Get a list of the settings";
-
-		return das.getSettings();
-	}
-
-	public String doNOTHING( String[] request, Writable wr, boolean html ){	
+	public String doNOTHING( String[] request, Writable wr, boolean html ){
 		if( request[1].equals("?") )
 			return " -> Clear the datarequests";
 		if( wr != null ){
 			rtvals.removeRequest(wr);
 			streampool.removeForwarding(wr);
-			das.getI2CWorker().ifPresent( i2c -> i2c.removeTarget(wr));
+			commandables.values().forEach( c -> c.removeWritable(wr) );
 		}
 		return "Clearing all data requests\r\n";
 	}	
@@ -1317,163 +1126,7 @@ public class CommandReq {
 			}
 		}    				
 		return b.toString();
-	}	
-	
-	public String doI2C( String[] request, Writable wr, boolean html ){						
-		
-		String[] cmd = request[1].split(",");
-
-		switch( cmd[0] ){
-			case "?":
-				StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
-				join.add("i2c:detect,<controller> -> Detect the devices connected to a certain controller")
-					.add("i2c:list -> List all registered devices and their commands")
-					.add("i2c:cmds -> List all registered devices and their commands including comms")
-					.add("i2c:reload -> Reload the command file(s)")
-					.add("i2c:forward,device -> Show the data received from the given device")
-					.add("i2c:adddevice,id,bus,address,script -> Add a device on bus at hex addres that uses script")
-					.add("i2c:<device>,<command> -> Send the given command to the given device");
-				return join.toString();
-			case "list": return das.getI2CDevices(false);
-			case "cmds": return das.getI2CDevices(true);
-			case "reload": return das.reloadI2CCommands();
-			case "forward": return das.addI2CDataRequest(cmd[1],wr)?"Added forward":"No such device";
-			case "listeners": return das.getI2CListeners();
-			case "debug":
-				if( cmd.length == 2){
-					if( das.getI2CWorker().map( i2c -> i2c.setDebug(cmd[1].equalsIgnoreCase("on"))).orElse(false) )
-						return "Debug"+cmd[1];
-					return "Failed to set debug, maybe no i2cworker yet?";
-				}else{
-					return "Incorrect number of variables: i2c:debug,on/off";
-				}
-			case "adddevice":
-				if( cmd.length != 5)
-					return "Incorrect number of variables: i2c:adddevice,id,bus,address,script";
-				if( das.getI2CWorker().isEmpty()) // if no worker yet, make it
-					das.addI2CWorker();
-				if( I2CWorker.addDeviceToXML(XMLfab.withRoot(das.getSettingsDoc(),"dcafs","settings"),
-						cmd[1], //id
-						Integer.parseInt(cmd[2]), //bus
-						cmd[3], //address in hex
-						cmd[4] //script
-						)) {
-					// Check if the script already exists, if not build it
-					var p = Path.of(workPath,"i2cscripts",cmd[4]+".xml");
-					if( !Files.exists(p)){
-						XMLfab.withRoot(p,"commandset").attr("script",cmd[4])
-								.addParent("command","An empty command to start with")
-									.attr("id","cmdname").attr("info","what this does")
-								.build();
-						das.getI2CWorker().ifPresent(
-								worker -> worker.readSettingsFromXML(das.getSettingsDoc())
-						);
-						return "Device added, created blank script at "+p;
-					}else{
-						return "Device added, using existing script";
-					}
-
-				}
-				return "Failed to add device to XML";
-			case "detect":
-				if( cmd.length == 2){
-					return I2CWorker.detectI2Cdevices( Integer.parseInt(cmd[1]) );
-				}else{
-					return "Incorrect number of variables: i2c:detect,<bus>";
-				}
-			default:
-				if( cmd.length!=2)
-					return UNKNOWN_CMD+": "+request[0]+":"+request[1];
-
-				if( wr!=null && wr.getID().equalsIgnoreCase("telnet") ){
-					das.addI2CDataRequest(cmd[0],wr);
-				}
-				if( das.runI2Ccommand(cmd[0], cmd[1]) ){					
-					return "Command added to the queue.";
-				}else{
-					return "Failed to add command to the queue, probably wrong device or command";
-				}
-		}
 	}
-	
-	public String doMQTT( String[] request, Writable wr, boolean html ){		
-		
-		String[] cmd = request[1].split(",");
-		String nl = html ? "<br>" : "\r\n";
-
-		switch( cmd[0] ){
-			//mqtt:brokers
-			case "brokers": return das.getMqttBrokersInfo();
-			//mqtt:subscribe,ubidots,aanderaa,outdoor_hub/1844_temperature
-			case "subscribe":
-				if( cmd.length == 4){
-					das.addMQTTSubscription(cmd[1], cmd[2], cmd[3]);
-					return nl+"Subscription added, send 'mqtt:store,"+cmd[1]+"' to save settings to xml";
-				}else{
-					return nl+"Incorrect amount of cmd: mqtt:subscribe,brokerid,label,topic";
-				}
-			case "unsubscribe":
-				if( cmd.length == 3){
-					if( das.removeMQTTSubscription(cmd[1], cmd[2]) ){
-						return nl+"Subscription removed, send 'mqtt:store,"+cmd[1]+"' to save settings to xml";
-					}else{
-						return nl+"Failed to remove subscription, probably typo?";
-					}
-				}else{
-					return nl+"Incorrect amount of cmd: mqtt:unsubscribe,brokerid,topic";
-			}
-			case "reload":
-				if( cmd.length == 2){
-					das.reloadMQTTsettings(cmd[1]);
-					return nl+"Settings for "+cmd[1]+" reloaded.";
-				}else{
-					return "Incorrect amount of cmd: mqtt:reload,brokerid";
-				}
-			case "store":
-				if( cmd.length == 2){
-					das.updateMQTTsettings(cmd[1]);
-					return nl+"Settings updated";
-				}else{
-					return "Incorrect amount of cmd: mqtt:store,brokerid";
-				}
-			case "forward":
-				if( cmd.length == 2){
-					das.getMqttWorker(cmd[1]).ifPresent( x -> x.addRequest(wr));
-					return "Forward requested";
-				}else{
-					return "Incorrect amount of cmd: mqtt:forward,brokerid";
-				}
-			case "send":
-				if( cmd.length != 3){
-					Logger.warn( "Not enough arguments, expected mqtt:send,brokerid,topic:value" );
-					return "Not enough arguments, expected mqtt:send,brokerid,topic:value";
-				}else if( !cmd[2].contains(":") ){
-					return "No proper topic:value given, got "+cmd[2]+" instead.";
-				}
-				if( das.getMqttWorker(cmd[1]).isEmpty() ){
-					Logger.warn("No such mqttworker to so send command "+cmd[1]);
-					return "No such MQTTWorker: "+cmd[1];
-				}
-				String[] topVal = cmd[2].split(":");
-				double val = rtvals.getRealtimeValue(topVal[1], -999);
-				das.getMqttWorker(cmd[1]).ifPresent( w -> w.addWork(topVal[0],""+val));
-				return "Data send to "+cmd[1];
-			case "?":
-				StringJoiner response = new StringJoiner(nl);	
-				response.add( "mqtt:brokers -> Get a listing of the current registered brokers")
-						.add( "mqtt:subscribe,brokerid,label,topic -> Subscribe to a topic with given label on given broker")
-						.add( "mqtt:unsubscribe,brokerid,topic -> Unsubscribe from a topic on given broker")
-						.add( "mqtt:unsubscribe,brokerid,all -> Unsubscribe from all topics on given broker")
-						.add( "mqtt:forward,brokerid -> Forwards the data received from the given broker to the issueing writable")
-						.add( "mqtt:send,brokerid,topic:value -> Sends the value to the topic of the brokerid")
-						.add( "mqtt:store,brokerid -> Store the current settings of the broker to the xml.")
-						.add( "mqtt:reload,brokerid -> Reload the settings for the broker from the xml.")
-						.add( "mqtt:? -> Show this message");
-				return response.toString();
-			default: return UNKNOWN_CMD+": "+cmd[0];
-		}
-	}
-	
 	public String doSLEEP( String[] request, Writable wr, boolean html ){
 		if( request[1].equals("?") || request[1].split(",").length!=2 ){
 			return "sleep:rtc,<time> -> Let the processor sleep for some time using an rtc fe. sleep:1,5m sleep 5min based on rtc1";
@@ -1502,8 +1155,12 @@ public class CommandReq {
 			process = pb.start();
 			process.waitFor();
 			Logger.error("Woke up again at "+TimeTools.formatLongUTCNow());
+
 			// do wake up stuff
-			das.startKeywordTask("sleep:wokeup");
+			var tmCmd = commandables.get("tm");
+			if( tmCmd != null ){
+				tmCmd.replyToCommand(new String[]{"tm","startkeyword,sleep:wokeup"},wr,false);
+			}
 		} catch (IOException | InterruptedException e) {
 			Logger.error(e);
 		}

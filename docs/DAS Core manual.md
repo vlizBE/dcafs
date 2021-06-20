@@ -431,22 +431,23 @@ package core;
 import org.tinylog.Logger; // TinyLog for logging purposes
 import das.DAS;
 
-public class DcafsTest{
+public class DcafsTest {
 
-    public DasTest() { 
+    public DasTest() {
 
-        DAS das = new DAS();	
-        
+        DAS das = new DAS();
+
         // Use the extended BaseWorker instead of the default one
-        das.alterBaseWorker( new Worker() );
-        
+        das.alterLabelWorker(new Worker());
+
         // Let DAS start 
-        das.startAll();	
-        
+        das.startAll();
+
         Logger.info("Everything started up, waiting for things to happen...");
     }
-    public static void main(String[] args) { 
-       new DcafsTest(); 
+
+    public static void main(String[] args) {
+        new DcafsTest();
     }
 }
 ```
@@ -1576,7 +1577,7 @@ First an entry is created in the settings.xml inside the settings node, this loo
 		<device id="ROM" script="AT24C02D" label="AT24" address="0x50"/>
     <!--
       id -> this has two uses
-                1) used to identify the device in telnet and TaskManager etc
+                1) used to identify the device in telnet and TaskList etc
                 2) Will be passed along to the BaseWorker extension
       script -> name of the file and id for the command script
       label -> Same as other sensors as reference to use in the BaseWorker extension (doAT24)

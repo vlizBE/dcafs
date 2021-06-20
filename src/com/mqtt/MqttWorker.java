@@ -16,15 +16,19 @@ import java.util.StringJoiner;
 import java.util.concurrent.*;
 
 /**
- * Non-blocking worker that handles the connection to a broker. How
- * publish/subscribe works: 1) Add the work to the queue 2) Check if there's an
- * active connection. a) If not, start the doConnect thread and add the work to
- * the queue b) If so, go to 3 if publish 3) Check if the worker is currently
- * publishing a) If not, start the doPublish thread b) If so, do nothing
+ * Non-blocking worker that handles the connection to a broker. How publish/subscribe works:
+ * 1) Add the work to the queue
+ * 2) Check if there's an active connection.
+ * 		a) If not, start the doConnect thread and add the work to the queue
+ * 		b) If so, go to 3 if publish
+ * 3) Check if the worker is currently publishing
+ *     a) If not, start the doPublish thread
+ *     b) If so, do nothing
  * 
  * If a connection is established all subscriptions will be subscribed to and
- * doPublish will be started if any work is to be done. For now nothing happens
- * with the connection when no work is present and no subscriptions are made, an
+ * doPublish will be started if any work is to be done.
+ *
+ * For now nothing happens with the connection when no work is present and no subscriptions are made, an
  * option is to disconnect.
  */
 public class MqttWorker implements MqttCallbackExtended {
@@ -333,9 +337,12 @@ public class MqttWorker implements MqttCallbackExtended {
 			}
 		}
 	}	
-	public void addRequest( Writable wr ){
+	public void registerWritable(Writable wr ){
 		if(!targets.contains(wr))
 			targets.add(wr);
+	}
+	public boolean removeWritable( Writable wr ){
+		return targets.remove(wr);
 	}
   	/* ***************************************** C O N N E C T  ***************************************************** */
 	/**

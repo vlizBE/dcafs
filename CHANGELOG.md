@@ -30,6 +30,11 @@ To many breaking stuff, so version bump.
 - databases node: replace 'idle' attribute with 'idleclose' node
 - Tasklist: Replace the @fillin with {fillin}
 
+### BaseReq
+- Renamed to CommandReq
+- Added interface commandable, these can be given to commandreq to use as custom commands
+- Removed option from DAS to extend CommandReq, should now use the interface
+
 ## DatabaseManager
 - BREAKING: renamed the setup node to flush and flushtime to age, move idle out of it
 
@@ -50,6 +55,8 @@ var d = Datagram.system("message").writable(this);
 ````
 ### TaskManager
 - BREAKING: Replaced @fillin with {fillin}
+- Moved it out of the main and renamed taskmanager to tasklist, made taskmanager that holds the main code  
+- Implemented Commandable to access it via CommandReq
 - Added the trigger 'waitfor', this can be used in a tasket to wait for a check to be correct a number of
 times with the given interval so trigger="waitfor:5s,5" will check 5 times with 5 seconds between each check (so 20s in total)
 - Bugfix: Not sure why the while actually worked... because fixed it. Runs never got reset
@@ -62,10 +69,14 @@ times with the given interval so trigger="waitfor:5s,5" will check 5 times with 
 <!-- This will wait till 5 checks return ok, stopping the taskset on a failure -->
 <while interval="5" checks="5">value is below 10</while>
 ````
-### BaseReq
-- Renamed to CommandReq
-- Added interface commandable, these can be given to commandreq to use as custom commands
-- Removed option from DAS to extend CommandReq, should now use the interface
+
+### DigiWorker
+- Added interface SMSSending to use instead of passing the queue
+
+### MQTTWorker
+- Added MQTTManager that manages the mqttworkers, to move code out of das.java
+- MQTTmanager implements the Commandable interface
+
 
 ### Other
 - cmds command now supports regex, uses startswith by default (meaning appends .*)

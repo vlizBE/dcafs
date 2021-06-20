@@ -24,7 +24,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-public class DigiWorker implements Runnable{
+public class DigiWorker implements Runnable, SMSSending{
 
 	private TelnetClientHandler handler;
 	private Channel digi;
@@ -124,6 +124,9 @@ public class DigiWorker implements Runnable{
 		join.add("Server: "+server);
 		join.add("User: "+user);
 		return join.toString();
+	}
+	public void sendSMS( String to, String content ){
+		smsQueue.add( new String[]{to, content.length() > 150 ? content.substring(0, 150) : content} );
 	}
 	@Override
 	public void run() {

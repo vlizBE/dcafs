@@ -2,6 +2,7 @@ package com.stream.tcp;
 
 import com.stream.StreamListener;
 import com.stream.Writable;
+import das.Commandable;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -24,7 +25,7 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
 
-public class TcpServer implements StreamListener {
+public class TcpServer implements StreamListener, Commandable {
 
 	private BlockingQueue<Datagram> dQueue; // TransHandler can also process other commands if given this queue
 
@@ -45,6 +46,7 @@ public class TcpServer implements StreamListener {
 	public TcpServer(Path xml, EventLoopGroup workerGroup) {
 		this.workerGroup = workerGroup;
 		xmlPath = xml;
+
 		readSettingsFromXML(XMLtools.readXML(xmlPath), false);
 	}
 
@@ -88,9 +90,9 @@ public class TcpServer implements StreamListener {
 		Element tran = XMLtools.getFirstElementByTag(xml, XML_PARENT_TAG);
 		if (tran != null) {
 			Logger.info("Settings for the TransServer found.");
-			this.serverPort = XMLtools.getIntAttribute(tran, "port", -1);
-			if (this.serverPort == -1)
-				this.serverPort = XMLtools.getChildIntValueByTag(tran, "port", 5542);
+			serverPort = XMLtools.getIntAttribute(tran, "port", -1);
+			if (serverPort == -1)
+				serverPort = XMLtools.getChildIntValueByTag(tran, "port", 5542);
 			defaults.clear();
 			for( Element client : XMLtools.getAllElementsByTag(xml, "default")){
 				TransDefault td = new TransDefault(client.getAttribute("id"),client.getAttribute("address"));
@@ -100,15 +102,9 @@ public class TcpServer implements StreamListener {
 			}
 			if (run)
 				run();
-		} else {
-			Logger.warn("No settings for the transserver found, creating defaults!");
-			alterXML();
-
-			if (run)
-				run();
-			return false;
+			return true;
 		}
-		return true;
+		return false;
 	}
 
 	public void alterXML() {
@@ -293,12 +289,13 @@ public class TcpServer implements StreamListener {
 
 	/**
 	 * Execute and reply to commands given in as a readable string
-	 * @param req the command
+	 * @param request the command
 	 * @param wr the writable to send the answer to
 	 * @return the reply
 	 */
-	public String replyToRequest(String req, Writable wr) {
-		String[] cmds = req.split(",");
+	@Override
+	public String replyToCommand(String[] request, Writable wr, boolean html) {
+		String[] cmds = request[1].split(",");
 
 		if( cmds[0].equals("create"))
 			return "Server already exists";
@@ -307,7 +304,6 @@ public class TcpServer implements StreamListener {
 
 		switch( cmds[0] ){
 			case "?":
-
 				return "ts:store,id/index(,newid) -> Store the session in the xml\r\n"+
 						"ts:add,id/index,cmd -> Add the cmd to the id/index\r\n"+
 						"ts:clear,id/index -> Clear all cmds from the client id/index\r\n"+
@@ -387,8 +383,13 @@ public class TcpServer implements StreamListener {
 			case "": case "list": 
 				return "Server running on port "+serverPort+"\r\n"+getClientList();
 			default: 
-				return "Unknown command "+req;
+				return "unknown command "+request[0]+":"+request[1];
 		}
+	}
+
+	@Override
+	public boolean removeWritable(Writable wr) {
+		return false;
 	}
 
 	/**
