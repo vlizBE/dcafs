@@ -3,13 +3,10 @@
  */
 package com.email;
 
-import util.tools.TimeTools;
-
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.concurrent.TimeUnit;
 
-public class EmailWork {
+public class Email {
 	String toRaw;				  	  // The destination without conversion between reference and email address
 	String subject;					  // The subject of the email
 	String content;					  // The content of the email
@@ -26,32 +23,36 @@ public class EmailWork {
 	 * Short constructor with the mininum required info
 	 * 
 	 * @param to Destination email adres of reference
-	 * @param subject The subject of the email
-	 * @param content The text content of the email
 	 */
-	public EmailWork( String to, String subject, String content){
-		if( to.isBlank() ){ // Can't do anything without a valid destination
-			return;
-		}
+	private Email(String to){
 		toRaw=to;
-		this.subject = subject;
-		this.content = content;
 		valid = true;				
 	}
-	/**
-	 * Full constructor
-	 * 
-	 * @param to Destination email adres of reference
-	 * @param subject The subject of the email
-	 * @param content The text content of the email
-	 * @param attachment Link to the file to attach
-	 * @param delete True if the linked file should be deleted afterwards (if email was successfully send)
-	 */
-	public EmailWork( String to, String subject, String content, String attachment, boolean delete ){
-		this(to,subject,content+"\r\n" );
-		this.attachment=attachment;
-		deleteAttachment = delete;
+	/* ********************************** F L U I D  A P I ********************************************************** */
+	public static Email to(String to){
+		return new Email(to);
 	}
+	public Email from(String from){
+		this.from = from;
+		return this;
+	}
+	public Email subject(String subject){
+		this.subject = subject;
+		return this;
+	}
+	public Email content(String content){
+		this.content = content;
+		return this;
+	}
+	public Email attachment(String attachment){
+		this.attachment = attachment;
+		return this;
+	}
+	public Email deleteAttachment(boolean delete){
+		deleteAttachment = delete;
+		return this;
+	}
+	/* ************************************************************************************************************** */
 	/**
 	 * Check if the object is valid
 	 * 

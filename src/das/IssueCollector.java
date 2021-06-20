@@ -1,6 +1,6 @@
 package das;
 
-import com.email.EmailWork;
+import com.email.Email;
 import org.tinylog.Logger;
 import util.task.TaskList;
 import util.tools.TimeTools;
@@ -27,7 +27,7 @@ public class IssueCollector {
     ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(); // scheduler
 
     /* Notify */
-	BlockingQueue<EmailWork> emailQueue;
+	BlockingQueue<Email> emailQueue;
 	BlockingQueue<String[]> smsQueue;
 
     BlockingQueue<String> sqlQueue;

@@ -37,7 +37,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 	double maxSizeMB = 1; // Maximum size of attachments to send (in MB)
 
 	/* Queues that hold new emails and retries */
-	private final ArrayList<EmailWork> retryQueue = new ArrayList<>(); // Queue holding emails to be
+	private final ArrayList<Email> retryQueue = new ArrayList<>(); // Queue holding emails to be
 																		// send/retried
 
 	private final Map<String, String> emailBook = new HashMap<>(); // Hashmap containing the reference to email address
@@ -589,16 +589,16 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 		if (!to.contains("@")) {
 			String rep = emailBook.get(to);
 			if (rep != null && !rep.isBlank()) {
-				scheduler.execute( new Sender( new EmailWork(rep, subject, content, attachment, deleteAttachment),false));
+				scheduler.execute( new Sender( Email.to(rep).subject(subject).content(content).attachment(attachment).deleteAttachment(deleteAttachment),false));
 				Logger.info("Converted " + to + " to " + rep);
 			} else {
 				Logger.info("Keyword received (" + to + ") but no emails attached.");
 			}
 			return;
 		}
-		scheduler.execute( new Sender( new EmailWork( to, subject, content,attachment,deleteAttachment),false ));
+		scheduler.execute( new Sender( Email.to(to).subject(subject).content(content).attachment(attachment).deleteAttachment(deleteAttachment),false ));
 	}
-	private void sendEmail( EmailWork work ){
+	private void sendEmail( Email work ){
 		scheduler.execute( new Sender( work,false ));
 	}
 	/* *********************************  W O R K E R S ******************************************************* */
@@ -606,10 +606,10 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 	 * Main worker thread that sends emails
 	 */
 	private class Sender implements Runnable {
-		EmailWork email;
+		Email email;
 		boolean retry;
 
-		public Sender( EmailWork email, boolean retry) {
+		public Sender(Email email, boolean retry) {
 			this.email = email;
 			this.retry = retry;
 		}
@@ -902,9 +902,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 								Logger.info( "Not yet read by "+newSub.substring(newSub.indexOf(" for ")+5));
 
 								Logger.info("Someone else wants this...");
-								var work = new EmailWork(to,newSub,body);
-								work.from = from; // use the same from as the original
-								sendEmail(work); // make sure the other can get it
+								sendEmail( Email.to(to).from(from).subject(newSub).content(body) ); // make sure the other can get it
 							}else{
 								Logger.info( "Only one/Last one read it");
 							}
