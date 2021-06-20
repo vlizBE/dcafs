@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentMap;
 
-public abstract class Database {
+public abstract class Database{
 
     protected long firstSimpleStamp = 0; // The System.currentTimeInMillis of the last query
     protected long firstPrepStamp = 0; // The System.currentTimeInMillis of the last query

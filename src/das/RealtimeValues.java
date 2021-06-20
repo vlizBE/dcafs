@@ -7,10 +7,12 @@ import com.stream.collector.CollectorFuture;
 import com.stream.collector.MathCollector;
 import com.telnet.TelnetCodes;
 import org.influxdb.dto.Point;
+import org.influxdb.dto.Query;
 import org.tinylog.Logger;
 import util.database.Database;
 import util.database.Influx;
 import util.database.Insert;
+import util.database.QueryWriting;
 import util.gis.Waypoints;
 
 import java.time.LocalDateTime;
@@ -52,8 +54,7 @@ public class RealtimeValues implements CollectorFuture {
 	protected HashMap<Writable, List<ScheduledFuture<?>>> calcRequest = new HashMap<>();
 
 	/* Databases */
-	protected HashMap<String, Database> dbs = new HashMap<>();
-	protected Database firstDB;
+	protected QueryWriting queryWriting;
 
 	/* MQTT */
 	Map<String, MqttWorker> mqttWorkers = new HashMap<>();
@@ -71,8 +72,6 @@ public class RealtimeValues implements CollectorFuture {
 
 	ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 	private final HashMap<String, MathCollector> mathCollectors = new HashMap<>();
-
-	Influx infuxdb;
 
 	/* **************************************  C O N S T R U C T O R **************************************************/
 	/**
@@ -92,8 +91,6 @@ public class RealtimeValues implements CollectorFuture {
 	}
 
 	public void copySetup(RealtimeValues to) {
-		// Copy sqlites
-		dbs.forEach(to::addDB); // Copy the sqlites already made
 		// Copy waypoints
 		to.waypoints = waypoints;
 		// Copy mqtt
@@ -103,81 +100,25 @@ public class RealtimeValues implements CollectorFuture {
 	public void addMQTTworker(String id, MqttWorker mqttWorker) {
 		this.mqttWorkers.put(id, mqttWorker);
 	}
-
+	public void addQueryWriting( QueryWriting queryWriting ){
+		this.queryWriting=queryWriting;
+	}
 	/* **************************************************************************************************************/
 
-	protected void addDB(String id, Database db) {
-		if (dbs.isEmpty())
-			firstDB = db;
-		dbs.put(id, db);
-	}
-
 	/**
-	 * Add a query to the first database added
-	 * 
-	 * @param query The query to add
-	 */
-	public boolean writeQuery(String query) {
-		if (firstDB != null) {
-			firstDB.addQuery(query);
-			return true;
-		} else {
-			Logger.error("Trying to write query to a non-existing database");
-			return false;
-		}
-	}
-
-	/**
-	 * Add a query to the first database added
-	 * 
-	 * @param query The query to run in the form of an Insert object
-	 */
-	public boolean writeQuery(Insert query) {
-		return writeQuery(query.create());
-	}
-
-	/**
-	 * Add a qeury to the buffer of the database with reference id
-	 * 
-	 * @param id    The reference to the database
-	 * @param query The query to run in the form of an Insert object
-	 * @return True if ok
-	 */
-	public boolean writeQuery(String id, Insert query) {
-		return this.writeQuery(id, query.create());
-	}
-
-	/**
-	 * Add a qeury to the buffer of the database with reference id
+	 * Add a query to the buffer of the database with reference id
 	 * 
 	 * @param id    The reference to the database
 	 * @param query The query to run
 	 * @return True if ok
 	 */
 	public boolean writeQuery(String id, String query) {
-		Database sqlite = dbs.get(id);
-		if (sqlite != null) {
-			sqlite.addQuery(query);
-			return true;
-		} else {
-			Logger.error("Trying to insert data in a non-existing database with id " + id);
-			return false;
-		}
+		return queryWriting.addQuery(id,query);
 	}
-	public boolean provideRecord(String[] ids, String table, Object[] data) {
-		boolean wrote = false;
-		int result=0;
+	public void provideRecord(String[] ids, String table, Object[] data) {
 		for ( String id : ids ) {
-			Database db = id.isBlank() ? firstDB : dbs.get(id);
-			result++;
-			if (db != null) {
-				if( db.doDirectInsert(table,data)==1)
-					result--;
-			} else {
-				Logger.error("Invalid Database id <" + id + ">");
-			}
+			queryWriting.doDirectInsert(id,table,data);
 		}
-		return result==0;
 	}
 	/**
 	 * This tries to add an insert based on values found in the realtimevalues
@@ -188,44 +129,14 @@ public class RealtimeValues implements CollectorFuture {
 	 * @return True if ok
 	 */
 	public boolean writeRecord(String[] ids, String table, String macro) {
-		boolean wrote = false;
+		int wrote = 0;
 		for ( String id : ids) {
-			Database db = id.isBlank() ? firstDB : dbs.get(id);
-
-			if (db != null) {
-				wrote=db.buildInsert(table,rtvals, rttext, macro);
-			} else {
-				Logger.error("Invalid Database id <" + id + ">");
-			}
+			wrote +=queryWriting.buildInsert(id,table,rtvals, rttext, macro)?1:0;
 		}
-		return wrote;
+		return wrote!=0;
 	}
 	public boolean writeRecord(String[] ids, String table) {
 		return writeRecord(ids, table, "");
-	}
-
-	/**
-	 * This tries to add an insert based on values found in the realtimevalues
-	 * hashmap. This writes to the first/only defined database
-	 * 
-	 * @param table The table in the database
-	 * @return True if ok
-	 */
-	public boolean writeRecord(String table) {
-		if (firstDB != null) {
-			return firstDB.buildInsert(table,rtvals, rttext,"");
-		}
-		return false;
-	}
-	public boolean sendToMqtt(String id, String param) {
-		MqttWorker worker = mqttWorkers.get(id);
-		if (worker != null) {
-			double val = this.getRealtimeValue(param, -999);
-			if (val != -999) {
-				return worker.addWork(new MqttWork(param, val));
-			}
-		}
-		return false;
 	}
 
 	public boolean sendToMqtt(String id, String device, String param) {
@@ -239,17 +150,8 @@ public class RealtimeValues implements CollectorFuture {
 		return false;
 	}
 	/* ********************************** I N F L U X D B *********************************************************** */
-	public void setInfluxDB( Influx influxDB ){
-		this.infuxdb=influxDB;
-	}
-	public boolean sendToInflux( Point p){
-
-		if( infuxdb!=null && p!=null) {
-			infuxdb.writePoint(p);
-			return true;
-		}
-		Logger.error("Failed to store point in Influx DB (point or db are null");
-		return false;
+	public boolean sendToInflux( String id, Point p){
+		return queryWriting.writeInfluxPoint(id,p);
 	}
 	/* ************************************** * D E S C R I P T O R S *************************************************/
 	/**

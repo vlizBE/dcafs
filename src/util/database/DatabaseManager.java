@@ -1,5 +1,6 @@
 package util.database;
 
+import org.influxdb.dto.Point;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -11,11 +12,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.StringJoiner;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public class DatabaseManager{
+public class DatabaseManager implements QueryWriting{
     
     private final Map<String, SQLiteDB> lites = new HashMap<>();
     private final Map<String, SQLDB> sqls = new HashMap<>();
@@ -145,7 +147,61 @@ public class DatabaseManager{
         lites.values().forEach( SQLiteDB::flushAll );
         sqls.values().forEach(SQLDB::flushAll);
     }
+    /* **************************************  Q U E R Y W R I T I N G************************************************/
+    @Override
+    public int doDirectInsert(String id, String table, Object... values) {
+        lites.entrySet().stream().filter(ent -> ent.getKey().equalsIgnoreCase(id)).forEach(db -> db.getValue().doDirectInsert(table,values));
+        sqls.entrySet().stream().filter(ent -> ent.getKey().equalsIgnoreCase(id)).forEach(db -> db.getValue().doDirectInsert(table,values));
+        int applied=0;
+        for( SQLiteDB sqlite : lites.values() ){
+            if( sqlite.getID().equalsIgnoreCase(id))
+                return sqlite.doDirectInsert(table,values);
+        }
+        for( SQLDB sqldb : sqls.values() ){
+            if( sqldb.getID().equalsIgnoreCase(id))
+                return sqldb.doDirectInsert(table,values);
+        }
+        return 0;
+    }
 
+    @Override
+    public boolean buildInsert(String id, String table, ConcurrentMap<String, Double> rtvals, ConcurrentMap<String, String> rttext, String macro) {
+        for( SQLiteDB sqlite : lites.values() ){
+            if( sqlite.getID().equalsIgnoreCase(id))
+                return sqlite.buildInsert(table,rtvals,rttext,macro);
+        }
+        for( SQLDB sqldb : sqls.values() ){
+            if( sqldb.getID().equalsIgnoreCase(id))
+                return sqldb.buildInsert(table,rtvals,rttext,macro);
+        }
+        return false;
+    }
+    @Override
+    public boolean addQuery( String id, String query){
+        for( SQLiteDB sqlite : lites.values() ){
+            if( sqlite.getID().equalsIgnoreCase(id)) {
+                sqlite.addQuery(query);
+                return true;
+            }
+        }
+        for( SQLDB sqldb : sqls.values() ){
+            if( sqldb.getID().equalsIgnoreCase(id)) {
+                sqldb.addQuery(query);
+                return true;
+            }
+        }
+        return false;
+    }
+    @Override
+    public boolean writeInfluxPoint( String id, Point p){
+        for( Influx influx : influxes.values() ){
+            if( influx.getID().equalsIgnoreCase(id)) {
+                influx.writePoint(p);
+                return true;
+            }
+        }
+        return false;
+    }
     /* **************************************  R U N N A B L E S ****************************************************/
     /**
      * Checks if the oldest query present in the buffer isn't older than the maximum

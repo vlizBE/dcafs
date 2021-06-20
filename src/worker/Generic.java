@@ -312,7 +312,7 @@ public class Generic {
         }
         if( !influxID.isEmpty() ) {
             //pb.time(Instant.now().toEpochMilli(), TimeUnit.MILLISECONDS); // Set is here because unsure what happens on delayed execution...?
-            rtvals.sendToInflux(pb.build());
+            rtvals.sendToInflux(influxID,pb.build());
         }
         return data;
     }
