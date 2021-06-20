@@ -11,7 +11,6 @@ From 0.5.0 onwards, this should be better documented...
 - ConfirmCollector give ok on no reply or nok on certain reply?
 - Trans as output in taskmanager?
 - Trans command >>>signin:id to claim to be a certain id and pass the ip test
-- Wildcard to email sending to an instance group?
 
 ## Work in progress
 ## 0.9.x
@@ -37,6 +36,7 @@ To many breaking stuff, so version bump.
 
 ## DatabaseManager
 - BREAKING: renamed the setup node to flush and flushtime to age, move idle out of it
+- Added interface for simple querying, used by realtimevalues
 
 ### Datagram
 - Renamed DataWorker to LabelWorker, fits a bit better... i think
@@ -77,6 +77,9 @@ times with the given interval so trigger="waitfor:5s,5" will check 5 times with 
 - Added MQTTManager that manages the mqttworkers, to move code out of das.java
 - MQTTmanager implements the Commandable interface
 
+### EmailWorker
+- Renamed EmailWork to Email and added fluid api
+- Removed regular options in favor of the fluid api and applied it throughout
 
 ### Other
 - cmds command now supports regex, uses startswith by default (meaning appends .*)
