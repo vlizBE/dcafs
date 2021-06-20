@@ -402,55 +402,6 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 		return TimeTools.convertPeriodtoString( Instant.now().toEpochMilli() - lastInboxConnect, TimeUnit.MILLISECONDS)+" ago";	
 	}
 	/**
-	 * Set the SMTP server
-	 * 
-	 * @param server Address to the server (either hostname or ip)
-	 */
-	public void setOutboxServer(String server){
-		this.outbox.server = server;
-		setOutboxProps();
-	}
-	/**
-	 * Get the hostname or ip of the server
-	 * 
-	 * @return Hostname or ip of the server
-	 */
-	public String getOutboxServer(){
-		return outbox.server+":"+outbox.port;
-	}
-	/**
-	 * Enable or disable sending emails
-	 * 
-	 * @param send True if enabled
-	 */
-	public void setSending( boolean send ){
-		sendEmails = send;
-	}
-	/**
-	 * Set the name of the user for the inbox
-	 * 
-	 * @param user Name used to log in the inbox
-	 */
-	public void setInboxUser( String user ){
-		inbox.user=user;
-	}
-	/**
-	 * Set the password for the inbox
-	 * 
-	 * @param pass The password to access the inbox
-	 */
-	public void setInboxPass( String pass ){
-		inbox.pass=pass;
-	}
-	/**
-	 * Get the password to access the inbox
-	 * 
-	 * @return The password to access the inbox
-	 */
-	public String getInboxPass(){
-		return inbox.pass;
-	}
-	/**
 	 * Set the properties for sending emails
 	 */
 	private void setOutboxProps(){
@@ -533,7 +484,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 			case "send":
 				if( parts.length !=4 )
 					return "Not enough arguments send,ref/email,subject,content";
-				sendEmail(parts[1],parts[2],parts[3]);
+				sendEmail( Email.to(parts[1]).subject(parts[2]).content(parts[3]) );
 				return "Tried to send email";
 			case "checknow":
 				checker.cancel(false);
@@ -558,48 +509,19 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 		}
 	}
 	/**
-	 * Simple way of adding email to the queue
-	 * 
-	 * @param to Emailaddress or reference
-	 * @param subject The subject of the email
-	 * @param content The content of the email
+	 * Send an email
+	 * @param email The email to send
 	 */
-	public void sendEmail( String to, String subject, String content ){
-		sendEmail(to,subject,content,"",false);
-	}
-	/**
-	 * Simple way of adding email to the queue
-	 * 
-	 * @param to Emailaddress or reference
-	 * @param subject The subject of the email
-	 * @param content The content of the email
-	 * @param attachment The path to the attachment
-	 * @param deleteAttachment Whether or not to delete attachment after send was ok
-	 */
-	public void sendEmail( String to, String subject, String content,String attachment,boolean deleteAttachment ){
-
+	public void sendEmail( Email email ){
 		if( !sendEmails ){
 			Logger.warn("Sending emails disabled!");
 			return;
 		}
-		if( to.isEmpty() ){
-			Logger.warn("Email request received but to was empty, subject?"+subject);
-			return;
+		if( email.isValid()) {
+			scheduler.execute(new Sender(email, false));
+		}else{
+			Logger.error("Tried to send an invalid email");
 		}
-		if (!to.contains("@")) {
-			String rep = emailBook.get(to);
-			if (rep != null && !rep.isBlank()) {
-				scheduler.execute( new Sender( Email.to(rep).subject(subject).content(content).attachment(attachment).deleteAttachment(deleteAttachment),false));
-				Logger.info("Converted " + to + " to " + rep);
-			} else {
-				Logger.info("Keyword received (" + to + ") but no emails attached.");
-			}
-			return;
-		}
-		scheduler.execute( new Sender( Email.to(to).subject(subject).content(content).attachment(attachment).deleteAttachment(deleteAttachment),false ));
-	}
-	private void sendEmail( Email work ){
-		scheduler.execute( new Sender( work,false ));
 	}
 	/* *********************************  W O R K E R S ******************************************************* */
 	/**
@@ -870,16 +792,16 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 
 					var tos = findTo(from);
 					if( tos.isEmpty()){
-						sendEmail(from,"My admin doesn't allow me to talk to strangers...","");
-						sendEmail("admin","Got spam? ","From: "+from+" "+cmd);
+						sendEmail( Email.to(from).subject("My admin doesn't allow me to talk to strangers...") );
+						sendEmail( Email.toAdminAbout("Got spam? ").content("From: "+from+" "+cmd) );
 						Logger.warn("Received spam from: "+from);
 						message.setFlag(Flags.Flag.DELETED, true); // delete spam
 						continue;
 					}
 
 					if( isDenied(tos, from, cmd) ){
-						sendEmail(from,"Not allowed to use "+cmd,"Try asking an admin for permission?");
-						sendEmail("admin","Permission issue?","From: "+from+" -> "+cmd);
+						sendEmail( Email.to(from).subject("Not allowed to use "+cmd).content("Try asking an admin for permission?") );
+						sendEmail( Email.toAdminAbout("Permission issue?").content("From: "+from+" -> "+cmd) );
 						Logger.warn(from+" tried using "+cmd+" without permission");
 						message.setFlag(Flags.Flag.DELETED, true); // delete things without permission
 						continue;
@@ -1054,7 +976,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 			Logger.error("Buffer returned without info");
 		}else{
 			Logger.info("Buffer returned with info");
-			sendEmail(req.to, "Buffered response to "+req.about, String.join("<br>", req.getBuffer()));
+			sendEmail( Email.to(req.to).subject("Buffered response to "+req.about).content(String.join("<br>", req.getBuffer())) );
 		}
 	}
 

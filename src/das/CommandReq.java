@@ -1,5 +1,6 @@
 package das;
 
+import com.email.Email;
 import com.email.EmailSending;
 import com.email.EmailWorker;
 import com.fazecast.jSerialComm.SerialPort;
@@ -201,7 +202,7 @@ public class CommandReq {
 		}
 		/* Notification to know if anyone uses the bot. */
 		if ( (!d.getOriginID().startsWith("admin") && !emailWorker.isAddressInRef("admin",d.getOriginID()) ) && header.equalsIgnoreCase("Bot Reply")  ) {
-			sendEmail.get().sendEmail("admin", "DASbot", "Received '" + d.getData() + "' command from " + d.getOriginID() );
+			sendEmail.get().sendEmail( Email.toAdminAbout("DASbot").content("Received '" + d.getData() + "' command from " + d.getOriginID()) );
 		}
 		/* Processing of the question */
 		d.setData( d.getData().toLowerCase());
@@ -211,10 +212,12 @@ public class CommandReq {
 
 		if (!response.toLowerCase().contains(UNKNOWN_CMD)) {
 			response = response.replace("[33m ", "");
-			sendEmail.get().sendEmail(d.getOriginID(), header, response.replace("\r\n", "<br>"));
+			sendEmail.get().sendEmail( Email.to(d.getOriginID()).subject(header).content(response.replace("\r\n", "<br>")));
 		} else {
-			sendEmail.get().sendEmail(d.getOriginID(), header,
-					"Euh " + d.getOriginID().substring(0, d.getOriginID().indexOf(".")) + ", no idea what to do with '" + d.getData() + "'...");
+			sendEmail.get().sendEmail(
+					Email.to(d.getOriginID())
+							.subject(header)
+							.content("Euh " + d.getOriginID().substring(0, d.getOriginID().indexOf(".")) + ", no idea what to do with '" + d.getData() + "'..."));
 		}
 	}
 
@@ -559,7 +562,7 @@ public class CommandReq {
 				if( p.isEmpty() )
 					return "No such script";
 
-				sendEmail.get().sendEmail(spl[2], "Requested tm script: "+spl[1], "Nothing to say", p,false);
+				sendEmail.get().sendEmail( Email.to(spl[2]).subject("Requested tm script: "+spl[1]).content("Nothing to say").attachment(p) );
 				return "Tried sending "+spl[1]+" to "+spl[2];
 			case "setup":
 			case "settings":
@@ -569,7 +572,7 @@ public class CommandReq {
 				}
 				if( spl.length!=2)
 					return "Not enough arguments, expected retrieve:setup,email/ref";
-				sendEmail.get().sendEmail(spl[1], "Requested file: settings.xml", "Nothing to say", "settings.xml",false);
+				sendEmail.get().sendEmail(Email.to(spl[1]).subject("Requested file: settings.xml").content("Nothing to say").attachment(workPath+File.separator+"settings.xml") );
 				return "Tried sending settings.xml to "+spl[1];
 			default: return UNKNOWN_CMD+":"+spl[0];
 		}
@@ -939,20 +942,23 @@ public class CommandReq {
 			case "getlogs":
 				if( sendEmail.isEmpty() )
 					return "Failed to send logs to admin, no worker.";
-				sendEmail.get().sendEmail( "admin","Statuslog","File attached (probably)", workPath+"logs"+File.separator+"info.log", false );
-				sendEmail.get().sendEmail( "admin","Errorlog","File attached (probably)", workPath+"logs"+File.separator+"errors_"+TimeTools.formatUTCNow("yyMMdd")+".log", false );
+				sendEmail.get().sendEmail( Email.toAdminAbout("Statuslog").subject("File attached (probably)")
+						.attachment( Path.of(workPath,"logs","info.log") ));
+				sendEmail.get().sendEmail( Email.toAdminAbout("Errorlog").subject("File attached (probably)")
+						.attachment(Path.of(workPath,"logs","errors_"+TimeTools.formatUTCNow("yyMMdd")+".log" )) );
 				return "Sending logs (info,errors) to admin...";
 			case "gettasklog":
 				if( sendEmail.isEmpty() )
 					return "Failed to send logs to admin, no worker.";
-				sendEmail.get().sendEmail( "admin","Taskmanager.log","File attached (probably)", workPath+"logs"+File.separator+"taskmanager.log", false );
+				sendEmail.get().sendEmail( Email.toAdminAbout("Taskmanager.log").subject("File attached (probably)")
+						.attachment( Path.of(workPath,"logs","taskmanager.log" ) ));
 				return "Trying to send taskmanager log";
 			case "getlastraw":
 				Path it = Path.of(workPath,"raw",TimeTools.formatUTCNow("yyyy-MM"));
 				try {
 					var last = Files.list(it).filter( f -> !Files.isDirectory(f)).max( Comparator.comparingLong( f -> f.toFile().lastModified()));
 					if( last.isPresent() ){
-						sendEmail.get().sendEmail( "admin","Taskmanager.log","File attached (probably)", last.get().toString(), false );
+						sendEmail.get().sendEmail( Email.toAdminAbout("Taskmanager.log").subject("File attached (probably)").attachment( last.get() ));
 						return "Tried sending "+last.get();
 					}else{
 						return "File not found";
@@ -1032,7 +1038,8 @@ public class CommandReq {
 			return "No recipient given.";
 		
 		if( sendEmail.isEmpty() ){
-			sendEmail.get().sendEmail(request[1],"Executed tasksets","Nothing to add","logs/tasks.csv", false );
+			sendEmail.get().sendEmail( Email.to(request[1]).subject("Executed tasksets").content("Nothing to add")
+					.attachment( Path.of(workPath,"logs","tasks.csv").toString() ) );
 			return "Sending log of taskset execution to "+request[1]; 
 		}
 		return "Failed to send Taskset Execution list.";

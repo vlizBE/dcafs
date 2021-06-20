@@ -9,7 +9,7 @@ import java.time.Instant;
 public class Email {
 	String toRaw;				  	  // The destination without conversion between reference and email address
 	String subject;					  // The subject of the email
-	String content;					  // The content of the email
+	String content="";				  // The content of the email
 	String attachment="";			  // Link to the attachment
 	String from="";
 	boolean valid = false;			  // Flag whether or not the email is valid
@@ -20,17 +20,21 @@ public class Email {
 
 	/* ******************************* C O N S T R U C T O R S ************************************************* */
 	/**
-	 * Short constructor with the mininum required info
+	 * Short constructor with the minimum required info
 	 * 
-	 * @param to Destination email adres of reference
+	 * @param to Destination email address of reference
 	 */
 	private Email(String to){
 		toRaw=to;
-		valid = true;				
+		if( !to.isEmpty())
+			valid = true;
 	}
 	/* ********************************** F L U I D  A P I ********************************************************** */
 	public static Email to(String to){
 		return new Email(to);
+	}
+	public static Email toAdminAbout( String subject){
+		return new Email("admin").subject(subject);
 	}
 	public Email from(String from){
 		this.from = from;
@@ -46,6 +50,10 @@ public class Email {
 	}
 	public Email attachment(String attachment){
 		this.attachment = attachment;
+		return this;
+	}
+	public Email attachment(Path attachment){
+		this.attachment = attachment.toString();
 		return this;
 	}
 	public Email deleteAttachment(boolean delete){

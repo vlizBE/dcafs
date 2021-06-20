@@ -1,5 +1,6 @@
 package das;
 
+import com.email.Email;
 import com.email.EmailSending;
 import com.email.EmailWorker;
 import com.hardware.i2c.I2CWorker;
@@ -564,7 +565,7 @@ public class DAS implements DeadThreadListener {
                 // Try to send email...
                 if (emailWorker != null) {
                     Logger.info("Informing admin");
-                    emailWorker.sendEmail("admin", telnet.getTitle() + " shutting down.", "Reason: " + sdReason);
+                    emailWorker.sendEmail( Email.toAdminAbout(telnet.getTitle() + " shutting down.").content("Reason: " + sdReason) );
                 }
                 try {
                     Logger.info("Giving things two seconds to finish up.");

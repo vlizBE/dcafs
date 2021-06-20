@@ -1,5 +1,6 @@
 package util.task;
 
+import com.email.Email;
 import com.email.EmailSending;
 import com.sms.SMSSending;
 import com.stream.StreamPool;
@@ -36,7 +37,7 @@ public class TaskList implements CollectorFuture {
 	Path xmlPath = null; 								// Path to the xml file containing the tasks/tasksets
 
 	/* The different outputs */
-	EmailSending emailQueue = null; // Reference to the email send, so emails can be send
+	EmailSending emailer = null; // Reference to the email send, so emails can be send
 	SMSSending smsSender = null; 	// Reference to the sms queue, so sms's can be send
 	StreamPool streampool; 			// Reference to the streampool, so sensors can be talked to
 	RealtimeValues rtvals;
@@ -84,7 +85,7 @@ public class TaskList implements CollectorFuture {
 	 * @param emailQueue The queue of the EmailWorker
 	 */
 	public void setEmailSending(EmailSending emailQueue) {
-		this.emailQueue = emailQueue;
+		this.emailer = emailQueue;
 	}
 
 	/**
@@ -697,7 +698,7 @@ public class TaskList implements CollectorFuture {
 						smsSender.sendSMS( task.outputRef, sms.length() > 150 ? sms.substring(0, 150) : sms );
 						break;
 					case EMAIL: // Send the response in an email
-						if (emailQueue == null) {
+						if (emailer == null) {
 							Logger.tag(TINY_TAG).error("[" + id + "] Task not executed because no valid emailQueue");
 							return false;
 						}
@@ -707,7 +708,7 @@ public class TaskList implements CollectorFuture {
 						for (String item : task.outputRef.split(";")) {
 							if( splits.length==1)
 								response = "";
-							emailQueue.sendEmail(item,header,response,task.attachment,false);
+							emailer.sendEmail( Email.to(item).subject(header).content(response).attachment(task.attachment) );
 						}
 						break;
 					case STREAM: // Send the value to a device
@@ -792,7 +793,7 @@ public class TaskList implements CollectorFuture {
 							break;
 							case "error":	// Note the error and send email								
 								Logger.tag(TINY_TAG).error("TaskList.reportIssue\t["+ id +"] "+device+"\t"+mess);
-								emailQueue.sendEmail( "admin", device+" -> "+mess, "", "", false);
+								emailer.sendEmail( Email.toAdminAbout(device+" -> "+mess) );
 							break;
 							default: Logger.error("Tried to use unknown outputref: "+task.outputRef); break;
 						}
@@ -913,8 +914,8 @@ public class TaskList implements CollectorFuture {
 				Logger.tag(TINY_TAG).info( "["+ id +"] Rescheduled to execute "+task.value +" in "+TimeTools.convertPeriodtoString(next, TimeUnit.SECONDS)+".");
 			}else{
 				Logger.tag(TINY_TAG).info( " Next is :"+next );
-				if( emailQueue != null) {
-					emailQueue.sendEmail("admin",  "Failed to reschedule task", task.toString() );
+				if( emailer != null) {
+					emailer.sendEmail( Email.to("admin").subject("Failed to reschedule task").content(task.toString()) );
 				}else {
 					Logger.tag(TINY_TAG).error( "["+ id +"] Failed to reschedule task "+ task);
 				}
