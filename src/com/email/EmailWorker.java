@@ -256,17 +256,18 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 	/**
 	 * This creates the barebones settings in the xml
 	 * 
-	 * @param xmlDoc The original XML file to alter
+	 * @param fab An XMLfab to build upon
 	 * @param sendEmails Whether or not to include sending emails
 	 * @param receiveEmails Whether or not to include checking for emails
 	 * @return True if changes were written to the xml
 	 */
-	public static boolean addBlankEmailToXML( Document xmlDoc, boolean sendEmails, boolean receiveEmails ){	
+	public static boolean addBlankEmailToXML( XMLfab fab, boolean sendEmails, boolean receiveEmails ){
 		
-		if( XMLtools.hasElementByTag( xmlDoc,XML_PARENT_TAG) )//Don't overwrite if already exists?
+		if( fab.getChild("email").isPresent() ) // Don't overwrite if already exists?
 			return false;
 
-		XMLfab fab = XMLfab.withRoot(xmlDoc, "settings",XML_PARENT_TAG);
+		fab.digRoot(XML_PARENT_TAG);
+
 		if( sendEmails ){
 			fab.addParent("outbox","Settings related to sending")
 					 .addChild("server", "host/ip").attr("user").attr("pass").attr("ssl","yes").attr("port","993")
