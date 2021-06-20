@@ -523,6 +523,9 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 			Logger.error("Tried to send an invalid email");
 		}
 	}
+	public void setSending( boolean send ){
+		sendEmails=send;
+	}
 	/* *********************************  W O R K E R S ******************************************************* */
 	/**
 	 * Main worker thread that sends emails
