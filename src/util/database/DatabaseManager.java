@@ -2,11 +2,14 @@ package util.database;
 
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -21,20 +24,17 @@ public class DatabaseManager{
     private static final int CHECK_INTERVAL=5;
     private final ScheduledExecutorService scheduler;// scheduler for the request data action
     private static final String XML_PARENT_TAG = "databases";
-    /**
-     * Create a manager that uses the gives scheduler
-     * 
-     * @param scheduler
-     */
-    public DatabaseManager(ScheduledExecutorService scheduler) {
-        this.scheduler = scheduler;
-    }
-
+    private String workPath;
+    private Path settingsPath;
     /**
      * Create a manager that uses its own scheduler
      */
-    public DatabaseManager() {
+    public DatabaseManager( String workPath) {
+        this.workPath=workPath;
+        settingsPath = Path.of(workPath,"settings.xml");
         scheduler = Executors.newScheduledThreadPool(1);
+
+        readFromXML();
     }
 
     /**
@@ -102,6 +102,39 @@ public class DatabaseManager{
         sqls.forEach((id, db)  -> join.add( id + " : " + db.toString() + (db.isValid(1)?"":" (NC)")));
         influxes.forEach( (id,db) -> join.add( id+ " : " + db.toString() + (db.isValid(1)?"":" (NC)")));
         return join.toString();
+    }
+    private void readFromXML() {
+        XMLfab.getRootChildren(settingsPath,"settings","databases")
+                .filter( db -> !db.getAttribute("id").isEmpty() )
+                .forEach(
+                            db -> {
+                                if( db.getTagName().equalsIgnoreCase("sqlite")){
+                                    addSQLiteDB(db.getAttribute("id"),SQLiteDB.readFromXML(db,workPath));
+                                }else if(db.getTagName().equalsIgnoreCase("server")){
+                                    switch(db.getAttribute("type")){
+                                        case "influx":
+                                            addInfluxDB( db.getAttribute("id"), Influx.readFromXML(db) );
+                                            break;
+                                        case "":break;
+                                        default:
+                                            addSQLDB(db.getAttribute("id"), SQLDB.readFromXML(db));
+                                            break;
+                                    }
+                                }
+                            }
+        );
+    }
+    public Database reloadDatabase( String id ){
+        var fab = XMLfab.withRoot(settingsPath,"settings","databases");
+        var sqlite = fab.getChild("sqlite","id",id);
+        if( sqlite.isPresent()){
+            return addSQLiteDB(id,SQLiteDB.readFromXML( sqlite.get(),workPath));
+        }else{
+            var sqldb= fab.getChild("server","id",id);
+            if( sqldb.isPresent())
+                return addSQLDB(id, SQLDB.readFromXML(sqldb.get()));
+        }
+        return null;
     }
 
     /* ***************************************************************************************************************/
@@ -172,16 +205,17 @@ public class DatabaseManager{
     }
 
     /**
-     * Adds an empty server node to the databases node, if databases doesn't exist it will be created 
-     * @param xml The loaded settings.xml
+     *
+     * @param fab
+     * @param type
+     * @param id
      */
-    public static void addBlankServerToXML( Document xml, String type, String id ){
-        XMLfab.withRoot(xml, "settings",XML_PARENT_TAG)                
-                    .addParent("server").attr("id", id.isEmpty()?"remote":id).attr("type",type)
-                        .addChild("db","name").attr("user").attr("pass")    
-                        .addChild("setup").attr("idletime",-1).attr("flushtime","30s").attr("batchsize",30)                         
-                        .addChild("address","localhost")
-               .build();
+    public static void addBlankServerToXML( XMLfab fab, String type, String id ){
+            fab.addParent("server").attr("id", id.isEmpty()?"remote":id).attr("type",type)
+                .addChild("db","name").attr("user").attr("pass")
+                .addChild("setup").attr("idletime",-1).attr("flushtime","30s").attr("batchsize",30)
+                .addChild("address","localhost")
+       .build();
     }
     /**
      * Adds an empty server node to the databases node, if databases doesn't exist it will be created 
@@ -194,19 +228,18 @@ public class DatabaseManager{
                         .addChild("setup").attr("idletime","2m").attr("flushtime","30s").attr("batchsize",30)                        
                .build();
     }
-    public static boolean addBlankTableToXML( Document xml, String id, String table, String format){
-        var opt = XMLfab.getRootChildren(xml, "dcafs",XML_PARENT_TAG,"sqlite")
-                .filter( db -> db.getAttribute("id").equals(id) )
-                .findFirst();
-        if( opt.isEmpty()){
-            opt = XMLfab.getRootChildren(xml, "dcafs",XML_PARENT_TAG,"server")
-                    .filter( db -> db.getAttribute("id").equals(id) && !db.getAttribute("type").startsWith("influx") )
-                    .findFirst();
-            if( opt.isEmpty())
+    public static boolean addBlankTableToXML( XMLfab fab, String id, String table, String format){
+
+        var serverOpt = fab.selectParent("server","id",id);
+        if( serverOpt.isPresent() ){
+            fab.selectParent("server","id",id);
+        }else{
+            var sqliteOpt = fab.selectParent("sqlite","id",id);
+            if( sqliteOpt.isEmpty())
                 return false;
+            fab.selectParent("sqlite","id",id);
         }
-        SqlTable.addBlankToXML( xml,opt.get(),table,format );
-        XMLtools.updateXML(xml);
+        SqlTable.addBlankToXML( fab,table,format );
         return true;
     }
 }

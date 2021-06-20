@@ -710,18 +710,28 @@ public class SqlTable {
             return title+" "+type + (unique?" UNIQUE":"") + (notnull?" NOT NULL":"")+(primary?" PRIMARY KEY":"");
         }
     }
-	public static void addBlankToXML(Document xml, Element db, String table, String format) {
-        Element tab = XMLtools.createChildElement(xml, db, "table");
-        tab.setAttribute("name", table);
+
+    /**
+     * Adds a blank table node according to the format to the fab with current parent the database node;
+     * @param fab The fab with the database node as current parent
+     * @param tableName The name of the table
+     * @param format The format of the table, t=timestamp,r=real,i=int,c=text,m=epochmillis
+     * @return True if written
+     */
+    public static boolean addBlankToXML( XMLfab fab, String tableName, String format ) {
+
+        fab.addChild("table").attr("name",tableName).down();
+
         for( char c : format.toCharArray() ){
             switch(c){
-                case 't': XMLtools.createChildTextElement(xml, tab, "timestamp","columnname"); break;
-                case 'r': XMLtools.createChildTextElement(xml, tab, "real","columnname"); break;
-                case 'i': XMLtools.createChildTextElement(xml, tab, "integer","columnname"); break;
-                case 'c': XMLtools.createChildTextElement(xml, tab, "text","columnname"); break;
-                case 'm': XMLtools.createChildTextElement(xml, tab, "epochmillis","columnname"); break;
+                case 't': fab.addChild( "timestamp","columnname"); break;
+                case 'r': fab.addChild( "real","columnname"); break;
+                case 'i': fab.addChild( "integer","columnname"); break;
+                case 'c': fab.addChild( "text","columnname"); break;
+                case 'm': fab.addChild( "epochmillis","columnname"); break;
             }
         }
+        return fab.build()!=null;
     }
 
     /**

@@ -87,7 +87,7 @@ public class DAS implements DeadThreadListener {
     EventLoopGroup nettyGroup = new NioEventLoopGroup(); // Single group so telnet,trans and streampool can share it
 
     /* Database */
-    private final DatabaseManager dbManager = new DatabaseManager();
+    private DatabaseManager dbManager;
 
     /* MQTT */
     private MQTTManager mqttManager;
@@ -147,8 +147,10 @@ public class DAS implements DeadThreadListener {
             if( issues.hasAlarms())
                 taskManager.addTaskList("alarms",issues.alarms); // Make that manager available through general interface
 
+            dbManager = new DatabaseManager(workPath);
+
             rtvals = new RealtimeValues(issues);
-            readDatabasesFromXML();
+
 
             commandReq = new CommandReq(rtvals, issues, workPath);
             commandReq.setDatabaseManager(dbManager);
@@ -461,86 +463,6 @@ public class DAS implements DeadThreadListener {
         digiWorker.getQueue().add(new String[] { to, message });
         Logger.info("Added SMS: '" + message + "' to " + to);
         return true;
-    }
-
-    /* ************************************  D A T A B A S E   M A N A G E R ***************************************/
-
-    public SQLiteDB addSQLiteDB(SQLiteDB db) {
-        if( db !=null ){
-            dbManager.addSQLiteDB(db.getID(), db);
-            rtvals.addDB(db.getID(), db);
-        }else{
-            Logger.error("Tried to add a null sqlite or empty id (id:"+db.getID()+")");
-        }
-        return db;
-    }
-    public Optional<SQLDB> addSQLDB(String id, SQLDB db) {
-        if( db !=null && !id.isEmpty() ){
-            dbManager.addSQLDB(id, db);
-            rtvals.addDB(id, db);
-            return Optional.of(db);
-        }else{
-            Logger.error("Tried to add a null database or empty id (id:"+id+")");
-        }
-
-        return Optional.empty();
-    }
-    public boolean addInfluxDB(String id, Influx db) {
-        if( db !=null && !id.isEmpty() ){
-            dbManager.addInfluxDB(id, db);
-            rtvals.setInfluxDB(db);
-            return true;
-        }else{
-            Logger.error("Tried to add a null influxdb or empty id (id:"+id+")");
-        }
-
-        return false;
-    }
-    public DatabaseManager getDatabaseManager() {
-        return dbManager;
-    }
-    public Database reloadDatabase( String id ){
-        Element root = XMLtools.getFirstElementByTag(settingsDoc, "databases");
-        
-        Optional<Element> sqlite = XMLtools.getChildElements(root, "sqlite").stream()
-                        .filter( db -> db.getAttribute("id").equals(id)).findFirst();
-
-        if( sqlite.isPresent() )
-            return addSQLiteDB(SQLiteDB.readFromXML(sqlite.get(),workPath));
-
-        return XMLtools.getChildElements(root, "server").stream()
-                        .filter( db -> db.getAttribute("id").equals(id))
-                        .findFirst()
-                        .map( db -> {
-                            var sqldb =SQLDB.readFromXML(db);
-                            if( sqldb!=null) {
-                                return addSQLDB(id, sqldb).get();
-                            }else{
-                                return null;
-                            }
-                        }).orElse(null);
-
-    }
-    private void readDatabasesFromXML() {
-        Element root = XMLtools.getFirstElementByTag(settingsDoc, "databases");
-        XMLtools.getChildElements(root, "sqlite").stream()
-                    .filter( db -> !db.getAttribute("id").isEmpty() ) // Can't do anything without id
-                    .forEach( db -> addSQLiteDB( SQLiteDB.readFromXML(db,workPath) ) );
-        
-        XMLtools.getChildElements(root, "server").stream()
-            .filter( db -> !db.getAttribute("id").isEmpty() && !db.getAttribute("type").isEmpty() ) // Can't do anything without id/type
-            .forEach( db ->
-            {
-                if( db.getAttribute("type").equalsIgnoreCase("influxdb")){
-                    addInfluxDB( db.getAttribute("id"), Influx.readFromXML(db) );
-                }else {
-                    addSQLDB(db.getAttribute("id"), SQLDB.readFromXML(db));
-                }
-            } );
-    }
-
-    public Database getDatabase(String id) {
-        return dbManager.getDatabase(id);
     }
 
     /* *************************************  D E B U G W O R K E R ***********************************************/
