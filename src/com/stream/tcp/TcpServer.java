@@ -12,6 +12,7 @@ import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.bytes.ByteArrayDecoder;
 import io.netty.handler.codec.bytes.ByteArrayEncoder;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -43,11 +44,13 @@ public class TcpServer implements StreamListener, Commandable {
 	static final String XML_PARENT_TAG = "transserver";
 	private final HashMap<String,ArrayList<Writable>> targets = new HashMap<>();
 
+	private boolean active=false;
+
 	public TcpServer(Path xml, EventLoopGroup workerGroup) {
 		this.workerGroup = workerGroup;
 		xmlPath = xml;
 
-		readSettingsFromXML(XMLtools.readXML(xmlPath), false);
+		active = readSettingsFromXML(XMLtools.readXML(xmlPath), false);
 	}
 
 	public TcpServer(Path xml) {
@@ -59,13 +62,15 @@ public class TcpServer implements StreamListener, Commandable {
 	 * 
 	 * @param port The new port to use
 	 */
-	public void setServerPort(int port) {
+	public boolean setServerPort(int port) {
 		if (this.serverPort != port && port != -1) {
 			Logger.info("New port isn't the same as current one. current=" + this.serverPort + " req=" + port);
 			serverPort = port;
 			alterXML();
 			restartServer();
+			active=true;
 		}
+		return active;
 	}
 	/**
 	 * Set the queue worked on by a @see BaseWorker
@@ -193,12 +198,13 @@ public class TcpServer implements StreamListener, Commandable {
 						th.writeHistory(td.commands);
 						th.setID(td.id);
 						th.setLabel(td.label);
+						th.writeLine("Welcome back "+th.getID()+"!");
+						break;
 					}
 				}
 				if(targets.containsKey(th.getID())){
 					targets.get(th.getID()).forEach( th::addTarget );
 				}
-				th.writeLine("Welcome back "+th.getID()+"!");
 				return true;
 			}else{
 				Logger.info("No matching ID "+title+" vs "+th.getID() );
@@ -297,6 +303,17 @@ public class TcpServer implements StreamListener, Commandable {
 	public String replyToCommand(String[] request, Writable wr, boolean html) {
 		String[] cmds = request[1].split(",");
 
+		if( !active ) {
+			if(cmds[0].equalsIgnoreCase("start")&&cmds.length==2){
+				if( setServerPort(NumberUtils.toInt(cmds[1],-1)) )
+
+					return "Server started on "+cmds[1];
+				return "Invalid port number given.";
+			}else{
+				return "No server active yet, use ts:start,port to start one";
+			}
+
+		}
 		if( cmds[0].equals("create"))
 			return "Server already exists";
 
@@ -389,7 +406,7 @@ public class TcpServer implements StreamListener, Commandable {
 
 	@Override
 	public boolean removeWritable(Writable wr) {
-		return false;
+		return targets.entrySet().removeIf( ent->ent.getValue().equals(wr));
 	}
 
 	/**
