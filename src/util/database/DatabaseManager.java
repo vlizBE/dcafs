@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class DatabaseManager implements QueryWriting{
     
@@ -106,13 +107,13 @@ public class DatabaseManager implements QueryWriting{
         return join.toString();
     }
     private void readFromXML() {
-        XMLfab.getRootChildren(settingsPath,"settings","databases")
+        XMLfab.getRootChildren(settingsPath,"dcafs","settings","databases","sqlite")
                 .filter( db -> !db.getAttribute("id").isEmpty() )
-                .forEach(
-                            db -> {
-                                if( db.getTagName().equalsIgnoreCase("sqlite")){
-                                    addSQLiteDB(db.getAttribute("id"),SQLiteDB.readFromXML(db,workPath));
-                                }else if(db.getTagName().equalsIgnoreCase("server")){
+                .forEach( db -> addSQLiteDB(db.getAttribute("id"),SQLiteDB.readFromXML(db,workPath) ));
+
+        XMLfab.getRootChildren(settingsPath,"dcafs","settings","databases","server")
+                .filter( db -> !db.getAttribute("id").isEmpty() )
+                .forEach( db -> {
                                     switch(db.getAttribute("type")){
                                         case "influx":
                                             addInfluxDB( db.getAttribute("id"), Influx.readFromXML(db) );
@@ -123,11 +124,10 @@ public class DatabaseManager implements QueryWriting{
                                             break;
                                     }
                                 }
-                            }
-        );
+                        );
     }
     public Database reloadDatabase( String id ){
-        var fab = XMLfab.withRoot(settingsPath,"settings","databases");
+        var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","databases");
         var sqlite = fab.getChild("sqlite","id",id);
         if( sqlite.isPresent()){
             return addSQLiteDB(id,SQLiteDB.readFromXML( sqlite.get(),workPath));
