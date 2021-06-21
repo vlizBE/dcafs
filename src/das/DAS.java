@@ -137,8 +137,7 @@ public class DAS implements DeadThreadListener {
 
             issues = new IssueCollector();
 
-            if( issues.hasAlarms())
-                taskManager.addTaskList("alarms",issues.alarms); // Make that manager available through general interface
+
 
             dbManager = new DatabaseManager(workPath);
 
@@ -187,6 +186,9 @@ public class DAS implements DeadThreadListener {
 
             /* TaskManager */
             addTaskManager();
+
+            if( issues.hasAlarms())
+                taskManager.addTaskList("alarms",issues.alarms); // Make that manager available through general interface
 
             /* Waypoints */
             if (Waypoints.inXML(settingsDoc)) {
@@ -312,6 +314,8 @@ public class DAS implements DeadThreadListener {
         if (digiWorker != null) {
             taskManager.setSMSSending(digiWorker);
         }
+        taskManager.readFromXML();
+        addCommandable("tm",taskManager);
     }
     /* ******************************************  S T R E A M P O O L ***********************************************/
     /**
@@ -403,7 +407,7 @@ public class DAS implements DeadThreadListener {
         trans.setServerPort(port);
         trans.setDataQueue(dQueue);
 
-        commandReq.setTcpServer(trans);
+        addCommandable("ts",trans);
     }
 
     /* **********************************  E M A I L W O R K E R *********************************************/

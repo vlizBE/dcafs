@@ -644,7 +644,7 @@ public class TaskList implements CollectorFuture {
 				}
 			} else { // If not a supposed to run a taskset, check if any of the text needs to be
 						// replaced
-				if (task.value.contains("@")) { // Meaning there's an @ somewhere
+				if (task.value.contains("{")) { // Meaning there's an { somewhere
 					fill = fillIn(task.value, task.value);
 				}
 				String[] splits = fill.split(";");
@@ -741,7 +741,7 @@ public class TaskList implements CollectorFuture {
 									if( res.isEmpty() ) {
 										ok = false;
 									}else{
-										if( !task.value.contains("@"))
+										if( !task.value.contains("{"))
 											task.value=res;
 										ok = true;
 									}
