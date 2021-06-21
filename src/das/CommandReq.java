@@ -51,7 +51,6 @@ public class CommandReq {
 
 	private RealtimeValues rtvals; // To have access to the current values
 	private StreamPool streampool = null; // To be able to interact with attached devices
-	private TcpServer trans = null; // To be able to make requests to the TransServer
 	private EmailWorker emailWorker; // To be able to send emails and get status
 	private IssueCollector issues=null;
 	private DatabaseManager dbManager;
@@ -134,15 +133,6 @@ public class CommandReq {
 		return streampool.getFilter(id);
 	}
 	/**
-	 * To handle data requests, access to the TransServer is needed
-	 * 
-	 * @param trans A reference to the TransServer
-	 */
-	public void setTcpServer(TcpServer trans) {
-		this.trans = trans;
-	}
-
-	/**
 	 * To have access to the realtime values
 	 * 
 	 * @param rtvals A reference to the RealtimeValues
@@ -222,7 +212,7 @@ public class CommandReq {
 	}
 
 	/**
-	 * A question is asked to the BaseReq through this method, a TransDescriptor is
+	 * A question is asked to the BaseReq through this method, a Writable is
 	 * passed for streaming data questions
 	 * 
 	 * @param question The command/Question to process
@@ -235,7 +225,7 @@ public class CommandReq {
 	}
 
 	/**
-	 * A question is asked to the BaseReq through this method, a TransDescriptor is
+	 * A question is asked to the BaseReq through this method, a Writable is
 	 * passed for streaming data questions
 	 * 
 	 * @param question The command/Question to process
@@ -297,7 +287,7 @@ public class CommandReq {
 					var nl = html ? "<br>" : "\r\n";
 					return doCmd("tm",split[0]+",sets",wr)+nl+doCmd("tm",split[0]+",tasks",wr);
 				}else{
-					doCmd("tm","run,"+split[0]+":"+split[1],wr);
+					return doCmd("tm","run,"+split[0]+":"+split[1],wr);
 				}
 			}
 		}
@@ -579,7 +569,7 @@ public class CommandReq {
 	}
 	/* *******************************************************************************/
 	public String doTRANS(String[] request, Writable wr, boolean html ){
-		return doCmd("tm","forward,"+request[1],wr);
+		return doCmd("ts","forward,"+request[1],wr);
 	}
 	public String doSTOP(String[] request, Writable wr, boolean html ) {
 		if( streampool.removeForwarding(wr) )
