@@ -1,10 +1,12 @@
 package com.mqtt;
 
 import com.stream.Writable;
+import com.telnet.TelnetCodes;
 import das.Commandable;
 import das.RealtimeValues;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
@@ -57,7 +59,7 @@ public class MQTTManager implements Commandable {
         StringJoiner join = new StringJoiner("\r\n", "id -> broker -> online?\r\n", "");
         join.setEmptyValue("No brokers yet");
         mqttWorkers.forEach((id, worker) -> join
-                .add(id + " -> " + worker.getBroker() + " -> " + (worker.isConnected() ? "online" : "offline"))
+                .add(id + " -> " + worker.getBrokerAddress() + " -> " + (worker.isConnected() ? "online" : "offline"))
                 .add(worker.getSubscriptions("\r\n")));
         return join.toString();
     }
@@ -77,7 +79,10 @@ public class MQTTManager implements Commandable {
             return false;
         return worker.addSubscription(topic, label);
     }
-
+    public boolean addBroker( String id, String address, String defTopic){
+        mqttWorkers.put( id, new MqttWorker(address,defTopic,dQueue) );
+        return updateMQTTsettings(id);
+    }
     /**
      * Remove a subscription from a certain MQTTWorker
      *
@@ -100,18 +105,14 @@ public class MQTTManager implements Commandable {
      * @return True if updated
      */
     public boolean updateMQTTsettings(String id) {
-        Element mqtt;
+        XMLfab fab = XMLfab.withRoot(settingsFile,"settings")
+                            .selectOrCreateParent("mqtt")
+                            .down();
 
-        var settingsDoc = XMLtools.readXML(settingsFile);
-        if ((mqtt = XMLtools.getFirstElementByTag(settingsDoc, "mqtt")) == null)
-            return false; // No valid node, nothing to update
-
-        for (Element broker : XMLtools.getChildElements(mqtt, "broker")) {
-            if (XMLtools.getStringAttribute(broker, "id", "general").equals(id)) {
-                MqttWorker worker = mqttWorkers.get(id);
-                if (worker != null && worker.updateXMLsettings(settingsDoc, broker))
-                    return XMLtools.updateXML(settingsDoc);
-            }
+        MqttWorker worker = mqttWorkers.get(id);
+        if (worker != null ){
+            worker.updateXMLsettings(fab, true);
+            return true;
         }
         return false;
     }
@@ -170,6 +171,12 @@ public class MQTTManager implements Commandable {
             //mqtt:brokers
             case "brokers": return getMqttBrokersInfo();
             //mqtt:subscribe,ubidots,aanderaa,outdoor_hub/1844_temperature
+            case "addbroker":
+                if( cmd.length!=4)
+                    return "Wrong amount of arguments: mqtt:addbroker,id,address,deftopic";
+                if( addBroker(cmd[1],cmd[2],cmd[3]) )
+                    return "Broker added";
+                return "Failed to add broker";
             case "subscribe":
                 if( cmd.length == 4){
                     addMQTTSubscription(cmd[1], cmd[2], cmd[3]);
@@ -224,17 +231,22 @@ public class MQTTManager implements Commandable {
                 getMqttWorker(cmd[1]).ifPresent( w -> w.addWork(topVal[0],""+val));
                 return "Data send to "+cmd[1];
             case "?":
-                StringJoiner response = new StringJoiner(nl);
-                response.add( "mqtt:brokers -> Get a listing of the current registered brokers")
-                        .add( "mqtt:subscribe,brokerid,label,topic -> Subscribe to a topic with given label on given broker")
-                        .add( "mqtt:unsubscribe,brokerid,topic -> Unsubscribe from a topic on given broker")
-                        .add( "mqtt:unsubscribe,brokerid,all -> Unsubscribe from all topics on given broker")
-                        .add( "mqtt:forward,brokerid -> Forwards the data received from the given broker to the issueing writable")
-                        .add( "mqtt:send,brokerid,topic:value -> Sends the value to the topic of the brokerid")
-                        .add( "mqtt:store,brokerid -> Store the current settings of the broker to the xml.")
-                        .add( "mqtt:reload,brokerid -> Reload the settings for the broker from the xml.")
-                        .add( "mqtt:? -> Show this message");
-                return response.toString();
+                StringJoiner join = new StringJoiner(nl);
+                join.add(TelnetCodes.TEXT_MAGENTA+"The MQTT manager manages the workers that connect to brokers");
+                join.add(TelnetCodes.TEXT_GREEN+"General"+TelnetCodes.TEXT_YELLOW)
+                        .add( "   mqtt:addbroker,brokerid,address -> Add a new broker with the given id found at the address")
+                        .add( "   mqtt:brokers -> Get a listing of the current registered brokers")
+                        .add( "   mqtt:reload,brokerid -> Reload the settings for the broker from the xml.")
+                        .add( "   mqtt:store,brokerid -> Store the current settings of the broker to the xml.")
+                        .add( "   mqtt:? -> Show this message");
+                join.add(TelnetCodes.TEXT_GREEN+"Subscriptions"+TelnetCodes.TEXT_YELLOW)
+                        .add( "   mqtt:subscribe,brokerid,label,topic -> Subscribe to a topic with given label on given broker")
+                        .add( "   mqtt:unsubscribe,brokerid,topic -> Unsubscribe from a topic on given broker")
+                        .add( "   mqtt:unsubscribe,brokerid,all -> Unsubscribe from all topics on given broker");
+                join.add(TelnetCodes.TEXT_GREEN+"Send & Receive"+TelnetCodes.TEXT_YELLOW)
+                        .add( "   mqtt:forward,brokerid -> Forwards the data received from the given broker to the issuing writable")
+                        .add( "   mqtt:send,brokerid,topic:value -> Sends the value to the topic of the brokerid");
+                return join.toString();
             default: return UNKNOWN_CMD+": "+cmd[0];
         }
     }

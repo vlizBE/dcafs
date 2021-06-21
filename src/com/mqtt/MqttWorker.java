@@ -4,8 +4,8 @@ import com.stream.Writable;
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.tinylog.Logger;
-import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
@@ -42,7 +42,7 @@ public class MqttWorker implements MqttCallbackExtended {
 	MqttConnectOptions connOpts = null;
 
 	String id = ""; // Name/if/title for this worker
-	String broker = ""; // The address of the broker
+	String brokerAddress = ""; // The address of the broker
 	String clientId = ""; // Client id to use for the broker
 	String defTopic = ""; // The defaulttopic for this broker, will be prepended to publish/subscribe etc
 
@@ -68,13 +68,13 @@ public class MqttWorker implements MqttCallbackExtended {
 	/**
 	 * Constructor to create a worker without the xml
 	 * 
-	 * @param broker   The address of the broker
+	 * @param address   The address of the broker
 	 * @param clientId The client id to connect to the broker
 	 * @param topic    The default topic (will be added to all subscribe/publish
 	 *                 requests)
 	 */
-	public MqttWorker(String broker, String clientId, String topic) {
-		this.broker = broker;
+	public MqttWorker(String address, String clientId, String topic) {
+		this.brokerAddress = address;
 		this.clientId = clientId;
 		this.defTopic = topic;
 		applySettings();
@@ -87,19 +87,15 @@ public class MqttWorker implements MqttCallbackExtended {
 	 * @param mqtt The element containing the settings
 	 */
 	public MqttWorker(Element mqtt, BlockingQueue<Datagram> dQueue) {
-		this.readSettings(mqtt);
+		readSettings(mqtt);
 		this.dQueue = dQueue;
 	}
-
-	/**
-	 * Set the queue from a BaseWorker so that message are processsed
-	 * 
-	 * @param dQueue The queue for a BaseWorker
-	 */
-	public void setDataQueue(BlockingQueue<Datagram> dQueue) {
+	public MqttWorker( String address, String defTopic, BlockingQueue<Datagram> dQueue ) {
 		this.dQueue = dQueue;
+		this.brokerAddress=address;
+		this.defTopic=defTopic;
+		settingsChanged = true;
 	}
-
 	/**
 	 * Set the id of this worker, this is added to the work given to the
 	 * baseworker
@@ -115,8 +111,8 @@ public class MqttWorker implements MqttCallbackExtended {
 	 * 
 	 * @return the address of the broker
 	 */
-	public String getBroker() {
-		return this.broker;
+	public String getBrokerAddress() {
+		return this.brokerAddress;
 	}
 
 	/* ************************************ Q U E U E ************************************************************* **/
@@ -151,12 +147,12 @@ public class MqttWorker implements MqttCallbackExtended {
 	 * @param mqtt The element containing the info
 	 */
 	public void readSettings(Element mqtt) {
-		this.broker = XMLtools.getChildValueByTag(mqtt, "address", "");
+		this.brokerAddress = XMLtools.getChildValueByTag(mqtt, "address", "");
 		this.clientId = XMLtools.getChildValueByTag(mqtt, "clientid", "");
 		this.defTopic = XMLtools.getChildValueByTag(mqtt, "defaulttopic", "");
 		this.id = XMLtools.getStringAttribute(mqtt, "id", "general");
 
-		if (broker.contains("ubidots")) {
+		if (brokerAddress.contains("ubidots")) {
 			flavour = MQTT_FLAVOUR.UBIDOTS;
 		} else {
 			flavour = MQTT_FLAVOUR.MOSQUITO;
@@ -179,29 +175,27 @@ public class MqttWorker implements MqttCallbackExtended {
 	/**
 	 * Alter the element to reflect current settings
 	 * 
-	 * @param xmlDoc The doc in which the element resides (needed to make Elements)
-	 * @param mqtt   The element currently used
+	 * @param fab The fab that points to the broker
 	 * @return True if something was changed
 	 */
-	public boolean updateXMLsettings(Document xmlDoc, Element mqtt) {
+	public boolean updateXMLsettings(XMLfab fab, boolean build) {
 		if (!settingsChanged)
 			return false;
 
-		while (mqtt.hasChildNodes()) // Remove all the current children
-			mqtt.removeChild(mqtt.getFirstChild());
+		fab.selectOrCreateParent("broker").attr("id",id);
 
-		XMLtools.createChildTextElement(xmlDoc, mqtt, "address", broker);
-		XMLtools.createChildTextElement(xmlDoc, mqtt, "clientid", clientId);
-		XMLtools.createChildTextElement(xmlDoc, mqtt, "defaulttopic", defTopic);
+		fab.alterChild("address", brokerAddress)
+			.alterChild("clientid",clientId)
+			.alterChild("defaulttopic",defTopic);
 
 		subscriptions.forEach(
 			(topic,label) -> {
-				Element sub = xmlDoc.createElement("subscribe");
-				sub.setTextContent(topic);
-				sub.setAttribute("label", label);
-				mqtt.appendChild(sub);
+				fab.alterChild("subscribe",topic).attr("label",label);
 			}
 		);
+		if( build ) {
+			fab.build();
+		}
 		settingsChanged=false;
 		return true;
 	}
@@ -216,13 +210,13 @@ public class MqttWorker implements MqttCallbackExtended {
 			connOpts.setUserName(clientId);
 		connOpts.setAutomaticReconnect(true); //works
 		
-		Logger.info("Creating client for "+this.broker);
+		Logger.info("Creating client for "+this.brokerAddress);
 
 		try {
 			if( client != null ){
 				client.disconnect();
 			}
-			client = new MqttClient( this.broker, MqttClient.generateClientId(), persistence);
+			client = new MqttClient( this.brokerAddress, MqttClient.generateClientId(), persistence);
 			client.setTimeToWait(10000);
 			client.setCallback(this);
 			
@@ -398,10 +392,10 @@ public class MqttWorker implements MqttCallbackExtended {
 			if (!client.isConnected()) {
 				try {					
 					client.connect(connOpts);
-					Logger.debug("Connected to broker: " + broker + " ...");
+					Logger.debug("Connected to broker: " + brokerAddress + " ...");
 				} catch (MqttException me) {					
 					attempt++;
-					Logger.warn("Failed to connect to "+broker+", trying again later");
+					Logger.warn("Failed to connect to "+ brokerAddress +", trying again later");
 					scheduler.schedule( new Connector(attempt), Math.max(attempt * 5, 60), TimeUnit.SECONDS );
 				}
 			}
