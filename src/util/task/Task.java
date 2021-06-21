@@ -106,7 +106,7 @@ public class Task implements Comparable<Task>{
 			Pair<Long,TimeUnit> period = TimeTools.parsePeriodString(XMLtools.getStringAttribute(tsk,"interval",""));
 			interval = period.getKey();
 			unit = period.getValue();
-			runs = XMLtools.getIntAttribute(tsk,"checks",-1);
+			runs = XMLtools.getIntAttribute(tsk,"checks",1);
 
 			switch( tsk.getTagName() ){
 				//case "retry": triggerType =TRIGGERTYPE.RETRY; break;

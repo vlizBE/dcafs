@@ -174,6 +174,9 @@ public class TcpServer implements StreamListener, Commandable {
 		}
 	}
 
+	/**
+	 * Restart the server
+	 */
 	private void restartServer() {
 		if (serverFuture != null) {
 			serverFuture.cancel(true);

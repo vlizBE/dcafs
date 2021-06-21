@@ -153,12 +153,19 @@ public class XMLfab {
         parent = root;
         return this;
     }
-
+    /**
+     * Get a Element stream with all the elements that match the last item of the given root.
+     * fe. trunk,branch,twig will return all the twig elements
+     * @param xmlPath The path to the document
+     * @param roots The roots to look for
+     * @return The elements found at the end of the root
+     */
     public static Stream<Element> getRootChildren( Path xmlPath, String... roots){
         XMLfab fab = new XMLfab(xmlPath);
         fab.root = XMLtools.getFirstElementByTag(fab.xmlDoc, roots[0]);
+        String end = roots[roots.length-1];
         if( fab.hasRoots(roots) ){
-            fab.last=(Element)fab.root.getParentNode();            
+            fab.last=(Element)fab.root.getParentNode();
             return fab.getChildren(roots[roots.length-1]).stream();
         }        
         return new ArrayList<Element>().stream();
@@ -190,6 +197,7 @@ public class XMLfab {
     private boolean hasRoots( String... roots ){
         for( int a=1; a<roots.length;a++){
             Element ele = XMLtools.getFirstChildByTag(root, roots[a]);
+
             if( ele == null ){
                 return false;
             }else{               

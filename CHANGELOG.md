@@ -91,6 +91,7 @@ times with the given interval so trigger="waitfor:5s,5" will check 5 times with 
 so `update:scripts,scriptfilename` is now `update:tmscript,taskmanager id`
 - Same for retrieve command
 - `ff:addblank` and `ff:addshort` didn't notify on errors but claimed 'ok'
+- TransServer: >>>label: wasn't working because of bad unaltered substring
 
 ## 0.9.9 (11/06/21)
 
