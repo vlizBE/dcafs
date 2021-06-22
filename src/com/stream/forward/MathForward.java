@@ -183,7 +183,8 @@ public class MathForward extends AbstractForward {
 
         ops.clear();
         String content = math.getTextContent();
-        if( content != null && !content.startsWith("\n") ){
+
+        if( content != null && XMLtools.getChildElements(math).isEmpty() ){
             addComplex(content);
         }
         defs.clear();
