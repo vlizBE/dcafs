@@ -556,7 +556,7 @@ public class TaskList implements CollectorFuture {
 					task.reset();
 				}else if (task.triggerType == TRIGGERTYPE.WAITFOR) {
 					failure = false;
-					Logger.info("Requirement not met, resetting counter");
+					Logger.info("Requirement not met, resetting counter failed "+task.preReq1.toString());
 					task.attempts = 0; // reset the counter
 				}else if (task.triggerType == TRIGGERTYPE.RETRY || task.triggerType == TRIGGERTYPE.INTERVAL) {
 					failure = false;
@@ -1134,9 +1134,9 @@ public class TaskList implements CollectorFuture {
 			}
 			switch( verify.reqtype ) {
 				case EQUAL:				return val[0] == val[1]?1:0;
-				case LARGER:			return val[0] >  val[1]?1:0;
+				case ABOVE:			return val[0] >  val[1]?1:0;
 				case LARGER_OR_EQUAL: 	return val[0] >= val[1]?1:0;
-				case SMALLER:			return val[0] <  val[1]?1:0;
+				case BELOW:			return val[0] <  val[1]?1:0;
 				case SMALLER_OR_EQUAL:	return val[0] <= val[1]?1:0;
 				case NONE:
 				default:	return 0;		
@@ -1158,9 +1158,9 @@ public class TaskList implements CollectorFuture {
 			}
 			switch( verify.reqtype ) {
 				case EQUAL:				return result == val[2]?1:0;
-				case LARGER:			return result >  val[2]?1:0;
+				case ABOVE:			return result >  val[2]?1:0;
 				case LARGER_OR_EQUAL: 	return result >= val[2]?1:0;
-				case SMALLER:			return result <  val[2]?1:0;
+				case BELOW:			return result <  val[2]?1:0;
 				case SMALLER_OR_EQUAL:	return result <= val[2]?1:0;
 				case NONE:
 				default:	return 0;		

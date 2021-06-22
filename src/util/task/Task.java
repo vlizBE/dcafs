@@ -78,7 +78,7 @@ public class Task implements Comparable<Task>{
 
 	/* Verify */
 	enum VERIFYTYPE {NONE,SINGLE,AND,OR}                                             // The options for combining verifies
-	enum REQTYPE { NONE, SMALLER, LARGER, EQUAL, SMALLER_OR_EQUAL, LARGER_OR_EQUAL} // The options of comparing values in the verify
+	enum REQTYPE { NONE, BELOW, ABOVE, EQUAL, SMALLER_OR_EQUAL, LARGER_OR_EQUAL} // The options of comparing values in the verify
 	enum MATHTYPE { NONE, DIFF, PLUS, MINUS}                                         // The operation to be executed on the variables
 
 	Verify preReq1=null;
@@ -432,9 +432,9 @@ public class Task implements Comparable<Task>{
 	 */
 	private REQTYPE parseCompare( String compare ){
 		switch( compare ) {
-			case "<":case "below": return REQTYPE.SMALLER;
+			case "<":case "below": return REQTYPE.BELOW;
 			case "<=": return REQTYPE.SMALLER_OR_EQUAL;
-			case ">":case "above": return REQTYPE.LARGER;  
+			case ">":case "above": return REQTYPE.ABOVE;
 			case ">=": return REQTYPE.LARGER_OR_EQUAL;
 			case "==":case "equal":case "equals":		
 			default: return REQTYPE.EQUAL;
@@ -450,7 +450,12 @@ public class Task implements Comparable<Task>{
 		double[] reqValue = {-999,-999,-999};
 		
 		public String toString() {
-			return " if "+reqRef[0]+" "+reqtype+" "+reqValue[1];
+			if( mathtype == MATHTYPE.NONE ) {
+				return " if " + reqRef[0] + " " + reqtype + " " + reqValue[1];
+			}else{
+				String res= " if " + (reqValue[0]==-999?reqRef[0]:reqValue[0])+ " " + mathtype + " " + (reqValue[1]==-999?reqRef[1]:reqValue[1])+" "+reqtype+" "+ (reqValue[2]==-999?reqRef[2]:reqValue[2]);
+				return res.toLowerCase();
+			}
 		}
 	}
 	/* *******************************************  L I N K **********************************************************/
