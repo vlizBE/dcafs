@@ -89,14 +89,15 @@ public class DAS implements DeadThreadListener {
 
         try {
             Path p = Path.of(getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
+            System.out.println("Path found: "+p.toString());
             if (!p.toString().endsWith(".jar")) { //meaning from ide
                 p = p.getParent();
             }
             workPath = p.getParent().toString();
-
-            if( workPath.matches(".*[lib]")) { // Meaning used as a lib
+            if( workPath.matches(".*lib$")) { // Meaning used as a lib
                 workPath = Path.of(workPath).getParent().toString();
             }
+            System.out.println("Workpath lib: "+workPath);
             if( System.getProperty("tinylog.directory") == null ) { // don't overwrite this
                 // Re set the paths for the file writers to use the same path as the rest of the program
                 System.setProperty("tinylog.directory", workPath); // Set work path as system property
@@ -715,13 +716,13 @@ public class DAS implements DeadThreadListener {
                 }
             }
         }
-        if (mqttManager!=null) {
+        if (mqttManager!=null && !mqttManager.getMqttWorkerIDs().isEmpty()) {
             if (html) {
                 b.append("<br><b>MQTT</b><br>");
             } else {
                 b.append(TEXT_YELLOW).append(TEXT_CYAN).append("\r\n").append("MQTT").append("\r\n").append(UNDERLINE_OFF).append(TEXT_YELLOW);
             }
-            b.append(mqttManager.getMqttBrokersInfo());
+            b.append(mqttManager.getMqttBrokersInfo()).append("\r\n");
         }
 
         try {
