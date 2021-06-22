@@ -65,9 +65,9 @@ times with the given interval so trigger="waitfor:5s,5" will check 5 times with 
 <!-- This will wait till 5 check return ok, restarting the count on a failure -->
 <task trigger="waitfor:5s,5" req="value below 10"/>
 <!-- can now also be written as -->
-<waitfor interval="5" checks="5">value below 10</waitfor>
+<waitfor interval="5s" checks="5">value below 10</waitfor>
 <!-- This will wait till 5 checks return ok, stopping the taskset on a failure -->
-<while interval="5" checks="5">value is below 10</while>
+<while interval="5s" checks="5">value below 10</while>
 ````
 
 ### DigiWorker
@@ -85,6 +85,7 @@ times with the given interval so trigger="waitfor:5s,5" will check 5 times with 
 - cmds command now supports regex, uses startswith by default (meaning appends .*)
 - Changed `update:setup` to `update:settings` because it's the settings file
 - Updated dependencies
+- Verify to string didn't take math into account
 
 ### Bugfixes
 - update command still referred to scripts instead of tmscripts, now also looks up the path instead of assuming default 
@@ -92,6 +93,7 @@ so `update:scripts,scriptfilename` is now `update:tmscript,taskmanager id`
 - Same for retrieve command
 - `ff:addblank` and `ff:addshort` didn't notify on errors but claimed 'ok'
 - TransServer: >>>label: wasn't working because of bad unaltered substring
+- Regex that determines workpath was wrong
 
 ## 0.9.9 (11/06/21)
 
