@@ -218,7 +218,7 @@ public class TaskList implements CollectorFuture {
 	public Task addTask(Element tsk) {
 		Task task = new Task(tsk);
 
-		if (startOnLoad && task.getTriggerType()!=TRIGGERTYPE.EXECUTE) {
+		if (startOnLoad && task.getTriggerType()!=TRIGGERTYPE.EXECUTE && task.isEnableOnStart()) {
 			startTask(task);
 		}
 		tasks.add(task);

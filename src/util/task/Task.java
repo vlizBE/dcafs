@@ -31,6 +31,7 @@ public class Task implements Comparable<Task>{
 	long interval = 0;					// If it's an interval task, this is where the interval is stored
 	long startDelay = 0;				// If it's an interval task, this is where the delay before first execution is stored
 	TimeUnit unit = TimeUnit.SECONDS;	// The time unit of the interval and start delay
+	boolean enableOnStart=true;			// If the task should be started on startup
 
 	/* Retry and also channel in a way*/
 	int retries=-1;				// How many retries if allowed for a retry task
@@ -38,7 +39,7 @@ public class Task implements Comparable<Task>{
 	int attempts=0;
 
 	ScheduledFuture<?> future;	// The future if the task is scheduled, this way it can be cancelled
-	boolean enabled = false;	// Whether or not the task is currently enabled	
+	boolean enabled = false;	// Whether or not the task is currently enabled
 	String keyword="";
 	
 	/* output:channel */
@@ -115,6 +116,8 @@ public class Task implements Comparable<Task>{
 			}
 			splitReq( tsk.getTextContent(), true ); // text content has the req
 		}else{
+			id = XMLtools.getStringAttribute( tsk, "id", ""+new Random().nextLong()).toLowerCase();
+
 			reply = XMLtools.getStringAttribute( tsk, "reply", "");
 			String[] rep = reply.split(",");
 			reply=rep[0];
@@ -124,8 +127,8 @@ public class Task implements Comparable<Task>{
 			}
 
 			link = XMLtools.getStringAttribute( tsk, "link", "");
-			Random r = new Random();
-			id = XMLtools.getStringAttribute( tsk, "id", ""+r.nextLong()).toLowerCase();
+
+			enableOnStart = XMLtools.getBooleanAttribute(tsk,"atstartup",true);
 
 			splitReq( XMLtools.getStringAttribute( tsk, "req", ""), true );
 			splitReq( XMLtools.getStringAttribute( tsk, "check", ""), false );
@@ -134,13 +137,13 @@ public class Task implements Comparable<Task>{
 			convertTrigger( XMLtools.getStringAttribute( tsk, "trigger", "") );
 
 			if( tsk.getFirstChild() != null ){
-				this.value = tsk.getFirstChild().getTextContent(); // The control command to execute
-				if( this.value.startsWith("\\h(") ){
-					this.bytes=Tools.fromHexStringToBytes( value.substring(3, value.lastIndexOf(")") ) );
-				}else if( this.value.startsWith("\\d(") ){
-					this.bytes = Tools.fromDecStringToBytes( value.substring(3, value.indexOf(")")) );
+				value = tsk.getFirstChild().getTextContent(); // The control command to execute
+				if( value.startsWith("\\h(") ){
+					bytes=Tools.fromHexStringToBytes( value.substring(3, value.lastIndexOf(")") ) );
+				}else if( value.startsWith("\\d(") ){
+					bytes = Tools.fromDecStringToBytes( value.substring(3, value.indexOf(")")) );
 				}else{
-					this.bytes=this.value.getBytes();
+					bytes=value.getBytes();
 				}
 			}else{
 				Logger.tag("TASK").info("["+(taskset.isEmpty()?"noset":taskset)+"] Task of type "+ triggerType +" without value.");
@@ -161,6 +164,9 @@ public class Task implements Comparable<Task>{
 				link = linking[1];
 			}
 		}
+	}
+	public boolean isEnableOnStart(){
+		return enableOnStart;
 	}
 	public boolean errorIncrement(){
 		errorOccurred++;

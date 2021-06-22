@@ -69,6 +69,7 @@ times with the given interval so trigger="waitfor:5s,5" will check 5 times with 
 <!-- This will wait till 5 checks return ok, stopping the taskset on a failure -->
 <while interval="5s" checks="5">value below 10</while>
 ````
+- Added the attribute 'atstartup' for single tasks that shouldn't be started on startup, default true
 
 ### DigiWorker
 - Added interface SMSSending to use instead of passing the queue
