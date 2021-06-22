@@ -553,7 +553,8 @@ public class SQLDB extends Database{
 
         fab.selectOrCreateParent("server","id", id.isEmpty()?"remote":id).attr("type",type.toString().toLowerCase())
                 .alterChild("db",dbName).attr("user",user).attr("pass",pass)
-                .alterChild("flush").attr("idletime",idle).attr("age",flush).attr("batchsize",maxQueries)
+                .alterChild("flush").attr("age",flush).attr("batchsize",maxQueries)
+                .alterChild("idleclose",idle)
                 .alterChild("address",address);
 
         fab.build();

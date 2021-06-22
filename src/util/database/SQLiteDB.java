@@ -268,6 +268,9 @@ public class SQLiteDB extends SQLDB{
         /* Setup */
         db.readFlushSetup(XMLtools.getFirstChildByTag(dbe, "flush"));
 
+        // How many seconds before the connection is considered idle (and closed)
+        db.idleTime = TimeTools.parsePeriodStringToSeconds(XMLtools.getChildValueByTag(dbe,"idleclose","5m"));
+
         /* Views */
         for( Element view : XMLtools.getChildElements(dbe, "view")){
             String name = view.getAttribute("name");
@@ -297,7 +300,8 @@ public class SQLiteDB extends SQLDB{
         fab.selectOrCreateParent("sqlite","id", id).attr("path",dbPath.toString());
         if( hasRollOver() )
             fab.alterChild("rollover",oriFormat).attr("count",rollCount).attr("unit",rollUnit.toString().toLowerCase());
-        fab.alterChild("flush").attr("idletime",idle).attr("age",flush).attr("batchsize",maxQueries)
+        fab.alterChild("flush").attr("age",flush).attr("batchsize",maxQueries)
+           .alterChild("idleclose",idle)
            .build();
     }
 
