@@ -86,6 +86,7 @@ times with the given interval so trigger="waitfor:5s,5" will check 5 times with 
 - Changed `update:setup` to `update:settings` because it's the settings file
 - Updated dependencies
 - Verify to string didn't take math into account
+- Triggered cmds now support having a command as content of an email:send,to,subject,content
 
 ### Bugfixes
 - update command still referred to scripts instead of tmscripts, now also looks up the path instead of assuming default 
