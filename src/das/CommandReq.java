@@ -1007,7 +1007,7 @@ public class CommandReq {
 				return "Adding default email settings";
 			return "Failed to add default email settings";
 		}
-		
+
 		if( emailWorker == null ){
 			if(request[1].equals("reload") && XMLtools.hasElementByTag(xml, "email") ){
 				das.addEmailWorker();
@@ -1016,6 +1016,16 @@ public class CommandReq {
 			}
 		}
 
+		// Check if the content part of a send command is a command itself, if so replace it
+		if( request[1].startsWith("send,") ){ // If it's a send request
+			String[] parts = request[1].split(",");
+			if( parts.length==4){ // Check if the amount of components is correct
+				String rep = createResponse(parts[3],wr,false,true); //if so, use content as command
+				if( !rep.startsWith("unknown")) // if this resulted in a response
+					parts[3]=rep; //replace the command
+				request[1] = String.join(",",parts);
+			}
+		}
 		return emailWorker.replyToSingleRequest(request[1], html);
 	}
 
