@@ -358,7 +358,10 @@ public class FileCollector extends AbstractCollector{
                 Logger.error(e);
             }
             join = new StringJoiner( lineSeparator );
-            headers.forEach( join::add ); // Add the headers
+            headers.forEach( hdr ->
+            {
+                join.add(hdr.replace("{file}",dest.getFileName().toString()));
+            } ); // Add the headers
         }else{
             join = new StringJoiner( lineSeparator,lineSeparator,"" );
         }
