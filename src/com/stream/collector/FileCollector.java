@@ -105,7 +105,7 @@ public class FileCollector extends AbstractCollector{
         return fcs;
     }
     public void readFromXML( Element fcEle, String workpath ){
-        // Flush settings
+        /* Flush settings */
         Element flush = XMLtools.getFirstChildByTag(fcEle,"flush");
         if( flush != null ){
             setBatchsize( XMLtools.getIntAttribute(flush,"batchsize",Integer.MAX_VALUE));
@@ -116,7 +116,7 @@ public class FileCollector extends AbstractCollector{
                 }
             }
         }
-        // Source and destination
+        /* Source and destination */
         addSource( XMLtools.getStringAttribute(fcEle,"src",""));
         setWorkPath(workpath);
         String path = XMLtools.getChildValueByTag(fcEle,"path","");
@@ -130,7 +130,7 @@ public class FileCollector extends AbstractCollector{
         }
         setPath(dest);
 
-        //Headers
+        /* Headers */
         headers.clear();
         for( var ele : XMLtools.getChildElements(fcEle,"header") ){
             addHeaderLine(ele.getTextContent());
@@ -169,9 +169,17 @@ public class FileCollector extends AbstractCollector{
             addTriggerCommand(XMLtools.getStringAttribute(ele,"trigger","none").toLowerCase(),cmd);
         }
 
-        // Changing defaults
+        /* Changing defaults */
         setLineSeparator( Tools.fromEscapedStringToBytes( XMLtools.getStringAttribute(fcEle,"eol",System.lineSeparator())) );
     }
+
+    /**
+     * Add a blank node in the position the fab is pointing to
+     * @param fab XMLfab pointing to where the collectors parent should be
+     * @param id The id for the filecollector
+     * @param source The source of data
+     * @param path The path of the file
+     */
     public static void addBlankToXML(XMLfab fab, String id, String source, String path ){
         fab.selectOrCreateParent("collectors")
                 .addChild("file").attr("id",id).attr("src",source)
@@ -179,8 +187,13 @@ public class FileCollector extends AbstractCollector{
                     .addChild("path",path)
                     .addChild("flush").attr("batchsize","-1").attr("age","1m")
                 .build();
-
     }
+
+    /**
+     * Set the maximum size th file can become, and whether or not to zip it after reaching this point
+     * @param size The size of the file, allows kb,mb,gb extension (fe. 15mb)
+     * @param zip If true, this file gets zipped
+     */
     public void setMaxFileSize( String size,boolean zip ){
         long multiplier=1;
         size=size.replace("b","");
@@ -195,9 +208,21 @@ public class FileCollector extends AbstractCollector{
         zipMaxBytes=zip;
         Logger.info(id+"(fc) -> Maximum size set to "+maxBytes);
     }
+
+    /**
+     * Change the max file size but keep the zip option as it was
+     * @param size The size of the file, allows kb,mb,gb extension (fe. 15mb)
+     */
     public void setMaxFileSize( String size ){
         setMaxFileSize(size,zipMaxBytes);
     }
+
+    /**
+     * Add a triggered command to the collector
+     * @param trigger The trigger, current options: rollover, idle, maxsize
+     * @param cmd The command to execute if triggered
+     * @return True if added successfully
+     */
     public boolean addTriggerCommand( String trigger, String cmd ){
         if(cmd==null)
             return false;
@@ -210,15 +235,21 @@ public class FileCollector extends AbstractCollector{
         }
         return true;
     }
-    public void addTriggerCommand( TRIGGERS trigger, String command ){
-        trigCmds.add( new TriggeredCommand(trigger,command) );
+    /**
+     * Add a triggered command to the collector
+     * @param trigger The trigger, using the enum
+     * @param cmd The command to execute if triggered
+     * @return True if added successfully
+     */
+    public void addTriggerCommand( TRIGGERS trigger, String cmd ){
+        trigCmds.add( new TriggeredCommand(trigger,cmd) );
     }
     /**
      * Set the the full path (relative of absolute) to the file
      * @param path the path to the file
      */
     public void setPath( Path path ){
-        this.destPath =path;
+        this.destPath=path;
     }
     public void setPath( Path path, String workPath ){
         this.destPath =path;
@@ -366,9 +397,9 @@ public class FileCollector extends AbstractCollector{
             join = new StringJoiner( lineSeparator,lineSeparator,"" );
         }
         String line;
-        while((line=dataBuffer.poll()) !=null ) {
+        while((line=dataBuffer.poll()) != null )
             join.add(line);
-        }
+
         byteCount=0;
         try {
             Files.write(dest, join.toString().getBytes(charSet) , StandardOpenOption.CREATE, StandardOpenOption.APPEND );
