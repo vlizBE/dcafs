@@ -283,12 +283,16 @@ public class CommandReq {
 			if( cmd!=null) {
 				result = cmd.replyToCommand(split, wr, html);
 			}else{
+				String res;
 				if( split[1].equals("?")||split[1].equals("list")){
 					var nl = html ? "<br>" : "\r\n";
-					return doCmd("tm",split[0]+",sets",wr)+nl+doCmd("tm",split[0]+",tasks",wr);
+					res = doCmd("tm",split[0]+",sets",wr)+nl+doCmd("tm",split[0]+",tasks",wr);
+
 				}else{
-					return doCmd("tm","run,"+split[0]+":"+split[1],wr);
+					res = doCmd("tm","run,"+split[0]+":"+split[1],wr);
 				}
+				if( !res.startsWith("No "))
+					result = res;
 			}
 		}
 		if( result.startsWith(UNKNOWN_CMD) ) {
@@ -341,7 +345,7 @@ public class CommandReq {
 		var c = commandables.get(id);
 		if( c==null) {
 			Logger.error("No "+id+" available");
-			return "";
+			return UNKNOWN_CMD+": No "+id+" available";
 		}
 		return c.replyToCommand(new String[]{id,command},wr,false);
 	}
@@ -1028,7 +1032,6 @@ public class CommandReq {
 		}
 		return emailWorker.replyToSingleRequest(request[1], html);
 	}
-
 
 	public String doREQTASKS( String[] request, Writable wr, boolean html ){
 		if( request[1].equals("?") )
