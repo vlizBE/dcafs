@@ -4,7 +4,7 @@ import com.email.EmailSending;
 import com.sms.SMSSending;
 import com.stream.StreamPool;
 import com.stream.Writable;
-import das.CommandReq;
+import das.CommandPool;
 import das.Commandable;
 import das.RealtimeValues;
 import org.tinylog.Logger;
@@ -25,14 +25,14 @@ public class TaskManager implements Commandable {
     private String workPath;
     HashMap<String, TaskList> tasklists = new HashMap<>();
     RealtimeValues rtvals;
-    CommandReq cmdReq;
+    CommandPool cmdReq;
     StreamPool streamPool;
     EmailSending emailSender;
     SMSSending smsSender;
 
     static final String UNKNOWN_CMD = "unknown command";
 
-    public TaskManager(String workpath, RealtimeValues rtvals, CommandReq cmdReq){
+    public TaskManager(String workpath, RealtimeValues rtvals, CommandPool cmdReq){
         this.workPath=workpath;
         this.rtvals=rtvals;
         this.cmdReq=cmdReq;

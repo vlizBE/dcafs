@@ -31,7 +31,7 @@ To many breaking stuff, so version bump.
 
 ### BaseReq
 - Renamed to CommandReq
-- Added interface commandable, these can be given to commandreq to use as custom commands
+- Added interface Commandable, these can be given to commandreq to use as custom commands
 - Removed option from DAS to extend CommandReq, should now use the interface
 
 ## DatabaseManager
@@ -75,8 +75,8 @@ times with the given interval so trigger="waitfor:5s,5" will check 5 times with 
 - Added interface SMSSending to use instead of passing the queue
 
 ### MQTTWorker
-- Added MQTTManager that manages the mqttworkers, to move code out of das.java
-- MQTTmanager implements the Commandable interface
+- Added MqttPool that interfaces the mqttworkers, to move code out of das.java
+- MqttPool implements the Commandable interface
 
 ### EmailWorker
 - Renamed EmailWork to Email and added fluid api

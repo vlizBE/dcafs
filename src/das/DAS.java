@@ -63,7 +63,7 @@ public class DAS implements DeadThreadListener {
     private TelnetServer telnet;
 
     private RealtimeValues rtvals;
-    private CommandReq commandReq;
+    private CommandPool commandPool;
     private IssueCollector issues;
 
     /* Managers & Pools */
@@ -144,8 +144,8 @@ public class DAS implements DeadThreadListener {
             rtvals = new RealtimeValues(issues);
             rtvals.addQueryWriting(dbManager);
 
-            commandReq = new CommandReq(rtvals, issues, workPath);
-            commandReq.setDatabaseManager(dbManager);
+            commandPool = new CommandPool(rtvals, issues, workPath);
+            commandPool.setDatabaseManager(dbManager);
 
             /* TransServer */
             addTransServer(-1);
@@ -199,12 +199,12 @@ public class DAS implements DeadThreadListener {
 
             /* Forwards */
             forwardPool = new ForwardPool( dQueue, settingsPath );
-            commandReq.addCommandable("filter", forwardPool);
-            commandReq.addCommandable("ff", forwardPool);
-            commandReq.addCommandable("math", forwardPool);
-            commandReq.addCommandable("mf", forwardPool);
-            commandReq.addCommandable("editor", forwardPool);
-            commandReq.addCommandable("ef", forwardPool);
+            commandPool.addCommandable("filter", forwardPool);
+            commandPool.addCommandable("ff", forwardPool);
+            commandPool.addCommandable("math", forwardPool);
+            commandPool.addCommandable("mf", forwardPool);
+            commandPool.addCommandable("editor", forwardPool);
+            commandPool.addCommandable("ef", forwardPool);
 
             /* Math Collectors */
             MathCollector.createFromXml( XMLfab.getRootChildren(settingsDoc,"dcafs","maths","*") ).forEach(
@@ -225,7 +225,7 @@ public class DAS implements DeadThreadListener {
                     }
             );
         }
-        commandReq.setDAS(this);
+        commandPool.setDAS(this);
         this.attachShutDownHook();
     }
     public DAS(boolean start) {
@@ -277,12 +277,12 @@ public class DAS implements DeadThreadListener {
 
     /* **************************************  C O M M A N D R E Q  ********************************************/
     /**
-     * Add a commandable to the CommandReq, this is the same as adding commands to dcafs
+     * Add a commandable to the CommandPool, this is the same as adding commands to dcafs
      * @param id The unique start command (so whatever is in front of the : )
      * @param cmd The commandable to add
      */
     public void addCommandable( String id, Commandable cmd ){
-        commandReq.addCommandable(id,cmd);
+        commandPool.addCommandable(id,cmd);
     }
     /* **************************************  R E A L T I M E V A L U E S ********************************************/
     /**
@@ -295,7 +295,7 @@ public class DAS implements DeadThreadListener {
         this.rtvals.copySetup(altered);
         this.rtvals = altered;
 
-        commandReq.setRealtimeValues(rtvals);
+        commandPool.setRealtimeValues(rtvals);
         rtvals.setIssueCollector(issues);
         labelWorker.setRealtimeValues(rtvals);
     }
@@ -311,7 +311,7 @@ public class DAS implements DeadThreadListener {
      */
     public void addTaskManager() {
 
-        taskManager = new TaskManager(workPath, rtvals, commandReq);
+        taskManager = new TaskManager(workPath, rtvals, commandPool);
 
         if (streampool != null)
             taskManager.setStreamPool(streampool);
@@ -330,7 +330,7 @@ public class DAS implements DeadThreadListener {
     public void addStreamPool() {
 
         streampool = new StreamPool(dQueue, issues, nettyGroup);
-        commandReq.setStreamPool(streampool);
+        commandPool.setStreamPool(streampool);
 
         if (debug) {
             Logger.info("Connecting to streams once because in debug.");
@@ -354,7 +354,7 @@ public class DAS implements DeadThreadListener {
     public void addLabelWorker() {
         if (this.labelWorker == null)
             labelWorker = new LabelWorker(dQueue);
-        labelWorker.setCommandReq(commandReq);
+        labelWorker.setCommandReq(commandPool);
         labelWorker.setRealtimeValues(rtvals);
         labelWorker.setDebugging(debug);
         labelWorker.setEventListener(this);
@@ -368,7 +368,7 @@ public class DAS implements DeadThreadListener {
             labelWorker.stopWorker();
         altered.setQueue(dQueue);
         labelWorker = altered;
-        labelWorker.setCommandReq(commandReq);
+        labelWorker.setCommandReq(commandPool);
         labelWorker.setRealtimeValues(rtvals);
         labelWorker.setDebugging(debug);
         labelWorker.setEventListener(this);
@@ -425,7 +425,7 @@ public class DAS implements DeadThreadListener {
         addLabelWorker();
         emailWorker = new EmailWorker(settingsDoc, dQueue);
         emailWorker.setEventListener(this);
-        commandReq.setEmailWorker(emailWorker);
+        commandPool.setEmailWorker(emailWorker);
     }
     public Optional<EmailSending> getEmailSender(){
         if(emailWorker!=null)
@@ -493,7 +493,7 @@ public class DAS implements DeadThreadListener {
         } else {
             Logger.error("No valid streampool");
         }
-        commandReq.setIssues(this.issues);
+        commandPool.setIssues(this.issues);
         rtvals.setIssueCollector(issues);
     }
     public IssueCollector getIssueCollector(){
@@ -620,7 +620,7 @@ public class DAS implements DeadThreadListener {
      */
     public void startAll() {
 
-        commandReq.getMethodMapping();
+        commandPool.getMethodMapping();
 
         if (labelWorker != null) {
             Logger.info("Starting BaseWorker...");

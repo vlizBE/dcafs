@@ -2,7 +2,7 @@ package worker;
 
 import com.stream.Readable;
 import com.stream.Writable;
-import das.CommandReq;
+import das.CommandPool;
 import das.RealtimeValues;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
@@ -40,7 +40,7 @@ public class LabelWorker implements Runnable, Labeller {
 	protected BlockingQueue<Datagram> dQueue = new LinkedBlockingQueue<>();      // The queue holding raw data for processing
 	private boolean goOn = true; // General process boolean, clean way of stopping thread
 
-	protected CommandReq reqData;
+	protected CommandPool reqData;
 
 	protected boolean debugMode = false;
 
@@ -100,10 +100,10 @@ public class LabelWorker implements Runnable, Labeller {
 	/**
 	 * Set the BaseReq for this worker to use
 	 *
-	 * @param commandReq The default BaseReq or extended one
+	 * @param commandPool The default BaseReq or extended one
 	 */
-	public void setCommandReq(CommandReq commandReq) {
-		this.reqData = commandReq;
+	public void setCommandReq(CommandPool commandPool) {
+		this.reqData = commandPool;
 	}
 
 	/**
@@ -513,7 +513,7 @@ public class LabelWorker implements Runnable, Labeller {
 		dQueue.add(d);
 	}
 	/* ******************************* D E F A U L T   S T U F F **************************************** */
-
+/*
 	public void doFILTER( Datagram d ){
 		String[] filter = d.label.split(":");
 
@@ -530,7 +530,7 @@ public class LabelWorker implements Runnable, Labeller {
 			}
 		}
 		procCount.incrementAndGet();
-	}
+	}*/
 	public void doTELNET(Datagram d) {
 		Writable dt = d.getWritable();
 		if (!d.getData().equals("status")) {

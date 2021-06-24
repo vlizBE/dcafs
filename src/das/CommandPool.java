@@ -7,8 +7,6 @@ import com.fazecast.jSerialComm.SerialPort;
 import com.stream.StreamPool;
 import com.stream.Writable;
 import com.stream.collector.FileCollector;
-import com.stream.forward.FilterForward;
-import com.stream.tcp.TcpServer;
 import com.telnet.TelnetCodes;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
@@ -43,7 +41,7 @@ import java.util.*;
  * Handles a server-side channel.
  */
 @SuppressWarnings("ALL")
-public class CommandReq {
+public class CommandPool {
 
 	private static DateTimeFormatter secFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -77,18 +75,18 @@ public class CommandReq {
 	 * Constructor requiring a link to the @see RealtimeValues for runtime values
 	 * @param rtvals The current RealtimeValues
 	 */
-	public CommandReq(RealtimeValues rtvals, String workPath){
+	public CommandPool(RealtimeValues rtvals, String workPath){
 		this.rtvals = rtvals;
 		this.workPath=workPath;
 		settingsPath = Path.of(workPath,"settings.xml");
-		Logger.info("CommandReq started with workpath: "+workPath);
+		Logger.info("CommandPool started with workpath: "+workPath);
 	}
 	/**
 	 * Constructor requiring a link to the @see RealtimeValues for runtime values and @see IssueCollector to notify problems
 	 * @param rtvals The current RealtimeValues
 	 * @param issues The collector for the issues created by the BaseReq
 	 */
-	public CommandReq(RealtimeValues rtvals, IssueCollector issues, String workPath) {
+	public CommandPool(RealtimeValues rtvals, IssueCollector issues, String workPath) {
 		this(rtvals,workPath);
 		this.issues = issues;
 	}
@@ -312,7 +310,7 @@ public class CommandReq {
 
 		ArrayList<Method> methods = new ArrayList<>(Arrays.asList(reqdata.getDeclaredMethods()));
 
-		if (reqdata.getSuperclass() == CommandReq.class) { // To make sure that both the child and the parent class are
+		if (reqdata.getSuperclass() == CommandPool.class) { // To make sure that both the child and the parent class are
 														// searched
 			methods.addAll(Arrays.asList(reqdata.getSuperclass().getDeclaredMethods()));
 		}
