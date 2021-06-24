@@ -56,6 +56,11 @@ public class Email {
 		this.attachment = attachment.toString();
 		return this;
 	}
+	public Email tempAttachment(String attachment){
+		this.attachment = attachment;
+		deleteAttachment=true;
+		return this;
+	}
 	public Email deleteAttachment(boolean delete){
 		deleteAttachment = delete;
 		return this;
