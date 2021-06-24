@@ -9,6 +9,7 @@ import com.sms.DigiWorker;
 import com.stream.StreamPool;
 import com.stream.collector.FileCollector;
 import com.stream.collector.MathCollector;
+import com.stream.forward.ForwardPool;
 import com.stream.tcp.TcpServer;
 import com.telnet.TelnetCodes;
 import com.telnet.TelnetServer;
@@ -65,10 +66,11 @@ public class DAS implements DeadThreadListener {
     private CommandReq commandReq;
     private IssueCollector issues;
 
-    /* Managers */
+    /* Managers & Pools */
     private DatabaseManager dbManager;
     private MQTTManager mqttManager;
     private TaskManager taskManager;
+    private ForwardPool forwardPool;
 
     private Map<String, FileCollector> fileCollectors = new HashMap<>();
 
@@ -138,8 +140,6 @@ public class DAS implements DeadThreadListener {
 
             issues = new IssueCollector();
 
-
-
             dbManager = new DatabaseManager(workPath);
 
             rtvals = new RealtimeValues(issues);
@@ -197,6 +197,15 @@ public class DAS implements DeadThreadListener {
             } else {
                 rtvals.getWaypoints().setXML(settingsDoc);
             }
+
+            /* Forwards */
+            forwardPool = new ForwardPool( dQueue, settingsPath );
+            commandReq.addCommandable("filter", forwardPool);
+            commandReq.addCommandable("ff", forwardPool);
+            commandReq.addCommandable("math", forwardPool);
+            commandReq.addCommandable("mf", forwardPool);
+            commandReq.addCommandable("editor", forwardPool);
+            commandReq.addCommandable("ef", forwardPool);
 
             /* Math Collectors */
             MathCollector.createFromXml( XMLfab.getRootChildren(settingsDoc,"dcafs","maths","*") ).forEach(
@@ -331,7 +340,7 @@ public class DAS implements DeadThreadListener {
             Logger.info("Connecting to streams once because in debug.");
             streampool.enableDebug();
         }
-        streampool.readSettingsFromXML(settingsDoc);
+        streampool.readSettingsFromXML(settingsPath);
     }
 
     public StreamPool getStreamPool() {

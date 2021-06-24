@@ -129,9 +129,6 @@ public class CommandReq {
 	public void setStreamPool(StreamPool streampool) {
 		this.streampool = streampool;
 	}
-	public Optional<FilterForward> getFilter(String id) {
-		return streampool.getFilter(id);
-	}
 	/**
 	 * To have access to the realtime values
 	 * 
@@ -348,6 +345,14 @@ public class CommandReq {
 			return UNKNOWN_CMD+": No "+id+" available";
 		}
 		return c.replyToCommand(new String[]{id,command},wr,false);
+	}
+	private String doCmd( String[] req, Writable wr){
+		var c = commandables.get(req[0]);
+		if( c==null) {
+			Logger.error("No "+req[0]+" available");
+			return UNKNOWN_CMD+": No "+req[0]+" available";
+		}
+		return c.replyToCommand(req,wr,false);
 	}
 	/* ******************************************  C O M M A N D S ****************************************************/
 	/**
@@ -578,6 +583,7 @@ public class CommandReq {
 	public String doSTOP(String[] request, Writable wr, boolean html ) {
 		if( streampool.removeForwarding(wr) )
 			return "Removed forwarding to "+wr.getID();
+		commandables.values().forEach( c -> c.removeWritable(wr) );
 		return "No matches found for "+wr.getID();
 	}
 	public String doRAW( String[] request, Writable wr, boolean html ){
@@ -588,11 +594,7 @@ public class CommandReq {
 		}
 	}
 	public String doMATH(String[] request, Writable wr, boolean html ){
-		if( streampool.addForwarding( "math:"+request[1], wr ) ){
-			return "Request for "+request[0]+":"+request[1]+" ok.";
-		}else{
-			return "Request for "+request[0]+":"+request[1]+" failed.";
-		}
+		return doCmd(request[0],request[1],wr);
 	}
 	public String doFILTER( String[] request, Writable wr, boolean html ){
 		if( streampool.addForwarding( "filter:"+request[1], wr ) ){
@@ -704,24 +706,6 @@ public class CommandReq {
 			return "No StreamPool defined.";
 		}
 		return streampool.replyToStreamsCmd(request[1], wr, html);
-	}
-	public String doFilterForward( String[] request, Writable wr, boolean html ){
-		if( streampool == null ){
-			return "No StreamPool defined.";
-		}
-		return streampool.replyToFilterCmd(request[1], wr, html);
-	}
-	public String doEditorForward( String[] request, Writable wr, boolean html ){
-		if( streampool == null ){
-			return "No StreamPool defined.";
-		}
-		return streampool.replyToEditorCmd(request[1], wr, html);
-	}
-	public String doMathForward( String[] request, Writable wr, boolean html ){
-		if( streampool == null ){
-			return "No StreamPool defined.";
-		}
-		return streampool.replyToMathCmd(request[1], wr, html);
 	}
 	public String doRIOS( String[] request, Writable wr, boolean html ){
 		if( request[1].equals("?") )

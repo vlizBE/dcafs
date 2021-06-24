@@ -64,7 +64,7 @@ public abstract class AbstractForward implements Writable {
             Logger.info(getID() +" -> Adding source "+source);
             if( valid ){
                 Logger.info(getID() +" -> Requesting data from "+source);
-                dQueue.add( Datagram.build( source ).label("system").writable(this) );
+                dQueue.add( Datagram.system( source ).writable(this) );
             }
             if( xmlOk )
                 writeToXML( XMLfab.withRoot(xml, "dcafs"));
