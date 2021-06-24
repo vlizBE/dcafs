@@ -14,7 +14,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 
-public class MQTTManager implements Commandable {
+public class MqttPool implements Commandable {
 
     Map<String, MqttWorker> mqttWorkers = new HashMap<>();
     Path settingsFile;
@@ -22,7 +22,7 @@ public class MQTTManager implements Commandable {
     RealtimeValues rtvals;
     BlockingQueue<Datagram> dQueue;
 
-    public MQTTManager( Path settingsFile, RealtimeValues rtvals, BlockingQueue<Datagram> dQueue ){
+    public MqttPool(Path settingsFile, RealtimeValues rtvals, BlockingQueue<Datagram> dQueue ){
         this.settingsFile=settingsFile;
         this.rtvals=rtvals;
         this.dQueue=dQueue;

@@ -4,7 +4,7 @@ import com.email.Email;
 import com.email.EmailSending;
 import com.email.EmailWorker;
 import com.hardware.i2c.I2CWorker;
-import com.mqtt.MQTTManager;
+import com.mqtt.MqttPool;
 import com.sms.DigiWorker;
 import com.stream.StreamPool;
 import com.stream.collector.FileCollector;
@@ -68,7 +68,7 @@ public class DAS implements DeadThreadListener {
 
     /* Managers & Pools */
     private DatabaseManager dbManager;
-    private MQTTManager mqttManager;
+    private MqttPool mqttPool;
     private TaskManager taskManager;
     private ForwardPool forwardPool;
 
@@ -128,8 +128,7 @@ public class DAS implements DeadThreadListener {
                 debug = XMLtools.getChildValueByTag(settings, "mode", "normal").equals("debug");
                 log = XMLtools.getChildValueByTag(settings, "mode", "normal").equals("log");
 
-                String tinylog = XMLtools.getChildValueByTag(settings,"tinylog",workPath);
-                System.setProperty("tinylog.directory", tinylog);
+                System.setProperty("tinylog.directory", XMLtools.getChildValueByTag(settings,"tinylog",workPath) );
 
                 if (debug) {
                     Logger.info("Program booting in DEBUG mode");
@@ -276,9 +275,6 @@ public class DAS implements DeadThreadListener {
                 .build();
     }
 
-    public Document getSettingsDoc() {
-        return XMLtools.readXML(settingsPath);
-    }
     /* **************************************  C O M M A N D R E Q  ********************************************/
     /**
      * Add a commandable to the CommandReq, this is the same as adding commands to dcafs
@@ -401,8 +397,8 @@ public class DAS implements DeadThreadListener {
     }
     /* ***************************************** M Q T T ******************************************************** */
     public void addMQTTManager(){
-        mqttManager = new MQTTManager(settingsPath,rtvals,dQueue);
-        addCommandable("mqtt",mqttManager);
+        mqttPool = new MqttPool(settingsPath,rtvals,dQueue);
+        addCommandable("mqtt", mqttPool);
     }
     /* *****************************************  T R A N S S E R V E R ***************************************** */
     /**
@@ -725,13 +721,13 @@ public class DAS implements DeadThreadListener {
                 }
             }
         }
-        if (mqttManager!=null && !mqttManager.getMqttWorkerIDs().isEmpty()) {
+        if (mqttPool !=null && !mqttPool.getMqttWorkerIDs().isEmpty()) {
             if (html) {
                 b.append("<br><b>MQTT</b><br>");
             } else {
                 b.append(TEXT_YELLOW).append(TEXT_CYAN).append("\r\n").append("MQTT").append("\r\n").append(UNDERLINE_OFF).append(TEXT_YELLOW);
             }
-            b.append(mqttManager.getMqttBrokersInfo()).append("\r\n");
+            b.append(mqttPool.getMqttBrokersInfo()).append("\r\n");
         }
 
         try {
@@ -803,9 +799,9 @@ public class DAS implements DeadThreadListener {
             join.add(digiWorker.getServerInfo());
             join.add(digiWorker.getSMSBook());
         }
-        if (mqttManager!=null) {
+        if (mqttPool !=null) {
             join.add("\r\n----MQTT----");
-            join.add(mqttManager.getMqttBrokersInfo());
+            join.add(mqttPool.getMqttBrokersInfo());
         }
         return join.toString();
     }
