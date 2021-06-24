@@ -139,6 +139,7 @@ public abstract class AbstractForward implements Writable {
         if( fw==null) // Can't work if this is null
             return false;
 
+        /* Attributes */
         id = XMLtools.getStringAttribute( fw, "id", "");
         if( id.isEmpty() ) // Cant work without id
             return false;
@@ -149,9 +150,35 @@ public abstract class AbstractForward implements Writable {
         if( !label.isEmpty() || log ){ // this counts as a target, so enable it
             valid=true;
         }
+
+        /* Sources */
         sources.clear();
+        addSource(XMLtools.getStringAttribute( fw, "src", ""));
+        XMLtools.getChildElements(fw, "src").forEach( ele ->sources.add(ele.getTextContent()) );
+
         rulesString.clear();
         Logger.info(id+" -> Reading from xml");
+        return true;
+    }
+
+    /**
+     * Write the basics that are the same for each forward
+     * @param fab An XMLfab with the forward as the current parent
+     * @return True no reason to fail for now
+     */
+    protected boolean writeBasicsToXML( XMLfab fab){
+        if( !label.isEmpty() )
+            fab.attr("label",label);
+
+        // Sources
+        if( sources.size()==1 ){
+            fab.attr("src",sources.get(0));
+        }else{
+            fab.content("");
+            fab.removeAttr("src"); // making sure there aren't any leftovers
+            fab.comment("Sources go here");
+            sources.forEach( src -> fab.addChild("src", src) );
+        }
         return true;
     }
     public void setInvalid(){valid=false;}

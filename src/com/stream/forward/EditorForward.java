@@ -77,7 +77,6 @@ public class EditorForward extends AbstractForward{
 
         return join.toString();
     }
-
     @Override
     protected boolean addData(String data) {
 
@@ -112,7 +111,16 @@ public class EditorForward extends AbstractForward{
 
     @Override
     public boolean writeToXML(XMLfab fab) {
-        return false;
+        fab.digRoot("editors");
+        fab.selectOrCreateParent("editor","id",id);
+
+        /* Attributes and nodes that are the same for all forwards fe.label and src */
+        writeBasicsToXML(fab);
+
+        /* If edits is stil empty, this means this is a blank add */
+        if( edits.isEmpty())
+            fab.addChild("edit",".").attr("type","xxx");
+        return fab.build()!=null;
     }
 
     @Override
@@ -122,18 +130,13 @@ public class EditorForward extends AbstractForward{
             return false;
 
         edits.clear();
-
-        addSource(XMLtools.getStringAttribute( editor, "src", ""));
-        XMLtools.getChildElements(editor, "src").forEach( ele ->sources.add(ele.getTextContent()) );
-
         if( XMLtools.hasChildByTag(editor,"edit") ) { // if rules are defined as nodes
             // Process all the types except 'start'
-            XMLtools.getChildElements(editor, "edit")
-                    .forEach( this::processNode );
+            XMLtools.getChildElements(editor, "edit").forEach( this::processNode );
         }else{
             processNode(editor);
         }
-        return false;
+        return true;
     }
     private void processNode( Element edit ){
         String deli = XMLtools.getStringAttribute(edit,"delimiter",",");

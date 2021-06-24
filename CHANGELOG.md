@@ -22,17 +22,18 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.10.0 (work in progress)
 
-To many breaking stuff, so version bump.
+To many breaking stuff, so version bump and update guide.
 
 ## Update guide from 0.9.x
 - databases node: replace 'setup' with 'flush' and 'flushtime' with 'age'
 - databases node: replace 'idle' attribute with 'idleclose' node
 - Tasklist: Replace the @fillin with {fillin}
+- FilterForward: rename source node to src node
 
 ### BaseReq
-- Renamed to CommandReq
-- Added interface Commandable, these can be given to commandreq to use as custom commands
-- Removed option from DAS to extend CommandReq, should now use the interface
+- Renamed to CommandPool
+- Added interface Commandable, these can be given to CommandPool to use as custom commands
+- Removed option from dcafs to extend CommandPool, should now use the interface
 
 ## DatabaseManager
 - BREAKING: renamed the setup node to flush and flushtime to age, move idle out of it
@@ -70,6 +71,7 @@ times with the given interval so trigger="waitfor:5s,5" will check 5 times with 
 <while interval="5s" checks="5">value below 10</while>
 ````
 - Added the attribute 'atstartup' for single tasks that shouldn't be started on startup, default true
+- Verify to string didn't take math into account
 
 ### DigiWorker
 - Added interface SMSSending to use instead of passing the queue
@@ -84,15 +86,16 @@ times with the given interval so trigger="waitfor:5s,5" will check 5 times with 
 
 ### Forwards
 - Moved the code out of StreamPool and into ForwardsPool
+- BREAKING Changed source node option to src in filterforward for consistency with mathforward & attribute  
 - ForwardsPool implements Commandable
 - No functionality change (normally), just code separation
+- EditorForward: now has addblank command, no idea yet on how to do the edits...
 
 ### Other
 - cmds command now supports regex, uses startswith by default (meaning appends .*)
 - Changed `update:setup` to `update:settings` because it's the settings file
 - Updated dependencies
-- Verify to string didn't take math into account
-- Triggered cmds now support having a command as content of an email:send,to,subject,content
+- Triggered cmds now support having a command as content of email:send,to,subject,content
 
 ### Bugfixes
 - update command still referred to scripts instead of tmscripts, now also looks up the path instead of assuming default 

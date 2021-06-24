@@ -197,9 +197,6 @@ public class MathForward extends AbstractForward {
                             fromStringToOPTYPE(XMLtools.getStringAttribute(ops,"type","complex")),
                             XMLtools.getStringAttribute(ops,"cmd",""),
                             ops.getTextContent()) );
-
-        XMLtools.getChildElements(math, "src").forEach( ele ->addSource(ele.getTextContent()) );
-        addSource( XMLtools.getStringAttribute( math, "src", ""));
         return true;
     }
     /**

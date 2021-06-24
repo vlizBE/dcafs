@@ -299,10 +299,35 @@ public class ForwardPool implements Commandable {
         String[] cmds = cmd.split(",");
 
         StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
-        FilterForward ff;
+        EditorForward ef;
         switch( cmds[0] ) {
             case "?":
+                join.add(TelnetCodes.TEXT_RED+"Purpose"+TelnetCodes.TEXT_YELLOW)
+                        .add("  If a next step in the processing needs something altered to the format or layout of the data")
+                        .add("  an editorforward can do this.");
+                join.add(TelnetCodes.TEXT_BLUE+"Notes"+TelnetCodes.TEXT_YELLOW)
+                        .add("  - Forward doesn't do anything if it doesn't have a target (label counts as target)")
+                        .add("  - ...");
+                join.add("").add(TelnetCodes.TEXT_GREEN+"Create a EditorForward"+TelnetCodes.TEXT_YELLOW);
+                join.add( "  ef:addblank,id<,source> -> Add a blank filter with an optional source, gets stored in xml.");
+
                 break;
+            case "addblank":
+                if( cmds.length<2)
+                    return "Not enough arguments, needs to be ef:addblank,id<,src,>";
+                if( getEditorForward(cmds[1]).isPresent() )
+                    return "Already editor with that id";
+
+                StringJoiner src = new StringJoiner(",");
+                for( int a=2;a<cmds.length;a++){
+                    src.add(cmds[a]);
+                }
+
+                ef = addEditor(cmds[1].toLowerCase(),src.toString());
+                if( ef == null)
+                    return "Something wrong with the command, filter not created";
+                ef.writeToXML( XMLfab.withRoot(settingsPath, "dcafs") );
+                return "Blank editor with id "+cmds[1]+ " created"+(cmds.length>2?", with source "+cmds[2]:"")+".";
             case "reload":
                 if( cmds.length == 2) {
                     Optional<Element> x = XMLfab.withRoot(settingsPath, "dcafs", "editors").getChild("editor", "id", cmds[1]);

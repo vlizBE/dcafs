@@ -94,18 +94,9 @@ public class FilterForward extends AbstractForward {
             fab.comment("Some info on what the "+id+" "+getXmlChildTag()+" does");
             fab.addParent(getXmlChildTag()).attr("id",id); // adds a parent to the root
         }
-        if( !label.isEmpty() )
-            fab.attr("label",label);
 
-        // Sources
-        if( sources.size()==1 ){
-            fab.attr("src",sources.get(0));
-        }else{
-            fab.content("");
-            fab.removeAttr("src"); // making sure there aren't any leftovers
-            fab.comment("Sources go here");
-            sources.forEach( src -> fab.addChild("source", src) );
-        }
+        writeBasicsToXML(fab);
+
         if( rules.isEmpty() )
             return fab.build()!=null;
 
@@ -131,10 +122,6 @@ public class FilterForward extends AbstractForward {
             return false;
 
         rules.clear();
-
-        addSource(XMLtools.getStringAttribute( filter, "src", ""));
-
-        XMLtools.getChildElements(filter, "source").forEach( ele ->sources.add(ele.getTextContent()) );
 
         if( XMLtools.hasChildByTag(filter,"rule") ){ // if rules are defined as nodes
             // Process all the types except 'start'
