@@ -22,7 +22,7 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.10.0 (work in progress)
 
-To many breaking stuff, so version bump and update guide.
+Too much breaking stuff, so version bump and update guide.
 
 ## Update guide from 0.9.x
 - databases node: replace 'setup' with 'flush' and 'flushtime' with 'age'
