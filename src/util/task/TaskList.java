@@ -1050,22 +1050,25 @@ public class TaskList implements CollectorFuture {
 		line = line.replace("{rand20}", ""+(int)Math.rint(1+Math.random()*19));
 		line = line.replace("{rand100}", ""+(int)Math.rint(1+Math.random()*99));
 
-		String[] ipmac = line.split("@");
-		for( int a=1;a<ipmac.length;a++){
-			String result="";
-			if( ipmac[a].startsWith("mac:")){				
-				result = Tools.getMAC( ipmac[a].substring(4) );
-			}else if( ipmac[a].startsWith("ipv4:")){
-				result = Tools.getIP(ipmac[a].substring(5),false);				
-			}else if( ipmac[a].startsWith("ipv6:")){
-				result = Tools.getIP(ipmac[a].substring(5),false);
-			}
-			if( result.isBlank() ){
-				Logger.tag("TASKS").error("Couldn't find result for "+ipmac[a]);
-			}else{
-				line = line.replace(ipmac[a],result);
-			}
-		}		
+		String to = "";
+		int i = line.indexOf("{ipv4:");
+		if( i !=-1 ){
+			int end = line.substring(i).indexOf("}");
+			to = Tools.getIP(line.substring(i+6,i+end),true);
+			line = line.replace(line.substring(i,i+end+1),to);
+		}
+		i = line.indexOf("{ipv6:");
+		if( i !=-1 ){
+			int end = line.substring(i).indexOf("}");
+			to = Tools.getIP(line.substring(i+6,i+end),false);
+			line = line.replace(line.substring(i,i+end+1),to);
+		}
+		i = line.indexOf("{mac:");
+		if( i !=-1 ){
+			int end = line.substring(i).indexOf("}");
+			to = Tools.getMAC( line.substring(i+5,i+end) );
+			line = line.replace(line.substring(i,i+end+1),to);
+		}
     	line = line.replace("[EOL]", "\r\n");
     	return line;
     }
