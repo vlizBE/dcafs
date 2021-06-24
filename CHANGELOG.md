@@ -82,6 +82,11 @@ times with the given interval so trigger="waitfor:5s,5" will check 5 times with 
 - Renamed EmailWork to Email and added fluid api
 - Removed regular options in favor of the fluid api and applied it throughout
 
+### Forwards
+- Moved the code out of StreamPool and into ForwardsPool
+- ForwardsPool implements Commandable
+- No functionality change (normally), just code separation
+
 ### Other
 - cmds command now supports regex, uses startswith by default (meaning appends .*)
 - Changed `update:setup` to `update:settings` because it's the settings file
