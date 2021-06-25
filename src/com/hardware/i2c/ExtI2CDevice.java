@@ -1,7 +1,7 @@
 package com.hardware.i2c;
 
 import com.diozero.api.I2CDevice;
-import com.stream.Writable;
+import com.Writable;
 import org.tinylog.Logger;
 
 import java.util.ArrayList;

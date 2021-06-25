@@ -4,7 +4,7 @@ import com.email.Email;
 import com.email.EmailSending;
 import com.sms.SMSSending;
 import com.stream.StreamPool;
-import com.stream.collector.CollectorFuture;
+import com.collector.CollectorFuture;
 import das.CommandPool;
 import das.RealtimeValues;
 import org.apache.commons.lang3.math.NumberUtils;

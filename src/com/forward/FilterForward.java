@@ -1,6 +1,6 @@
-package com.stream.forward;
+package com.forward;
 
-import com.stream.Writable;
+import com.Writable;
 import org.apache.commons.lang3.StringUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;

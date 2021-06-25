@@ -156,6 +156,7 @@ public class XMLfab {
     /**
      * Get a Element stream with all the elements that match the last item of the given root.
      * fe. trunk,branch,twig will return all the twig elements
+     * Note that twig can be * because this is considered a special tag that acts as a wildcard
      * @param xmlPath The path to the document
      * @param roots The roots to look for
      * @return The elements found at the end of the root
@@ -173,7 +174,8 @@ public class XMLfab {
 
     /**
      * Get a Element stream with all the elements that match the last item of the given root.
-     * fe. trunk,branch,twig will return all the twig elements
+     * fe. trunk,branch,twig will return all the twig elements.
+     * Note that twig can be * because this is considered a special tag that acts as a wildcard
      * @param xml The source document
      * @param roots The roots to look for
      * @return The elements found at the end of the root

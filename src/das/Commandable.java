@@ -1,6 +1,6 @@
 package das;
 
-import com.stream.Writable;
+import com.Writable;
 
 public interface Commandable {
     String replyToCommand(String[] request, Writable wr, boolean html);

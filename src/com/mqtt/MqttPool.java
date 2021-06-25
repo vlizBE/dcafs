@@ -1,6 +1,6 @@
 package com.mqtt;
 
-import com.stream.Writable;
+import com.Writable;
 import com.telnet.TelnetCodes;
 import das.Commandable;
 import das.RealtimeValues;

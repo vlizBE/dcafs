@@ -1,6 +1,6 @@
 package com.telnet;
 
-import com.stream.Writable;
+import com.Writable;
 import io.netty.channel.*;
 import io.netty.handler.codec.TooLongFrameException;
 import org.tinylog.Logger;

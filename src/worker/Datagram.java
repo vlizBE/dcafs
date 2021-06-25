@@ -1,9 +1,9 @@
 package worker;
 
-import com.stream.Writable;
+import com.Writable;
 
 import java.time.Instant;
-import com.stream.Readable;
+import com.Readable;
 
 /**
  * Simple storage class that holds the raw data before processing

@@ -1,6 +1,6 @@
 package worker;
 
-import com.stream.Writable;
+import com.Writable;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.StringJoiner;
 import java.util.concurrent.*;
 
-import com.stream.Readable;
+import com.Readable;
 /**
  * This is a worker that simulates receiving data from devices. In order to do
  * that it reads the data from a previously made raw file, puts each line in the

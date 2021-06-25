@@ -7,9 +7,9 @@ import com.hardware.i2c.I2CWorker;
 import com.mqtt.MqttPool;
 import com.sms.DigiWorker;
 import com.stream.StreamPool;
-import com.stream.collector.FileCollector;
-import com.stream.collector.MathCollector;
-import com.stream.forward.ForwardPool;
+import com.collector.FileCollector;
+import com.collector.MathCollector;
+import com.forward.ForwardPool;
 import com.stream.tcp.TcpServer;
 import com.telnet.TelnetCodes;
 import com.telnet.TelnetServer;
@@ -41,7 +41,7 @@ import java.util.concurrent.*;
 
 public class DAS implements DeadThreadListener {
 
-    private static final String version = "0.10.0";
+    private static final String version = "0.10.1";
 
     private Path settingsPath = Path.of("settings.xml");
     private String workPath=Path.of("").toString();
@@ -73,8 +73,6 @@ public class DAS implements DeadThreadListener {
     private ForwardPool forwardPool;
 
     private Map<String, FileCollector> fileCollectors = new HashMap<>();
-
-
 
     private boolean debug = false;
     private boolean log = false;

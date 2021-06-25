@@ -1,6 +1,6 @@
 package com.mqtt;
 
-import com.stream.Writable;
+import com.Writable;
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.tinylog.Logger;

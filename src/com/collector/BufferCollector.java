@@ -1,4 +1,4 @@
-package com.stream.collector;
+package com.collector;
 
 import org.tinylog.Logger;
 

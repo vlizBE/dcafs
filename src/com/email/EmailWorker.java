@@ -1,8 +1,8 @@
 package com.email;
 
-import com.stream.Writable;
-import com.stream.collector.BufferCollector;
-import com.stream.collector.CollectorFuture;
+import com.Writable;
+import com.collector.BufferCollector;
+import com.collector.CollectorFuture;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;

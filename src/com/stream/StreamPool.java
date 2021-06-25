@@ -1,7 +1,8 @@
 package com.stream;
 
-import com.stream.collector.CollectorFuture;
-import com.stream.collector.ConfirmCollector;
+import com.Writable;
+import com.collector.CollectorFuture;
+import com.collector.ConfirmCollector;
 import com.stream.serialport.ModbusStream;
 import com.stream.serialport.MultiStream;
 import com.stream.serialport.SerialStream;
@@ -98,7 +99,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 	 * @param id The stream to look for
 	 * @return The optional writable or an empty one
 	 */
-	public Optional<Writable> getWritable( String id ){
+	public Optional<Writable> getWritable(String id ){
 		// Get the stream, check if it's writable if so get the writable or return an empty optional if not
 		return getStream(id).filter(BaseStream::isWritable).map(bs -> (Writable) bs);
 		//TODO Check if this still works

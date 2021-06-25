@@ -2,7 +2,7 @@ package com.stream.serialport;
 
 import com.fazecast.jSerialComm.*;
 import com.stream.BaseStream;
-import com.stream.Writable;
+import com.Writable;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.tools.Tools;

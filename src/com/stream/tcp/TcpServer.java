@@ -1,7 +1,7 @@
 package com.stream.tcp;
 
 import com.stream.StreamListener;
-import com.stream.Writable;
+import com.Writable;
 import das.Commandable;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;

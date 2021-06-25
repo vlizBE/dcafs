@@ -1,4 +1,4 @@
-package com.stream.forward;
+package com.forward;
 
 import org.tinylog.Logger;
 import org.w3c.dom.Element;

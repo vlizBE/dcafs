@@ -1,7 +1,7 @@
 package com.stream.udp;
 
 import com.stream.BaseStream;
-import com.stream.Writable;
+import com.Writable;
 import com.stream.tcp.TcpHandler;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;

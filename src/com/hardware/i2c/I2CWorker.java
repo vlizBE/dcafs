@@ -5,7 +5,7 @@ import com.diozero.api.DeviceBusyException;
 import com.diozero.api.I2CDevice;
 import com.diozero.api.RuntimeIOException;
 import com.hardware.i2c.I2CCommand.CommandStep;
-import com.stream.Writable;
+import com.Writable;
 import com.telnet.TelnetCodes;
 import das.Commandable;
 import org.apache.commons.lang3.ArrayUtils;

@@ -1,7 +1,7 @@
 package com.stream.tcp;
 
 import com.stream.StreamListener;
-import com.stream.Writable;
+import com.Writable;
 import io.netty.channel.*;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.timeout.IdleState;

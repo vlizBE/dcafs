@@ -1,4 +1,4 @@
-package com.stream.forward;
+package com.forward;
 
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;

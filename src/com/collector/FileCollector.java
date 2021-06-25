@@ -1,4 +1,4 @@
-package com.stream.collector;
+package com.collector;
 
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;

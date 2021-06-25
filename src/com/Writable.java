@@ -1,4 +1,4 @@
-package com.stream;
+package com;
 
 public interface Writable {
     /**

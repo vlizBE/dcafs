@@ -1,4 +1,6 @@
-package com.stream;
+package com;
+
+import com.Writable;
 
 public interface Readable {
 

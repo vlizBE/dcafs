@@ -1,6 +1,6 @@
 package com.stream.udp;
 
-import com.stream.Writable;
+import com.Writable;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;

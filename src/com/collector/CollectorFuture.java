@@ -1,4 +1,4 @@
-package com.stream.collector;
+package com.collector;
 
 /**
  * Allows a class to monitor the result of a collector

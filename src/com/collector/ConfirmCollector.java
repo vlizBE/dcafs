@@ -1,6 +1,6 @@
-package com.stream.collector;
+package com.collector;
 
-import com.stream.Writable;
+import com.Writable;
 import org.tinylog.Logger;
 
 import java.util.ArrayList;

@@ -13,14 +13,16 @@ From 0.5.0 onwards, this should be better documented...
 - Trans command >>>signin:id to claim to be a certain id and pass the ip test
 
 ## Work in progress
-## 0.9.x
+## 0.10.x
 - Goals for this version series (removed when as they are done)
   * Code cleanup
     * Bring javadoc up to date
     * Decide on final class structure (mainly StreamPool)   
   * Rework the TaskManager (will be trigger for 0.10.0)
 
-## 0.10.0 (work in progress)
+## 0.10.1 (work in progress)
+
+## 0.10.0 (24/06/21)
 
 Too much breaking stuff, so version bump and update guide.
 
@@ -30,12 +32,14 @@ Too much breaking stuff, so version bump and update guide.
 - Tasklist: Replace the @fillin with {fillin}
 - FilterForward: rename source node to src node
 
+## Changes
+
 ### BaseReq
 - Renamed to CommandPool
 - Added interface Commandable, these can be given to CommandPool to use as custom commands
 - Removed option from dcafs to extend CommandPool, should now use the interface
 
-## DatabaseManager
+### DatabaseManager
 - BREAKING: renamed the setup node to flush and flushtime to age, move idle out of it
 - Added interface for simple querying, used by realtimevalues
 
@@ -82,6 +86,15 @@ times with the given interval so trigger="waitfor:5s,5" will check 5 times with 
 
 ### EmailWorker
 - Renamed EmailWork to Email and added fluid api
+```java
+var email = new EmailWork(to,subject,content,attachment,deleteattachment);
+//became
+var email = Email.to(to).subject(subject).content(content).tempAttachment(attachment);
+// Also possible
+Email.to(to).from(from);
+// Special case
+var adminEmail = Email.toAdminAbout(subject);
+```  
 - Removed regular options in favor of the fluid api and applied it throughout
 
 ### Forwards

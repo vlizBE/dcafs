@@ -1,7 +1,7 @@
 package com.stream.tcp;
 
 import com.stream.StreamListener;
-import com.stream.Writable;
+import com.Writable;
 import io.netty.channel.*;
 import org.tinylog.Logger;
 import worker.Datagram;

@@ -1,6 +1,6 @@
-package com.stream.forward;
+package com.forward;
 
-import com.stream.Writable;
+import com.Writable;
 import com.telnet.TelnetCodes;
 import das.Commandable;
 import org.apache.commons.lang3.ArrayUtils;

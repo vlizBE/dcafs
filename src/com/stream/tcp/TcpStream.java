@@ -1,7 +1,7 @@
 package com.stream.tcp;
 
 import com.stream.BaseStream;
-import com.stream.Writable;
+import com.Writable;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
