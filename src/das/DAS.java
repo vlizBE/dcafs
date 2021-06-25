@@ -6,7 +6,7 @@ import com.email.EmailWorker;
 import com.hardware.i2c.I2CWorker;
 import com.mqtt.MqttPool;
 import com.sms.DigiWorker;
-import com.stream.StreamPool;
+import com.stream.StreamManager;
 import com.collector.FileCollector;
 import com.collector.MathCollector;
 import com.forward.ForwardPool;
@@ -58,7 +58,7 @@ public class DAS implements DeadThreadListener {
     private I2CWorker i2cWorker;
 
     /* */
-    private StreamPool streampool;
+    private StreamManager streampool;
     private TcpServer trans;
     private TelnetServer telnet;
 
@@ -157,7 +157,7 @@ public class DAS implements DeadThreadListener {
             /* ValMaps */
             loadValMaps(true);
 
-            /* StreamPool */
+            /* StreamManager */
             addStreamPool();
 
             /* EmailWorker */
@@ -327,7 +327,7 @@ public class DAS implements DeadThreadListener {
      */
     public void addStreamPool() {
 
-        streampool = new StreamPool(dQueue, issues, nettyGroup);
+        streampool = new StreamManager(dQueue, issues, nettyGroup);
         commandPool.setStreamPool(streampool);
 
         if (debug) {
@@ -337,7 +337,7 @@ public class DAS implements DeadThreadListener {
         streampool.readSettingsFromXML(settingsPath);
     }
 
-    public StreamPool getStreamPool() {
+    public StreamManager getStreamPool() {
         if (streampool == null) {
             Logger.warn("No Streampool defined");
             return null;

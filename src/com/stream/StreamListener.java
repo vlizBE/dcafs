@@ -1,7 +1,7 @@
 package com.stream;
 
 /**
- * Allow a stream to give feedback to the class managing the stream (fe. StreamPool)
+ * Allow a stream to give feedback to the class managing the stream (fe. StreamManager)
  */
 public interface StreamListener {
     

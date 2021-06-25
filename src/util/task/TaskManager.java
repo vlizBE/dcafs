@@ -2,7 +2,7 @@ package util.task;
 
 import com.email.EmailSending;
 import com.sms.SMSSending;
-import com.stream.StreamPool;
+import com.stream.StreamManager;
 import com.Writable;
 import das.CommandPool;
 import das.Commandable;
@@ -26,7 +26,7 @@ public class TaskManager implements Commandable {
     HashMap<String, TaskList> tasklists = new HashMap<>();
     RealtimeValues rtvals;
     CommandPool cmdReq;
-    StreamPool streamPool;
+    StreamManager streamManager;
     EmailSending emailSender;
     SMSSending smsSender;
 
@@ -38,8 +38,8 @@ public class TaskManager implements Commandable {
         this.cmdReq=cmdReq;
 
     }
-    public void setStreamPool(StreamPool streamPool){
-        this.streamPool=streamPool;
+    public void setStreamPool(StreamManager streamManager){
+        this.streamManager = streamManager;
     }
     public void setEmailSending(EmailSending emailSender ){
         this.emailSender=emailSender;
@@ -63,7 +63,7 @@ public class TaskManager implements Commandable {
         }
     }
     public void addTaskList( String id, TaskList tl){
-        tl.setStreamPool(streamPool);
+        tl.setStreamPool(streamManager);
         tl.setCommandReq(cmdReq);
         tl.setWorkPath(workPath);
         tl.setEmailSending(emailSender);

@@ -35,7 +35,7 @@ import java.util.concurrent.*;
  * data from it. It uses the internal class StreamDescriptor to hold this
  * information. All connections are made using the Netty 4.x library.
  */
-public class StreamPool implements StreamListener, CollectorFuture {
+public class StreamManager implements StreamListener, CollectorFuture {
 
 	private BlockingQueue<Datagram> dQueue; // Holds the data for the DataWorker
 
@@ -60,12 +60,12 @@ public class StreamPool implements StreamListener, CollectorFuture {
 	private static final String XML_PARENT_TAG="streams";
 	private static final String XML_CHILD_TAG="stream";
 
-	public StreamPool(BlockingQueue<Datagram> dQueue, IssueCollector issues, EventLoopGroup nettyGroup ) {
+	public StreamManager(BlockingQueue<Datagram> dQueue, IssueCollector issues, EventLoopGroup nettyGroup ) {
 		this.dQueue = dQueue;
 		this.issues = issues;	
 		this.group = nettyGroup;	
 	}
-	public StreamPool(BlockingQueue<Datagram> dQueue, IssueCollector issues) {
+	public StreamManager(BlockingQueue<Datagram> dQueue, IssueCollector issues) {
 		this(dQueue,issues, new NioEventLoopGroup());	
 	}
 
@@ -390,7 +390,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 	}
 	/* ***************************** A D D I N G C H A N N E L S ******************************************/
 	/**
-	 * Checks whether or not StreamPool info can be found in the settings file.
+	 * Checks whether or not StreamManager info can be found in the settings file.
 	 * 
 	 * @param xml The settings file
 	 * @return True if settings were found

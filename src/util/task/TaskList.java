@@ -3,7 +3,7 @@ package util.task;
 import com.email.Email;
 import com.email.EmailSending;
 import com.sms.SMSSending;
-import com.stream.StreamPool;
+import com.stream.StreamManager;
 import com.collector.CollectorFuture;
 import das.CommandPool;
 import das.RealtimeValues;
@@ -39,7 +39,7 @@ public class TaskList implements CollectorFuture {
 	/* The different outputs */
 	EmailSending emailer = null; // Reference to the email send, so emails can be send
 	SMSSending smsSender = null; 	// Reference to the sms queue, so sms's can be send
-	StreamPool streampool; 			// Reference to the streampool, so sensors can be talked to
+	StreamManager streampool; 			// Reference to the streampool, so sensors can be talked to
 	RealtimeValues rtvals;
 
 	CommandPool commandPool; // Source to get the data from nexus
@@ -103,7 +103,7 @@ public class TaskList implements CollectorFuture {
 	 * 
 	 * @param streampool The streampool to set
 	 */
-	public void setStreamPool(StreamPool streampool) {
+	public void setStreamPool(StreamManager streampool) {
 		this.streampool = streampool;
 	}
 
@@ -714,7 +714,7 @@ public class TaskList implements CollectorFuture {
 					case STREAM: // Send the value to a device
 						if (streampool == null) { // Can't send anything if the streampool is not defined
 							Logger.tag(TINY_TAG).error("[" + id + "] Wanted to output to a stream (" + task.stream
-									+ "), but no StreamPool defined.");
+									+ "), but no StreamManager defined.");
 							return false;
 						}
 

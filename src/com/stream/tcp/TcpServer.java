@@ -82,7 +82,7 @@ public class TcpServer implements StreamListener, Commandable {
 	}
 
 	/**
-	 * Checks whether or not StreamPool info can be found in the settings file.
+	 * Checks whether or not StreamManager info can be found in the settings file.
 	 * 
 	 * @param xml The settings file
 	 * @return True if settings were found

@@ -4,7 +4,7 @@ import com.email.Email;
 import com.email.EmailSending;
 import com.email.EmailWorker;
 import com.fazecast.jSerialComm.SerialPort;
-import com.stream.StreamPool;
+import com.stream.StreamManager;
 import com.Writable;
 import com.collector.FileCollector;
 import com.telnet.TelnetCodes;
@@ -48,7 +48,7 @@ public class CommandPool {
 	private HashMap<String,Commandable> commandables = new HashMap<>();
 
 	private RealtimeValues rtvals; // To have access to the current values
-	private StreamPool streampool = null; // To be able to interact with attached devices
+	private StreamManager streampool = null; // To be able to interact with attached devices
 	private EmailWorker emailWorker; // To be able to send emails and get status
 	private IssueCollector issues=null;
 	private DatabaseManager dbManager;
@@ -124,7 +124,7 @@ public class CommandPool {
 	 *
 	 * @param streampool  A reference to the streampool
 	 */
-	public void setStreamPool(StreamPool streampool) {
+	public void setStreamPool(StreamManager streampool) {
 		this.streampool = streampool;
 	}
 	/**
@@ -579,7 +579,7 @@ public class CommandPool {
 		return doCmd("ts","forward,"+request[1],wr);
 	}
 	public String doSTOP(String[] request, Writable wr, boolean html ) {
-		if( streampool.removeForwarding(wr) )
+		if( streampool.removeWritable(wr) )
 			return "Removed forwarding to "+wr.getID();
 		commandables.values().forEach( c -> c.removeWritable(wr) );
 		return "No matches found for "+wr.getID();
@@ -692,7 +692,7 @@ public class CommandPool {
 		}
 	}
 	/**
-	 * Execute commands associated with the @see StreamPool
+	 * Execute commands associated with the @see StreamManager
 	 * 
 	 * @param request The full command split on the first :
 	 * @param wr The writable of the source of the command
@@ -701,9 +701,9 @@ public class CommandPool {
 	 */
 	public String doStreamS(String[] request, Writable wr, boolean html ){
 		if( streampool == null ){
-			return "No StreamPool defined.";
+			return "No StreamManager defined.";
 		}
-		return streampool.replyToStreamsCmd(request[1], wr, html);
+		return streampool.replyToCommand(request[1], wr, html);
 	}
 	public String doRIOS( String[] request, Writable wr, boolean html ){
 		if( request[1].equals("?") )
@@ -712,7 +712,7 @@ public class CommandPool {
 	}
 	public String doH_( String[] request, Writable wr, boolean html ){
 		if( streampool == null )
-			return "No StreamPool defined.";
+			return "No StreamManager defined.";
 
 		if( request[1].equals("?") ){
 			return "Hx:y -> Send the hex y to stream x";
@@ -740,7 +740,7 @@ public class CommandPool {
 	public String doS_( String[] request, Writable wr, boolean html ){	
 		
 		if( streampool == null )
-			return "No StreamPool defined.";
+			return "No StreamManager defined.";
 
 		if( request[1].equals("?") ){
 			return "Sx:y -> Send the string y to stream x";
@@ -1035,7 +1035,7 @@ public class CommandPool {
 			return " -> Clear the datarequests";
 		if( wr != null ){
 			rtvals.removeRequest(wr);
-			streampool.removeForwarding(wr);
+			streampool.removeWritable(wr);
 			commandables.values().forEach( c -> c.removeWritable(wr) );
 		}
 		return "Clearing all data requests\r\n";
