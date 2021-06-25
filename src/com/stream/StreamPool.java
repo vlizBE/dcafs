@@ -37,26 +37,26 @@ import java.util.concurrent.*;
  */
 public class StreamPool implements StreamListener, CollectorFuture {
 
-	BlockingQueue<Datagram> dQueue; // Holds the data for the DataWorker
+	private BlockingQueue<Datagram> dQueue; // Holds the data for the DataWorker
 
 	// Netty 
-	Bootstrap bootstrapTCP;		// Bootstrap for TCP connections
-	Bootstrap bootstrapUDP;	  	// Bootstrap for UDP connections
+	private Bootstrap bootstrapTCP;		// Bootstrap for TCP connections
+	private Bootstrap bootstrapUDP;	  	// Bootstrap for UDP connections
 
-	EventLoopGroup group;		    // Event loop used by the netty stuff
+	private EventLoopGroup group;		    // Event loop used by the netty stuff
 
-	IssueCollector issues;			// Handles the issues/problems that arise
-	int retryDelayMax = 30;			// The minimum time between reconnection attempts
-	int retryDelayIncrement = 5;	// How much the delay increases between attempts
+	private IssueCollector issues;			// Handles the issues/problems that arise
+	private int retryDelayMax = 30;			// The minimum time between reconnection attempts
+	private int retryDelayIncrement = 5;	// How much the delay increases between attempts
 
-	HashMap<String, ConfirmCollector> confirmCollectors = new HashMap<>();
+	private HashMap<String, ConfirmCollector> confirmCollectors = new HashMap<>();
 
-	LinkedHashMap<String,BaseStream> streams = new LinkedHashMap<>();
+	private LinkedHashMap<String,BaseStream> streams = new LinkedHashMap<>();
 
-	Path settingsPath = Path.of("settings.xml"); // Path to the xml file
-	boolean debug = false; // Whether or not in debug mode, gives more feedback
+	private Path settingsPath = Path.of("settings.xml"); // Path to the xml file
+	private boolean debug = false; // Whether or not in debug mode, gives more feedback
 
-	ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(); // scheduler for the connection attempts
+	private ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(); // scheduler for the connection attempts
 	private static final String XML_PARENT_TAG="streams";
 	private static final String XML_CHILD_TAG="stream";
 
@@ -354,10 +354,10 @@ public class StreamPool implements StreamListener, CollectorFuture {
 	 */
 	public String reloadStream( String id ) {
 		
-		BaseStream stream = this.streams.get(id.toLowerCase());
+		BaseStream stream = streams.get(id.toLowerCase());
 
-		Logger.info("Reloading "+id+ " from "+ this.settingsPath.toAbsolutePath());
-		Document xmlDoc = XMLtools.readXML(this.settingsPath);
+		Logger.info("Reloading "+id+ " from "+ settingsPath.toAbsolutePath());
+		Document xmlDoc = XMLtools.readXML(settingsPath);
 		if( xmlDoc != null ){
 			Element streamElement = XMLtools.getFirstElementByTag(xmlDoc, XML_PARENT_TAG);
 			var child = XMLfab.withRoot(settingsPath,"dcafs","streams").getChild("stream","id",id);
@@ -377,7 +377,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 			}
 
 		}else{
-			Logger.error("Failed to read xml file at "+ this.settingsPath.toAbsolutePath());
+			Logger.error("Failed to read xml file at "+ settingsPath.toAbsolutePath());
 			return "Failed to read xml";
 		}
 	}
@@ -586,7 +586,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 	 * @param html Whether or not the answer should use html or regular line endings
 	 * @return The answer or Unknown Command if the question wasn't understood
 	 */
-	public String replyToStreamsCmd(String request, Writable wrOri, boolean html ){
+	public String replyToCommand(String request, Writable wrOri, boolean html ){
 
 		String nl = html?"<br>":"\r\n";
 
@@ -1014,7 +1014,7 @@ public class StreamPool implements StreamListener, CollectorFuture {
 	 * @param wr The writable to remove
 	 * @return True if any were removed
 	 */
-	public boolean removeForwarding(Writable wr) {
+	public boolean removeWritable(Writable wr) {
 		boolean removed=false;
 		for( BaseStream bs : streams.values() ){
 			if( bs.removeTarget(wr) )
@@ -1039,6 +1039,11 @@ public class StreamPool implements StreamListener, CollectorFuture {
 				break;
 		}
 	}
+
+	/**
+	 * Remove the confirmCollector with the given id from the hashmap
+	 * @param id The id to look for
+	 */
 	public void removeConfirm(String id){
 		if( confirmCollectors.values().removeIf( cc -> cc.getID().equalsIgnoreCase(id)) ){
 			Logger.info("ConfirmCollector removed: "+id);
