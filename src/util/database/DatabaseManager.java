@@ -3,26 +3,22 @@ package util.database;
 import org.influxdb.dto.Point;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import util.xml.XMLfab;
-import util.xml.XMLtools;
 
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 public class DatabaseManager implements QueryWriting{
     
     private final Map<String, SQLiteDB> lites = new HashMap<>();
     private final Map<String, SQLDB> sqls = new HashMap<>();
-    private final Map<String, Influx> influxes = new HashMap<>();
+    private final Map<String, InfluxDB> influxes = new HashMap<>();
 
     private static final int CHECK_INTERVAL=5;
     private final ScheduledExecutorService scheduler;// scheduler for the request data action
@@ -67,7 +63,7 @@ public class DatabaseManager implements QueryWriting{
         sqls.put(id, db);
         return db;
     }
-    public Influx addInfluxDB( String id, Influx db){
+    public InfluxDB addInfluxDB(String id, InfluxDB db){
         influxes.put(id,db);
         return db;
     }
@@ -116,7 +112,7 @@ public class DatabaseManager implements QueryWriting{
                 .forEach( db -> {
                                     switch(db.getAttribute("type")){
                                         case "influx":
-                                            addInfluxDB( db.getAttribute("id"), Influx.readFromXML(db) );
+                                            addInfluxDB( db.getAttribute("id"), InfluxDB.readFromXML(db) );
                                             break;
                                         case "":break;
                                         default:
@@ -194,9 +190,9 @@ public class DatabaseManager implements QueryWriting{
     }
     @Override
     public boolean writeInfluxPoint( String id, Point p){
-        for( Influx influx : influxes.values() ){
-            if( influx.getID().equalsIgnoreCase(id)) {
-                influx.writePoint(p);
+        for( InfluxDB influxDB : influxes.values() ){
+            if( influxDB.getID().equalsIgnoreCase(id)) {
+                influxDB.writePoint(p);
                 return true;
             }
         }
@@ -224,7 +220,7 @@ public class DatabaseManager implements QueryWriting{
                     Logger.error(e);
                 }
             }
-            for( Influx db : influxes.values() ){
+            for( InfluxDB db : influxes.values() ){
                 try{
                     db.checkState(CHECK_INTERVAL);
                 }catch(Exception e){

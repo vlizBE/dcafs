@@ -1,7 +1,6 @@
 package util.database;
 
 import org.apache.commons.lang3.StringUtils;
-import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDBFactory;
 import org.influxdb.InfluxDBIOException;
 import org.influxdb.dto.Point;
@@ -19,9 +18,9 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
-public class Influx extends Database{
+public class InfluxDB extends Database{
 
-    InfluxDB influxDB;
+    org.influxdb.InfluxDB influxDB;
     String dbname;
     HashMap<String,Measurement> measurements = new HashMap<>();
     ArrayList<Point> pointBuffer = new ArrayList<>();
@@ -30,7 +29,7 @@ public class Influx extends Database{
         INTEGER, FLOAT, STRING, TIMESTAMP
     }
 
-    public Influx( String address, String dbname, String user, String pass){
+    public InfluxDB(String address, String dbname, String user, String pass){
         this.user=user;
         this.pass=pass;
         irl=address;
@@ -40,7 +39,7 @@ public class Influx extends Database{
         this.dbname=dbname;
     }
 
-    public static Influx readFromXML( Element dbe ) {
+    public static InfluxDB readFromXML(Element dbe ) {
 
         if (dbe == null)
             return null;
@@ -57,7 +56,7 @@ public class Influx extends Database{
         if(StringUtils.countMatches(irl,":")==0){
             irl += ":8086";
         }
-        var db = new Influx(irl,dbname,user,pass);
+        var db = new InfluxDB(irl,dbname,user,pass);
 
         db.readFlushSetup( XMLtools.getFirstChildByTag(dbe, "setup") );
         db.connect(false);
@@ -157,7 +156,7 @@ public class Influx extends Database{
                 state = STATE.HAS_CON;
                 return true;
             } else {
-                Logger.error("Failed to connect to Influx: "+dbname);
+                Logger.error("Failed to connect to InfluxDB: "+dbname);
                 state = STATE.NEED_CON;
                 return false;
             }

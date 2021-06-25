@@ -1429,7 +1429,7 @@ public class CommandPool {
 				s.forceRollover();
 				return "Rollover added";
 			case "addinfluxdb": case "addinflux":
-				var influx = new Influx(address,dbName,user,pass);
+				var influx = new InfluxDB(address,dbName,user,pass);
 				if( influx.connect(false)){
 					dbManager.addInfluxDB(id,influx);
 					influx.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","settings","databases") );
