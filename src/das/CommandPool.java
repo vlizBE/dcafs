@@ -162,7 +162,9 @@ public class CommandPool {
 	public boolean checkIssue(String issue) {
 		return issues.isActive(issue);
 	}
-
+	public ArrayList<String> getActiveIssues(){
+		return issues.getActive();
+	}
 	/**
 	 * Set the DatabaseManager to get answers from it
 	 * 
@@ -429,7 +431,7 @@ public class CommandPool {
 	 */
 	public String doCHECKSUM( String[] request, Writable wr, boolean html ){
 		
-		// Check for files with wildcard? 2019-07-24_RAW_0.log.zip		
+		// Check for files with wildcard? 2019-07-24_RAW_0.log.zip
 		StringBuilder b = new StringBuilder();
 
 		switch( request[1] ){

@@ -23,7 +23,7 @@ import org.w3c.dom.Element;
 import util.DeadThreadListener;
 import util.database.*;
 import util.gis.Waypoints;
-import util.math.MathUtils;
+import util.task.RtvalCheck;
 import util.task.TaskManagerPool;
 import util.tools.TimeTools;
 import util.tools.Tools;
@@ -835,7 +835,6 @@ public class DAS implements DeadThreadListener {
     }
     public static void main(String[] args) {
 
-        var list = MathUtils.extractParts("sbe38+12.5");
         DAS das = new DAS();
 
         if( das.telnet == null ){

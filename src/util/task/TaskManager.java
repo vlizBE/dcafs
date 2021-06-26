@@ -515,7 +515,7 @@ public class TaskManager implements CollectorFuture {
 
 			if (executed) { // if it was executed
 				if (task.triggerType == TRIGGERTYPE.RETRY) {
-					switch (verifyRequirements(task, false)) { // If it meets the post requirements
+					switch (checkRequirements(task, false)) { // If it meets the post requirements
 						case 0: executed=false;
 						case 1:
 							task.reset();
@@ -607,7 +607,7 @@ public class TaskManager implements CollectorFuture {
 	 */
 	private synchronized boolean doTask(Task task) {
 
-		int ver = verifyRequirements(task, true); // Verify the pre req's
+		int ver = checkRequirements(task, true); // Verify the pre req's
 		if( ver == -1 ){
 			task.errorIncrement();
 			return false;
@@ -873,17 +873,17 @@ public class TaskManager implements CollectorFuture {
 			if( task.triggerType != TRIGGERTYPE.INTERVAL && task.triggerType != TRIGGERTYPE.RETRY){
 				// UNCOMMENT FOR DEBUG PURPOSES
 				if( !verify ) {
-					switch( task.verifyType) {
+					switch( task.checkType) {
 						case AND:
 						case OR:
 							Logger.tag(TINY_TAG).warn(""+task.id+"/"+task.value+" => not executed, requirement not met.");
-							Logger.tag(TINY_TAG).warn( printVerify(task.preReq1) );
-							Logger.tag(TINY_TAG).warn( task.verifyType);
-							Logger.tag(TINY_TAG).warn( printVerify(task.preReq2) );
+							Logger.tag(TINY_TAG).warn( printCheck(task.preReq1) );
+							Logger.tag(TINY_TAG).warn( task.checkType);
+							Logger.tag(TINY_TAG).warn( printCheck(task.preReq2) );
 							break;
 						case SINGLE:
 							Logger.tag(TINY_TAG).warn("["+id+"] "+task.id+"/"+task.value+" => not executed, requirement not met.");
-							Logger.tag(TINY_TAG).warn( "["+id+"] Reason: "+printVerify(task.preReq1) );
+							Logger.tag(TINY_TAG).warn( "["+id+"] Reason: "+ printCheck(task.preReq1) );
 							break;
 						case NONE:
 						default:
@@ -1071,151 +1071,53 @@ public class TaskManager implements CollectorFuture {
     }
     /* *******************************************  V E R I F Y ***************************************************** */
 	/**
-	 * Check all the requirement in a task
+	 * RtvalCheck all the requirements in a task
 	 * @param task The task to check
 	 * @param pre True if checking the pre checks and false for the post
 	 * @return 1=ok,0=nok,-1=error
 	 */
-	private int verifyRequirements( Task task, boolean pre ) {
-		Verify first = task.preReq1;
-		Verify second = task.preReq2;
-		VERIFYTYPE verify = task.verifyType;
+	private int checkRequirements(Task task, boolean pre ) {
+
+		if( rtvals == null ){ // If the verify can't be checked, return false
+			Logger.tag(TINY_TAG).info("["+ id +"] Couldn't check because no RealtimeValues defined.");
+			return -1;
+		}
+
+		RtvalCheck first = task.preReq1;
+		RtvalCheck second = task.preReq2;
+
+		CHECKTYPE checkType = task.checkType;
 		if( !pre ){
 			first = task.postReq1;
 			second = task.postReq2;
-			verify=task.postReqType;
+			checkType=task.postReqType;
 		}
-		int ver1 = verifyRequirement(first);
-		int ver2 = verifyRequirement(second);
-		
-		if(ver1==-1){
-			task.badReq=first.reqRef[0]+" "+first.reqRef[2];
-			return -1;
-		}
-		if( ver2==-1){
-			task.badReq=second.reqRef[0]+" "+second.reqRef[2];
-			return -1;
-		}
-			
-		switch(verify) {
+		if( checkType == CHECKTYPE.NONE)
+			return 1;
+
+		int ver1 = first==null?0:(first.test(rtvals, states, commandPool.getActiveIssues())?1:0);
+		if( checkType == CHECKTYPE.SINGLE)
+			return ver1;
+
+		int ver2 = second==null?0:(second.test(rtvals, states, commandPool.getActiveIssues())?1:0);
+
+		switch(checkType) {
 			case AND: return (ver1 + ver2==2)?1:0;			
 			case OR:  return (ver1 + ver2>0)?1:0;
-			case SINGLE: return ver1;
-			case NONE: 
-			default:
-				return 1;		
 		}
+		return -1;
 	}
 	/**
-	 * Single verify check
-	 * @param verify The verify to check
-	 * @return 1=ok,0=nok,-1=error
+	 * Create a readable string based on the check
+	 * @param check The check to make the string from
+	 * @return The string representation of the check
 	 */
-	private int verifyRequirement( Verify verify ) {
-		if( rtvals == null ){ // If the verify can't be checked, return false
-			Logger.tag(TINY_TAG).info("["+ id +"] Couldn't check because no RealtimeValues defined.");
-			return 0;
-		}
-		if( verify==null )
-			return 0;
-
-		if( verify.reqtype==REQTYPE.NONE) // If there isn't an actual verify, return true
-			return 1;
-		
-		double[] val = {0,0,0};
-		
-		if(verify.mathtype==MATHTYPE.NONE) {
-			for( int a=0;a<2;a++) {
-				// Check if a ref is given, if not it's a value if so get the value associated
-				val[a] = getVerifyValue( verify.reqRef[a], verify.reqValue[a],-1234.4321);
-				if( val[a] == -1234.4321 ) {
-					return -1;
-				}
-			}
-			switch( verify.reqtype ) {
-				case EQUAL:				return val[0] == val[1]?1:0;
-				case ABOVE:			return val[0] >  val[1]?1:0;
-				case LARGER_OR_EQUAL: 	return val[0] >= val[1]?1:0;
-				case BELOW:			return val[0] <  val[1]?1:0;
-				case SMALLER_OR_EQUAL:	return val[0] <= val[1]?1:0;
-				case NONE:
-				default:	return 0;		
-			}
-		}else{
-			for( int a=0;a<3;a++) {
-				val[a] =verify.reqRef[a].isBlank()?verify.reqValue[a]:rtvals.getRealtimeValue(verify.reqRef[a],-1234.4321);
-				if( val[a] == -1234.4321 ) {
-					return -1;
-				}
-			}
-			double result=0;	
-			switch(verify.mathtype) {
-				case DIFF: result = Math.abs(val[0]-val[1]);break;
-				case MINUS:result = val[0]-val[1];break;
-				case PLUS: result = val[0]+val[1];break;
-				default:
-					break;
-			}
-			switch( verify.reqtype ) {
-				case EQUAL:				return result == val[2]?1:0;
-				case ABOVE:			return result >  val[2]?1:0;
-				case LARGER_OR_EQUAL: 	return result >= val[2]?1:0;
-				case BELOW:			return result <  val[2]?1:0;
-				case SMALLER_OR_EQUAL:	return result <= val[2]?1:0;
-				case NONE:
-				default:	return 0;		
-			}
-		}
-	}
-	/**
-	 * Create a readable string based on the verify
-	 * @param verify The verify to make the string from
-	 * @return The string representation of the verify
-	 */
-	public String printVerify(Verify verify) {
+	public String printCheck(RtvalCheck check) {
 		if( rtvals == null )
-			return "No ReqData defined!";
+			return "No RealtimeValues defined!";
+		return check.toString(rtvals,states,commandPool.getActiveIssues());
+	}
 
-		StringJoiner join = new StringJoiner(" ");
-		if( verify.mathtype== MATHTYPE.NONE) {
-			join.add( verify.reqRef[0]+" -> "+getVerifyValue(verify.reqRef[0],verify.reqValue[0],-1234.4321));
-			join.add( ""+verify.reqtype);
-			if( verify.reqRef[1].isBlank() ) {
-				join.add( ""+verify.reqValue[1]);
-			}else {
-				join.add( verify.reqRef[1]+"->"+getVerifyValue(verify.reqRef[1],verify.reqValue[1],-1234.4321));
-			}
-			join.add("=> "+this.verifyRequirement(verify));
-		}else {
-			for( int a=0;a<3;a++) {
-				if( verify.reqValue[a] ==-999) {
-					join.add( verify.reqRef[a]+" ("+getVerifyValue(verify.reqRef[a],verify.reqValue[a],-1234.4321)+")");
-				}else {
-					join.add( ""+verify.reqValue[a]);
-				}
-				switch(a) {
-					case 0: join.add( ""+verify.mathtype); break;
-					case 1: join.add( ""+verify.reqtype); break;
-					case 2: join.add("=> "+this.verifyRequirement(verify)); break;
-					default:break;
-				}				
-			}
-		}
-		return join.toString();
-	}
-	private double getVerifyValue( String ref, double value, double bad ){
-		if( ref.isBlank() ){
-			return value;
-		}else if( ref.startsWith("flag") ){
-			String flag = ref.split(":")[1];
-			return this.checkState(flag+":1")?1:0;
-		}else if( ref.startsWith("issue") ){
-			String issue = ref.split(":")[1];
-			return commandPool.checkIssue(issue)?1:0;
-		}else{
-			return rtvals.getRealtimeValue(ref,bad);
-		}
-	}
 	/* *******************************************************************************************************/
 	/**
 	 * If a task is prohibited of execution for a set amount of time, this is scheduled after that time.

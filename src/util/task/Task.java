@@ -78,17 +78,17 @@ public class Task implements Comparable<Task>{
 	TRIGGERTYPE triggerType = TRIGGERTYPE.EXECUTE;								  		// Default trigger type is execute (no trigger)
 
 	/* Verify */
-	enum VERIFYTYPE {NONE,SINGLE,AND,OR}                                             // The options for combining verifies
+	enum CHECKTYPE {NONE,SINGLE,AND,OR}                                             // The options for combining verifies
 	enum REQTYPE { NONE, BELOW, ABOVE, EQUAL, SMALLER_OR_EQUAL, LARGER_OR_EQUAL} // The options of comparing values in the verify
 	enum MATHTYPE { NONE, DIFF, PLUS, MINUS}                                         // The operation to be executed on the variables
 
-	Verify preReq1=null;
-	Verify preReq2=null;							// The check to do before execution
-	VERIFYTYPE verifyType = VERIFYTYPE.NONE;		// How the two pre requirements are linked
-	
-	Verify postReq1=null;
-	Verify postReq2=null;			// The check to do after execution
-	VERIFYTYPE postReqType = VERIFYTYPE.NONE;		// How the two post requirements are linked
+	RtvalCheck preReq1=null;
+	RtvalCheck preReq2=null;							// The check to do before execution
+	CHECKTYPE checkType = CHECKTYPE.NONE;		// How the two pre requirements are linked
+
+	RtvalCheck postReq1=null;
+	RtvalCheck postReq2=null;			// The check to do after execution
+	CHECKTYPE postReqType = CHECKTYPE.NONE;		// How the two post requirements are linked
 		
 	/* Taskset */ 
 	private String taskset="";			// The taskset this task is part of
@@ -353,16 +353,16 @@ public class Task implements Comparable<Task>{
 	/**
 	 * To split the string representation of the verify in usable objects
 	 * @param req The string representation
-	 * @param isPre True if the verify is done to determine if the task will be executed, false if afterwards if needs to be repeated
+	 * @param isPre True if the Rtvalcheck is done to determine if the task will be executed, false if afterwards if needs to be repeated
 	 */
 	private void splitReq( String req, boolean isPre ) {
 		
 		if( req.isBlank())
 			return;
 		
-		Verify first;
-		Verify second=null;
-		VERIFYTYPE verify;
+		RtvalCheck first;
+		RtvalCheck second=null;
+		CHECKTYPE verify;
 
 		req = req.toLowerCase();
 		req = req.replace(" && ", " and ");
@@ -370,103 +370,32 @@ public class Task implements Comparable<Task>{
 		
 		if(req.contains(" and ")) {// Meaning an 'and' check
 			String[] split = req.split(" and ");
-			first = parseVerify(split[0]);
-			second = parseVerify(split[1]);
-			verify = VERIFYTYPE.AND;
+			first = new RtvalCheck(split[0]);
+			second = new RtvalCheck(split[1]);
+			verify = CHECKTYPE.AND;
 		}else if(req.contains(" or ")) { // Meaning an 'or' check
 			String[] split = req.split(" or ");
-			first = parseVerify(split[0]);
-			second = parseVerify(split[1]);
-			verify = VERIFYTYPE.OR;
+			first = new RtvalCheck(split[0]);
+			second = new RtvalCheck(split[1]);
+			verify = CHECKTYPE.OR;
 		}else{	// Meaning only a single verify
-			first = parseVerify(req);
-			verify = VERIFYTYPE.SINGLE;
+			first = new RtvalCheck(req);
+			verify = CHECKTYPE.SINGLE;
 		}
 		if( isPre ){
-			this.preReq1 = first;
-			this.preReq2 = second;
-			this.verifyType = verify;
+			preReq1 = first;
+			preReq2 = second;
+			checkType = verify;
 		}else{
-			this.postReq1 = first;
-			this.postReq2 = second;
-			this.postReqType = verify;
+			postReq1 = first;
+			postReq2 = second;
+			postReqType = verify;
 		}
 	}
-	/**
-	 * Parses a string representation of a verify to a verify object
-	 * @param verifyString The string representation of the verify
-	 * @return The parsed verify
-	 */
-	private Verify parseVerify( String verifyString ) {
-		Verify verify = new Verify();
-		String[] split = verifyString.split(" ");
 
-		verify.reqtype = REQTYPE.EQUAL;
-		
-		if( split.length == 5 ) {
-			switch( split[1]){
-				case "diff": verify.mathtype = MATHTYPE.DIFF;  break;
-				case "+": case "plus": verify.mathtype = MATHTYPE.PLUS;  break;
-				case "-": case "minus":verify.mathtype = MATHTYPE.MINUS; break;
-				default:	 verify.mathtype = MATHTYPE.NONE;	break;
-			}
-			verify.reqtype = parseCompare(split[3]);
-			
-			for( int a=0;a<split.length;a+=2) {
-				double d = Tools.parseDouble(split[a], Double.NaN);
-				if(Double.isNaN(d)) {
-					verify.reqRef[a/2]=split[a];
-					verify.reqValue[a/2]=-999;
-				}else {
-					verify.reqValue[a/2]=d;
-				}
-			}			
-		}
-		if( split.length == 3 ) {
-			verify.reqtype = parseCompare(split[1]);			
-			verify.reqRef[0] = split[0];
-			verify.reqValue[1] = Tools.parseDouble(split[2], Double.NaN);
-			if(Double.isNaN(verify.reqValue[1]))
-				verify.reqRef[1] = split[2];
-		}
-		return verify;
-	}	
-	/**
-	 * Parses a string representation of the compare to the REQTYPE opbject
-	 * @param compare The string to parse
-	 * @return The REQTYPE object that corresponds to the compare string
-	 */
-	private REQTYPE parseCompare( String compare ){
-		switch( compare ) {
-			case "<":case "below": return REQTYPE.BELOW;
-			case "<=": return REQTYPE.SMALLER_OR_EQUAL;
-			case ">":case "above": return REQTYPE.ABOVE;
-			case ">=": return REQTYPE.LARGER_OR_EQUAL;
-			case "==":case "equal":case "equals":		
-			default: return REQTYPE.EQUAL;
-		}		
-	}
-	/**
-	 * 
-	 */
-	public static class Verify{
-		String[] reqRef= {"","",""};
-		REQTYPE reqtype = REQTYPE.NONE;
-		MATHTYPE mathtype = MATHTYPE.NONE;
-		double[] reqValue = {-999,-999,-999};
-		
-		public String toString() {
-			if( mathtype == MATHTYPE.NONE ) {
-				return " if " + reqRef[0] + " " + reqtype + " " + reqValue[1];
-			}else{
-				String res= " if " + (reqValue[0]==-999?reqRef[0]:reqValue[0])+ " " + mathtype + " " + (reqValue[1]==-999?reqRef[1]:reqValue[1])+" "+reqtype+" "+ (reqValue[2]==-999?reqRef[2]:reqValue[2]);
-				return res.toLowerCase();
-			}
-		}
-	}
 	/* *******************************************  L I N K **********************************************************/
 	/**
-	 * Check if the task should run on a specifick day of the week	
+	 * Check if the task should run on a specifick day of the week
 	 * @param day The day of the week to check
 	 * @return True if it should run
 	 */
