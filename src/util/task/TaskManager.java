@@ -867,6 +867,9 @@ public class TaskManager implements CollectorFuture {
 				}
 			}		
 		}else{
+			if( !task.stopOnFailure() )
+				executed=true;
+
 			if( !task.doToday ) {
 				Logger.tag(TINY_TAG).info( "["+ id +"] Not executing "+task.value +" because not allowed today.");
 			}

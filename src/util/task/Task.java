@@ -93,7 +93,7 @@ public class Task implements Comparable<Task>{
 	/* Taskset */ 
 	private String taskset="";			// The taskset this task is part of
 	private int tasksetIndex=-1;		// The index the task has in the taskset it's part of
-
+	private boolean stopOnFail=true;	// Whether or not this task should stop the taskset on failure
 	/* *************************************  C O N S T R U C T O R S ***********************************************/
 	/**
 	 * Constructor that parses an Element to get all the info
@@ -128,7 +128,7 @@ public class Task implements Comparable<Task>{
 			}
 
 			link = XMLtools.getStringAttribute( tsk, "link", "");
-
+			stopOnFail = XMLtools.getBooleanAttribute(tsk,"stoponfail",true);
 			enableOnStart = XMLtools.getBooleanAttribute(tsk,"atstartup",true);
 
 			splitReq( XMLtools.getStringAttribute( tsk, "req", ""), true );
@@ -181,6 +181,9 @@ public class Task implements Comparable<Task>{
 	public void cancelFuture( boolean mayInterruptIfRunning){
 		if( future != null)
 			future.cancel(mayInterruptIfRunning);
+	}
+	public boolean stopOnFailure(){
+		return stopOnFail;
 	}
 	public ScheduledFuture<?> getFuture(){
 		return this.future;
