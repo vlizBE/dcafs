@@ -21,6 +21,7 @@ import java.util.function.Function;
 public class MathUtils {
     final static int DIV_SCALE = 8;
     static final String[] ORDERED_OPS={"^","^","*","/","%","%","+","-"};
+    static final String[] COMPARES={"<","<=","==","!=",">=",">"};
     static final String OPS_REGEX="\\+|/|\\*|-|\\^|%";
 
     /**
@@ -116,6 +117,19 @@ public class MathUtils {
         }
         return full;
     }
+    public static Function<double[],Boolean> getCompareFunction( String comp ){
+        Function<double[],Boolean> proc=null;
+        switch( comp ){
+            case "<": proc = x -> x[0]<x[1]; break;
+            case "<=": proc = x -> x[0]<=x[1]; break;
+            case ">": proc = x -> x[0]>x[1]; break;
+            case ">=": proc = x -> x[0]>=x[1]; break;
+            case "==": proc = x -> x[0]==x[1]; break;
+            case "!=": proc = x -> x[0]!=x[1]; break;
+        }
+        return proc;
+    }
+
     /**
      * Converts a simple operation (only two operands) on elements in an array to a function
      * @param first The first element of the operation
@@ -453,6 +467,21 @@ public class MathUtils {
                     Logger.error(e);
                 }
                 break;
+            case "diff":
+                try{
+                    if( db1!=null && db2!=null ){ // meaning both numbers
+                        proc = x -> Math.abs(db1-db2);
+                    }else if( db1==null && db2!=null){ // meaning first is an index and second a number
+                        proc = x -> Math.abs(x[i1]-db2);
+                    }else if( db1!=null && db2==null ){ //  meaning first is a number and second an index
+                        proc = x -> Math.abs(db1-x[i2]);
+                    }else{ // meaning both indexes
+                        proc = x -> Math.abs(x[i1]-x[i2]);
+                    }
+                }catch (IndexOutOfBoundsException | NullPointerException e){
+                    Logger.error("Bad things when "+first+" "+op+" "+second+ " was processed");
+                    Logger.error(e);
+                }
             case "ln":
                 try{
                     if( db1!=null && db2!=null ){ // meaning both numbers
