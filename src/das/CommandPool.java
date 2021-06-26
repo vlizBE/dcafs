@@ -640,16 +640,6 @@ public class CommandPool {
 			}
 			rtvals.setRealtimeValue(spl[0], result);
 			return "Saved "+result+" to "+spl[0];
-		}else if( spl.length==3){// added calculation
-			var parts = MathUtils.extractParts(spl[2]);
-			if(parts.size()!=3)
-				return "Invalid formula format";
-			if( !NumberUtils.isCreatable(parts.get(0)) ){
-				parts.set(0,""+rtvals.getRealtimeValue(parts.get(0),-999));
-			}
-			if( !NumberUtils.isCreatable(parts.get(0)) ){
-				parts.set(0,""+rtvals.getRealtimeValue(parts.get(0),-999));
-			}
 		}
 		return "Unknown command: "+request[0]+":"+request[1];
 	}

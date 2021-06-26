@@ -23,7 +23,6 @@ import org.w3c.dom.Element;
 import util.DeadThreadListener;
 import util.database.*;
 import util.gis.Waypoints;
-import util.task.RtvalCheck;
 import util.task.TaskManagerPool;
 import util.tools.TimeTools;
 import util.tools.Tools;
