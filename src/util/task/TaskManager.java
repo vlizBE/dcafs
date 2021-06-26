@@ -778,7 +778,7 @@ public class TaskManager implements CollectorFuture {
 						String[] spl = task.value.split(";");
 					
 						String device = "none";
-						String mess = task.value;
+						String mess = fill;//task.value;
 
 						if( spl.length == 2 ){
 							device = spl[0];
@@ -1064,6 +1064,19 @@ public class TaskManager implements CollectorFuture {
 		if( i !=-1 ){
 			int end = line.substring(i).indexOf("}");
 			to = Tools.getMAC( line.substring(i+5,i+end) );
+			line = line.replace(line.substring(i,i+end+1),to);
+		}
+		i = line.indexOf("{rtval:");
+		if( i !=-1 ){
+			int end = line.substring(i).indexOf("}");
+			to = ""+rtvals.getRealtimeValue( line.substring(i+7,i+end),-123456 );
+			line = line.replace(line.substring(i,i+end+1),to);
+		}
+		i = line.indexOf("{rttext:");
+		if( i !=-1 ){
+			int end = line.substring(i).indexOf("}");
+			var look = line.substring(i+8,i+end);
+			to = ""+rtvals.getRealtimeText(look,look );
 			line = line.replace(line.substring(i,i+end+1),to);
 		}
     	line = line.replace("[EOL]", "\r\n");
