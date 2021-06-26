@@ -29,7 +29,10 @@ public class TaskSet {
         this(id,description);
         if( run != null )
             this.run = run;
+        if( repeats >0)
+            repeats --;
         this.repeat = repeats;
+
         Logger.tag("TASK").info("["+managerID+"] Created taskset: "+description+" "+id+" "+run+" reps:"+repeats);
     }
     public void setManagerID( String manID ){
