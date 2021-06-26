@@ -26,6 +26,13 @@ From 0.5.0 onwards, this should be better documented...
 - StreamPool -> StreamManager for consistency, and some methods
 - Moved forward,collector, Writable, Readable to a level higher out of stream
 - Influx -> InfluxDB
+- Renamed TaskList back to TaskManager and TaskManager to TaskManagerPool
+
+### Task
+- Replaced Verify with RtvalCheck, uses MathUtils and should cleaner
+
+### CommandPool
+- The store command now accepts formulas fe. store:dp1,dp1+5 or store:dp1,dp2/6 etc
 
 ## 0.10.0 (24/06/21)
 

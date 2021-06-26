@@ -619,11 +619,37 @@ public class CommandPool {
 	}
 	public String doSTORE( String[] request, Writable wr, boolean html ){
 		if( request[1].equals("?") )
-			return "store:rtval,value -> Store the value as the given rtval";
+			return "store:rtval,value/op -> Store the value or result of the operation as the given rtval fe. store:dp1,dp1+5 etc";
+
 		String[] spl = request[1].split(",");
+		double result;
 		if( spl.length==2){
-			rtvals.setRealtimeValue(spl[0], NumberUtils.createDouble(spl[1]));
-			return "Value saved.";
+			var parts = MathUtils.extractParts(spl[1]);
+			if( parts.size()==1 ){
+				if( !NumberUtils.isCreatable(spl[1]))
+					spl[1] = ""+rtvals.getRealtimeValue(spl[1],-999);
+				result = NumberUtils.createDouble(spl[1]);
+			}else if (parts.size()==3){
+				if( !NumberUtils.isCreatable(parts.get(0)))
+					parts.set(0, ""+rtvals.getRealtimeValue(parts.get(0),-999));
+				if( !NumberUtils.isCreatable(parts.get(2)))
+					parts.set(2, ""+rtvals.getRealtimeValue(parts.get(2),-999));
+				result= MathUtils.decodeDoublesOp(parts.get(0),parts.get(2),parts.get(1),0).apply(new Double[]{});
+			}else{
+				return "Invalid value part";
+			}
+			rtvals.setRealtimeValue(spl[0], result);
+			return "Saved "+result+" to "+spl[0];
+		}else if( spl.length==3){// added calculation
+			var parts = MathUtils.extractParts(spl[2]);
+			if(parts.size()!=3)
+				return "Invalid formula format";
+			if( !NumberUtils.isCreatable(parts.get(0)) ){
+				parts.set(0,""+rtvals.getRealtimeValue(parts.get(0),-999));
+			}
+			if( !NumberUtils.isCreatable(parts.get(0)) ){
+				parts.set(0,""+rtvals.getRealtimeValue(parts.get(0),-999));
+			}
 		}
 		return "Unknown command: "+request[0]+":"+request[1];
 	}
