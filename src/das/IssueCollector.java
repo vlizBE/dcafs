@@ -63,6 +63,19 @@ public class IssueCollector {
         }
         return i.isActive();
     }
+
+    /**
+     * Get an arraylist of all the active issues
+     * @return An arraylist of all the currently active issues;
+     */
+    public ArrayList<String> getActive(){
+        ArrayList<String> is = new ArrayList<>();
+        issues.entrySet().forEach( entry -> {
+            if( entry.getValue().isActive())
+                is.add(entry.getKey());
+        });
+        return is;
+    }
     /* **********************************************************************************************************/
     /**
      * Report an issue
