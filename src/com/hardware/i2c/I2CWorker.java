@@ -55,7 +55,7 @@ public class I2CWorker implements Runnable, Commandable {
     /**
      * Adds a device to the hashmap
      * 
-     * @param id         The name of the device, will be used to reference it from the TaskList etc
+     * @param id         The name of the device, will be used to reference it from the TaskManager etc
      * @param controller The controller the device is connected to
      * @param address    The address the device had
      * @return The created device

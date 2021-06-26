@@ -18,9 +18,14 @@ From 0.5.0 onwards, this should be better documented...
   * Code cleanup
     * Bring javadoc up to date
     * Decide on final class structure (mainly StreamPool)   
-  * Rework the TaskManager (will be trigger for 0.10.0)
+  * Rework the TaskManager (will be trigger for 0.11.0)
 
 ## 0.10.1 (work in progress)
+
+### Refactoring
+- StreamPool -> StreamManager for consistency, and some methods
+- Moved forward,collector, Writable, Readable to a level higher out of stream
+- Influx -> InfluxDB
 
 ## 0.10.0 (24/06/21)
 

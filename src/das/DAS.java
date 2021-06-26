@@ -23,7 +23,8 @@ import org.w3c.dom.Element;
 import util.DeadThreadListener;
 import util.database.*;
 import util.gis.Waypoints;
-import util.task.TaskManager;
+import util.math.MathUtils;
+import util.task.TaskManagerPool;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
@@ -69,7 +70,7 @@ public class DAS implements DeadThreadListener {
     /* Managers & Pools */
     private DatabaseManager dbManager;
     private MqttPool mqttPool;
-    private TaskManager taskManager;
+    private TaskManagerPool taskManagerPool;
     private ForwardPool forwardPool;
 
     private Map<String, FileCollector> fileCollectors = new HashMap<>();
@@ -182,11 +183,11 @@ public class DAS implements DeadThreadListener {
             /* Telnet */
             addTelnetServer();
 
-            /* TaskManager */
+            /* TaskManagerPool */
             addTaskManager();
 
             if( issues.hasAlarms())
-                taskManager.addTaskList("alarms",issues.alarms); // Make that manager available through general interface
+                taskManagerPool.addTaskList("alarms",issues.alarms); // Make that manager available through general interface
 
             /* Waypoints */
             if (Waypoints.inXML(settingsDoc)) {
@@ -309,17 +310,17 @@ public class DAS implements DeadThreadListener {
      */
     public void addTaskManager() {
 
-        taskManager = new TaskManager(workPath, rtvals, commandPool);
+        taskManagerPool = new TaskManagerPool(workPath, rtvals, commandPool);
 
         if (streampool != null)
-            taskManager.setStreamPool(streampool);
+            taskManagerPool.setStreamPool(streampool);
         if (emailWorker != null)
-            taskManager.setEmailSending(emailWorker.getSender());
+            taskManagerPool.setEmailSending(emailWorker.getSender());
         if (digiWorker != null) {
-            taskManager.setSMSSending(digiWorker);
+            taskManagerPool.setSMSSending(digiWorker);
         }
-        taskManager.readFromXML();
-        addCommandable("tm",taskManager);
+        taskManagerPool.readFromXML();
+        addCommandable("tm", taskManagerPool);
     }
     /* ******************************************  S T R E A M P O O L ***********************************************/
     /**
@@ -561,7 +562,7 @@ public class DAS implements DeadThreadListener {
                 Logger.info("DAS Shutting down");
 
                 // Run shutdown tasks
-                taskManager.startTaskset("shutdown");
+                taskManagerPool.startTaskset("shutdown");
 
                 // SQLite & SQLDB
                 Logger.info("Flushing database buffers");
@@ -649,8 +650,8 @@ public class DAS implements DeadThreadListener {
             new Thread(i2cWorker, "i2cWorker").start();// Start the thread
         }
 
-        // TaskList
-        taskManager.reloadAll();
+        // TaskManager
+        taskManagerPool.reloadAll();
 
 
         Logger.debug("Finished");
@@ -834,6 +835,7 @@ public class DAS implements DeadThreadListener {
     }
     public static void main(String[] args) {
 
+        var list = MathUtils.extractParts("sbe38+12.5");
         DAS das = new DAS();
 
         if( das.telnet == null ){
