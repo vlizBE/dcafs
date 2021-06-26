@@ -300,6 +300,7 @@ public class ForwardPool implements Commandable {
 
         StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
         EditorForward ef;
+
         switch( cmds[0] ) {
             case "?":
                 join.add(TelnetCodes.TEXT_RED+"Purpose"+TelnetCodes.TEXT_YELLOW)
@@ -310,8 +311,7 @@ public class ForwardPool implements Commandable {
                         .add("  - ...");
                 join.add("").add(TelnetCodes.TEXT_GREEN+"Create a EditorForward"+TelnetCodes.TEXT_YELLOW);
                 join.add( "  ef:addblank,id<,source> -> Add a blank filter with an optional source, gets stored in xml.");
-
-                break;
+                return join.toString();
             case "addblank":
                 if( cmds.length<2)
                     return "Not enough arguments, needs to be ef:addblank,id<,src,>";
