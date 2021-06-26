@@ -20,7 +20,10 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamPool)   
   * Rework the TaskManager (will be trigger for 0.11.0)
 
-## 0.10.1 (work in progress)
+## 0.10.2 (work in progress)
+
+## 0.10.1 (26/06/21)
+Breaking: Removed below,above etc in favor off <, > etc from task req etc
 
 ### Refactoring
 - StreamPool -> StreamManager for consistency, and some methods
@@ -34,10 +37,15 @@ From 0.5.0 onwards, this should be better documented...
 - Fixed repeats, were executed once to many (counted down to zero)
 - Added option to use an attribute for while/waitfor checks, to allow usage of < and > etc
 - Added option to use an attribute stoponfail (boolean) to not stop a taskset on failure of the task
+- Removed below,above etc in favor off <, > etc
 
 ### CommandPool
 - The store command now accepts formulas fe. store:dp1,dp1+5 or store:dp1,dp2/6 etc. This can be used in a 
 task...
+- Removed doEditor,doFilter,doMath were replaced by Commandable in 0.10.0
+
+### Other
+- Fixed ef:? command
 
 ## 0.10.0 (24/06/21)
 
