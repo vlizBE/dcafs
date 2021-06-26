@@ -114,7 +114,8 @@ public class Task implements Comparable<Task>{
 				case "while": triggerType =TRIGGERTYPE.WHILE; break;
 				case "waitfor": triggerType =TRIGGERTYPE.WAITFOR; break;
 			}
-			splitReq( tsk.getTextContent(), true ); // text content has the req
+			var check = XMLtools.getStringAttribute(tsk,"check","");
+			splitReq( check.isEmpty()?tsk.getTextContent():check, true ); // text content has the req
 		}else{
 			id = XMLtools.getStringAttribute( tsk, "id", ""+new Random().nextLong()).toLowerCase();
 
