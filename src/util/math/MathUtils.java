@@ -15,11 +15,107 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Function;
 
 public class MathUtils {
     final static int DIV_SCALE = 8;
+    static final String[] ORDERED_OPS={"^","^","*","/","%","%","+","-"};
+    static final String OPS_REGEX="\\+|/|\\*|-|\\^|%";
 
+    /**
+     * Splits a simple expression of the type i1+125 etc into distinct parts i1,+,125
+     * @param expression The expression to split
+     * @param indexOffset The offset to apply to the index
+     * @param debug Give extra debug information
+     * @return The result of the splitting, so i1+125 => {"i1","+","125"}
+     */
+    public static List<String[]> splitExpression(String expression, int indexOffset, boolean debug ){
+        var result = new ArrayList<String[]>();
+
+        expression=expression.replace("+-","-"); // adding a negative number is the same as subtracting it
+
+        var parts = extractParts(expression);
+
+        if( debug ){
+            Logger.info("-> Splitting: "+expression);
+        }
+        indexOffset++;
+        try {
+            if (parts.size() == 3) {
+                if (debug) {
+                    Logger.info("  Sub: " + "o" + indexOffset + "=" + expression);
+                }
+                result.add(new String[]{parts.get(0), parts.get(2), parts.get(1)});
+            } else {
+                int oIndex = indexOffset;
+                for (int a = 0; a < ORDERED_OPS.length; a += 2) {
+
+                    int opIndex = getIndexOfOperand(parts, ORDERED_OPS[a], ORDERED_OPS[a + 1]);
+
+                    while (opIndex != -1) {
+                        String res = parts.get(opIndex - 1) + parts.get(opIndex) + parts.get(opIndex + 1);
+                        result.add(new String[]{parts.get(opIndex - 1), parts.get(opIndex + 1), parts.get(opIndex)});
+                        parts.remove(opIndex);  // remove the operand
+                        parts.remove(opIndex);  // remove the top part
+                        parts.set(opIndex - 1, "o" + oIndex); // replace the bottom one
+
+                        if (debug) {
+                            Logger.info("  Sub: " + "o" + oIndex + "=" + res);
+                        }
+                        expression = expression.replace(res, "o" + oIndex++);
+                        opIndex = getIndexOfOperand(parts, ORDERED_OPS[a], ORDERED_OPS[a + 1]);
+                    }
+                }
+            }
+        }catch( IndexOutOfBoundsException e){
+            Logger.error("Index issue while processing "+expression);
+            Logger.error(e);
+        }
+        return result;
+    }
+    private static int getIndexOfOperand( List<String> data, String op1, String op2){
+        int op1Index = data.indexOf(op1);
+        int op2Index = data.indexOf(op2);
+
+        if( op1Index==-1) { // first op can't be found, so it's e
+            return op2Index;
+        }
+        if( op2Index==-1){
+            return op1Index;
+        }else{
+            return Math.min( op1Index,op2Index);
+        }
+    }
+    public static List<String> extractParts( String formula ){
+        formula = formula.replace("e","E");
+        String alt = formula.replace("E-","e");
+        alt = alt.replace("E+","E");
+
+        String[] spl = alt.split(OPS_REGEX);
+
+        String ops = alt.replaceAll("[a-zA-Z0-9]", "");
+        ops=ops.replace(".","");
+        // The above replace all doesn't handle it properly if the formula starts with a - (fe. -5*i1)
+        // So if this is the case, remove it from the ops line
+        if( ops.startsWith("-")&&formula.startsWith("-"))
+            ops=ops.substring(1);
+
+        var full = new ArrayList<String>();
+        int b=0;
+        for (int a = 0; a < spl.length; a++) {
+            if (spl[a].isEmpty()) {
+                spl[a + 1] = "-" + spl[a + 1];
+            } else {
+                full.add(spl[a].replace("e","E-"));
+                // add the op
+                if( b<ops.length())
+                    full.add(""+ops.charAt(b));
+                b++;
+            }
+        }
+        return full;
+    }
     /**
      * Converts a simple operation (only two operands) on elements in an array to a function
      * @param first The first element of the operation
