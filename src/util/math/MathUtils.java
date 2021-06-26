@@ -89,7 +89,9 @@ public class MathUtils {
         }
     }
     public static List<String> extractParts( String formula ){
-        formula = formula.replace("e","E");
+
+        if( formula.matches("\\d[e]") )
+            formula = formula.replace("e","E");
         String alt = formula.replace("E-","e");
         alt = alt.replace("E+","E");
 
@@ -108,7 +110,12 @@ public class MathUtils {
             if (spl[a].isEmpty()) {
                 spl[a + 1] = "-" + spl[a + 1];
             } else {
-                full.add(spl[a].replace("e","E-"));
+                if( spl[a].matches("\\d[e]") ){
+                    full.add(spl[a].replace("e","E-"));
+                }else{
+                    full.add(spl[a]);
+                }
+
                 // add the op
                 if( b<ops.length())
                     full.add(""+ops.charAt(b));
