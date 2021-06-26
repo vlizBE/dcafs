@@ -593,23 +593,6 @@ public class CommandPool {
 			return "Request for "+request[0]+":"+request[1]+" failed.";
 		}
 	}
-	public String doMATH(String[] request, Writable wr, boolean html ){
-		return doCmd(request[0],request[1],wr);
-	}
-	public String doFILTER( String[] request, Writable wr, boolean html ){
-		if( streampool.addForwarding( "filter:"+request[1], wr ) ){
-			return "Request for "+request[0]+":"+request[1]+" ok.";
-		}else{
-			return "Request for "+request[0]+":"+request[1]+" failed.";
-		}
-	}
-	public String doEDITOR( String[] request, Writable wr, boolean html ){
-		if( streampool.addForwarding( "editor:"+request[1], wr ) ){
-			return "Request for "+request[0]+":"+request[1]+" ok.";
-		}else{
-			return "Request for "+request[0]+":"+request[1]+" failed.";
-		}
-	}
 	public String doCALC( String[] request, Writable wr, boolean html ){
 		if( request[1].equals("reqs")){
 			return rtvals.getRequestList("calc:reqs");
