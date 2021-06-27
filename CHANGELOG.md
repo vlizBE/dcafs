@@ -20,10 +20,16 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamPool)   
   * Rework the TaskManager (will be trigger for 0.11.0)
 
+## Update guide from 0.9.x -> 0.10.2
+- databases node: replace 'setup' with 'flush' and 'flushtime' with 'age'
+- databases node: replace 'idle' attribute with 'idleclose' node
+- TaskManager script: Replace the @fillin with {fillin}
+- FilterForward: rename source node to src node
+
 ## 0.10.2 (work in progress)
 
+
 ## 0.10.1 (26/06/21)
-Breaking: Removed below,above etc in favor off <, > etc from task req etc
 
 ### Refactoring
 - StreamPool -> StreamManager for consistency, and some methods
@@ -37,7 +43,6 @@ Breaking: Removed below,above etc in favor off <, > etc from task req etc
 - Fixed repeats, were executed once to many (counted down to zero)
 - Added option to use an attribute for while/waitfor checks, to allow usage of < and > etc
 - Added option to use an attribute stoponfail (boolean) to not stop a taskset on failure of the task
-- Removed below,above etc in favor off <, > etc
 
 ### CommandPool
 - The store command now accepts formulas fe. store:dp1,dp1+5 or store:dp1,dp2/6 etc. This can be used in a 
@@ -50,12 +55,6 @@ task...
 ## 0.10.0 (24/06/21)
 
 Too much breaking stuff, so version bump and update guide.
-
-## Update guide from 0.9.x
-- databases node: replace 'setup' with 'flush' and 'flushtime' with 'age'
-- databases node: replace 'idle' attribute with 'idleclose' node
-- Tasklist: Replace the @fillin with {fillin}
-- FilterForward: rename source node to src node
 
 ## Changes
 

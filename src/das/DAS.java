@@ -41,7 +41,7 @@ import java.util.concurrent.*;
 
 public class DAS implements DeadThreadListener {
 
-    private static final String version = "0.10.1";
+    private static final String version = "0.10.2";
 
     private Path settingsPath = Path.of("settings.xml");
     private String workPath=Path.of("").toString();
