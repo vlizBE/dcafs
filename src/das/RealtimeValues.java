@@ -43,7 +43,7 @@ public class RealtimeValues implements CollectorFuture {
 	/* Other */
 	protected Waypoints waypoints = new Waypoints(); // Storage of the waypoints
 	protected Map<String, Integer> descriptorID = new HashMap<>();
-	protected ConcurrentHashMap<String, Double> rtvals = new ConcurrentHashMap<>();
+	protected ConcurrentHashMap<String, DoubleVal> rtvals = new ConcurrentHashMap<>();
 	protected ConcurrentHashMap<String, String> rttext = new ConcurrentHashMap<>();
 	protected HashMap<String, List<Writable>> rtvalRequest = new HashMap<>();
 	protected HashMap<String, List<Writable>> rttextRequest = new HashMap<>();
@@ -187,7 +187,7 @@ public class RealtimeValues implements CollectorFuture {
 	 * @param value The value to set debug to
 	 */
 	public void setDebugValue(int value) {
-		this.rtvals.put("debug", (double) value);
+		setRealtimeValue("debug", (double) value);
 	}
 
 	/* ***************************************************************************************************/
@@ -200,16 +200,16 @@ public class RealtimeValues implements CollectorFuture {
 	 */
 	public double getRealtimeValue(String parameter, double bad) {
 
-		Double d = rtvals.get(parameter.toLowerCase());
+		DoubleVal d = rtvals.get(parameter.toLowerCase());
 		if (d == null) {
 			Logger.error("No such parameter: " + parameter);
 			return bad;
 		}
-		if (Double.isNaN(d)) {
+		if (Double.isNaN(d.getValue())) {
 			Logger.error("Parameter: " + parameter + " is NaN.");
 			return bad;
 		}
-		return d;
+		return d.getValue();
 	}
 	public boolean removeRealtimeValue( String parameter ){
 		return rtvals.remove(parameter)!=null;
@@ -227,15 +227,27 @@ public class RealtimeValues implements CollectorFuture {
 			Logger.error("Empty param given");
 			return;
 		}
+		var d = rtvals.get(param);
+		if( d==null) {
+			var par = param.split("_");
+			if( par.length==2){
+				rtvals.put(param, DoubleVal.newVal(par[0],par[1]) );
+			}else{
+				rtvals.put(param, DoubleVal.newVal("",par[0]) );
+			}
+		}else{
+			d.setValue(value);
+		}
 
-		rtvals.put(param, value);
 		if( !rtvalRequest.isEmpty()){
 			var res = rtvalRequest.get(param);
 			if( res != null)
 				res.forEach( wr -> wr.writeLine(param + " : " + value));
 		}
 	}
-
+	public DoubleVal getDoubleVal( String param ){
+		return rtvals.get(param);
+	}
 	public void setRealtimeText(String parameter, String value) {
 		final String param=parameter.toLowerCase();
 
@@ -296,7 +308,7 @@ public class RealtimeValues implements CollectorFuture {
 	 */
 	public String getFilteredRTVals(String param, String eol) {
 
-		Stream<Entry<String, Double>> stream;
+		Stream<Entry<String, DoubleVal>> stream;
 		if (param.endsWith("*") && param.startsWith("*")) {
 			stream = rtvals.entrySet().stream()
 					.filter(e -> e.getKey().contains(param.substring(1, param.length() - 1)));
@@ -312,7 +324,7 @@ public class RealtimeValues implements CollectorFuture {
 		}
 		// Stream contains all of it...
 		if( param.equalsIgnoreCase("groups")) {
-			var sorted = stream.sorted(Map.Entry.comparingByKey()).map(e -> e.getKey() + " : " + e.getValue()).collect(Collectors.toList());
+			var sorted = stream.sorted(Map.Entry.comparingByKey()).map(e -> e.getKey() + " : " + e.getValue().toString()).collect(Collectors.toList());
 			StringJoiner join = new StringJoiner(eol);
 			String header = "";
 			for (var line : sorted) {
@@ -336,7 +348,7 @@ public class RealtimeValues implements CollectorFuture {
 			}
 			return join.toString();
 		}
-		return stream.sorted(Map.Entry.comparingByKey()).map(e -> e.getKey() + " : " + e.getValue()).collect(Collectors.joining(eol));
+		return stream.sorted(Map.Entry.comparingByKey()).map(e -> e.getKey() + " : " + e.getValue().toString()).collect(Collectors.joining(eol));
 	}
 	/**
 	 * Get a listing of text parameter : value pairs currently stored that meet the param

@@ -1,5 +1,6 @@
 package util.database;
 
+import das.DoubleVal;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.tools.TimeTools;
@@ -97,7 +98,7 @@ public abstract class Database{
         return doSelect(query,false);
     }
     public abstract void addQuery(String query);
-    public abstract boolean buildInsert(String table, ConcurrentMap<String, Double> rtvals,
+    public abstract boolean buildInsert(String table, ConcurrentMap<String, DoubleVal> rtvals,
                                         ConcurrentMap<String, String> rttext, String macro);
 
 }

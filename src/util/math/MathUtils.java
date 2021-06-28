@@ -17,6 +17,9 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
+import java.util.regex.MatchResult;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class MathUtils {
     final static int DIV_SCALE = 8;
@@ -136,7 +139,30 @@ public class MathUtils {
         }
         return proc;
     }
-
+    public static String[] splitCompare( String comparison ){
+        var results = Pattern.compile("[><=!][=]?");
+        var full = new String[3];
+        full[1] = results.matcher(comparison)
+                .results()
+                .map(MatchResult::group)
+                .collect(Collectors.joining());
+        var split = comparison.split(full[1]);
+        full[0]=split[0];
+        full[2]=split[1];
+        return full;
+    }
+    public static Function<Double,Boolean> getSingleCompareFunction( double fixed,String comp ){
+        Function<Double,Boolean> proc=null;
+        switch( comp ){
+            case "<": proc = x -> x<fixed; break;
+            case "<=": proc = x -> x<=fixed; break;
+            case ">": proc = x -> x>fixed; break;
+            case ">=": proc = x -> x>=fixed; break;
+            case "==": proc = x -> x==fixed; break;
+            case "!=": proc = x -> x!=fixed; break;
+        }
+        return proc;
+    }
     /**
      * Converts a simple operation (only two operands) on elements in an array to a function
      * @param first The first element of the operation
