@@ -1,7 +1,7 @@
 package worker;
 
-import com.Readable;
-import com.Writable;
+import io.Readable;
+import io.Writable;
 import das.CommandPool;
 import das.RealtimeValues;
 import org.apache.commons.lang3.math.NumberUtils;

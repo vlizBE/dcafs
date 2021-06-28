@@ -1,13 +1,13 @@
 package das;
 
-import com.email.Email;
-import com.email.EmailSending;
-import com.email.EmailWorker;
+import io.email.Email;
+import io.email.EmailSending;
+import io.email.EmailWorker;
 import com.fazecast.jSerialComm.SerialPort;
-import com.stream.StreamManager;
-import com.Writable;
-import com.collector.FileCollector;
-import com.telnet.TelnetCodes;
+import io.stream.StreamManager;
+import io.Writable;
+import io.collector.FileCollector;
+import io.telnet.TelnetCodes;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;

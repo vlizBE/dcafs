@@ -1,11 +1,11 @@
 package das;
 
-import com.mqtt.MqttWork;
-import com.mqtt.MqttWorker;
-import com.Writable;
-import com.collector.CollectorFuture;
-import com.collector.MathCollector;
-import com.telnet.TelnetCodes;
+import io.mqtt.MqttWork;
+import io.mqtt.MqttWorker;
+import io.Writable;
+import io.collector.CollectorFuture;
+import io.collector.MathCollector;
+import io.telnet.TelnetCodes;
 import org.influxdb.dto.Point;
 import org.tinylog.Logger;
 import util.database.QueryWriting;
