@@ -14,8 +14,12 @@ public class DoubleVal {
 
     String group="";
     String name="";
+
     double value;
+    double defVal=Double.NaN;
+
     String unit="";
+
 
     /* Keep Time */
     long timestamp;
@@ -33,6 +37,13 @@ public class DoubleVal {
 
     public DoubleVal(double val){
         setValue(val);
+    }
+    public DoubleVal defValue( double defVal){
+        if( !Double.isNaN(defVal) ) {
+            this.defVal = defVal;
+            value=defVal;
+        }
+        return this;
     }
 
     public void setValue( double val){

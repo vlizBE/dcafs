@@ -16,7 +16,6 @@ import io.telnet.TelnetServer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.commons.lang3.SystemUtils;
-import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.tinylog.provider.ProviderRegistry;
 import org.w3c.dom.Document;
@@ -24,7 +23,6 @@ import org.w3c.dom.Element;
 import util.DeadThreadListener;
 import util.database.*;
 import util.gis.Waypoints;
-import util.math.MathUtils;
 import util.task.TaskManagerPool;
 import util.tools.TimeTools;
 import util.tools.Tools;
@@ -287,8 +285,8 @@ public class DAS implements DeadThreadListener {
                             var dv = rtvals.getDoubleVal(id);
                             dv.name(XMLtools.getChildValueByTag(rtval,"name",dv.getName()))
                               .group(XMLtools.getChildValueByTag(rtval,"group",dv.getGroup()))
-                              .unit(XMLtools.getStringAttribute(rtval,"unit",""));
-
+                              .unit(XMLtools.getStringAttribute(rtval,"unit",""))
+                              .defValue(XMLtools.getDoubleAttribute(rtval,"default",Double.NaN));
                             if( !XMLtools.getChildElements(rtval,"cmd").isEmpty() )
                                 dv.enableTriggeredCmds(dQueue);
                             for( Element trigCmd : XMLtools.getChildElements(rtval,"cmd")){
