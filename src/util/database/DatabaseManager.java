@@ -1,5 +1,6 @@
 package util.database;
 
+import das.DoubleVal;
 import org.influxdb.dto.Point;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
@@ -161,7 +162,7 @@ public class DatabaseManager implements QueryWriting{
     }
 
     @Override
-    public boolean buildInsert(String id, String table, ConcurrentMap<String, Double> rtvals, ConcurrentMap<String, String> rttext, String macro) {
+    public boolean buildInsert(String id, String table, ConcurrentMap<String, DoubleVal> rtvals, ConcurrentMap<String, String> rttext, String macro) {
         for( SQLiteDB sqlite : lites.values() ){
             if( sqlite.getID().equalsIgnoreCase(id))
                 return sqlite.buildInsert(table,rtvals,rttext,macro);

@@ -140,6 +140,7 @@ public class DAS implements DeadThreadListener {
             dbManager = new DatabaseManager(workPath);
 
             rtvals = new RealtimeValues(issues);
+            readRTvals();
             rtvals.addQueryWriting(dbManager);
 
             commandPool = new CommandPool(rtvals, issues, workPath);
@@ -272,7 +273,32 @@ public class DAS implements DeadThreadListener {
                     .comment("Defining the various streams that need to be read")
                 .build();
     }
-
+    public void readRTvals(){
+        XMLfab.getRootChildren(settingsPath,"dcafs","settings","rtvals","*").forEach(
+                rtval -> {
+                    String id = XMLtools.getStringAttribute(rtval,"id","");
+                    if( id.isEmpty())
+                        return;
+                    switch( rtval.getTagName() ){
+                        case "double":
+                            rtvals.setRealtimeValue(id,-999);
+                            var dv = rtvals.getDoubleVal(id);
+                            dv.name(XMLtools.getChildValueByTag(rtval,"name",dv.getName()))
+                              .group(XMLtools.getChildValueByTag(rtval,"group",dv.getGroup()))
+                              .unit(XMLtools.getStringAttribute(rtval,"unit",""))
+                              .defValue(XMLtools.getDoubleAttribute(rtval,"default",Double.NaN));
+                            if( !XMLtools.getChildElements(rtval,"cmd").isEmpty() )
+                                dv.enableTriggeredCmds(dQueue);
+                            for( Element trigCmd : XMLtools.getChildElements(rtval,"cmd")){
+                                String trig = trigCmd.getAttribute("when");
+                                String cmd = trigCmd.getTextContent();
+                                dv.addTriggeredCmd(cmd,trig);
+                            }
+                            break;
+                    }
+                }
+        );
+    }
     /* **************************************  C O M M A N D R E Q  ********************************************/
     /**
      * Add a commandable to the CommandPool, this is the same as adding commands to dcafs

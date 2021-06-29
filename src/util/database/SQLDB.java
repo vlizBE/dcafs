@@ -1,5 +1,6 @@
 package util.database;
 
+import das.DoubleVal;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.tools.TimeTools;
@@ -432,7 +433,8 @@ public class SQLDB extends Database{
         }
         return Optional.ofNullable(data);
     }
-    public synchronized boolean buildInsert(String table, ConcurrentMap<String, Double> rtvals,
+
+    public synchronized boolean buildInsert(String table, ConcurrentMap<String, DoubleVal> rtvals,
                                             ConcurrentMap<String, String> rttext, String macro) {
         if (!hasRecords())
             firstPrepStamp = Instant.now().toEpochMilli();
