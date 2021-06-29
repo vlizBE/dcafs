@@ -1,5 +1,6 @@
 package util.database;
 
+import das.DoubleVal;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
@@ -581,10 +582,10 @@ public class SqlTable {
      * @param rtvals The rtvals object containing the values
      * @return The INSERT statement or an empty string if a value wasn't found
      */
-    public boolean buildInsert( ConcurrentMap<String,Double> rtvals,ConcurrentMap<String,String> rttext ){
+    public boolean buildInsert( ConcurrentMap<String,DoubleVal> rtvals,ConcurrentMap<String,String> rttext ){
         return buildInsert("",rtvals,rttext,"");
     }
-    public boolean buildInsert( ConcurrentMap<String,Double> rtvals,ConcurrentMap<String,String> rttext,String macro ){
+    public boolean buildInsert( ConcurrentMap<String,DoubleVal> rtvals,ConcurrentMap<String,String> rttext,String macro ){
         return buildInsert("",rtvals,rttext,macro);
     }
     /**
@@ -593,7 +594,7 @@ public class SqlTable {
      * @param macro The string to replace the @macro in the alias with
      * @return The INSERT statement or an empty string if a value wasn't found
      */
-    public boolean buildInsert( String id, ConcurrentMap<String,Double> rtvals,ConcurrentMap<String,String> rttext, String macro ){
+    public boolean buildInsert( String id, ConcurrentMap<String,DoubleVal> rtvals,ConcurrentMap<String,String> rttext, String macro ){
        
         PrepStatement prep = preps.get(id);
         if( prep==null){
@@ -622,12 +623,14 @@ public class SqlTable {
                 }else if( col.type == COLUMN_TYPE.TEXT){
                     val = rttext.get(ref);
                 }else if( col.type == COLUMN_TYPE.INTEGER){
-                    val = rtvals.get(ref);
-                    if( val!=null) {
+                    DoubleVal dv = rtvals.get(ref);
+                    if( dv!=null) {
+                        val = dv.getValue();
                         if( val instanceof Double){
                             val = ((Double)val).intValue();
                         }
                     }else{
+                        val = null;
                         if( col.hasDefault )
                             val = NumberUtils.toInt(def);
                     }
