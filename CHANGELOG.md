@@ -28,6 +28,17 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.10.2 (work in progress)
 
+### RealtimeValues
+- Added metadata class for double data called DoubleVal, allows for:
+  - default value
+  - unit
+  - triggered cmds based on single (<50) or double (10<x<50) comparison in plain text
+    - <50 or 'below 50'
+    - 10<x<50 or 'between 10 and 50'
+    - 10<=x<=50 or '10 through 50' or 'not below 10, not below 50' or '10-50'
+  - optional timekeeping (last data timestamp)
+  - optional historical data (up to 100 values)
+- Replaced rtvals hashmap <String,Double> with <String,DoubleVal>
 
 ## 0.10.1 (26/06/21)
 
