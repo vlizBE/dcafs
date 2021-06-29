@@ -163,6 +163,90 @@ public class MathUtils {
         }
         return proc;
     }
+
+    /**
+     * Parse a comparator operation with a single variable to a function, allowed formats:
+     * - Using <,>,=,!= so : <50,>30,x<25,y==65,z<=125.2 etc
+     * - Combining two like 1 < x < 10
+     * - using above or below: above 1, below 10
+     * - using not or equals: not 5, equals 10
+     * - combining with not: not below 5 (>=5) or not above 10 (<=10)
+     * - Maximum of two can be combined: 'above 1, below 10' = '1<x<10' (or ; as separator)
+     * - between 20 and 50 will be parsed to 20<x<50
+     * - from 1 to 10 will be parsed to 1<=x<10
+     * - 1 through 10 will be parsed to 1<=x<=10
+     * - or a range with '-' or '->' so 1-10 or -5->15
+     * @param op An operation in the understood format
+     * @return The combined functions that takes x and returns the result
+     */
+    public static Function<Double,Boolean> parseSingleCompareFunction( String op ){
+        var comparePattern = Pattern.compile("[><=!][=]?");
+
+        op=op.replace("->","-");
+
+        // between 40 and 50
+        if( op.startsWith("between") ){
+            op=op.replace("between ",">");
+            op=op.replace(" and ", ";<");
+        }
+        if( op.startsWith("from ") ){
+            op=op.replace("from ",">");
+            op=op.replace(" to ", ";<");
+            op=op.replace(" till ", ";<");
+        }
+        if( op.contains(" through ")){
+            op=op.replace(" through ", "<=var<=");
+        }
+        // 15 < x <= 25   or x <= 25
+        op = op.replace("not below ",">=");   // retain support for below
+        op = op.replace("not above ","<=");   // retain support for above
+        op = op.replace("below ","<");   // retain support for below
+        op = op.replace("above ",">");   // retain support for above
+        op = op.replace("equals ","=="); // retain support for equals
+        op = op.replace("not ","!="); // retain support for not equals
+
+        op = op.replace(" ",""); // remove all spaces
+
+        var cc = comparePattern.matcher(op)
+                .results()
+                .map(MatchResult::group)
+                .collect(Collectors.toList());
+        if( cc.isEmpty() ){ // fe. 1-10
+            op=op.replace("--","<=var<=-");
+            op=op.replace("-","<=var<=");
+            if( op.startsWith("<=var<="))
+                op = "-"+op.substring(7);
+        }else if( cc.size()==1){
+            var c1 = op.split(cc.get(0));
+            double fi1 = NumberUtils.toDouble(c1[1]);
+            return getSingleCompareFunction(fi1,cc.get(0));
+        }
+        double fi1;
+        Function<Double,Boolean> fu1;
+        if( op.startsWith(cc.get(0))){
+            fi1 = NumberUtils.toDouble(op.substring( cc.get(0).length(),op.lastIndexOf(cc.get(1))-1));
+            fu1 = getSingleCompareFunction(fi1,cc.get(1));
+        }else{
+            fi1 = NumberUtils.toDouble(op.substring( 0,op.indexOf(cc.get(0))));
+            fu1 = getSingleCompareFunction(fi1,invertCompare(cc.get(1)));
+        }
+
+        double fi2 = NumberUtils.toDouble(op.substring( op.lastIndexOf(cc.get(1))+cc.get(1).length()));
+        var fu2 = getSingleCompareFunction(fi2,cc.get(1));
+        Function<Double,Boolean> ff = x -> fu1.apply(x) && fu2.apply(x);
+
+        return ff;
+    }
+
+    private static String invertCompare(String comp){
+        switch( comp ){
+            case "<": return ">";
+            case "<=": return ">=";
+            case ">": return "<";
+            case ">=": return "<=";
+            default: return comp;
+        }
+    }
     /**
      * Converts a simple operation (only two operands) on elements in an array to a function
      * @param first The first element of the operation

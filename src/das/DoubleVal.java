@@ -127,16 +127,15 @@ public class DoubleVal {
         public TriggeredCmd( String cmd, String trigger){
             this.cmd=cmd;
             this.ori=trigger;
-            var split = MathUtils.splitCompare("i0"+trigger);
-            this.comp=MathUtils.getSingleCompareFunction(NumberUtils.toDouble(split[2]),split[1]);
+            this.comp=MathUtils.parseSingleCompareFunction(trigger);
         }
         public String getCmd(){
-            Logger.info("Triggered for "+(group.isEmpty()?"":group+"_")+name+ori+" => "+cmd);
+            Logger.info("Triggered for "+(group.isEmpty()?"":group+"_")+name+" "+ori+" => "+cmd);
             triggered=true;
             return cmd;
         }
         private void resetTrigger(){
-            Logger.info("Trigger reset for "+(group.isEmpty()?"":group+"_")+name+ori+" => "+cmd);
+            Logger.info("Trigger reset for "+(group.isEmpty()?"":group+"_")+name+" "+ori+" => "+cmd);
             triggered=false;
         }
     }
