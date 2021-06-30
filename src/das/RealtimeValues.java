@@ -28,7 +28,7 @@ import java.util.stream.Stream;
  */
 public class RealtimeValues implements CollectorFuture {
 
-	protected IssueCollector issues;
+	protected IssuePool issues;
 
 	protected static final String DEFAULT_TEXT_COLOR = TelnetCodes.TEXT_YELLOW;
 	protected int maxDevices = 2; // This is the maximum priority level allowed atm
@@ -73,10 +73,10 @@ public class RealtimeValues implements CollectorFuture {
 	/**
 	 * Standard constructor requiring an IssueCollector
 	 * 
-	 * @param collector The IssueCollector
+	 * @param issuePool The IssuePool
 	 */
-	public RealtimeValues(IssueCollector collector) {
-		this.issues = collector;
+	public RealtimeValues(IssuePool issuePool) {
+		this.issues = issuePool;
 	}
 
 	/**
@@ -172,15 +172,6 @@ public class RealtimeValues implements CollectorFuture {
 
 	/* ************************** O T H E R *************************************************************
 	 */
-	/**
-	 * Alter the currently used IssueCollector
-	 * 
-	 * @param issues The replacing issue collector
-	 */
-	protected void setIssueCollector(IssueCollector issues) {
-		this.issues = issues;
-	}
-
 	/**
 	 * Debug method to check rtvals work
 	 * 

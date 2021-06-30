@@ -50,7 +50,7 @@ public class CommandPool {
 	private RealtimeValues rtvals; // To have access to the current values
 	private StreamManager streampool = null; // To be able to interact with attached devices
 	private EmailWorker emailWorker; // To be able to send emails and get status
-	private IssueCollector issues=null;
+	private IssuePool issues=null;
 	private DatabaseManager dbManager;
 
 	private String title = "";
@@ -86,7 +86,7 @@ public class CommandPool {
 	 * @param rtvals The current RealtimeValues
 	 * @param issues The collector for the issues created by the BaseReq
 	 */
-	public CommandPool(RealtimeValues rtvals, IssueCollector issues, String workPath) {
+	public CommandPool(RealtimeValues rtvals, IssuePool issues, String workPath) {
 		this(rtvals,workPath);
 		this.issues = issues;
 	}
@@ -150,7 +150,7 @@ public class CommandPool {
 	 * 
 	 * @param issues The currently used IssueCollector
 	 */
-	public void setIssues(IssueCollector issues) {
+	public void setIssues(IssuePool issues) {
 		this.issues = issues;
 	}
 	/**
@@ -163,7 +163,7 @@ public class CommandPool {
 		return issues.isActive(issue);
 	}
 	public ArrayList<String> getActiveIssues(){
-		return issues.getActive();
+		return issues.getActives();
 	}
 	/**
 	 * Set the DatabaseManager to get answers from it

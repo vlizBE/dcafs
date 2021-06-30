@@ -64,13 +64,13 @@ public class DAS implements DeadThreadListener {
 
     private RealtimeValues rtvals;
     private CommandPool commandPool;
-    private IssueCollector issues;
 
     /* Managers & Pools */
     private DatabaseManager dbManager;
     private MqttPool mqttPool;
     private TaskManagerPool taskManagerPool;
     private ForwardPool forwardPool;
+    private IssuePool issuePool;
 
     private Map<String, FileCollector> fileCollectors = new HashMap<>();
 
@@ -135,16 +135,20 @@ public class DAS implements DeadThreadListener {
                 }
             }
 
-            issues = new IssueCollector();
-
             dbManager = new DatabaseManager(workPath);
 
-            rtvals = new RealtimeValues(issues);
+            /* IssuePool */
+            issuePool = new IssuePool(dQueue,settingsPath);
+
+            /* RealtimeValues */
+            rtvals = new RealtimeValues(issuePool);
             readRTvals();
             rtvals.addQueryWriting(dbManager);
 
-            commandPool = new CommandPool(rtvals, issues, workPath);
+            /* CommandPool */
+            commandPool = new CommandPool(rtvals, issuePool, workPath);
             commandPool.setDatabaseManager(dbManager);
+            addCommandable("issue",issuePool);
 
             /* TransServer */
             addTransServer(-1);
@@ -185,9 +189,6 @@ public class DAS implements DeadThreadListener {
 
             /* TaskManagerPool */
             addTaskManager();
-
-            if( issues.hasAlarms())
-                taskManagerPool.addTaskList("alarms",issues.alarms); // Make that manager available through general interface
 
             /* Waypoints */
             if (Waypoints.inXML(settingsDoc)) {
@@ -320,7 +321,6 @@ public class DAS implements DeadThreadListener {
         this.rtvals = altered;
 
         commandPool.setRealtimeValues(rtvals);
-        rtvals.setIssueCollector(issues);
         labelWorker.setRealtimeValues(rtvals);
     }
 
@@ -353,7 +353,7 @@ public class DAS implements DeadThreadListener {
      */
     public void addStreamPool() {
 
-        streampool = new StreamManager(dQueue, issues, nettyGroup);
+        streampool = new StreamManager(dQueue, issuePool, nettyGroup);
         commandPool.setStreamPool(streampool);
 
         if (debug) {
@@ -497,32 +497,6 @@ public class DAS implements DeadThreadListener {
             emailWorker.setSending(debugWorker.doEmails());            
     }
 
-    /* *************************************  I S S U E C O L L E C T I O N **********************************/
-    /**
-     * Alter the current IssueCollect with an extended one
-     * 
-     * @param alter     The newly extended IssueCollector
-     * @param useMainDB Whether or not to use the main database for storing
-     */
-    public void alterIssueCollection(IssueCollector alter, boolean useMainDB) {
-
-        if (alter == null) {
-            Logger.error("Invalid IssueCollector given");
-            return;
-        }
-        this.issues = alter;
-
-        if (streampool != null) {
-            streampool.setIssueCollector(issues);
-        } else {
-            Logger.error("No valid streampool");
-        }
-        commandPool.setIssues(this.issues);
-        rtvals.setIssueCollector(issues);
-    }
-    public IssueCollector getIssueCollector(){
-        return issues;
-    }
     /* ***************************************  T E L N E T S E R V E R ******************************************/
     /**
      * Create the telnetserver
@@ -834,17 +808,17 @@ public class DAS implements DeadThreadListener {
     public void notifyCancelled(String thread) {
 
         Logger.error("Thread: " + thread + " stopped for some reason.");
-        issues.triggerIssue("thread died:" + thread, thread + " died and got restarted", LocalDateTime.now());
+        issuePool.addIfNewAndIncrement("threaddied:" + thread, thread + " died and got restarted");
 
         switch (thread) {
             case "BaseWorker": // done
-                int retries = issues.getIssueTriggerCount("thread died:" + thread);
+                int retries = issuePool.getIssueTriggerCount("thread died:" + thread);
                 if (labelWorker != null && retries < 50) {
                     Logger.error("BaseWorker not alive, trying to restart...");
                     new Thread(labelWorker, "BaseWorker").start();// Start the thread
                 } else {
                     Logger.error("BaseWorker died 50 times, giving up reviving.");
-                    issues.triggerIssue("fatal:" + thread, thread + " permanently dead.", LocalDateTime.now());
+                    issuePool.addIfNewAndIncrement("fatal:" + thread, thread + " permanently dead.");
                 }
                 break;
             case "DigiWorker": // done

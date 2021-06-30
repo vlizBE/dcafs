@@ -28,17 +28,38 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.10.2 (work in progress)
 
+### Todo
+- DoubleVal: allow for setting an alternate reset condition for a trigger
+  - So for example >50 triggers but reset not done by <=50 but for example <=45, this 
+  to allow for fluctuating data not to trigger on a small change ( varying around 50 in the example)
+
 ### RealtimeValues
 - Added metadata class for double data called DoubleVal, allows for:
   - default value
   - unit
   - triggered cmds based on single (<50) or double (10<x<50) comparison in plain text
-    - <50 or 'below 50'
-    - 10<x<50 or 'between 10 and 50'
-    - 10<=x<=50 or '10 through 50' or 'not below 10, not below 50' or '10-50'
+    - Examples:
+      - <50 or 'below 50'
+      - 10<x<50 or 'between 10 and 50'
+      - 10<=x<=50 or '10 through 50' or 'not below 10, not below 50' or '10-50'
+    - Only triggers once when reaching range until reset by leaving said range
   - optional timekeeping (last data timestamp)
   - optional historical data (up to 100 values)
+````xml
+    <rtvals>
+      <double id="tof_range" unit="mm" keeptime="false" >
+        <name>distance</name>
+        <group>laser</group>
+        <cmd when="below 50">st1</cmd>
+        <cmd when="between 100.0 and 150">st3</cmd>
+      </double>
+    </rtvals>
+````  
+
 - Replaced rtvals hashmap <String,Double> with <String,DoubleVal>
+
+### IssueCollector
+- Replaced by IssuePool (complete rewrite)
 
 ## 0.10.1 (26/06/21)
 

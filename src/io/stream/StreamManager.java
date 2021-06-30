@@ -1,5 +1,6 @@
 package io.stream;
 
+import das.IssuePool;
 import io.Writable;
 import io.collector.CollectorFuture;
 import io.collector.ConfirmCollector;
@@ -45,7 +46,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 
 	private EventLoopGroup group;		    // Event loop used by the netty stuff
 
-	private IssueCollector issues;			// Handles the issues/problems that arise
+	private IssuePool issues;			// Handles the issues/problems that arise
 	private int retryDelayMax = 30;			// The minimum time between reconnection attempts
 	private int retryDelayIncrement = 5;	// How much the delay increases between attempts
 
@@ -60,18 +61,15 @@ public class StreamManager implements StreamListener, CollectorFuture {
 	private static final String XML_PARENT_TAG="streams";
 	private static final String XML_CHILD_TAG="stream";
 
-	public StreamManager(BlockingQueue<Datagram> dQueue, IssueCollector issues, EventLoopGroup nettyGroup ) {
+	public StreamManager(BlockingQueue<Datagram> dQueue, IssuePool issues, EventLoopGroup nettyGroup ) {
 		this.dQueue = dQueue;
 		this.issues = issues;	
 		this.group = nettyGroup;	
 	}
-	public StreamManager(BlockingQueue<Datagram> dQueue, IssueCollector issues) {
+	public StreamManager(BlockingQueue<Datagram> dQueue, IssuePool issues) {
 		this(dQueue,issues, new NioEventLoopGroup());	
 	}
 
-	public void setIssueCollector( IssueCollector issues ){
-		this.issues = issues;
-	}
 	public void enableDebug(){
 		debug=true;
 	}
@@ -545,7 +543,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 				Logger.error( "Failed to connect to "+base.getID()+", scheduling retry in "+delay+"s. ("+base.connectionAttempts+" attempts)" );				
 				String device = base.getID().replace(" ","").toLowerCase();
 				if( issues!=null )
-					issues.reportIssue(device+".conlost", "Connection lost to "+base.getID(), true);
+					issues.addIfNewAndStart(device+".conlost", "Connection lost to "+base.getID());
 				base.reconnectFuture = scheduler.schedule( new DoConnection( base ), delay, TimeUnit.SECONDS );
 			} catch (Exception ex) {		
 				Logger.error( "Connection thread interrupting while trying to connect to "+base.getID());
@@ -929,21 +927,21 @@ public class StreamManager implements StreamListener, CollectorFuture {
 	@Override
 	public void notifyIdle( String id ) {
 		String device = id.replace(" ", "").toLowerCase(); // Remove spaces
-		issues.reportIssue(device+".conidle", "TTL passed for "+id, true);
+		issues.addIfNewAndStart(device+".conidle", "TTL passed for "+id);
 		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.IDLE));
 		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.WAKEUP));
 	}
 	@Override
 	public boolean notifyActive(String id ) {
 		String device = id.replace(" ", "").toLowerCase(); // Remove spaces
-		issues.reportIssue(device+".conidle", "TTL passed for "+id, false);
+		issues.addIfNewAndStop(device+".conidle", "TTL passed for "+id);
 		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.IDLE_END));
 		return true;
 	}
 	@Override
 	public void notifyOpened( String id ) {
 		String device = id.replace(" ", "").toLowerCase(); // Remove spaces
-		issues.reportIssue(device+".conlost", "Connection lost to "+id, false);
+		issues.addIfNewAndStop(device+".conlost", "Connection lost to "+id);
 
 		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.HELLO));
 		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.OPEN));
@@ -952,7 +950,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 	@Override
 	public void notifyClosed( String id ) {
 		String device = id.replace(" ", "").toLowerCase(); // Remove spaces
-		issues.reportIssue(device+".conlost", "Connection lost to "+id, true);
+		issues.addIfNewAndStart(device+".conlost", "Connection lost to "+id);
 		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.CLOSE));
 	}
 	@Override
