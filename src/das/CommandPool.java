@@ -288,7 +288,7 @@ public class CommandPool {
 				}else{
 					res = doCmd("tm","run,"+split[0]+":"+split[1],wr);
 				}
-				if( !res.startsWith("No "))
+				if( !res.startsWith("No ")&&!res.startsWith("Not "))
 					result = res;
 			}
 		}
@@ -777,11 +777,11 @@ public class CommandPool {
 	 * @param html Whether or not to use html for newline etc
 	 * @return Descriptive result of the command, "Unknown command if not recognised
 	 */
-	public String doISSUEs( String[] request, Writable wr, boolean html ){			
+	/*public String doISSUEs( String[] request, Writable wr, boolean html ){
 		if( issues == null )
 			return "No IssueCollector defined.";	
         return issues.replyToSingleRequest(request[1], html); 
-	}
+	}*/
 
 	/**
 	 * Execute commands associated with serialports on the system
