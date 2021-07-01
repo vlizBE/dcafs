@@ -151,18 +151,7 @@ public class MathUtils {
         full[2]=split[1];
         return full;
     }
-    public static Function<Double,Boolean> getSingleCompareFunction( double fixed,String comp ){
-        Function<Double,Boolean> proc=null;
-        switch( comp ){
-            case "<": proc = x -> x<fixed; break;
-            case "<=": proc = x -> x<=fixed; break;
-            case ">": proc = x -> x>fixed; break;
-            case ">=": proc = x -> x>=fixed; break;
-            case "==": proc = x -> x==fixed; break;
-            case "!=": proc = x -> x!=fixed; break;
-        }
-        return proc;
-    }
+
 
     /**
      * Parse a comparator operation with a single variable to a function, allowed formats:
@@ -238,6 +227,30 @@ public class MathUtils {
         return ff;
     }
 
+    /**
+     * Convert the given fixed value and comparison to a function that requires another double and return if correct
+     * @param fixed The fixed part of the comparison
+     * @param comp The type of comparison (options: <,>,<=,>=,!=,==)
+     * @return The generated function
+     */
+    public static Function<Double,Boolean> getSingleCompareFunction( double fixed,String comp ){
+        Function<Double,Boolean> proc=null;
+        switch( comp ){
+            case "<": proc = x -> x<fixed; break;
+            case "<=": proc = x -> x<=fixed; break;
+            case ">": proc = x -> x>fixed; break;
+            case ">=": proc = x -> x>=fixed; break;
+            case "==": proc = x -> x==fixed; break;
+            case "!=": proc = x -> x!=fixed; break;
+        }
+        return proc;
+    }
+
+    /**
+     * Invert the compare symbol, so < -> > and so forth
+     * @param comp The original symbol
+     * @return The inverted version
+     */
     private static String invertCompare(String comp){
         switch( comp ){
             case "<": return ">";
