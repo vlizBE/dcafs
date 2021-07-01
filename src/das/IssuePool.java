@@ -66,11 +66,12 @@ public class IssuePool implements Commandable{
                 join.add("issue:? -> Show this message")
                         .add("issue:addblank -> Add a blank issue node with some example issues")
                         .add("issue:start -> Start an issue")
-                        .add("issue:stop -> stop an active issue")
+                        .add("issue:stop -> Stop an active issue")
                         .add("issue:add,id,message -> Add a new issue")
-                        .add("issue:listactive -> return a list of active issues")
-                        .add("issue:listresolved -> return a list of currently inactive issues")
-                        .add("issue:resetall -> Reset the issue counters");
+                        .add("issue:listactive -> Return a list of active issues")
+                        .add("issue:listresolved -> Return a list of currently inactive issues")
+                        .add("issue:resetall -> Reset the issue counters")
+                        .add("issue:listall -> List all id/message pairs of the issues");
                 return join.toString();
             case "add":
                 if( cmds.length!=3)
@@ -131,6 +132,11 @@ public class IssuePool implements Commandable{
                         .forEach( is->join.add(is.message+" --> "
                                 + (is.totalCycles==1?"once, ":is.totalCycles+" occurrences, ")+"total time "
                                 + TimeTools.convertPeriodtoString(is.totalActiveTime, TimeUnit.SECONDS)));
+                return join.toString();
+            case "listall":
+                join = new StringJoiner(nl,(html?"<b>Issues</b><br>":"Issues\r\n"),"");
+                join.setEmptyValue("None Yet");
+                issues.forEach( (key,val)->join.add(key+" --> "+val.getMessage()) );
                 return join.toString();
         }
         return "unknown command: "+request[0]+":"+request[1];
