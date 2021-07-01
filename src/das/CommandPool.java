@@ -768,21 +768,6 @@ public class CommandPool {
 			}
 		}
 	}
-
-	/**
-	 * Execute commands associated with the @see IssueCollector
-	 * 
-	 * @param request The full command split on the first :
-	 * @param wr The writable of the source of the command
-	 * @param html Whether or not to use html for newline etc
-	 * @return Descriptive result of the command, "Unknown command if not recognised
-	 */
-	/*public String doISSUEs( String[] request, Writable wr, boolean html ){
-		if( issues == null )
-			return "No IssueCollector defined.";	
-        return issues.replyToSingleRequest(request[1], html); 
-	}*/
-
 	/**
 	 * Execute commands associated with serialports on the system
 	 * 

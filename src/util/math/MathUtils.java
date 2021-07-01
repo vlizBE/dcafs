@@ -275,7 +275,6 @@ public class MathUtils {
         final BigDecimal bd2 ;
         final int i2;
 
-        BigDecimal result;
         try{
             if(NumberUtils.isCreatable(first) ) {
                 bd1 = NumberUtils.createBigDecimal(first);

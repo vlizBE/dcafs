@@ -26,12 +26,7 @@ From 0.5.0 onwards, this should be better documented...
 - TaskManager script: Replace the @fillin with {fillin}
 - FilterForward: rename source node to src node
 
-## 0.10.2 (work in progress)
-
-### Todo
-- DoubleVal: allow for setting an alternate reset condition for a trigger
-  - So for example >50 triggers but reset not done by <=50 but for example <=45, this 
-  to allow for fluctuating data not to trigger on a small change ( varying around 50 in the example)
+## 0.10.2 (01/07/21)
 
 ### RealtimeValues
 - Added metadata class for double data called DoubleVal, allows for:
@@ -50,16 +45,27 @@ From 0.5.0 onwards, this should be better documented...
       <double id="tof_range" unit="mm" keeptime="false" >
         <name>distance</name>
         <group>laser</group>
-        <cmd when="below 50">st1</cmd>
-        <cmd when="between 100.0 and 150">st3</cmd>
+        <cmd when="above 150">issue:start,overrange</cmd>
+        <cmd when="below 100">issue:stop,overrange</cmd>
       </double>
     </rtvals>
 ````  
-
 - Replaced rtvals hashmap <String,Double> with <String,DoubleVal>
 
 ### IssueCollector
 - Replaced by IssuePool (complete rewrite)
+- In combination with DoubleVal, this allows for cmds to be started on one condition and the reset on another
+````xml
+<issues>
+    <issue id="overrange">
+      <message>Warning range over the limit</message>
+      <cmd when="start">fix the overrange</cmd>
+      <cmd when="start">email:admin,Overrange detected,rtvals</cmd>
+      <cmd when="stop">email:admin,Overrange fixed,rtvals</cmd>
+    </issue>
+</issues>
+````
+
 
 ## 0.10.1 (26/06/21)
 
