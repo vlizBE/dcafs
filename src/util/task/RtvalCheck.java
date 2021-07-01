@@ -27,7 +27,9 @@ public class RtvalCheck {
 
     public RtvalCheck(String equ){
         ori=equ;
-
+        equ=equ.replace(" not below ",">=");
+        equ=equ.replace(" not above ","<=");
+        equ=equ.replace(" not ","!=");
         equ=equ.replace(" below ","<");   // retain support for below
         equ=equ.replace(" above ",">");   // retain support for above
         equ=equ.replace(" equals ","=="); // retain support for equals
