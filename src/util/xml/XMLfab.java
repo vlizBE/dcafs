@@ -428,7 +428,16 @@ public class XMLfab {
         last.setAttribute(attr, ""+value);
         return this;
     }
-
+    /**
+     * Add a double attribute with the given value
+     * @param attr The attribute to add
+     * @param value The value for this attribute
+     * @return The fab after adding the attribute
+     */
+    public XMLfab attr( String attr, double value ){
+        last.setAttribute(attr, ""+value);
+        return this;
+    }
     /**
      * Add an empty attribute to the current node
      * @param attr The name of the attribute
