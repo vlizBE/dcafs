@@ -75,6 +75,12 @@ public class DoubleVal {
     public static DoubleVal newVal(String group, String name){
         return new DoubleVal().group(group).name(name);
     }
+    public static DoubleVal newVal(String combined){
+        String[] spl = combined.split("_");
+        if( spl.length==2)
+            return new DoubleVal().group(spl[0]).name(spl[1]);
+        return new DoubleVal().name(spl[0]);
+    }
     public DoubleVal name(String name){
         this.name=name;
         return this;
