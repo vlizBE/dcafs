@@ -1,35 +1,50 @@
 package util.gis;
 
+import das.Commandable;
+import das.DoubleVal;
+import das.RealtimeValues;
+import io.Writable;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import util.gis.Waypoint.Travel;
 import util.tools.Tools;
+import util.xml.XMLfab;
 import util.xml.XMLtools;
 
 import java.nio.file.Path;
+import java.time.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.StringJoiner;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
-public class Waypoints {
+public class Waypoints implements Commandable {
 
     List<Waypoint> wps = new ArrayList<>();
-    Document xml=null;
+    Path settingsPath=null;
     static final String XML_TAG = "waypoints";
     static final String XML_TRAVEL = "travel";
     static final String XML_CHILD_TAG = "waypoint";
 
-    /* *************************** C O N S T R U C T O R *********************************/
-    public Waypoints(){
+    DoubleVal latitude;
+    DoubleVal longitude;
+    DoubleVal heading;
+    DoubleVal sog;
 
-    }
-    public Waypoints(Document xml){
-        this.xml=xml;
-    }
-    public void setXML( Document xml ){
-        this.xml=xml;
+    ScheduledExecutorService scheduler;
+    static int CHECK_INTERVAL=15;
+
+    /* *************************** C O N S T R U C T O R *********************************/
+    public Waypoints(Path settingsPath, ScheduledExecutorService scheduler, RealtimeValues rtvals){
+        this.settingsPath=settingsPath;
+        this.scheduler=scheduler;
+        readFromXML(rtvals);
+        if( wps.isEmpty() )
+            scheduler.schedule(() -> checkWaypoints(),CHECK_INTERVAL, TimeUnit.SECONDS);
     }
 
     /* ****************************** A D D I N G ****************************************/
@@ -38,42 +53,60 @@ public class Waypoints {
      * @param wp The waypoint to add
      */
     public void addWaypoint( Waypoint wp ) {    	
-    	this.wps.add(wp);
+    	wps.add(wp);
     }
-    public void addWaypoint( double lat, double lon, String name) {
-    	this.wps.add( new Waypoint( name, lat, lon, 50) );
+    public void addWaypoint( String id, double lat, double lon) {
+    	addWaypoint(id,lat,lon,50);
     }
-    public void addWaypoint( double lat, double lon, double range, String name) {
-    	this.wps.add( new Waypoint( name, lat, lon, range) );
+    public void addWaypoint( String id, double lat, double lon, double range) {
+    	if(wps.isEmpty())
+            scheduler.schedule(() -> checkWaypoints(),CHECK_INTERVAL, TimeUnit.SECONDS);
+        wps.add( new Waypoint( id, lat, lon, range) );
+    }
+    public boolean addHere(  String id, double range) {
+        if( latitude!= null && longitude != null) {
+            addWaypoint(id, latitude.getValue(), longitude.getValue(),range);
+            return true;
+        }
+        return false;
     }
     public boolean addWaypointIfNew( Waypoint wp ) {    	
-        if( !this.isExisting( wp.name ) ){
+        if( !isExisting( wp.name ) ){
             addWaypoint( wp );    
             return true;
         }
         return false;
     }
-    public boolean reloadWaypointsFromXML(){
-        return loadWaypointsFromXML(xml,true);
+    public boolean readFromXML(RealtimeValues rtvals){
+        return readFromXML(rtvals,true);
     }
     public static boolean inXML( Document xml ){
         return XMLtools.getFirstElementByTag(xml,XML_TAG) != null;
     }
-    public boolean loadWaypointsFromXML( Document xml, boolean clear ){
+    public boolean readFromXML( RealtimeValues rtvals, boolean clear ){
         
-        if( xml == null){
+        if( settingsPath == null){
             Logger.warn("Reading Waypoints failed because invalid XML.");
             return false;
         }
         if( clear ){
             this.wps.clear();
         }
-        this.xml = xml;
+        var xml = XMLtools.readXML(settingsPath);
+
         Element wpts = XMLtools.getFirstElementByTag(xml,XML_TAG);
         
         if( wpts == null )
             return false;
-        
+
+        if( rtvals!=null) {
+            Logger.info("Looking for lat, lon, sog & heading");
+            latitude = rtvals.getOrAddDoubleVal(XMLtools.getStringAttribute(wpts, "latitude", ""));
+            latitude = rtvals.getOrAddDoubleVal(XMLtools.getStringAttribute(wpts, "longitude", ""));
+            heading = rtvals.getOrAddDoubleVal(XMLtools.getStringAttribute(wpts, "heading", ""));
+            sog = rtvals.getOrAddDoubleVal(XMLtools.getStringAttribute(wpts, "sog", ""));
+        }
+
         Logger.info("Reading Waypoints");
         for( Element el : XMLtools.getChildElements(wpts, XML_CHILD_TAG)){
         	if( el != null ){
@@ -82,7 +115,7 @@ public class Waypoints {
         		double lon = GisTools.convertStringToDegrees(el.getAttribute("lon"));
         		
                 double range = Tools.parseDouble( el.getAttribute("range"), -999);
-                this.addWaypoint( new Waypoint(name,lat,lon,range) );	  
+                addWaypoint( new Waypoint(name,lat,lon,range) );
         	}
         }
         Logger.info("Checking for travel...");
@@ -110,52 +143,37 @@ public class Waypoints {
      * @return True if succesful
      */
     public boolean storeInXML( boolean includeTemp ){
-        if( xml==null){
+        if( settingsPath==null){
             Logger.error("XML not defined yet.");
             return false;
-        }  
-        Element root = XMLtools.getFirstElementByTag( xml, "dcafs" );
+        }
+        var fab = XMLfab.withRoot(settingsPath,"dcafs","settings");
+        fab.digRoot(XML_TAG);
+        fab.clearChildren();
+
         int cnt=0;
-        if( root==null){
-            Logger.error("XML root (das) not found.");
-            return false;
-        }
-        Element wpts = XMLtools.getFirstElementByTag( xml, XML_TAG );
-        if( wpts != null ){
-            XMLtools.removeAllChildren(wpts);
-        }else{
-            wpts = xml.createElement(XML_TAG);
-        }
+
         //Adding the clients
         for( Waypoint wp : wps ){
             if( !wp.isTemp() || includeTemp){
                 cnt++;
-                Element ele = xml.createElement(XML_CHILD_TAG);
-                ele.setAttribute("lat", ""+wp.getLat() );
-                ele.setAttribute("lon", ""+wp.getLon() );
-                ele.setAttribute("range", ""+wp.getRange() );
-                ele.appendChild( xml.createTextNode(wp.getName() ));
-                wpts.appendChild(ele);
+                fab.addParent(XML_CHILD_TAG)
+                        .attr("lat",wp.getLat())
+                        .attr("lat",wp.getLon())
+                        .attr("range",wp.getRange());
                 
                 for( Travel tr : wp.getTravels() ){
-                    ele = xml.createElement(XML_TRAVEL);
-                    ele.setAttribute("dir", ""+tr.getDirection() );
-                    ele.setAttribute("min_bearing", ""+tr.minBearing );
-                    ele.setAttribute("max_bearing", "" + tr.maxBearing );
-                    ele.setAttribute(XML_CHILD_TAG, "" + wp.getName() );
-                  
-                    ele.appendChild( xml.createTextNode(tr.name) );
-                    wpts.appendChild(ele);
+                    fab.addChild(XML_TRAVEL)
+                            .attr("dir", tr.getDirection() )
+                            .attr("min_bearing", tr.minBearing )
+                            .attr("max_bearing", tr.maxBearing )
+                            .attr(XML_CHILD_TAG, "" + wp.getName() );
                 }
             }
         }
         Logger.info("Stored "+cnt+" waypoints.");
-        root.appendChild(wpts);
 
-        String file = xml.getDocumentURI();
-		file=file.replace("file:/", "");
-		file=file.replace("%20", " ");
-        return XMLtools.writeXML(Path.of(file) , xml);//overwrite the file
+        return fab.build()!=null;//overwrite the file
         
     }
     /* ******************************** G E T ********************************************/
@@ -279,18 +297,23 @@ public class Waypoints {
 		}
 		return wayp;
     }
+    private void checkWaypoints(){
+        var now = OffsetDateTime.now(ZoneOffset.UTC);
+        wps.forEach( wp -> wp.checkIt(now, latitude.getValue(), longitude.getValue()));
+    }
     /* ****************************************************************************************************/
     /* ****************************************************************************************************/
     /**
      * Reply to requests made
-     * @param req The request
+     * @param request The request
+     * @param wr The writable of the origin of this request
      * @param html Determines if EOL should be <br> or crlf
-     * @param sog Current speed over ground (only needed for states request)
      * @return Descriptive reply to the request
      */
-    public String replyToSingleRequest( String req, boolean html, double sog ){
+    @Override
+    public String replyToCommand(String[] request, Writable wr, boolean html) {
         
-        String[] cmd = req.split(",");
+        String[] cmd = request[1].split(",");
 
 		switch( cmd[0] ){
             case "?":
@@ -304,7 +327,10 @@ public class Waypoints {
                     .add( "wpts:travel,<waypoint>,<minbearing>,<maxbearing>,<name> -> Add travel to a waypoint.");
                     return b.toString();
 			case "print": case "list": case "listing": return getSimpleListing(html?"<br>":"\r\n");
-            case "states": return getListing(false, sog );
+            case "states":
+                if( sog == null)
+                    return "Can't determine state, no sog defined";
+                return getListing(false, sog.getValue() );
             case "store": 
                 if( this.storeInXML(false) ){
                     return "Storing waypoints succesful";
@@ -312,11 +338,24 @@ public class Waypoints {
                     return "Storing waypoints failed";
                 }
 			case "reload": 
-				if( reloadWaypointsFromXML() ){
+				if( readFromXML(null) ){
 					return "Reloaded stored waypoints";
 				}else{
 					return "Failed to reload waypoints";
                 }
+            case "addblank":
+                XMLfab.withRoot(settingsPath,"dcafs","settings")
+                        .addParent(XML_TAG,"Waypoints are listed here")
+                            .attr("lat","lat_rtval")
+                            .attr("lon","lon_rtval")
+                            .attr("sog","sog_rtval")
+                            .addChild(XML_CHILD_TAG)
+                                .attr("lat",1)
+                                .attr("lon",1)
+                                .attr("range",50)
+                                    .content("wp_id")
+                        .build();
+                return "Blank section added";
             case "new": //wpts:new,51.1253,2.2354,wrak
                 if( cmd.length < 4)
                     return "Not enough parameters given";
@@ -325,14 +364,14 @@ public class Waypoints {
 
                 double lat = GisTools.convertStringToDegrees(cmd[1]);
                 double lon = GisTools.convertStringToDegrees(cmd[2]);
-                String name = cmd[3];
+                String id = cmd[3];
                 double range = 50;
                 if( cmd.length == 5){
-                    name=cmd[4];
+                    id=cmd[4];
                     range = Tools.parseDouble(cmd[3], 50);    
                 }
                 
-                addWaypoint( lat, lon, range, name);
+                addWaypoint( id, lat, lon, range );
                 return "Added waypoint called "+cmd[3]+ " lat:"+lat+"°\tlon:"+lon+"°\tRange:"+range+"m";
             case "update":
                 if( cmd.length < 4)
@@ -364,5 +403,9 @@ public class Waypoints {
             default:
                 return "Unknown waypoints command";
         }
+    }
+    @Override
+    public boolean removeWritable(Writable wr) {
+        return false;
     }
 }

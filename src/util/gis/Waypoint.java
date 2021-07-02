@@ -7,6 +7,7 @@ import util.tools.TimeTools;
 import util.tools.Tools;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,8 +36,8 @@ public class Waypoint implements Comparable<Waypoint>{
 	/* Stuff to determine enter and leave time if entered and left multiple times in succession */
 	boolean active = false;
 	boolean movementReady=false;
-	LocalDateTime enterTime;
-	LocalDateTime leaveTime;	
+	OffsetDateTime enterTime;
+	OffsetDateTime leaveTime;
 	double leaveDistance=0;
 		
 	/* Specific movements */
@@ -65,7 +66,7 @@ public class Waypoint implements Comparable<Waypoint>{
 	public Waypoint( String name ){
 		this.name=name;
 	}
-	public STATE currentState( LocalDateTime when, double lat, double lon ){
+	public STATE currentState( OffsetDateTime when, double lat, double lon ){
 		lastDist = GisTools.roughDistanceBetween(lon, lat, this.lon, this.lat, 3)*1000;// From km to m				
 		bearing = GisTools.calcBearing( lon, lat, this.lon, this.lat, 2 );
 		
@@ -96,7 +97,7 @@ public class Waypoint implements Comparable<Waypoint>{
 	public double getLastDistance( ) {
 		return lastDist;
 	}
-	public String checkIt( LocalDateTime when, double lat, double lon ){
+	public String checkIt(OffsetDateTime when, double lat, double lon ){
 		String travel="";
 		
 		switch( currentState( when , lat, lon ) ){
@@ -126,10 +127,10 @@ public class Waypoint implements Comparable<Waypoint>{
 		}		
 		return "";
 	}
-	public LocalDateTime getEnterTimeStamp(){
+	public OffsetDateTime getEnterTimeStamp(){
 		return enterTime;
 	}
-	public LocalDateTime getLeaveTimeStamp(){
+	public OffsetDateTime getLeaveTimeStamp(){
 		return leaveTime;
 	}
 	public boolean isTemp(){
