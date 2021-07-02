@@ -71,6 +71,7 @@ public class DAS implements DeadThreadListener {
     private TaskManagerPool taskManagerPool;
     private ForwardPool forwardPool;
     private IssuePool issuePool;
+    private Waypoints waypoints;
 
     private Map<String, FileCollector> fileCollectors = new HashMap<>();
 
@@ -150,6 +151,10 @@ public class DAS implements DeadThreadListener {
             commandPool.setDatabaseManager(dbManager);
             addCommandable("issue",issuePool);
 
+            /* Waypoints */
+            waypoints = new Waypoints(settingsPath,nettyGroup,rtvals);
+            addCommandable("wpts",waypoints);
+
             /* TransServer */
             addTransServer(-1);
 
@@ -189,13 +194,6 @@ public class DAS implements DeadThreadListener {
 
             /* TaskManagerPool */
             addTaskManager();
-
-            /* Waypoints */
-            if (Waypoints.inXML(settingsDoc)) {
-                rtvals.getWaypoints().loadWaypointsFromXML(settingsDoc, true);
-            } else {
-                rtvals.getWaypoints().setXML(settingsDoc);
-            }
 
             /* Forwards */
             forwardPool = new ForwardPool( dQueue, settingsPath );

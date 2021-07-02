@@ -9,7 +9,6 @@ import io.telnet.TelnetCodes;
 import org.influxdb.dto.Point;
 import org.tinylog.Logger;
 import util.database.QueryWriting;
-import util.gis.Waypoints;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -41,7 +40,6 @@ public class RealtimeValues implements CollectorFuture {
 	protected static final DateTimeFormatter dayFormat = DateTimeFormatter.ofPattern("yyMMdd");
 
 	/* Other */
-	protected Waypoints waypoints = new Waypoints(); // Storage of the waypoints
 	protected Map<String, Integer> descriptorID = new HashMap<>();
 	protected ConcurrentHashMap<String, DoubleVal> rtvals = new ConcurrentHashMap<>();
 	protected ConcurrentHashMap<String, String> rttext = new ConcurrentHashMap<>();
@@ -87,8 +85,6 @@ public class RealtimeValues implements CollectorFuture {
 	}
 
 	public void copySetup(RealtimeValues to) {
-		// Copy waypoints
-		to.waypoints = waypoints;
 		// Copy mqtt
 		mqttWorkers.forEach(to::addMQTTworker);
 	}
@@ -239,6 +235,23 @@ public class RealtimeValues implements CollectorFuture {
 	public DoubleVal getDoubleVal( String param ){
 		return rtvals.get(param);
 	}
+
+	/**
+	 * Retrieves the param or add's it if it doesn't exist yet
+	 * @param param The group_name or just name of the val
+	 * @return The object if found or made or null if something went wrong
+	 */
+	public DoubleVal getOrAddDoubleVal( String param ){
+		if( param.isEmpty())
+			return null;
+
+		var val = rtvals.get(param);
+		if( val==null){
+			var spl = param.split("_");
+			rtvals.put(param,DoubleVal.newVal(spl[0],spl[1]));
+		}
+		return rtvals.get(param);
+	}
 	public void setRealtimeText(String parameter, String value) {
 		final String param=parameter.toLowerCase();
 
@@ -363,15 +376,6 @@ public class RealtimeValues implements CollectorFuture {
 			stream = rttext.entrySet().stream().filter(e -> e.getKey().equalsIgnoreCase(param));
 		}
 		return stream.sorted(Map.Entry.comparingByKey()).map(e -> e.getKey() + " : " + e.getValue()).collect(Collectors.joining(eol));
-	}
-	/* ******************************************************************************************************/
-	/**
-	 * Get the stored waypoints
-	 * 
-	 * @return The stored waypoints
-	 */
-	public Waypoints getWaypoints() {
-		return waypoints;
 	}
 
 	/* ******************************************************************************************************/

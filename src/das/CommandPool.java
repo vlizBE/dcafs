@@ -1060,10 +1060,7 @@ public class CommandPool {
 				+(html?"<br>":"\r\n")+(html?"<br>":"\r\n")
 				+rtvals.getFilteredRTTexts(request[1],html?"<br>":"\r\n");
 	}
-	public String doWayPoinTS( String[] request, Writable wr, boolean html ){		
-		return rtvals.getWaypoints().replyToSingleRequest(request[1], html, 0.0 );
-	}
-	
+
 	public String doCONVert( String[] request, Writable wr, boolean html ){
 		if( request[1].equals("?") )
 			return " -> Convert a coordinate in the standard degrees minutes format";		
