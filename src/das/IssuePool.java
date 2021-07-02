@@ -234,7 +234,8 @@ public class IssuePool implements Commandable{
             }
             lastStartTime = dt;
             lastEndTime=null;
-            startCmds.forEach( c -> dQueue.add(Datagram.system(c)));
+            if( startCmds!=null)
+                startCmds.forEach( c -> dQueue.add(Datagram.system(c)));
             return true;
         }
         public void increment(){
@@ -258,7 +259,8 @@ public class IssuePool implements Commandable{
             totalCycles++;
             lastEndTime = dt;
             totalActiveTime += Duration.between(lastStartTime, lastEndTime).getSeconds();
-            stopCmds.forEach( c -> dQueue.add(Datagram.system(c)));
+            if( stopCmds != null)
+                stopCmds.forEach( c -> dQueue.add(Datagram.system(c)));
             return true;
         }
         public void clear(){
