@@ -6,6 +6,7 @@ import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.tools.Tools;
 
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -13,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 public class Waypoint implements Comparable<Waypoint>{
 	
@@ -97,28 +99,25 @@ public class Waypoint implements Comparable<Waypoint>{
 	public double getLastDistance( ) {
 		return lastDist;
 	}
-	public String checkIt(OffsetDateTime when, double lat, double lon ){
-		String travel="";
-		
+	public Travel checkIt(OffsetDateTime when, double lat, double lon ){
+
 		switch( currentState( when , lat, lon ) ){
 			case ENTER:
 			case LEAVE:
-				travel = checkTravel();				
-				break;
+				return checkTravel();
 			case INSIDE:
-				travel="IN";
-				break;
+				return null;
 			case OUTSIDE:
 				String l = getLastMovement();
 				if( !l.isBlank()){
-					FileTools.appendToTxtFile("logs/stationMoves.txt", l+"\r\n");
+					FileTools.appendToTxtFile(Path.of("logs","stationMoves.txt"), l+"\r\n");
 					Logger.info( "Travel: "+l);
 				}
 				break;
 			default:
 				break;    		
 		}
-		return travel;
+		return null;
 	}
 	public String getLastMovement(){		
 		if( movementReady ){
@@ -216,8 +215,7 @@ public class Waypoint implements Comparable<Waypoint>{
 	public void setName( String name ){
 		this.name=name;
 	}
-	/***********************************************************************************/
-	/***********************************************************************************/
+	/* **********************************************************************************/
 	/**
 	 * Generate a WPL sentence based on this waypoint
 	 * @return The generated WPL sentence
@@ -244,32 +242,32 @@ public class Waypoint implements Comparable<Waypoint>{
 		result += MathUtils.getNMEAchecksum(result+"00");
 		return result;
 	}
-	/***********************************************************************************/
-	/***********************************************************************************/
+	/* ******************************************************************************** **/
 	/**
 	 * Adds a possible travel to the waypoint
 	 * 
 	 * @param name The name of the travel
 	 * @param dir The direction either in(or enter) or out( or leave)
-	 * @param minb Minimum bearing at the time of dir to be considered correct
-	 * @param maxb Maximum bearing at the time of dir to be considered correct
+	 * @param bearing Range of bearing in readable english, fe. from 100 to 150
 	 */
-	public void addTravel( String name, String dir, double minb, double maxb ){
-		travels.add(new Travel(name, dir, minb, maxb));
+	public Travel addTravel( String name, String dir, String bearing ){
+		var travel = new Travel(name, dir, bearing);
+		travels.add(travel);
 		Logger.info("Added travel named "+name+" to waypoint "+this.name);
+		return travel;
 	}
 	/**
-	 * Check if any travel occurred 
-	 * @return The name of the travel that occurred
+	 * Check if any travel occurred, if so return the travel in question
+	 * @return The travel that occurred
 	 */
-	public String checkTravel(){
+	public Travel checkTravel(){
 		for( Travel t : travels ){
-			if( state == t.direction && bearing >= t.minBearing && bearing <= t.maxBearing ){
+			if( state == t.direction && t.check.apply(bearing) ){
 				Logger.info("Travel occurred "+t.name);
-				return t.name;				
+				return t;
 			}
 		}
-		return "";
+		return null;
 	}
 	public List<Travel> getTravels(){
 		return this.travels;
@@ -289,18 +287,23 @@ public class Waypoint implements Comparable<Waypoint>{
 	}
 	static class Travel{
 		String name="";
-		double minBearing=0;
-		double maxBearing=0;
+		String bearing="";
+		Function<Double,Boolean> check;
 		STATE direction;		
-				
-		public Travel( String name, String dir, double minb, double maxb ){
+
+		ArrayList<String> cmds;
+
+		public Travel( String name, String dir, String bearing ){
 			this.name=name;
 			if( dir.equals("in")||dir.equals("enter"))
 				direction = STATE.ENTER;
 			if( dir.equals("out")||dir.equals("leave"))
 				direction = STATE.LEAVE;
-			this.minBearing=minb;
-			this.maxBearing=maxb;
+			check=MathUtils.parseSingleCompareFunction(bearing);
+			this.bearing=bearing;
+		}
+		public ArrayList<String> getCmds(){
+			return cmds;
 		}
 		public String getDirection(){
 			switch( direction ){
@@ -310,7 +313,17 @@ public class Waypoint implements Comparable<Waypoint>{
 			}
 		}
 		public String toString(){
-			return (direction==STATE.ENTER?"Entering ":"Leaving")+" with heading between "+minBearing+"° and "+maxBearing+"° is called "+name;
+			return (direction==STATE.ENTER?"Entering ":"Leaving")+" with bearing "+bearing+"° is called "+name;
+		}
+		public Travel addCmd( String cmd){
+			if( cmd==null) {
+				Logger.error(name+" -> Invalid cmd given");
+				return this;
+			}
+			if( cmds==null)
+				cmds=new ArrayList<>();
+			cmds.add(cmd);
+			return this;
 		}
 	}
 }

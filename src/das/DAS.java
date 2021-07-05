@@ -139,7 +139,7 @@ public class DAS implements DeadThreadListener {
             dbManager = new DatabaseManager(workPath);
 
             /* IssuePool */
-            issuePool = new IssuePool(dQueue,settingsPath);
+            issuePool = new IssuePool(dQueue, settingsPath);
 
             /* RealtimeValues */
             rtvals = new RealtimeValues(issuePool);
@@ -152,7 +152,7 @@ public class DAS implements DeadThreadListener {
             addCommandable("issue",issuePool);
 
             /* Waypoints */
-            waypoints = new Waypoints(settingsPath,nettyGroup,rtvals);
+            waypoints = new Waypoints( settingsPath, nettyGroup, rtvals, dQueue );
             addCommandable("wpts",waypoints);
 
             /* TransServer */
