@@ -20,13 +20,30 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamPool)   
   * Rework the TaskManager (will be trigger for 0.11.0)
 
-## Update guide from 0.9.x -> 0.10.2
+## Update guide from 0.9.x -> 0.10.3
 - databases node: replace 'setup' with 'flush' and 'flushtime' with 'age'
 - databases node: replace 'idle' attribute with 'idleclose' node
 - TaskManager script: Replace the @fillin with {fillin}
 - FilterForward: rename source node to src node
 
 ## 0.10.3 (work in progress)
+
+### Waypoints
+- Reworked the waypoints code to include new code:
+  - 'from x to y' translation to a function (added in 0.10.2)
+  - DoubleVal to have a local reference to latitude, longitude and sog
+  - Implement Commandable (still wpts)
+- Now executes commands by itself instead of via taskmanager
+```xml
+    <waypoints latval="lat_rtval" lonval="lon_rtval" sogval="sog_rtval">
+      <waypoint id="wp_id" lat="1" lon="1" range="50">
+          <name>dock</name>
+          <travel id="leave_harbor" dir="out" bearing="from 100 to 180">
+            <cmd>dosomething</cmd>
+          </travel>
+      </waypoint>
+    </waypoints>
+```
 
 ## 0.10.2 (01/07/21)
 
