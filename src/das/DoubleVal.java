@@ -46,7 +46,7 @@ public class DoubleVal {
         return this;
     }
 
-    public void setValue( double val){
+    public DoubleVal setValue( double val){
         this.value=val;
         /* Keep history of passed values */
         if( keepHistory ) {
@@ -67,10 +67,11 @@ public class DoubleVal {
             // Reset the triggers that are no longer valid
             triggered.stream().filter(tc -> !tc.comp.apply(val)&&tc.triggered).forEach(tc -> tc.resetTrigger());
         }
+        return this;
     }
 
     public double getValue(){
-        return getValue();
+        return value;
     }
     public static DoubleVal newVal(String group, String name){
         return new DoubleVal().group(group).name(name);
