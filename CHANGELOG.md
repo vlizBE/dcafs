@@ -26,6 +26,10 @@ From 0.5.0 onwards, this should be better documented...
 - TaskManager script: Replace the @fillin with {fillin}
 - FilterForward: rename source node to src node
 
+## 0.10.4 (work in progress)
+
+
+
 ## 0.10.3 (13/07/2021)
 
 ### Waypoints
