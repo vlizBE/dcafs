@@ -465,7 +465,7 @@ public class CommandPool {
 	 * @param html Whether or not to use html for newline etc
 	 * @return Descriptive result of the command, "Unknown command if not recognised
 	 */
-	public String doUPDATE(String[] request, Writable wr, boolean html) {
+	public String doUPGRADE(String[] request, Writable wr, boolean html) {
 		
 		Path p=null;
 		Path to=null;
@@ -476,9 +476,9 @@ public class CommandPool {
 		switch (spl[0]) {
 			case "?":
 				StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
-				join.add( "update:dcafs -> Try to update dcafs (todo)")
-					.add( "update:tmscript,tm id -> Try to update the given taskmanagers script")
-					.add( "update:settings -> Try to update the settings.xml");
+				join.add( "upgrade:dcafs -> Try to update dcafs (todo)")
+					.add( "upgrade:tmscript,tm id -> Try to update the given taskmanagers script")
+					.add( "upgrade:settings -> Try to update the settings.xml");
 				return join.toString();			
 			case "dcafs":
 				return "todo";
@@ -600,9 +600,9 @@ public class CommandPool {
 		rtvals.addRequest(wr, "calc:"+request[1]);
 		return "Request added: calc:"+request[1];
 	}
-	public String doSTORE( String[] request, Writable wr, boolean html ){
+	public String doUPDATE( String[] request, Writable wr, boolean html ){
 		if( request[1].equals("?") )
-			return "store:rtval,value/op -> Store the value or result of the operation as the given rtval fe. store:dp1,dp1+5 etc";
+			return "update:rtval,value/op -> Update the value or result of the operation as the given rtval fe. update:dp1,dp1+5 etc";
 
 		String[] spl = request[1].split(",");
 		double result;
@@ -610,18 +610,54 @@ public class CommandPool {
 			var parts = MathUtils.extractParts(spl[1]);
 			if( parts.size()==1 ){
 				if( !NumberUtils.isCreatable(spl[1]))
-					spl[1] = ""+rtvals.getRealtimeValue(spl[1],-999);
+					spl[1] = ""+rtvals.getRealtimeValue(spl[1],-1234.321);
+				if( spl[1].equalsIgnoreCase("-1234.321") )
+					return "Invalid rtval given "+spl[1];
 				result = NumberUtils.createDouble(spl[1]);
 			}else if (parts.size()==3){
 				if( !NumberUtils.isCreatable(parts.get(0)))
-					parts.set(0, ""+rtvals.getRealtimeValue(parts.get(0),-999));
+					parts.set(0, ""+rtvals.getRealtimeValue(parts.get(0),-1234.321));
 				if( !NumberUtils.isCreatable(parts.get(2)))
-					parts.set(2, ""+rtvals.getRealtimeValue(parts.get(2),-999));
+					parts.set(2, ""+rtvals.getRealtimeValue(parts.get(2),-1234.321));
+
+				if( parts.get(0).equalsIgnoreCase("-1234.321")|| parts.get(2).equalsIgnoreCase("-1234.321"))
+					return "Invalid rtval given";
+
 				result= MathUtils.decodeDoublesOp(parts.get(0),parts.get(2),parts.get(1),0).apply(new Double[]{});
 			}else{
 				return "Invalid value part";
 			}
-			rtvals.setRealtimeValue(spl[0], result);
+			rtvals.setRealtimeValue(spl[0], result,false);
+			return "Saved "+result+" to "+spl[0];
+		}
+		return "Unknown command: "+request[0]+":"+request[1];
+	}
+	public String doCREATE( String[] request, Writable wr, boolean html ){
+		StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
+
+		if( request[1].equals("?") )
+			return join.add("create:rtval,value/op -> Store the value or result of the operation as the given rtval fe. store:dp1,dp1+5 etc")
+						.add("Rtvals that don't exist yet will be created with 0 as default value")
+						.toString();
+
+		String[] spl = request[1].split(",");
+		double result;
+		if( spl.length==2){
+			var parts = MathUtils.extractParts(spl[1]);
+			if( parts.size()==1 ){
+				if( !NumberUtils.isCreatable(spl[1]))
+					spl[1] = ""+rtvals.getRealtimeValue(spl[1],0,true);
+				result = NumberUtils.createDouble(spl[1]);
+			}else if (parts.size()==3){
+				if( !NumberUtils.isCreatable(parts.get(0)))
+					parts.set(0, ""+rtvals.getRealtimeValue(parts.get(0),0,true));
+				if( !NumberUtils.isCreatable(parts.get(2)))
+					parts.set(2, ""+rtvals.getRealtimeValue(parts.get(2),0,true));
+				result= MathUtils.decodeDoublesOp(parts.get(0),parts.get(2),parts.get(1),0).apply(new Double[]{});
+			}else{
+				return "Invalid value part";
+			}
+			rtvals.setRealtimeValue(spl[0], result,true);
 			return "Saved "+result+" to "+spl[0];
 		}
 		return "Unknown command: "+request[0]+":"+request[1];
@@ -1133,7 +1169,7 @@ public class CommandPool {
 			// do wake up stuff
 			var tmCmd = commandables.get("tm");
 			if( tmCmd != null ){
-				tmCmd.replyToCommand(new String[]{"tm","startkeyword,sleep:wokeup"},wr,false);
+				tmCmd.replyToCommand(new String[]{"tm","run,*:wokeup"},wr,false);
 			}
 		} catch (IOException | InterruptedException e) {
 			Logger.error(e);
@@ -1471,7 +1507,7 @@ public class CommandPool {
 					 .add("   fc:addnew,id,src,path -> Create a blank filecollector with given id, source and path")
 					 .add("   fc:alter,id,param:value -> Alter some elements, options: eol, path, sizelimit, src");
 				join.add(TelnetCodes.TEXT_GREEN+"Add optional parts"+TelnetCodes.TEXT_YELLOW)
-					 .add("   fc:addrollover,id,count,unit,format,zip? (unit options:min,hour,day,week,month,year")
+					 .add("   fc:addrollover,id,count,unit,format,zip? -> Add rollover (unit options:min,hour,day,week,month,year")
 					 .add("   fc:addcmd,id,trigger:cmd -> Add a triggered command, triggers: maxsize,idle,rollover")
 					 .add("   fc:addheader,id,headerline -> Adds the header to the given fc")
 					 .add("   fc:addsizelimit,id,size,zip? -> Adds a limit of the given size with optional zipping");
