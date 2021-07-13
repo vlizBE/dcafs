@@ -308,7 +308,7 @@ public class XMLfab {
 
     /**
      * Checks the children of the active node for a specific tag,attribute,value match and make that active and parent
-     * @param tag The tage of the parent
+     * @param tag The tag of the parent
      * @param attribute The attribute to check
      * @param value The value the attribute should be
      * @return The optional parent node or empty if none found
@@ -316,6 +316,20 @@ public class XMLfab {
     public Optional<Element> selectParent( String tag, String attribute, String value){
         Optional<Element> found = this.getChildren(tag).stream()
                 .filter( x -> x.getAttribute(attribute).equalsIgnoreCase(value)).findFirst();
+        if( found.isPresent() ){
+            last = found.get();
+            parent = last;
+        }
+        return found;
+    }
+
+    /**
+     * Checks the children of the active node for a specific tag and make that active and parent
+     * @param tag The tag of the parent
+     * @return The optional parent node or empty if none found
+     */
+    public Optional<Element> selectFirstParent( String tag ){
+        Optional<Element> found = this.getChildren(tag).stream().findFirst();
         if( found.isPresent() ){
             last = found.get();
             parent = last;
