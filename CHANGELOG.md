@@ -45,6 +45,17 @@ From 0.5.0 onwards, this should be better documented...
     </waypoints>
 ```
 
+### CommandPool
+- Refactored the store command to update and added create. Difference being that update requires the rtvals to exist
+already and create will create them if needed.
+- Renamed the update command (update dcafs,scripts etc ) to upgrade.  
+
+### Bugfixes
+- Building insert statement failed because it took the doubleval instead of val
+- setting an rtval for the first time (and create it) didn't actually set the value
+- doubleval getvalue, was endless loop
+- starting with dcafs in repo didn't work properly
+
 ## 0.10.2 (01/07/21)
 
 ### RealtimeValues
@@ -98,11 +109,11 @@ From 0.5.0 onwards, this should be better documented...
 - Replaced Verify with RtvalCheck, uses MathUtils and should be cleaner code
 - Added option to add {rtval:xxx} and {rttext:xxx} in the value of a task node
 - Fixed repeats, were executed once to many (counted down to zero)
-- Added option to use an attribute for while/waitfor checks, to allow usage of < and > etc
+- Added option to use an attribute for while/waitfor checks
 - Added option to use an attribute stoponfail (boolean) to not stop a taskset on failure of the task
 
 ### CommandPool
-- The store command now accepts formulas fe. store:dp1,dp1+5 or store:dp1,dp2/6 etc. This can be used in a 
+- The store command now accepts simple formulas fe. `store:dp1,dp1+5` or `store:dp1,dp2/6` etc. This can be used in a 
 task...
 - Removed doEditor,doFilter,doMath were replaced by Commandable in 0.10.0
 
@@ -189,7 +200,7 @@ var adminEmail = Email.toAdminAbout(subject);
 - cmds command now supports regex, uses startswith by default (meaning appends .*)
 - Changed `update:setup` to `update:settings` because it's the settings file
 - Updated dependencies
-- Triggered cmds now support having a command as content of email:send,to,subject,content
+- Triggered cmds now support having a command as content of `email:send,to,subject,content`
 
 ### Bugfixes
 - update command still referred to scripts instead of tmscripts, now also looks up the path instead of assuming default 
