@@ -231,14 +231,30 @@ public class TaskManagerPool implements Commandable {
                 if( cmd.length != 2)
                     return "Not enough parameters, missing manager:taskset";
                 String[] task = cmd[1].split(":");
-                tl = tasklists.get(task[0]);
-                if( tl == null)
-                    return "No such taskmanager: "+task[0];
-                if( tl.hasTaskset(task[1])){
-                    return tl.startTaskset(task[1]);
+
+                if( task[0].equalsIgnoreCase("*")){
+                    int a=0;
+                    for( var t : tasklists.values()){
+                        if( t.hasTaskset(task[1])) {
+                            a+=t.startTaskset(task[1]).isEmpty()?0:1;
+                        }else{
+                            a+=t.startTask(task[1])?1:0;
+                        }
+                    }
+                    if(a==0)
+                        return "Nothing started";
+                    return "Started "+a+" task(set)s";
                 }else{
-                    return tl.startTask(task[1])?"Task started":"No such task(set) "+task[1];
+                    tl = tasklists.get(task[0]);
+                    if( tl == null)
+                        return "No such taskmanager: "+task[0];
+                    if( tl.hasTaskset(task[1])){
+                        return tl.startTaskset(task[1]);
+                    }else{
+                        return tl.startTask(task[1])?"Task started":"No such task(set) "+task[1];
+                    }
                 }
+
             case "remove":
                 if( tasklists.remove(cmd[1]) == null ){
                     return "Failed to remove the TaskManager, unknown key";
