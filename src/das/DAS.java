@@ -97,6 +97,8 @@ public class DAS implements DeadThreadListener {
             workPath = p.getParent().toString();
             if( workPath.matches(".*lib$")) { // Meaning used as a lib
                 workPath = Path.of(workPath).getParent().toString();
+            }else if( workPath.contains("repository")){
+                workPath = Path.of("").toAbsolutePath().toString();
             }
             System.out.println("Workpath lib: "+workPath);
             if( System.getProperty("tinylog.directory") == null ) { // don't overwrite this
@@ -113,6 +115,7 @@ public class DAS implements DeadThreadListener {
                     + settingsPath.toFile().getAbsolutePath());
             createXML();
         }
+        Logger.info("Used settingspath: "+settingsPath);
 
         settingsDoc = XMLtools.readXML(settingsPath);
 
@@ -234,6 +237,9 @@ public class DAS implements DeadThreadListener {
     public String getWorkPath(){
         return workPath;
     }
+    public Path getSettingsPath(){
+        return settingsPath;
+    }
 
     /**
      * Check if the boot up was successful
@@ -280,7 +286,7 @@ public class DAS implements DeadThreadListener {
                         return;
                     switch( rtval.getTagName() ){
                         case "double":
-                            rtvals.setRealtimeValue(id,-999);
+                            rtvals.setRealtimeValue(id,-999,true);
                             var dv = rtvals.getDoubleVal(id);
                             dv.name(XMLtools.getChildValueByTag(rtval,"name",dv.getName()))
                               .group(XMLtools.getChildValueByTag(rtval,"group",dv.getGroup()))
