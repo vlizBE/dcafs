@@ -46,7 +46,7 @@ public class ValMap {
         if( mapped!=null ) {
             if( !mapped.rtval.isEmpty() ) {
                 try {
-                    rtvals.setRealtimeValue(mapped.rtval, NumberUtils.createDouble(pair[1]));
+                    rtvals.setRealtimeValue(mapped.rtval, NumberUtils.createDouble(pair[1]),true);
                 }catch(NumberFormatException e){
                     Logger.error(id+" -> No valid number in "+data);
                 }

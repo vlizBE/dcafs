@@ -330,7 +330,7 @@ public class LabelWorker implements Runnable, Labeller {
 				val = NumberUtils.createInteger(data);
 			}
 			if( val != Double.NEGATIVE_INFINITY){
-				rtvals.setRealtimeValue(param,val);
+				rtvals.setRealtimeValue(param,val,true);
 			}else{
 				Logger.warn("Tried to convert "+data+" from "+origin+" to an rtval...");
 			}

@@ -174,7 +174,7 @@ public class RealtimeValues implements CollectorFuture {
 	 * @param value The value to set debug to
 	 */
 	public void setDebugValue(int value) {
-		setRealtimeValue("debug", (double) value);
+		setRealtimeValue("debug", (double) value,true);
 	}
 
 	/* ***************************************************************************************************/
@@ -186,15 +186,23 @@ public class RealtimeValues implements CollectorFuture {
 	 * @return The value found or the bad value
 	 */
 	public double getRealtimeValue(String parameter, double bad) {
+		return getRealtimeValue(parameter,bad,false);
+	}
+	public double getRealtimeValue(String parameter, double defVal, boolean createIfNew) {
 
 		DoubleVal d = rtvals.get(parameter.toLowerCase());
 		if (d == null) {
-			Logger.error("No such parameter: " + parameter);
-			return bad;
+			if( createIfNew ){
+				Logger.warn("Parameter "+parameter+" doesn't exist, creating it with value "+defVal);
+				setRealtimeValue(parameter,defVal,true);
+			}else{
+				Logger.error("No such parameter: " + parameter);
+			}
+			return defVal;
 		}
 		if (Double.isNaN(d.getValue())) {
 			Logger.error("Parameter: " + parameter + " is NaN.");
-			return bad;
+			return defVal;
 		}
 		return d.getValue();
 	}
@@ -207,20 +215,23 @@ public class RealtimeValues implements CollectorFuture {
 	 * @param param The parameter name
 	 * @param value     The value of the parameter
 	 */
-	public void setRealtimeValue(String param, double value) {
-		//final String param=parameter.toLowerCase();
+	public void setRealtimeValue(String param, double value, boolean createIfNew) {
 
 		if( param.isEmpty()) {
 			Logger.error("Empty param given");
 			return;
 		}
 		var d = rtvals.get(param);
-		if( d==null) {
-			var par = param.split("_");
-			if( par.length==2){
-				rtvals.put(param, DoubleVal.newVal(par[0],par[1]) );
+		if( d==null ) {
+			if( createIfNew ) {
+				var par = param.split("_");
+				if (par.length == 2) {
+					rtvals.put(param, DoubleVal.newVal(par[0], par[1]).setValue(value) );
+				} else {
+					rtvals.put(param, DoubleVal.newVal("", par[0]).setValue(value));
+				}
 			}else{
-				rtvals.put(param, DoubleVal.newVal("",par[0]) );
+				Logger.error("No such rtval "+param+" yet, use create:"+param+","+value+" to create it first");
 			}
 		}else{
 			d.setValue(value);
@@ -500,7 +511,7 @@ public class RealtimeValues implements CollectorFuture {
 	public void collectorFinished(String id, String message, Object result) {
 		String[] ids = id.split(":");
 		if(ids[0].equalsIgnoreCase("math")){
-			setRealtimeValue(message,(double)result);
+			setRealtimeValue(message,(double)result,false);
 		}
 	}
 	/* ********************************************************************************************** */

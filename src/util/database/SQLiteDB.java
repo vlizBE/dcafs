@@ -241,7 +241,10 @@ public class SQLiteDB extends SQLDB{
             return null;
 
         String id = XMLtools.getStringAttribute(dbe,"id","");
-        var p = Path.of(dbe.getAttribute("path"));
+        String pa = dbe.getAttribute("path");
+        if( !pa.endsWith(".sqlite"))
+            pa=pa+".sqlite";
+        var p = Path.of(pa);
         SQLiteDB db;
         if( p.isAbsolute() ){
             db = SQLiteDB.createDB(id,"",p);
