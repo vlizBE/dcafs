@@ -26,7 +26,7 @@ From 0.5.0 onwards, this should be better documented...
 - TaskManager script: Replace the @fillin with {fillin}
 - FilterForward: rename source node to src node
 
-## 0.10.3 (work in progress)
+## 0.10.3 (13/07/2021)
 
 ### Waypoints
 - Reworked the waypoints code to include new code:
@@ -55,6 +55,7 @@ already and create will create them if needed.
 - setting an rtval for the first time (and create it) didn't actually set the value
 - doubleval getvalue, was endless loop
 - starting with dcafs in repo didn't work properly
+- when sending emails, the refs weren't replaced with the emailaddress anymore
 
 ## 0.10.2 (01/07/21)
 
