@@ -518,11 +518,29 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 			return;
 		}
 		if( email.isValid()) {
+			applyBook(email);
 			scheduler.execute(new Sender(email, false));
 		}else{
 			Logger.error("Tried to send an invalid email");
 		}
 	}
+	public void applyBook( Email email ){
+		StringJoiner join = new StringJoiner(",");
+		for( String part : email.toRaw.split(",")){
+			if( part.contains("@")) {
+				join.add(part);
+			}else{
+				String found = emailBook.get(part);
+				if( found !=null){
+					join.add(found);
+				}else{
+					Logger.error("Invalid ref given for email "+part);
+				}
+			}
+		}
+		email.toRaw=join.toString();
+	}
+
 	public void setSending( boolean send ){
 		sendEmails=send;
 	}
@@ -605,7 +623,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 					}
 				}
 				String from = email.from.isEmpty()?(outbox.getFromStart()+"<" + outbox.from + ">"):email.from;
-				message.setFrom(new InternetAddress(  from ));
+				message.setFrom(new InternetAddress( from ));
 				for (String single : email.toRaw.split(",")) {
 					try {
 						message.addRecipient(Message.RecipientType.TO, new InternetAddress(single.split("\\|")[0]));
