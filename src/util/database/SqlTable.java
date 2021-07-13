@@ -635,7 +635,7 @@ public class SqlTable {
                             val = NumberUtils.toInt(def);
                     }
                 }else if( col.type == COLUMN_TYPE.REAL){
-                    val = rtvals.get(ref);
+                    val = rtvals.get(ref).getValue();
                     if( val==null && col.hasDefault )
                         val = NumberUtils.createDouble(def);
                 }else if( col.type == COLUMN_TYPE.LOCALDTNOW){
