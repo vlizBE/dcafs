@@ -392,8 +392,12 @@ public class EditorForward extends AbstractForward{
             String[] split = input.split(deli); // Get the source data
             StringJoiner join = new StringJoiner("",prefix,"");
             for( int a=0;a<indexes.length;a++){
-                join.add(split[indexes[a]]).add(fill[a]);
-                split[indexes[a]]=null;
+                try {
+                    join.add(split[indexes[a]]).add(fill[a]);
+                    split[indexes[a]] = null;
+                }catch( IndexOutOfBoundsException e){
+                    Logger.error("Out of bounds when processing: "+input);
+                }
             }
             if( indexes.length!=split.length && append){
                 StringJoiner rest = new StringJoiner(delimiter,delimiter,"");
