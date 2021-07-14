@@ -20,7 +20,7 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamPool)   
   * Rework the TaskManager (will be trigger for 0.11.0)
 
-## Update guide from 0.9.x -> 0.10.3
+## Update guide from 0.9.x -> 0.10.4
 - databases node: replace 'setup' with 'flush' and 'flushtime' with 'age'
 - databases node: replace 'idle' attribute with 'idleclose' node
 - TaskManager script: Replace the @fillin with {fillin}
@@ -28,7 +28,13 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.10.4 (work in progress)
 
+### DebugWorker
+- Using the command `read:debugworker` has been altered to `read:debugworker,originid` to only request
+data from a specific id or * for everything. If no originid is given, * is assumed.
 
+### Bugfixes
+- FileCollector, batchsize of -1 didn't mean ignore the batchsize
+- FileCollector, batchsize of -1 didn't allow for timeout flush
 
 ## 0.10.3 (13/07/2021)
 
