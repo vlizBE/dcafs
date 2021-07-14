@@ -66,6 +66,7 @@ public class FileCollector extends AbstractCollector{
     /* Size limit */
     long maxBytes=-1;
     boolean zipMaxBytes=false;
+    private boolean headerChanged=false;
 
     public FileCollector(String id, String timeoutPeriod, ScheduledExecutorService scheduler,BlockingQueue<Datagram> dQueue) {
         super(id);
@@ -171,6 +172,18 @@ public class FileCollector extends AbstractCollector{
 
         /* Changing defaults */
         setLineSeparator( Tools.fromEscapedStringToBytes( XMLtools.getStringAttribute(fcEle,"eol",System.lineSeparator())) );
+
+        /* Headers change ?*/
+        var curHead = FileTools.readLines(getPath(),1,headers.size());
+        headerChanged = false;
+        if( curHead.size()==headers.size() ) {
+            for (int a = 0; a < headers.size(); a++) {
+                if (!headers.get(a).equals(curHead.get(a))) {
+                    headerChanged = true;
+                    break;
+                }
+            }
+        }
     }
 
     /**
@@ -257,8 +270,8 @@ public class FileCollector extends AbstractCollector{
             this.workPath=workPath;
     }
     /**
-     * Get the current path this database can be found at
-     * @return The path to the database as a string
+     * Get the current path this file can be found at
+     * @return The path to the file as a string
      */
     public Path getPath(){
         String path = workPath+destPath.toString();
@@ -310,6 +323,7 @@ public class FileCollector extends AbstractCollector{
      */
     public void addHeaderLine(String header){
         headers.add(header);
+        headerChanged=true;
     }
 
     /**
@@ -380,17 +394,15 @@ public class FileCollector extends AbstractCollector{
             Logger.error(id+"(fc) -> No valid destination path");
             return;
         }
-        if(Files.notExists(dest) ){ // the file doesn't exist yet
+
+        if(Files.notExists(dest) || headerChanged){ // the file doesn't exist yet
             try { // So first create the dir structure
                 Files.createDirectories(dest.toAbsolutePath().getParent());
             } catch (IOException e) {
                 Logger.error(e);
             }
             join = new StringJoiner( lineSeparator );
-            headers.forEach( hdr ->
-            {
-                join.add(hdr.replace("{file}",dest.getFileName().toString()));
-            } ); // Add the headers
+            headers.forEach( hdr -> join.add(hdr.replace("{file}",dest.getFileName().toString()))); // Add the headers
         }else{
             join = new StringJoiner( lineSeparator,lineSeparator,"" );
         }
@@ -400,14 +412,24 @@ public class FileCollector extends AbstractCollector{
 
         byteCount=0;
         try {
-            Files.write(dest, join.toString().getBytes(charSet) , StandardOpenOption.CREATE, StandardOpenOption.APPEND );
-            Logger.debug("Written "+join.toString().length()+" bytes to "+ dest.getFileName().toString());
+            if(headerChanged) {
+                Path renamed=null;
+                headerChanged=false;
+                for( int a=1;a<1000;a++){
+                    renamed = Path.of(dest.toString().replace(".", "."+a+"."));
+                    // Check if the desired name or zipped version already is available
+                    if( Files.notExists(renamed) )
+                        break;
+                }
+                Files.move(dest, dest.resolveSibling(renamed));
+            }
+
+            Files.write(dest, join.toString().getBytes(charSet), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            Logger.debug("Written " + join.toString().length() + " bytes to " + dest.getFileName().toString());
 
             if( maxBytes!=-1 ){
 
-                if( Files.size(dest) >= maxBytes ){
-                    Logger.debug("Max filesize reached");
-
+                if( Files.size(dest) >= maxBytes  ){
                     Path renamed=null;
                     for( int a=1;a<1000;a++){
                         renamed = Path.of(dest.toString().replace(".", "."+a+"."));

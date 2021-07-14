@@ -96,15 +96,15 @@ public class FileTools {
      * 
      * @param path The path to the file
      * @param start Starting point (first line = 1)
-     * @param amount The amount of files to read, if less lines are available it will read till end of file
+     * @param amount The amount of lines to read, if less lines are available it will read till end of file
      * @return List of read lines or an empty list of none were read
      */
-    public static ArrayList<String> readLines( String path, int start, int amount) {
+    public static ArrayList<String> readLines( Path path, int start, int amount) {
         var read = new ArrayList<String>();
         if( start<0 || amount<0 )
             return read;
              
-        try( var lines = Files.lines(Path.of(path) )) {    
+        try( var lines = Files.lines((path)) ){
             lines.skip(start-1)
                  .limit(start+amount-1)
                  .forEach( read::add );

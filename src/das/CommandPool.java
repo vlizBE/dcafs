@@ -1544,7 +1544,7 @@ public class CommandPool {
 				fco = das.getFileCollector(cmds[1]);
 				if( fco.isEmpty() )
 					return "No such fc: "+cmds[1];
-
+				fco.get().flushNow();
 				fco.get().addHeaderLine(cmds[2]);
 				XMLfab.withRoot(settingsPath, "dcafs", "collectors")
 						.selectOrCreateParent("file", "id", cmds[1])
@@ -1628,8 +1628,10 @@ public class CommandPool {
 
 				var opt = XMLfab.withRoot(settingsPath, "dcafs", "collectors")
 						.getChild("file", "id", cmds[1]);
-				if( opt.isPresent() )
-					fco.get().readFromXML(opt.get(),workPath);
+				if( opt.isPresent() ) {
+					fco.get().flushNow();
+					fco.get().readFromXML(opt.get(), workPath);
+				}
 
 		}
 		return UNKNOWN_CMD+": "+request[0]+":"+request[1];

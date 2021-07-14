@@ -45,6 +45,9 @@ data from a specific id or * for everything. If no originid is given, * is assum
     <edit type="resplit" delimiter=";" leftover="remove">"{utc}";i1;{rtval:pd_iout1};i3;{rttext:pd_error}</edit>
 </editor>
 ````
+### FileCollector
+- If the header is changed, a new file will be started and the old one renamed to name.x.ext where x is the first available 
+number.
 
 ### Bugfixes
 - FileCollector, batchsize of -1 didn't mean ignore the batchsize
