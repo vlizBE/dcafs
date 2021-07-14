@@ -172,11 +172,10 @@ public class Waypoints implements Commandable {
     /**
      * Get the waypoint with the given name
      * @param id The id of the waypoint
-     * @param name The name to look for
      * @return The waypoint found or null if not
      */
-    public Waypoint getWaypoint( String id, String name ) {
-    	return getWaypoint(id,name,false);
+    public Waypoint getWaypoint( String id ) {
+    	return getWaypoint(id,"",false);
     }
     public Waypoint getWaypoint( String id, String name, boolean createIfNew ) {
         var wp = wps.get(id);
@@ -185,10 +184,10 @@ public class Waypoints implements Commandable {
                 wps.put(id, new Waypoint(name));
                 return wps.get(id);
             }
-            Logger.error("No such waypoint "+name+" in list of "+wps.size());
+            Logger.error("No such waypoint "+id+" in list of "+wps.size());
             return null;
         }else{
-            Logger.info("Waypoint found "+name+" in list of "+wps.size());
+            Logger.info("Waypoint found "+id+" in list of "+wps.size());
             return wp;
         }
     }

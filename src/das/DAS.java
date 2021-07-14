@@ -22,6 +22,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import util.DeadThreadListener;
 import util.database.*;
+import util.gis.Waypoint;
 import util.gis.Waypoints;
 import util.task.TaskManagerPool;
 import util.tools.TimeTools;
@@ -199,7 +200,7 @@ public class DAS implements DeadThreadListener {
             addTaskManager();
 
             /* Forwards */
-            forwardPool = new ForwardPool( dQueue, settingsPath );
+            forwardPool = new ForwardPool( dQueue, settingsPath,rtvals );
             commandPool.addCommandable("filter", forwardPool);
             commandPool.addCommandable("ff", forwardPool);
             commandPool.addCommandable("math", forwardPool);
@@ -240,7 +241,11 @@ public class DAS implements DeadThreadListener {
     public Path getSettingsPath(){
         return settingsPath;
     }
-
+    public DatabaseManager getDatabaseManager(){return dbManager;}
+    public IssuePool getIssuePool(){ return issuePool;}
+    public Waypoint getWaypoint(String id){
+        return waypoints.getWaypoint(id);
+    }
     /**
      * Check if the boot up was successful
      * 
@@ -321,7 +326,6 @@ public class DAS implements DeadThreadListener {
      */
     public void alterRealtimeValues(RealtimeValues altered) {
 
-        this.rtvals.copySetup(altered);
         this.rtvals = altered;
 
         commandPool.setRealtimeValues(rtvals);
@@ -361,10 +365,10 @@ public class DAS implements DeadThreadListener {
         commandPool.setStreamPool(streampool);
 
         if (debug) {
-            Logger.info("Connecting to streams once because in debug.");
             streampool.enableDebug();
+        }else{
+            streampool.readSettingsFromXML(settingsPath);
         }
-        streampool.readSettingsFromXML(settingsPath);
     }
 
     public StreamManager getStreamPool() {
