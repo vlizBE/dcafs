@@ -267,10 +267,11 @@ public class LabelWorker implements Runnable, Labeller {
 				} else if (d.label.startsWith("read:")) {
 					if( d.getWritable()!=null){
 						if (d.label.split(":").length >= 2) {
-
-							var read = readables.get(readID);
+							var ids = readID.split(",");
+							var read = readables.get(ids[0]);
 							if( read != null && !read.isInvalid()){
-								read.addTarget(d.getWritable());
+
+								read.addTarget(d.getWritable(),ids.length==2?ids[1]:"*");
 								Logger.info("Added "+d.getWritable().getID()+ " to target list of "+read.getID());
 							}else{
 								Logger.error(d.getWritable().getID()+" asked for data from "+readID+" but doesn't exists (anymore)");

@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.StringJoiner;
 import java.util.concurrent.*;
 
@@ -54,7 +55,8 @@ public class DebugWorker implements Readable {
 	private String label="";
 	DatabaseManager dbm;
 
-	ArrayList<Writable> targets = new ArrayList<>();
+	HashMap<String,ArrayList<Writable>> targets = new HashMap<>();
+
 	long interval =0;
 	int steps=1;
 
@@ -68,8 +70,17 @@ public class DebugWorker implements Readable {
 	}
 
 	@Override
-	public boolean addTarget(Writable target) {
-		return targets.add(target);
+	public boolean addTarget(Writable target, String src) {
+		var t = targets.get(src);
+		if( t==null) {
+			t = new ArrayList<Writable>();
+			targets.put(src,t);
+		}
+		if( !t.contains(target)) {
+			t.add(target);
+			return true;
+		}
+		return false;
 	}
 
 	@Override
@@ -78,7 +89,6 @@ public class DebugWorker implements Readable {
 	}
 
 	public enum SourceType { // different types of GPS fixes
-
 		RAW, NMEA, GAPS, FILTER,RANDOM ;
 	}
 
@@ -278,11 +288,13 @@ public class DebugWorker implements Readable {
 					}
 					if (r != null) {
 						final String send;
+						String origin="";
 						switch (srcType) {
 							case RAW:
 								var d = rawLineToDatagram(r);
 								if (d != null) {
 									dQueue.add(d);
+									origin = d.getOriginID();
 									String[] line = r.split("\t");
 									StringJoiner join = new StringJoiner("\t");
 									if( line.length>3){
@@ -307,17 +319,18 @@ public class DebugWorker implements Readable {
 								break;
 						}
 
-						if (!send.isEmpty()) {
-							targets.stream().forEach(wr ->
-							{
+						if (!send.isEmpty() && !targets.isEmpty()) {
+							var t = targets.get(origin);
+							if( t==null)
+								t=targets.get("*");
+
+							if( t != null ){
 								try {
-									wr.writeLine(send);
+									t.forEach( wr -> wr.writeLine(send));
+									t.removeIf( wr -> !wr.isConnectionValid() );
 								}catch(Exception e){
 									Logger.error(e);
 								}
-							});
-							if( targets.removeIf(wr -> !wr.isConnectionValid())){
-								Logger.info("Removed an element from targets");
 							}
 						}
 					}else{

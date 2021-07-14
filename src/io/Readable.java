@@ -13,7 +13,7 @@ public interface Readable {
      * @param target The writable of the target
      * @return True if added, false if duplicate etc
      */
-    boolean addTarget( Writable target);
+    boolean addTarget( Writable target, String src);
     /**
      * Indicate if the connection is valid or not. Mainly used to know if the Writable should be removed or not
      * @return True if it's valid
