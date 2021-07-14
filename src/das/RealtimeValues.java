@@ -225,11 +225,15 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 				res.forEach( wr -> wr.writeLine(param + " : " + value));
 		}
 	}
-	public String parseRTline( String line ){
+	public String parseRTline( String line, String error ){
+
 		if( rtvalPattern==null) {
 			rtvalPattern = Pattern.compile("\\{rtval:.*}");
 			rttextPattern = Pattern.compile("\\{rttext:.*}");
 		}
+		if( !line.contains("{"))
+			return line;
+
 		var vals= rtvalPattern.matcher(line)
 				.results()
 				.map(MatchResult::group)
@@ -238,7 +242,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		for( String val:vals){
 			var d = getRealtimeValue(val.substring(7,val.length()-1),Double.NaN);
 			if( Double.isNaN(d)) {
-				line = line.replace(val, "NAN");
+				line = line.replace(val, error);
 			}else {
 				line = line.replace(val, "" + d);
 			}
@@ -249,9 +253,11 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 				.toArray(String[]::new);
 
 		for( String val:vals){
-			line = line.replace(val, getRealtimeText(val.substring(7,val.length()-1),"NAN"));
+			line = line.replace(val, getRealtimeText(val.substring(7,val.length()-1),error));
 		}
 		line = line.replace("{utc}", TimeTools.formatLongUTCNow());
+		line = line.replace("{utclong}", TimeTools.formatLongUTCNow());
+		line = line.replace("{utcshort}", TimeTools.formatShortUTCNow());
 		return line;
 	}
 	public DoubleVal getDoubleVal( String param ){

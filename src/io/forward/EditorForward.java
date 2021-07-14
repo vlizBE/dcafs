@@ -143,6 +143,7 @@ public class EditorForward extends AbstractForward{
         String deli = XMLtools.getStringAttribute(edit,"delimiter",",");
         String content = edit.getTextContent();
         String from = XMLtools.getStringAttribute(edit,"from",",");
+        String error = XMLtools.getStringAttribute(edit,"error","NaN");
         String find = XMLtools.getStringAttribute(edit,"find","");
         String leftover = XMLtools.getStringAttribute(edit,"leftover","append");
 
@@ -162,7 +163,7 @@ public class EditorForward extends AbstractForward{
                 Logger.info(id+" -> Added charsplit with delimiter "+deli+" on positions "+content);
                 break;
             case "resplit":
-                addResplit(deli,content,leftover.equalsIgnoreCase("append"));
+                addResplit(deli,content,error,leftover.equalsIgnoreCase("append"));
                 Logger.info(id+" -> Added resplit edit on delimiter "+deli+" with formula "+content);
                 break;
             case "rexsplit":
@@ -351,11 +352,11 @@ public class EditorForward extends AbstractForward{
      * @param delimiter The string to split the data with
      * @param resplit The format of the new string, using i0 etc to get original values
      */
-    public void addResplit( String delimiter, String resplit, boolean append){
+    public void addResplit( String delimiter, String resplit, String error, boolean append){
 
         rulesString.add( new String[]{"","resplit","deli:"+delimiter+" ->"+resplit} );
 
-        var is = Pattern.compile("[i][0-9]{1,2}")
+        var is = Pattern.compile("[i][0-9]{1,3}")
                 .matcher(resplit)
                 .results()
                 .map(MatchResult::group)
@@ -372,14 +373,18 @@ public class EditorForward extends AbstractForward{
         }
 
         for( int a=0;a<is.length;a++ ){
-            // Get the indexes
-            indexes[a] = Integer.parseInt(is[a].substring(1));
+            try {
+                // Get the indexes
+                indexes[a] = Integer.parseInt(is[a].substring(1));
 
-            // Get the filler elements
-            int end = a+1<is.length?resplit.indexOf(is[a+1]):resplit.length();
-            fillers.add( resplit.substring( resplit.indexOf( is[a] )+is[a].length(),end));
+                // Get the filler elements
+                int end = a + 1 < is.length ? resplit.indexOf(is[a + 1]) : resplit.length();
+                fillers.add(resplit.substring(resplit.indexOf(is[a]) + is[a].length(), end));
 
-            resplit=resplit.substring(end);
+                resplit = resplit.substring(end);
+            }catch(StringIndexOutOfBoundsException e){
+                Logger.error(id+" (ef)-> Failed to process "+resplit );
+            }
         }
         String[] fill = fillers.toArray(new String[0]);
         String deli;
@@ -392,13 +397,10 @@ public class EditorForward extends AbstractForward{
         Function<String,String> edit = input ->
         {
             String[] split = input.split(deli); // Get the source data
-            StringJoiner join = new StringJoiner("",dataProviding.parseRTline(prefix),"");
+            StringJoiner join = new StringJoiner("",dataProviding.parseRTline(prefix,error),"");
             for( int a=0;a<indexes.length;a++){
                 try {
-                    var fdp =fill[a];
-                    if( fdp.contains("{"))
-                        fdp=dataProviding.parseRTline(fdp);
-                    join.add(split[indexes[a]]).add(fdp);
+                    join.add(split[indexes[a]]).add( dataProviding.parseRTline(fill[a],error) );
                     split[indexes[a]] = null;
                 }catch( IndexOutOfBoundsException e){
                     Logger.error("Out of bounds when processing: "+input);
