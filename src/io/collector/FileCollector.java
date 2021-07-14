@@ -333,7 +333,7 @@ public class FileCollector extends AbstractCollector{
             timeoutFuture = scheduler.schedule(new TimeOut(), secondsTimeout, TimeUnit.SECONDS );
         }
 
-        if( dataBuffer.size() > batchSize ){
+        if( dataBuffer.size() > batchSize && batchSize !=-1){
             Logger.debug(id+ "(fc) -> Buffer matches batchsize");
             scheduler.submit(()->appendData(getPath()));
         }
@@ -355,19 +355,17 @@ public class FileCollector extends AbstractCollector{
             trigCmds.stream().filter( tc -> tc.trigger==TRIGGERS.IDLE)
                              .forEach( tc->dQueue.add( Datagram.system(tc.cmd.replace("{path}",getPath().toString())).writable(this)) );
         }else{
-            if(batchSize!=-1){
-                long dif = Instant.now().getEpochSecond() - lastData; // if there's a batchsize, that is primary
+            long dif = Instant.now().getEpochSecond() - lastData; // if there's a batchsize, that is primary
 
-                if( batchSize==-1 )
-                    dif = Instant.now().getEpochSecond() - firstData; // if there's no batchsize
+            if( batchSize==-1 )
+                dif = Instant.now().getEpochSecond() - firstData; // if there's no batchsize
 
-                if( dif >= secondsTimeout-1 ) {
-                    scheduler.submit(() -> appendData(getPath()));
-                    timeoutFuture = scheduler.schedule(new TimeOut(), secondsTimeout, TimeUnit.SECONDS );
-                }else{
-                    long next = secondsTimeout - dif;
-                    timeoutFuture = scheduler.schedule(new TimeOut(), next, TimeUnit.SECONDS );
-                }
+            if( dif >= secondsTimeout-1 ) {
+                scheduler.submit(() -> appendData(getPath()));
+                timeoutFuture = scheduler.schedule(new TimeOut(), secondsTimeout, TimeUnit.SECONDS );
+            }else{
+                long next = secondsTimeout - dif;
+                timeoutFuture = scheduler.schedule(new TimeOut(), next, TimeUnit.SECONDS );
             }
         }
     }
