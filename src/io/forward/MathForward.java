@@ -1,5 +1,6 @@
 package io.forward;
 
+import das.DataProviding;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.math.Calculations;
@@ -27,11 +28,11 @@ public class MathForward extends AbstractForward {
 
     public enum OP_TYPE{COMPLEX, SCALE, LN, SALINITY, SVC}
 
-    public MathForward(String id, String source, BlockingQueue<Datagram> dQueue ){
-        super(id,source,dQueue);
+    public MathForward(String id, String source, BlockingQueue<Datagram> dQueue, DataProviding dp){
+        super(id,source,dQueue,dp);
     }
-    public MathForward(Element ele, BlockingQueue<Datagram> dQueue){
-        super(dQueue);
+    public MathForward(Element ele, BlockingQueue<Datagram> dQueue, DataProviding dp){
+        super(dQueue,dp);
         readFromXML(ele);
     }
     /**
@@ -39,8 +40,8 @@ public class MathForward extends AbstractForward {
      * @param ele The element containing the math info
      * @return The MathForward created based on the xml element
      */
-    public static MathForward readXML(Element ele, BlockingQueue<Datagram> dQueue ){
-        return new MathForward( ele,dQueue );
+    public static MathForward readXML(Element ele, BlockingQueue<Datagram> dQueue, DataProviding dp ){
+        return new MathForward( ele,dQueue,dp );
     }
     /**
      * Get the tag that is used for the child nodes, this way the abstract class can refer to it

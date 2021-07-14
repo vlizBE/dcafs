@@ -9,6 +9,7 @@ import io.telnet.TelnetCodes;
 import org.influxdb.dto.Point;
 import org.tinylog.Logger;
 import util.database.QueryWriting;
+import util.tools.TimeTools;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -16,6 +17,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.*;
+import java.util.regex.MatchResult;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -25,7 +28,7 @@ import java.util.stream.Stream;
  * 
  * @author Michiel T'Jampens
  */
-public class RealtimeValues implements CollectorFuture {
+public class RealtimeValues implements CollectorFuture, DataProviding {
 
 	protected IssuePool issues;
 
@@ -67,6 +70,10 @@ public class RealtimeValues implements CollectorFuture {
 	ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 	private final HashMap<String, MathCollector> mathCollectors = new HashMap<>();
 
+	/* Patterns */
+	Pattern rtvalPattern=null;
+	Pattern rttextPattern=null;
+
 	/* **************************************  C O N S T R U C T O R **************************************************/
 	/**
 	 * Standard constructor requiring an IssueCollector
@@ -84,13 +91,8 @@ public class RealtimeValues implements CollectorFuture {
 
 	}
 
-	public void copySetup(RealtimeValues to) {
-		// Copy mqtt
-		mqttWorkers.forEach(to::addMQTTworker);
-	}
-
 	public void addMQTTworker(String id, MqttWorker mqttWorker) {
-		this.mqttWorkers.put(id, mqttWorker);
+		mqttWorkers.put(id, mqttWorker);
 	}
 	public void addQueryWriting( QueryWriting queryWriting ){
 		this.queryWriting=queryWriting;
@@ -144,26 +146,6 @@ public class RealtimeValues implements CollectorFuture {
 	/* ********************************** I N F L U X D B *********************************************************** */
 	public boolean sendToInflux( String id, Point p){
 		return queryWriting.writeInfluxPoint(id,p);
-	}
-	/* ************************************** * D E S C R I P T O R S *************************************************/
-	/**
-	 * Add a descriptor to the collection
-	 * 
-	 * @param id         The ID of the variable
-	 * @param descriptor The name of the variable
-	 */
-	public void addDescriptorID(int id, String descriptor) {
-		descriptorID.put(descriptor.toLowerCase(), id);
-	}
-
-	/**
-	 * Get the ID corresponding to the variable name
-	 * 
-	 * @param descriptor The name of the variable
-	 * @return The ID corresponding or null if not found
-	 */
-	public int getDescriptorID(String descriptor) {
-		return descriptorID.get(descriptor);
 	}
 
 	/* ************************** O T H E R *************************************************************
@@ -242,6 +224,35 @@ public class RealtimeValues implements CollectorFuture {
 			if( res != null)
 				res.forEach( wr -> wr.writeLine(param + " : " + value));
 		}
+	}
+	public String parseRTline( String line ){
+		if( rtvalPattern==null) {
+			rtvalPattern = Pattern.compile("\\{rtval:.*}");
+			rttextPattern = Pattern.compile("\\{rttext:.*}");
+		}
+		var vals= rtvalPattern.matcher(line)
+				.results()
+				.map(MatchResult::group)
+				.toArray(String[]::new);
+
+		for( String val:vals){
+			var d = getRealtimeValue(val.substring(7,val.length()-1),Double.NaN);
+			if( Double.isNaN(d)) {
+				line = line.replace(val, "NAN");
+			}else {
+				line = line.replace(val, "" + d);
+			}
+		}
+		vals = rttextPattern.matcher(line)
+				.results()
+				.map(MatchResult::group)
+				.toArray(String[]::new);
+
+		for( String val:vals){
+			line = line.replace(val, getRealtimeText(val.substring(7,val.length()-1),"NAN"));
+		}
+		line = line.replace("{utc}", TimeTools.formatLongUTCNow());
+		return line;
 	}
 	public DoubleVal getDoubleVal( String param ){
 		return rtvals.get(param);

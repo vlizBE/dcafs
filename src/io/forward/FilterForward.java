@@ -22,10 +22,10 @@ public class FilterForward extends AbstractForward {
     protected final ArrayList<Writable> reversed = new ArrayList<>();
 
     public FilterForward(String id, String source, BlockingQueue<Datagram> dQueue ){
-        super(id,source,dQueue);
+        super(id,source,dQueue,null);
     }
     public FilterForward(Element ele, BlockingQueue<Datagram> dQueue  ){
-        super(dQueue);
+        super(dQueue,null);
         readFromXML(ele);
     }
 

@@ -1,5 +1,6 @@
 package io.forward;
 
+import das.DataProviding;
 import io.Writable;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
@@ -34,15 +35,19 @@ public abstract class AbstractForward implements Writable {
     protected int badDataCount=0;               // Keep track of the amount of bad data received
     static final protected int MAX_BAD_COUNT=10;
     protected boolean log = false;
+    protected final DataProviding dataProviding;
 
-    protected AbstractForward(String id, String source, BlockingQueue<Datagram> dQueue ){
+
+    protected AbstractForward(String id, String source, BlockingQueue<Datagram> dQueue, DataProviding dataProviding ){
         this.id=id;
+        this.dataProviding=dataProviding;
         if( !source.isEmpty() )
             sources.add(source);
         this.dQueue=dQueue;
     }
-    protected AbstractForward( BlockingQueue<Datagram> dQueue){
+    protected AbstractForward( BlockingQueue<Datagram> dQueue, DataProviding dataProviding){
         this.dQueue=dQueue;
+        this.dataProviding=dataProviding;
     }
     public void setDebug( boolean debug ){
         this.debug=debug;

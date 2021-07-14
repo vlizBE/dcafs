@@ -1,5 +1,6 @@
 package io.forward;
 
+import das.DataProviding;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
@@ -20,11 +21,11 @@ import java.util.regex.Pattern;
 public class EditorForward extends AbstractForward{
     ArrayList<Function<String,String>> edits = new ArrayList<>(); // for the scale type
 
-    public EditorForward(String id, String source, BlockingQueue<Datagram> dQueue ){
-        super(id,source,dQueue);
+    public EditorForward(String id, String source, BlockingQueue<Datagram> dQueue, DataProviding dataProviding ){
+        super(id,source,dQueue,dataProviding);
     }
-    public EditorForward(Element ele, BlockingQueue<Datagram> dQueue  ){
-        super(dQueue);
+    public EditorForward(Element ele, BlockingQueue<Datagram> dQueue, DataProviding dataProviding  ){
+        super(dQueue,dataProviding);
         readFromXML(ele);
     }
     /**
@@ -32,8 +33,8 @@ public class EditorForward extends AbstractForward{
      * @param ele The element containing the editor info
      * @return The EditorForward created based on the xml element
      */
-    public static EditorForward readXML(Element ele, BlockingQueue<Datagram> dQueue ){
-        return new EditorForward( ele,dQueue );
+    public static EditorForward readXML(Element ele, BlockingQueue<Datagram> dQueue, DataProviding dataProviding ){
+        return new EditorForward( ele,dQueue, dataProviding );
     }
     /**
      * Get an overview of all the available edit types
@@ -387,13 +388,17 @@ public class EditorForward extends AbstractForward{
         }else{
             deli=delimiter;
         }
+
         Function<String,String> edit = input ->
         {
             String[] split = input.split(deli); // Get the source data
-            StringJoiner join = new StringJoiner("",prefix,"");
+            StringJoiner join = new StringJoiner("",dataProviding.parseRTline(prefix),"");
             for( int a=0;a<indexes.length;a++){
                 try {
-                    join.add(split[indexes[a]]).add(fill[a]);
+                    var fdp =fill[a];
+                    if( fdp.contains("{"))
+                        fdp=dataProviding.parseRTline(fdp);
+                    join.add(split[indexes[a]]).add(fdp);
                     split[indexes[a]] = null;
                 }catch( IndexOutOfBoundsException e){
                     Logger.error("Out of bounds when processing: "+input);

@@ -1,5 +1,6 @@
 package io.forward;
 
+import das.DataProviding;
 import io.Writable;
 import io.telnet.TelnetCodes;
 import das.Commandable;
@@ -24,10 +25,12 @@ public class ForwardPool implements Commandable {
 
     BlockingQueue<Datagram> dQueue;
     Path settingsPath;
-    
-    public ForwardPool(BlockingQueue<Datagram> dQueue, Path settingsPath){
+    DataProviding dataProviding;
+
+    public ForwardPool(BlockingQueue<Datagram> dQueue, Path settingsPath, DataProviding dataProviding){
         this.dQueue=dQueue;
         this.settingsPath=settingsPath;
+        this.dataProviding=dataProviding;
         readSettingsFromXML();
     }
 
@@ -87,7 +90,7 @@ public class ForwardPool implements Commandable {
 
     /*    ------------------------ Math ---------------------------------    */
     public MathForward addMath(String id, String source ){
-        var mf = new MathForward( id, source, dQueue);
+        var mf = new MathForward( id, source, dQueue,dataProviding);
         maths.put( id, mf);
         return mf;
     }
@@ -96,7 +99,7 @@ public class ForwardPool implements Commandable {
     }
     public void readMathsFromXML( List<Element> maths ){
         for( Element ele : maths ){
-            MathForward mf = new MathForward( ele,dQueue );
+            MathForward mf = new MathForward( ele,dQueue,dataProviding );
             String id = mf.getID();
             this.maths.put(id.replace("math:", ""), mf);
         }
@@ -210,7 +213,7 @@ public class ForwardPool implements Commandable {
                                     mOp.get().readFromXML(ee);
                                     altered.add(id);
                                 }else{ //if doesn't exist yet
-                                    maths.put(id,MathForward.readXML(ee,dQueue));
+                                    maths.put(id,MathForward.readXML(ee,dQueue,dataProviding));
                                 }
                             }
                     );
@@ -278,7 +281,7 @@ public class ForwardPool implements Commandable {
     }
     /*    ------------------------ Editor ---------------------------------    */
     public EditorForward addEditor(String id, String source ){
-        var tf = new EditorForward( id, source, dQueue);
+        var tf = new EditorForward( id, source, dQueue,dataProviding);
         editors.put( id, tf);
         return tf;
     }
@@ -288,7 +291,7 @@ public class ForwardPool implements Commandable {
     public void readEditorsFromXML( List<Element> editorsEle ){
         Logger.info("Reading TextForwards from xml");
         for( Element ele : editorsEle ){
-            var tf = new EditorForward( ele,dQueue );
+            var tf = new EditorForward( ele,dQueue,dataProviding );
             editors.put(tf.getID().replace("editor:", ""), tf);
         }
     }
@@ -347,7 +350,7 @@ public class ForwardPool implements Commandable {
                                     fOp.get().readFromXML(ee);
                                     altered.add(id);
                                 }else{ //if doesn't exist yet
-                                    editors.put(id,EditorForward.readXML(ee,dQueue));
+                                    editors.put(id,EditorForward.readXML(ee,dQueue,dataProviding));
                                 }
                             }
                     );
