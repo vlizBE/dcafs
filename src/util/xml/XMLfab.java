@@ -14,7 +14,6 @@ import java.util.stream.Stream;
 public class XMLfab {
     Element root;           // The highest element to which parents are added
     Element last;           // The last created/added element
-    Element temp;           // Temp
     Element parent;         // The element to which child nodes are added
     Document xmlDoc;        // The xml document
     Path xmlPath;           // The path to the xml document
@@ -31,31 +30,31 @@ public class XMLfab {
 
     /**
      * Create a fab based on the given document, reload the document first if requested
-     * @param xmlDoc The xml document
+     * @param doc The xml document
      * @param reload True if the document should be reloaded from disk first
      */
-    private XMLfab( Document xmlDoc, boolean reload ){
-        if( xmlDoc == null ){
+    private XMLfab( Document doc, boolean reload ){
+        if( doc == null ){
             Logger.error("Invalid xml doc given.");
             return;
         }
         if( reload ){
-            this.xmlDoc = XMLtools.reloadXML(xmlDoc); // make sure we use latest version
+            xmlDoc = XMLtools.reloadXML(doc); // make sure we use latest version
         }else{
-            this.xmlDoc = xmlDoc;
+            xmlDoc = doc;
         }        
     }
 
     /**
      * Create a fab with the xml document at the given path
-     * @param xmlPath The path to the xml file
+     * @param path The path to the xml file
      */
-    private XMLfab( Path xmlPath ){
-        this.xmlPath=xmlPath;
-        if( Files.exists(xmlPath) ){
-            xmlDoc = XMLtools.readXML(xmlPath);
+    private XMLfab( Path path ){
+        xmlPath=path;
+        if( Files.exists(path) ){
+            xmlDoc = XMLtools.readXML(path);
         }else{
-            xmlDoc = XMLtools.createXML(xmlPath, false);
+            xmlDoc = XMLtools.createXML(path, false);
         }
     }
     /**
@@ -314,7 +313,7 @@ public class XMLfab {
      * @return The optional parent node or empty if none found
      */
     public Optional<Element> selectParent( String tag, String attribute, String value){
-        Optional<Element> found = this.getChildren(tag).stream()
+        Optional<Element> found = getChildren(tag).stream()
                 .filter( x -> x.getAttribute(attribute).equalsIgnoreCase(value)).findFirst();
         if( found.isPresent() ){
             last = found.get();
@@ -329,7 +328,7 @@ public class XMLfab {
      * @return The optional parent node or empty if none found
      */
     public Optional<Element> selectFirstParent( String tag ){
-        Optional<Element> found = this.getChildren(tag).stream().findFirst();
+        Optional<Element> found = getChildren(tag).stream().findFirst();
         if( found.isPresent() ){
             last = found.get();
             parent = last;
@@ -345,7 +344,7 @@ public class XMLfab {
      * @return This fab
      */
     public XMLfab selectOrCreateParent( String tag, String attribute, String value){
-        Optional<Element> found = this.getChildren(tag).stream()
+        Optional<Element> found = getChildren(tag).stream()
                 .filter( x -> x.getAttribute(attribute).equalsIgnoreCase(value)||attribute.isEmpty()).findFirst();
         if( found.isPresent() ){
             last = found.get();
