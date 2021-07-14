@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 public class TimeTools {
 
     static final public DateTimeFormatter LONGDATE_FORMATTER_UTC = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS").withZone(ZoneOffset.UTC);
+    static final public DateTimeFormatter SHORTDATE_FORMATTER_UTC = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.UTC);
     static final public DateTimeFormatter LONGDATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
     public static final String SQL_LONG_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS";
@@ -110,6 +111,13 @@ public class TimeTools {
      */
     public static String formatLongUTCNow( ) {
         return LONGDATE_FORMATTER_UTC.format(Instant.now());
+    }
+    /**
+     * Gets the current UTC datetime and formats it according to the standard 'long' format yyyy-MM-dd HH:mm:ss.SSS
+     * @return If successful it returns the requested date, if not an empty string
+     */
+    public static String formatShortUTCNow( ) {
+        return SHORTDATE_FORMATTER_UTC.format(Instant.now());
     }
     public static String formatLongNow( ) {
         return LONGDATE_FORMATTER.withZone( ZoneId.systemDefault() ).format(Instant.now());
