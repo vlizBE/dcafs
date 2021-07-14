@@ -32,6 +32,20 @@ From 0.5.0 onwards, this should be better documented...
 - Using the command `read:debugworker` has been altered to `read:debugworker,originid` to only request
 data from a specific id or * for everything. If no originid is given, * is assumed.
 
+### RealtimeValues
+- Implements the DataProviding interface the provide rtval and rttext data 
+
+### Forwards
+- DataProviding is added to the abstract class
+- EditorForward uses it to add realtime data (and timestamping) to a resplit action
+- Usage example:
+````xml
+<editor id="pd_parsec" src="filter:vout">
+    <!-- vout1;0;vout2;0;vout3;0;vout4;0;vout5;125;vout6;0;vout7:0;vout8;0 -->
+    <edit type="resplit" delimiter=";" leftover="remove">"{utc}";i1;{rtval:pd_iout1};i3;{rttext:pd_error}</edit>
+</editor>
+````
+
 ### Bugfixes
 - FileCollector, batchsize of -1 didn't mean ignore the batchsize
 - FileCollector, batchsize of -1 didn't allow for timeout flush
