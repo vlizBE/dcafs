@@ -484,6 +484,11 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 			case "send":
 				if( parts.length !=4 )
 					return "Not enough arguments send,ref/email,subject,content";
+
+				// Check if the subject contains time request
+				parts[2]=parts[2].replace("{localtime}", TimeTools.formatNow("HH:mm"));
+				parts[2]=parts[2].replace("{utctime}", TimeTools.formatUTCNow("HH:mm"));
+
 				sendEmail( Email.to(parts[1]).subject(parts[2]).content(parts[3]) );
 				return "Tried to send email";
 			case "checknow":
