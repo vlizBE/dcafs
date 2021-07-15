@@ -625,30 +625,23 @@ public class StreamManager implements StreamListener, CollectorFuture {
 					.add(" ss:forward,source,id -> Forward the data from a source to the stream, source can be any object that accepts a writable")
 					.add(" ss:connect,id1,if2 -> Data is interchanged between the streams with the given id's")
 					.add(" ss:echo,id -> Toggles that all the data received on this stream will be returned to sender")
+					.add(" ss:send,id,data(,reply) -> Send the given data to the id with optional reply")
 				.add("").add(TelnetCodes.TEXT_GREEN+"Send data to stream via telnet"+TelnetCodes.TEXT_YELLOW)
 					.add("Option 1) First get the index of the streams with ss or streams")
 					.add("          Then use Sx:data to send data to the given stream (eol will be added)")
 					.add("Option 2) ss:send,id,data -> Send the data to the given stream and append eol"+TelnetCodes.TEXT_BRIGHT);
 				return join.toString();
 			case "send":
-				if( cmds.length < 3 ) // Make sure we got the correct amount of arguments
-					return "Bad amount of arguments, need 3 (send,id,data)";
-				var s = getStream(cmds[1]);
-				if( s.isPresent() ){
-					var bs = s.get();
-					if( bs instanceof Writable ){
-						if( ((Writable)s.get()).writeLine(request.substring(request.indexOf(cmds[1]+",")+cmds[1].length()+1)) ){
-							return "Data written";
-						}else{
-							return "Failed to write data";
-						}
-					}else{
-						return "Can't write to this stream";
-					}
+					if( cmds.length < 3 ) // Make sure we got the correct amount of arguments
+						return "Bad amount of arguments, need 3 send,id,data(,reply)";
+					if( getStream(cmds[1]).isEmpty() )
+						return "No such stream: "+cmds[1];
 
-				}else{
-					return "No such stream: "+cmds[1];
-				}
+					String written = writeToStream(cmds[1],cmds[2],cmds.length>3?cmds[3]:"");
+					if( written.isEmpty() )
+						return "Failed to write data";
+					return "Data written: "+written;
+
 			case "buffers": return getConfirmBuffers();
 			case "labels" :case "rios": return this.getActiveLabels();
 			case "requests":
