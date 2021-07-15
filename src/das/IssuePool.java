@@ -141,12 +141,32 @@ public class IssuePool implements Commandable{
         }
         return "unknown command: "+request[0]+":"+request[1];
     }
+
+    /**
+     * Resets/Clears the issues of which the id starts with the given text
+     * @param startswith The text the id should start with
+     */
+    public void resetIssues(String startswith){
+        issues.entrySet().stream().filter( ent -> ent.getKey().startsWith(startswith)).forEach( ent -> ent.getValue().clear() );
+    }
+
+    /**
+     * Add the issue if it's new and start it
+     * @param id The id of the issue
+     * @param message The message explaining it
+     */
     public void addIfNewAndStart( String id, String message){
         var is = issues.get(id);
         if( is==null)
             addIssue(id,message);
         issues.get(id).start();
     }
+
+    /**
+     * Add the issue if it doesn't exist and stop it if it does exist and is active
+     * @param id The id pf the issue
+     * @param message The message explaining it
+     */
     public void addIfNewAndStop( String id, String message){
         var is = issues.get(id);
         if( is==null) {
@@ -155,12 +175,24 @@ public class IssuePool implements Commandable{
             is.stop();
         }
     }
+
+    /**
+     * Add the issue if new and increment the issue count with one (same as toggle on and off)
+     * @param id The id of the issue
+     * @param message The message explaining it
+     */
     public void addIfNewAndIncrement( String id, String message){
         var is = issues.get(id);
         if( is==null)
             addIssue(id,message);
         issues.get(id).increment();
     }
+
+    /**
+     * Get the amount of times the issue was triggered
+     * @param id The id to look for
+     * @return The amount of time it was triggered or 0 if not found
+     */
     public int getIssueTriggerCount(String id){
         var is = issues.get(id);
         if( is!=null)
