@@ -20,13 +20,25 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamPool)   
   * Rework the TaskManager (will be trigger for 0.11.0)
 
-## Update guide from 0.9.x -> 0.10.4
+## Update guide from 0.9.x -> 0.10.5
 - databases node: replace 'setup' with 'flush' and 'flushtime' with 'age'
 - databases node: replace 'idle' attribute with 'idleclose' node
 - TaskManager script: Replace the @fillin with {fillin}
 - FilterForward: rename source node to src node
 
-## 0.10.4 (work in progress)
+## 0.10.5 (work in progress)
+
+### Digiworker
+- Implemented Commandable
+- The sms:send command now also replaces {localtime} and {utctime}
+
+### StreamManager
+- The send command now allows optional expected reply `ss:send,id,data(,reply)`
+
+### EmailWorker
+- The email:send command now also replaces {localtime} and {utctime}
+
+## 0.10.4 (15/07/2021)
 
 ### DebugWorker
 - Using the command `read:debugworker` has been altered to `read:debugworker,originid` to only request
