@@ -4,6 +4,7 @@ import io.email.Email;
 import io.email.EmailSending;
 import io.email.EmailWorker;
 import com.fazecast.jSerialComm.SerialPort;
+import io.sms.SMSSending;
 import io.stream.StreamManager;
 import io.Writable;
 import io.collector.FileCollector;
@@ -68,8 +69,8 @@ public class CommandPool {
 	private Path settingsPath;
 
 	static final String UNKNOWN_CMD = "unknown command";
-	protected Optional<EmailSending> sendEmail = Optional.empty();
-
+	private Optional<EmailSending> sendEmail = Optional.empty();
+	private Optional<SMSSending> sendSMS = Optional.empty();
 	/* ******************************  C O N S T R U C T O R *********************************************************/
 	/**
 	 * Constructor requiring a link to the @see RealtimeValues for runtime values
@@ -118,6 +119,14 @@ public class CommandPool {
 
 		this.emailWorker = emailWorker;
 		sendEmail = Optional.ofNullable(emailWorker.getSender());
+	}
+
+	/**
+	 * Enable SMS sending from the CommandPool
+	 * @param sms The object that allows sms sending
+	 */
+	public void setSMSSending(SMSSending sms){
+		sendSMS = Optional.ofNullable(sms);
 	}
 	/**
 	 * To interact with streams/channels, access to the streampool is needed
@@ -969,7 +978,9 @@ public class CommandPool {
 				DebugWorker.addBlank(XMLfab.withRoot(settingsPath,"dcafs","settings"));
 				return "Tried to add node";
 			case "sms":
-				das.sendSMS("admin", "Test");
+				if(sendSMS.isEmpty())
+					return "No SMS sending defined";
+				sendSMS.get().sendSMS("admin","test");
 				return "Trying to send SMS\r\n";
 			case "haw":
 				das.haltWorkers();

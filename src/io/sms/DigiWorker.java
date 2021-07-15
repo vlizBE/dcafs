@@ -1,5 +1,7 @@
 package io.sms;
 
+import das.Commandable;
+import io.Writable;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -14,6 +16,7 @@ import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import util.DeadThreadListener;
+import util.tools.TimeTools;
 import util.xml.XMLtools;
 
 import java.util.ArrayList;
@@ -24,7 +27,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-public class DigiWorker implements Runnable, SMSSending{
+public class DigiWorker implements Runnable, SMSSending, Commandable {
 
 	private TelnetClientHandler handler;
 	private Channel digi;
@@ -126,6 +129,8 @@ public class DigiWorker implements Runnable, SMSSending{
 		return join.toString();
 	}
 	public void sendSMS( String to, String content ){
+		content=content.replace("{localtime}", TimeTools.formatNow("HH:mm"));
+		content=content.replace("{utctime}", TimeTools.formatUTCNow("HH:mm"));
 		smsQueue.add( new String[]{to, content.length() > 150 ? content.substring(0, 150) : content} );
 	}
 	@Override
@@ -301,6 +306,29 @@ public class DigiWorker implements Runnable, SMSSending{
 		} 
         return null;
 	}
+
+	@Override
+	public String replyToCommand(String[] request, Writable wr, boolean html) {
+		var cmds = request[1].split(",");
+		switch(cmds[0]){
+			case "?":
+				return "sms:send,ref,message";
+			case "send":
+				if( cmds.length<3)
+					return "Not enough arguments, need sms:send,ref,message";
+				if(to.get(cmds[1])==null)
+					return "No such ref found";
+				sendSMS(cmds[1],cmds[2]);
+				return "Tried to send sms";
+		}
+		return "unknown command: "+request[0]+":"+request[1];
+	}
+
+	@Override
+	public boolean removeWritable(Writable wr) {
+		return false;
+	}
+
 	/**
 	 * Handler class that processes incoming and outgoing messages.
 	 */

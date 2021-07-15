@@ -473,24 +473,9 @@ public class DAS implements DeadThreadListener {
         Logger.info("Adding DigiWorker");
         digiWorker = new DigiWorker(settingsDoc);
         digiWorker.setEventListener(this);
+        addCommandable("sms",digiWorker);
+        commandPool.setSMSSending(digiWorker);
     }
-    /**
-     * Send an SMS using the digi worker
-     * 
-     * @param to      The cellphone number or a keyword
-     * @param message The message to send
-     * @return True if successfully added to the queue
-     */
-    public boolean sendSMS(String to, String message) {
-        if (digiWorker == null) {
-            Logger.warn("Not sending SMS because no worker active");
-            return false;
-        }
-        digiWorker.getQueue().add(new String[] { to, message });
-        Logger.info("Added SMS: '" + message + "' to " + to);
-        return true;
-    }
-
     /* *************************************  D E B U G W O R K E R ***********************************************/
     /**
      * Creates the DebugWorker
