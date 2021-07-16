@@ -192,12 +192,16 @@ public class MathForward extends AbstractForward {
         XMLtools.getChildElements(math, "def")
                 .forEach( def -> defs.put( def.getAttribute("ref"),def.getTextContent()));
 
+        boolean oldValid=valid;
         XMLtools.getChildElements(math, "op")
                     .forEach( ops -> addOperation(
                             Integer.parseInt(ops.getAttribute("index")),
                             fromStringToOPTYPE(XMLtools.getStringAttribute(ops,"type","complex")),
                             XMLtools.getStringAttribute(ops,"cmd",""),
                             ops.getTextContent()) );
+
+        if( !oldValid && valid )// If math specific things made it valid
+            sources.forEach( source -> dQueue.add( Datagram.build( source ).label("system").writable(this) ) );
         return true;
     }
     /**
