@@ -66,6 +66,21 @@ public class FilterForward extends AbstractForward {
 
     }
     @Override
+    public String toString(){
+        StringJoiner join = new StringJoiner("\r\n" );
+        join.add(id+ (sources.isEmpty()?" without sources":" getting data from "+String.join( ";",sources)));
+        join.add(getRules());
+
+        StringJoiner ts = new StringJoiner(", ","Targets: ","" );
+        ts.setEmptyValue("No targets yet.");
+        targets.forEach( x -> ts.add(x.getID()));
+        reversed.forEach( x -> ts.add(x.getID()+"!"));
+
+        join.add(ts.toString());
+
+        return join.toString();
+    }
+    @Override
     public boolean removeTarget( Writable target ){
         return targets.remove(target)||reversed.remove(target);
     }
