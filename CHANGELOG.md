@@ -28,15 +28,25 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.10.5 (work in progress)
 
+### Datapaths
+- New functionality, allows for filter,math,editor and generic to be added in a single node
+- path can be in a seperate file instead of the main settings.xml
+- less boilerplate because the path will assume steps are following each other (so step 1 is the src for
+  step 2 etc) and will generate id's
+
 ### Digiworker
 - Implemented Commandable
 - The sms:send command now also replaces {localtime} and {utctime}
 
-### StreamManager
-- The send command now allows optional expected reply `ss:send,id,data(,reply)`
+### Other
+- Waypoints, travel bearing is now default 0-360 (so can be omitted)
+- StreamManager, the send command now allows optional expected reply `ss:send,id,data(,reply)`
+- EmailWorker, the email:send command now also replaces {localtime} and {utctime}
 
-### EmailWorker
-- The email:send command now also replaces {localtime} and {utctime}
+### Bugfixes
+- LabelWorker didn't give an error if a generic doesn't exist
+- MathForward, cmd in an op didn't make the forward valid
+
 
 ## 0.10.4 (15/07/2021)
 
