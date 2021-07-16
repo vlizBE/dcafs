@@ -626,7 +626,12 @@ public class LabelWorker implements Runnable, Labeller {
 
 				var genericIDs = d.label.split(":")[1].split(",");
 				for( String genericID : genericIDs ){
-					getGenerics(genericID).stream().forEach(
+					var generics = getGenerics(genericID);
+					if( generics==null || generics.isEmpty() ) {
+						Logger.error("No such generic " + genericID + " for " + d.getOriginID());
+						continue;
+					}
+					generics.stream().forEach(
 							gen -> {
 								if ( mes.startsWith(gen.getStartsWith()) ) {
 									Object[] data = gen.apply(mes, rtvals);
