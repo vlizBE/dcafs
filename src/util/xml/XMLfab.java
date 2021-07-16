@@ -161,11 +161,20 @@ public class XMLfab {
      * @return The elements found at the end of the root
      */
     public static Stream<Element> getRootChildren( Path xmlPath, String... roots){
+        if( Files.notExists(xmlPath) ){
+            Logger.error("No such xml file: "+xmlPath);
+            return new ArrayList<Element>().stream();
+        }
+
         XMLfab fab = new XMLfab(xmlPath);
         fab.root = XMLtools.getFirstElementByTag(fab.xmlDoc, roots[0]);
         String end = roots[roots.length-1];
         if( fab.hasRoots(roots) ){
-            fab.last=(Element)fab.root.getParentNode();
+            if( fab.root.getParentNode()!=null && fab.root.getParentNode() instanceof Element) {
+                fab.last = (Element) fab.root.getParentNode();
+            }else{
+                fab.last=fab.root;
+            }
             return fab.getChildren(roots[roots.length-1]).stream();
         }        
         return new ArrayList<Element>().stream();
