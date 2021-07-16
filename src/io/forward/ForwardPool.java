@@ -22,6 +22,7 @@ public class ForwardPool implements Commandable {
     HashMap<String, FilterForward> filters = new HashMap<>();
     HashMap<String, EditorForward> editors = new HashMap<>();
     HashMap<String, MathForward> maths = new HashMap<>();
+    HashMap<String, String> paths = new HashMap<>();
 
     BlockingQueue<Datagram> dQueue;
     Path settingsPath;
@@ -38,6 +39,7 @@ public class ForwardPool implements Commandable {
      * Read the forwards stored in the settings.xml
      */
     public void readSettingsFromXML() {
+
         var xml = XMLtools.readXML(settingsPath);
         Element filtersEle = XMLtools.getFirstElementByTag(xml, "filters");
         if (filtersEle != null)
@@ -50,11 +52,89 @@ public class ForwardPool implements Commandable {
         Element editorsEle = XMLtools.getFirstElementByTag(xml, "editors");
         if (editorsEle != null)
             readEditorsFromXML(XMLtools.getChildElements(editorsEle, "editor"));
+
+        /* Figure out the datapath? */
+        XMLfab.getRootChildren(settingsPath,"dcafs","datapaths","path").forEach(
+                child -> {
+                    String src = XMLtools.getStringAttribute(child,"src","");
+                    String id = XMLtools.getStringAttribute(child,"id","");
+                    String imp = XMLtools.getStringAttribute(child,"import","");
+
+                    if( !imp.isEmpty() ) {
+                        var p = XMLfab.getRootChildren(Path.of(imp),"dcafs","path").findFirst();
+                        if(p.isPresent()) {
+                            child = p.get();
+                            Logger.info("Valid path script found at "+imp);
+                        }else{
+                            Logger.error("No valid path script found: "+imp);
+                            return;
+                        }
+                    }
+                    int ffId=1;
+                    int mfId=1;
+                    int efId=1;
+                    var steps = XMLtools.getChildElements(child);
+                    for( int a=0;a<steps.size();a++  ){
+                        Element step = steps.get(a);
+
+                        // Check if the next step is a generic, if so change the label attribute of the current step
+                        if( a<steps.size() ){
+                            var next = steps.get(a+1);
+                            if(next.getTagName().equalsIgnoreCase("generic")){
+                                if( !step.hasAttribute("label"))
+                                    step.setAttribute("label","generic:"+next.getAttribute("id"));
+                            }
+                        }
+                        // If this step doesn't have a src, alter it
+                        if( !step.hasAttribute("src"))
+                            step.setAttribute("src",src);
+
+                        switch( step.getTagName() ){
+                            case "filter":
+                                if( !step.hasAttribute("id")) {
+                                    step.setAttribute("id", id + "_f" + ffId);
+                                    ffId++;
+                                }
+                                FilterForward ff = new FilterForward( step, dQueue );
+                                src=ff.getID();
+                                filters.put(ff.getID().replace("filter:", ""), ff);
+                                break;
+                            case "math":
+                                if( !step.hasAttribute("id")) {
+                                    step.setAttribute("id", id + "_m" + mfId);
+                                    mfId++;
+                                }
+                                MathForward mf = new MathForward( step,dQueue,dataProviding );
+                                src = mf.getID();
+                                this.maths.put(mf.getID().replace("math:", ""), mf);
+                                break;
+                            case "editor":
+                                if( !step.hasAttribute("id")) {
+                                    step.setAttribute("id", id + "_e" + efId);
+                                    efId++;
+                                }
+                                var tf = new EditorForward( step,dQueue,dataProviding );
+                                src = tf.getID();
+                                editors.put(tf.getID().replace("editor:", ""), tf);
+                                break;
+                        }
+                    }
+                    paths.put(id,src);
+                }
+        );
     }
 
     @Override
     public String replyToCommand(String[] request, Writable wr, boolean html) {
         boolean ok=false;
+        if( request[0].equals("path")){
+            var src = paths.get(request[1]);
+            if( src != null ) {
+                var spl = src.split(":");
+                request[0] = spl[0];
+                request[1] = spl[1];
+            }
+        }
         switch(request[0]){
             // Filter
             case "ff": return replyToFilterCmd(request[1],wr,html);
@@ -97,11 +177,11 @@ public class ForwardPool implements Commandable {
     public Optional<MathForward> getMathForward(String id ){
         return Optional.ofNullable( maths.get(id));
     }
-    public void readMathsFromXML( List<Element> maths ){
-        for( Element ele : maths ){
+    public void readMathsFromXML( List<Element> mathsEles ){
+        for( Element ele : mathsEles ){
             MathForward mf = new MathForward( ele,dQueue,dataProviding );
             String id = mf.getID();
-            this.maths.put(id.replace("math:", ""), mf);
+            maths.put(id.replace("math:", ""), mf);
         }
     }
     private String replyToMathCmd( String cmd, Writable wr, boolean html ){

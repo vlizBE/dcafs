@@ -25,6 +25,7 @@ import util.database.*;
 import util.gis.Waypoint;
 import util.gis.Waypoints;
 import util.task.TaskManagerPool;
+import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
@@ -39,6 +40,8 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class DAS implements DeadThreadListener {
 
@@ -207,6 +210,7 @@ public class DAS implements DeadThreadListener {
             commandPool.addCommandable("mf", forwardPool);
             commandPool.addCommandable("editor", forwardPool);
             commandPool.addCommandable("ef", forwardPool);
+            commandPool.addCommandable("path", forwardPool);
 
             /* Math Collectors */
             MathCollector.createFromXml( XMLfab.getRootChildren(settingsDoc,"dcafs","maths","*") ).forEach(
@@ -413,11 +417,19 @@ public class DAS implements DeadThreadListener {
     }
     public void loadGenerics(boolean clear) {
         if (clear) {
-            settingsDoc = XMLtools.readXML(settingsPath);
             labelWorker.clearGenerics();
         }        
-        XMLfab.getRootChildren(settingsDoc, "dcafs","generics","generic")
+        XMLfab.getRootChildren(settingsPath, "dcafs","generics","generic")
                 .forEach( ele ->  labelWorker.addGeneric( Generic.readFromXML(ele) ) );
+        // Find the path ones?
+        XMLfab.getRootChildren(settingsPath, "dcafs","datapaths","path")
+                .forEach( ele -> {
+                    String imp = ele.getAttribute("import");
+                    if( !imp.isEmpty() ){
+                        XMLfab.getRootChildren(Path.of(imp), "dcafs","path","generic")
+                                .forEach( gen ->  labelWorker.addGeneric( Generic.readFromXML(gen) ) );
+                    }
+                });
     }
     public void loadValMaps(boolean clear){
         if( clear ){
