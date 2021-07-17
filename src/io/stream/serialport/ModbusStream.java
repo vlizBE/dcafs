@@ -75,34 +75,21 @@ public class ModbusStream extends SerialStream{
             if(debug)
                 Logger.debug(id+"(mb) -> "+Tools.fromBytesToHexString(rec,0,index));
 
+            // Log anything and everything (except empty strings)
+            if( log )		// If the message isn't an empty string and logging is enabled, store the data with logback
+                Logger.tag("RAW").warn( priority + "\t" + label + "\t[hex] " + Tools.fromBytesToHexString(rec) );
+
             if( verifyCRC( rec, index ) ){
 
-                dQueue.add(Datagram.build(rec).label(label).priority(priority).origin(id).timestamp().writable(this));
+                if(!label.equals("void"))
+                    dQueue.add(Datagram.build(rec).label(label).priority(priority).origin(id).timestamp().writable(this));
 
-                if( !targets.isEmpty() ){
-                    try {
-                        targets.stream().forEach(dt -> {
-                            try{
-                                dt.writeLine(Tools.fromBytesToHexString(rec,0,index-2));
-                            }catch(Exception e){
-                                Logger.error(id+"(mb) -> Something bad while writeLine to "+dt.getID());
-                                Logger.error(e);
-                            }
-                        });
-                        targets.removeIf(wr -> !wr.isConnectionValid()); // Clear inactive
-                    }catch(Exception e){
-                        Logger.error(id+"(mb) -> Something bad in serialport");
-                        Logger.error(e);
-                    }
-                }
+                forwardData(Tools.fromBytesToHexString(rec,0,index-2));
 
                 readyForWorker=false;
                 if(debug)
                     Logger.info( id+"(mb) -> " + Tools.fromBytesToHexString(rec));
-                // Log anything and everything (except empty strings)    
-                if( log )		// If the message isn't an empty string and logging is enabled, store the data with logback
-                    Logger.tag("RAW").warn( priority + "\t" + label + "\t[hex] " + Tools.fromBytesToHexString(rec) );
-                
+
             }else{
                 Logger.error(id+"(mb) -> Message failed CRC check: "+Tools.fromBytesToHexString(rec,0,index));
             }

@@ -145,22 +145,7 @@ public class SerialStream extends BaseStream implements Writable {
             Logger.info(id + " -> " + message);
             Logger.info(Tools.fromBytesToHexString(message.getBytes()));
         }
-        if( !targets.isEmpty() ){
-            try {
-                targets.stream().forEach(dt -> {
-                    try{
-                        dt.writeLine(message);
-                    }catch(Exception e){
-                        Logger.error(id+" -> Something bad while writeLine to "+dt.getID());
-                        Logger.error(e);
-                    }
-                });
-                targets.removeIf(wr -> !wr.isConnectionValid()); // Clear inactive
-            }catch(Exception e){
-                Logger.error(id+" -> Something bad in serialport");
-                Logger.error(e);
-            }
-        }
+        forwardData(message);
 
         long p = Instant.now().toEpochMilli() - timestamp; // Calculate the time between 'now' and when the previous
         // message was received
@@ -169,7 +154,26 @@ public class SerialStream extends BaseStream implements Writable {
         }
         timestamp = Instant.now().toEpochMilli(); // Store the timestamp of the received message
     }
-
+    protected void forwardData( String message){
+        if( !targets.isEmpty() ){
+            try {
+                targets.forEach(dt -> {
+                    eventLoopGroup.submit(()-> {
+                        try {
+                            dt.writeLine(message);
+                        } catch (Exception e) {
+                            Logger.error(id + " -> Something bad while writeLine to " + dt.getID());
+                            Logger.error(e);
+                        }
+                    });
+                });
+                targets.removeIf(wr -> !wr.isConnectionValid()); // Clear inactive
+            }catch(Exception e){
+                Logger.error(id+" -> Something bad in serialport");
+                Logger.error(e);
+            }
+        }
+    }
     public void alterSerialSettings(String settings) {
         if (serialPort == null) {
             return;

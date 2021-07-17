@@ -61,7 +61,7 @@ public class LocalStream extends BaseStream implements Writable {
         	    Logger.tag("RAW").warn( priority + "\t" + label + "\t" + msg );
 
 			if( !targets.isEmpty() ){
-                targets.forEach(dt -> dt.writeLine( msg ) );
+                targets.forEach(dt -> eventLoopGroup.submit( () -> dt.writeLine(msg)) );
                 targets.removeIf(wr -> !wr.isConnectionValid() ); // Clear inactive
 			}
 		

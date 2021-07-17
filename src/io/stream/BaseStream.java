@@ -1,6 +1,7 @@
 package io.stream;
 
 import io.Writable;
+import io.netty.channel.EventLoopGroup;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.tools.TimeTools;
@@ -52,6 +53,8 @@ public abstract class BaseStream {
     private static final String XML_STREAM_TAG="stream";
     protected enum TRIGGER{OPEN,IDLE,CLOSE,HELLO,WAKEUP, IDLE_END}
 
+    protected EventLoopGroup eventLoopGroup;		    // Eventloop used by the netty stuff
+
     protected BaseStream( String id, String label, BlockingQueue<Datagram> dQueue){
         this.id=id;
         this.label=label;
@@ -62,6 +65,10 @@ public abstract class BaseStream {
         readFromXML(stream);
     }
     protected BaseStream(){}
+
+    public void setEventLoopGroup( EventLoopGroup eventLoopGroup ){
+        this.eventLoopGroup = eventLoopGroup;
+    }
 
     protected boolean readFromXML( Element stream ){
 

@@ -31,6 +31,8 @@ public class TransHandler extends SimpleChannelInboundHandler<byte[]> implements
 	private final ArrayList<String> history = new ArrayList<>();
 	String repeat="";
 	boolean keepHistory=false;
+	private EventLoopGroup eventLoopGroup;
+
 
     public TransHandler( String label, BlockingQueue<Datagram> dQueue ){
         this.label=label;
@@ -53,6 +55,9 @@ public class TransHandler extends SimpleChannelInboundHandler<byte[]> implements
 	public void addTarget( Writable wr){
 		targets.removeIf( w -> w.equals(wr) || w.getID().equalsIgnoreCase(wr.getID()));
 		targets.add(wr);
+	}
+	public void setEventLoopGroup(EventLoopGroup eventLoopGroup) {
+		this.eventLoopGroup=eventLoopGroup;
 	}
 	/**
 	 * Set the listener of the server here
@@ -188,7 +193,8 @@ public class TransHandler extends SimpleChannelInboundHandler<byte[]> implements
 		dQueue.put( Datagram.build(repeat+msg).label(tempLabel).writable(this).raw(data) );
 
 		if( !targets.isEmpty() && !tempLabel.equals("system")){
-			targets.stream().forEach(dt -> dt.writeLine( repeat+new String(data) ) );
+			String tosend = repeat+new String(data);
+			targets.forEach( dt -> eventLoopGroup.submit(()->dt.writeLine( tosend )) );
 			targets.removeIf(wr -> !wr.isConnectionValid() ); // Clear inactive
 		}
    }

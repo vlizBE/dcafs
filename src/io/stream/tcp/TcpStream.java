@@ -36,7 +36,7 @@ public class TcpStream extends BaseStream implements Writable {
 
     ByteBuf[] deli;
     Bootstrap bootstrap;		// Bootstrap for TCP connections
-    EventLoopGroup group;		    // Eventloop used by the netty stuff
+
 
     static int bufferSize = 2048; 	// How many bytes are stored before a dump
     private boolean writableValid = true;
@@ -60,12 +60,12 @@ public class TcpStream extends BaseStream implements Writable {
     }
     public Bootstrap setBootstrap( Bootstrap strap ){
         if( strap == null ){
-            if(group==null){
+            if(eventLoopGroup==null){
                 Logger.error("No eventloopgroup yet");
                 return null;
             }
             bootstrap = new Bootstrap();
-			bootstrap.group(group).channel(NioSocketChannel.class)
+			bootstrap.group(eventLoopGroup).channel(NioSocketChannel.class)
 					.option(ChannelOption.SO_KEEPALIVE, true)
 					.option(ChannelOption.TCP_NODELAY, true)
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 6000);
@@ -76,9 +76,6 @@ public class TcpStream extends BaseStream implements Writable {
     }
     public void setHandler( TcpHandler handler ){
         this.handler=handler;
-    }
-    public void setEventLoopGroup( EventLoopGroup group ){
-        this.group=group;
     }
 
     @Override
@@ -91,13 +88,13 @@ public class TcpStream extends BaseStream implements Writable {
         ChannelFuture f;
         Logger.info("Trying to connect to tcp stream");
 
-        if( group==null){
+        if( eventLoopGroup==null){
             Logger.error("Event loop group still null");
             return false;
         }
 		if( bootstrap == null ){
 			bootstrap = new Bootstrap();
-			bootstrap.group(group).channel(NioSocketChannel.class)
+			bootstrap.group(eventLoopGroup).channel(NioSocketChannel.class)
 					.option(ChannelOption.SO_KEEPALIVE, true)
 					.option(ChannelOption.TCP_NODELAY, true)
 					.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 6000);
@@ -128,6 +125,7 @@ public class TcpStream extends BaseStream implements Writable {
                     handler.setPriority(priority);
                     handler.setTargets(targets);
                     handler.setStreamListeners( listeners );
+                    handler.setEventLoopGroup(eventLoopGroup);
 					ch.pipeline().addLast( handler );	   
 				}catch( io.netty.channel.ChannelPipelineException e ){
 					Logger.error("Issue trying to use handler for "+id);

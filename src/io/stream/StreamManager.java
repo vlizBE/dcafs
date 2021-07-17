@@ -43,7 +43,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 	private Bootstrap bootstrapTCP;		// Bootstrap for TCP connections
 	private Bootstrap bootstrapUDP;	  	// Bootstrap for UDP connections
 
-	private EventLoopGroup group;		    // Event loop used by the netty stuff
+	private EventLoopGroup eventLoopGroup;	// Event loop used by the netty stuff
 
 	private IssuePool issues;			// Handles the issues/problems that arise
 	private int retryDelayMax = 30;			// The minimum time between reconnection attempts
@@ -63,7 +63,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 	public StreamManager(BlockingQueue<Datagram> dQueue, IssuePool issues, EventLoopGroup nettyGroup ) {
 		this.dQueue = dQueue;
 		this.issues = issues;	
-		this.group = nettyGroup;	
+		this.eventLoopGroup = nettyGroup;
 	}
 	public StreamManager(BlockingQueue<Datagram> dQueue, IssuePool issues) {
 		this(dQueue,issues, new NioEventLoopGroup());	
@@ -200,7 +200,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 	 */
 	public void disconnectAll() {
 		streams.forEach((k,v) -> v.disconnect() );
-		group.shutdownGracefully();
+		eventLoopGroup.shutdownGracefully();
 	}
 
 	/* ********************************** W R I T I N G **************************************************************/
@@ -254,7 +254,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 		
 		ConfirmCollector cw = confirmCollectors.get(ref+"_"+id);
 		if( cw==null ){
-			cw = new ConfirmCollector( ref+"_"+id,3,3, (Writable)stream, group );
+			cw = new ConfirmCollector( ref+"_"+id,3,3, (Writable)stream, eventLoopGroup);
 			cw.addListener(wf);
 			stream.addTarget(cw);
 			confirmCollectors.put(ref+"_"+id, cw );
@@ -435,26 +435,27 @@ public class StreamManager implements StreamListener, CollectorFuture {
     	switch( stream.getAttribute("type").toLowerCase() ){
 			case "tcp": case "tcpclient":
 				TcpStream tcp = new TcpStream( dQueue, stream );
-				tcp.setEventLoopGroup(group);
+				tcp.setEventLoopGroup(eventLoopGroup);
 				tcp.addListener(this);
 				bootstrapTCP = tcp.setBootstrap(bootstrapTCP);
 				tcp.reconnectFuture = scheduler.schedule( new DoConnection( tcp ), 0, TimeUnit.SECONDS );
 				return tcp;
 			case "udp":case "udpclient":
 				UdpStream udp = new UdpStream( dQueue, stream );
-				udp.setEventLoopGroup(group);
+				udp.setEventLoopGroup(eventLoopGroup);
 				udp.addListener(this);
 				bootstrapUDP = udp.setBootstrap(bootstrapUDP);
 				udp.reconnectFuture = scheduler.schedule( new DoConnection( udp ), 0, TimeUnit.SECONDS ); 
 				return udp;
 			case "udpserver":
 				UdpServer serv = new UdpServer( dQueue, stream );
-				serv.setEventLoopGroup(group);
+				serv.setEventLoopGroup(eventLoopGroup);
 				serv.addListener(this);
 				serv.reconnectFuture = scheduler.schedule( new DoConnection( serv ), 0, TimeUnit.SECONDS );
 				return serv;
 			case "serial":
 				SerialStream serial = new SerialStream( dQueue, stream );
+				serial.setEventLoopGroup(eventLoopGroup);
 				if( serial.readerIdleSeconds !=-1 ){
 					scheduler.schedule(new ReaderIdleTimeoutTask(serial), serial.readerIdleSeconds, TimeUnit.SECONDS);
 				}
@@ -463,11 +464,13 @@ public class StreamManager implements StreamListener, CollectorFuture {
 				return serial; 
 			case "modbus":
 				ModbusStream modbus = new ModbusStream( dQueue, stream );
+				modbus.setEventLoopGroup(eventLoopGroup);
 				modbus.addListener(this);
 				modbus.reconnectFuture = scheduler.schedule( new DoConnection( modbus ), 0, TimeUnit.SECONDS );
 				return modbus;
 			case "multiplex":
 				MultiStream mStream = new MultiStream( dQueue, stream );
+				mStream.setEventLoopGroup(eventLoopGroup);
 				if( mStream.readerIdleSeconds !=-1 ){
 					scheduler.schedule(new ReaderIdleTimeoutTask(mStream), mStream.readerIdleSeconds, TimeUnit.SECONDS);
 				}
@@ -476,6 +479,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 				return mStream;
 			case "local":
 				LocalStream local = new LocalStream( dQueue, stream);
+				local.setEventLoopGroup(eventLoopGroup);
 				local.addListener(this);
 				if( local.readerIdleSeconds !=-1 ){
 					scheduler.schedule(new ReaderIdleTimeoutTask(local), local.readerIdleSeconds, TimeUnit.SECONDS);
@@ -816,7 +820,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 
 				TcpStream tcp = new TcpStream( cmds[1], cmds[2], dQueue, label, 1 );
 				tcp.addListener(this);
-				tcp.setEventLoopGroup(group);
+				tcp.setEventLoopGroup(eventLoopGroup);
 				tcp.setBootstrap(bootstrapTCP);
 
 				if( !addStreamToXML(cmds[1],false) ){
@@ -842,7 +846,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 					cmds[3]=request.substring( request.indexOf(","+cmds[3])+1);
 				UdpStream udp = new UdpStream(cmds[1], cmds[2], dQueue, cmds[3], 1 );
 				udp.addListener(this);
-				udp.setEventLoopGroup(group);
+				udp.setEventLoopGroup(eventLoopGroup);
 				udp.setBootstrap(bootstrapUDP);
 
 				streams.put( cmds[1], udp );

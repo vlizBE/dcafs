@@ -38,9 +38,12 @@ public class TcpHandler extends SimpleChannelInboundHandler<byte[]>{
     protected Writable writable;
 
     protected List<Writable> targets;
-    
+
+    protected EventLoopGroup eventLoopGroup;
+
     String eol="\r\n";
     boolean udp=false;
+
 
     public TcpHandler( String id,String label, BlockingQueue<Datagram> dQueue ){
         this.id=id;
@@ -189,7 +192,8 @@ public class TcpHandler extends SimpleChannelInboundHandler<byte[]>{
                 Logger.tag("RAW").warn(priority + "\t" + label+"|"+id + "\t" + msg);
             }
 			if( !targets.isEmpty() ){
-                targets.stream().forEach(dt -> dt.writeLine( new String(data) ) );
+                String tosend=new String(data);
+                targets.forEach( dt -> eventLoopGroup.submit(()->dt.writeLine(tosend)));
                 targets.removeIf(wr -> !wr.isConnectionValid() ); // Clear inactive
 			}
 		
@@ -228,5 +232,9 @@ public class TcpHandler extends SimpleChannelInboundHandler<byte[]>{
     }
     public boolean isConnectionValid(){
         return channel!=null&&channel.isActive();
+    }
+
+    public void setEventLoopGroup(EventLoopGroup eventLoopGroup) {
+        this.eventLoopGroup=eventLoopGroup;
     }
 }
