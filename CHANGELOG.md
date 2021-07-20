@@ -30,7 +30,7 @@ From 0.5.0 onwards, this should be better documented...
 
 ### Datapaths
 - New functionality, allows for filter,math,editor and generic to be added in a single node
-- path can be in a seperate file instead of the main settings.xml
+- path can be in a separate file instead of the main settings.xml
 - less boilerplate because the path will assume steps are following each other (so step 1 is the src for
   step 2 etc) and will generate id's
 
@@ -41,6 +41,7 @@ From 0.5.0 onwards, this should be better documented...
 ### Other
 - Waypoints, travel bearing is now default 0-360 (so can be omitted)
 - StreamManager, the send command now allows optional expected reply `ss:send,id,data(,reply)`
+- BaseStream, now has access to the Netty threadpool and uses it for threaded forwarding  
 - EmailWorker, the email:send command now also replaces {localtime} and {utctime}
 
 ### Bugfixes
@@ -55,7 +56,7 @@ From 0.5.0 onwards, this should be better documented...
 data from a specific id or * for everything. If no originid is given, * is assumed.
 
 ### RealtimeValues
-- Implements the DataProviding interface the provide rtval and rttext data 
+- Implements the DataProviding interface to provide rtval and rttext data 
 
 ### Forwards
 - DataProviding is added to the abstract class

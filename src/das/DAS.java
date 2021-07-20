@@ -25,7 +25,6 @@ import util.database.*;
 import util.gis.Waypoint;
 import util.gis.Waypoints;
 import util.task.TaskManagerPool;
-import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
@@ -40,12 +39,10 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class DAS implements DeadThreadListener {
 
-    private static final String version = "0.10.4";
+    private static final String version = "0.10.5";
 
     private Path settingsPath = Path.of("settings.xml");
     private String workPath=Path.of("").toString();
@@ -534,7 +531,7 @@ public class DAS implements DeadThreadListener {
     public String getFileCollectorsList( String eol ){
         StringJoiner join = new StringJoiner(eol);
         join.setEmptyValue("None yet");
-        fileCollectors.keySet().forEach(join::add);
+        fileCollectors.entrySet().forEach(ent->join.add(ent.getKey()+" -> "+ent.getValue().toString()));
         return join.toString();
     }
     public FileCollector addFileCollector( String id ){

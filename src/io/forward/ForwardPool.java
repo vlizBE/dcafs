@@ -78,7 +78,7 @@ public class ForwardPool implements Commandable {
                         Element step = steps.get(a);
 
                         // Check if the next step is a generic, if so change the label attribute of the current step
-                        if( a<steps.size() ){
+                        if( a<steps.size()-1 ){
                             var next = steps.get(a+1);
                             if(next.getTagName().equalsIgnoreCase("generic")){
                                 if( !step.hasAttribute("label"))

@@ -78,6 +78,9 @@ public class FileCollector extends AbstractCollector{
         super(id);
         this.dQueue=dQueue;
     }
+    public String toString(){
+        return "Writing to "+getPath()+" buffer containing "+byteCount+"bytes";
+    }
     public void setScheduler( ScheduledExecutorService scheduler ){
         this.scheduler=scheduler;
     }

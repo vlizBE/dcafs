@@ -1525,11 +1525,12 @@ public class CommandPool {
 				return join.toString();
 			case "addnew":
 				if( cmds.length<4)
-					return "Not enough arguments given: fc:addblank,id,src,path";
+					return "Not enough arguments given: fc:addnew,id,src,path";
 				FileCollector.addBlankToXML(XMLfab.withRoot(settingsPath,"dcafs"),cmds[1],cmds[2],cmds[3]);
 				var fc = das.addFileCollector(cmds[1]);
 				fc.addSource(cmds[2]);
 				fc.setPath( Path.of(cmds[3]), workPath );
+
 				return "FileCollector "+cmds[1]+" created and added to xml.";
 			case "list":
 				return das.getFileCollectorsList(", ");
