@@ -59,20 +59,24 @@ public class ForwardPool implements Commandable {
                     String src = XMLtools.getStringAttribute(child,"src","");
                     String id = XMLtools.getStringAttribute(child,"id","");
                     String imp = XMLtools.getStringAttribute(child,"import","");
+                    String delimiter = "";
 
                     if( !imp.isEmpty() ) {
                         var p = XMLfab.getRootChildren(Path.of(imp),"dcafs","path").findFirst();
                         if(p.isPresent()) {
                             child = p.get();
+                            delimiter = XMLtools.getStringAttribute(child,"delimiter","");
                             Logger.info("Valid path script found at "+imp);
                         }else{
                             Logger.error("No valid path script found: "+imp);
                             return;
                         }
                     }
+
                     int ffId=1;
                     int mfId=1;
                     int efId=1;
+
                     var steps = XMLtools.getChildElements(child);
                     for( int a=0;a<steps.size();a++  ){
                         Element step = steps.get(a);
@@ -88,6 +92,10 @@ public class ForwardPool implements Commandable {
                         // If this step doesn't have a src, alter it
                         if( !step.hasAttribute("src"))
                             step.setAttribute("src",src);
+
+                        // If this step doesn't have a delimiter, alter it
+                        if( !step.hasAttribute("delimiter")&& !delimiter.isEmpty())
+                            step.setAttribute("delimiter",delimiter);
 
                         switch( step.getTagName() ){
                             case "filter":
