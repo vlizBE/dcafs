@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 public class FilterForward extends AbstractForward {
@@ -192,6 +193,7 @@ public class FilterForward extends AbstractForward {
             case "minlength": addMinimumLength(Tools.parseInt(value,-1)); break;
             case "maxlength": addMaximumLength(Tools.parseInt(value,-1)); break;
             case "nmea":      addNMEAcheck( Tools.parseBool(value,true));break;
+            case "regex":     addRegex( value ); break;
             default: 
                 Logger.error(id+" -> Unknown type chosen "+type);
                 return -1;
@@ -218,6 +220,8 @@ public class FilterForward extends AbstractForward {
             .add("    fe.<filter type='maxlength'>10</filter>  --> if data is longer than 10, filter out");
         join.add("nmea -> True or false that it's a valid nmea string")
             .add("    fe. <filter type='nmea'>true</filter> --> The data must end be a valid nmea string");
+        join.add("regex -> Matches the given regex")
+            .add("    fe. <filter type='regex'>\\s[a,A]</filter> --> The data must contain an empty character followed by a in any case");
         return join.toString();
     }
     /**
@@ -254,6 +258,9 @@ public class FilterForward extends AbstractForward {
     /* Filters */
     public void addStartsWith( String with ){
         rules.add( p -> p.startsWith(with) );
+    }
+    public void addRegex( String regex ){
+        rules.add( p -> p.matches(regex));
     }
     public void addStartsNotWith( String with ){
         rules.add( p -> !p.startsWith(with) );
