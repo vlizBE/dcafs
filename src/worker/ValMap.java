@@ -13,6 +13,7 @@ import java.util.StringJoiner;
 public class ValMap {
 
     String split="";
+    String multi="";
     HashMap<String,Mapping> mapping = new HashMap<>();
     String id="";
 
@@ -24,37 +25,49 @@ public class ValMap {
     }
 
     public void setDelimiter(String delimiter){
-        this.split = Tools.fromEscapedStringToBytes(delimiter);
+        split = Tools.fromEscapedStringToBytes(delimiter);
     }
+    public void setMultiSplit(String delimiter){
+        multi = Tools.fromEscapedStringToBytes(delimiter);
+    }
+
     public String getID(){
         return id;
     }
 
     public void apply(String data, RealtimeValues rtvals){
+        if( multi.isEmpty()) {
+            processSingle(data,rtvals);
+        }else {
+            for (String piece : data.split(multi))
+                processSingle(piece,rtvals);
+        }
+    }
+    private void processSingle( String data, RealtimeValues rtvals ){
         String[] pair = data.split(split);
         Mapping mapped;
 
-        if( pair.length==2){
+        if (pair.length == 2) {
             mapped = mapping.get(pair[0]);
-        }else if( pair.length==1){
+        } else if (pair.length == 1) {
             mapped = mapping.get("");
-        }else{
-            Logger.error(id+" -> No proper delimited data received: "+data);
+        } else {
+            Logger.error(id + " -> No proper delimited data received: " + data);
             return;
         }
 
-        if( mapped!=null ) {
-            if( !mapped.rtval.isEmpty() ) {
+        if (mapped != null) {
+            if (!mapped.rtval.isEmpty()) {
                 try {
-                    rtvals.setRealtimeValue(mapped.rtval, NumberUtils.createDouble(pair[1]),true);
-                }catch(NumberFormatException e){
-                    Logger.error(id+" -> No valid number in "+data);
+                    rtvals.setRealtimeValue(mapped.rtval, NumberUtils.createDouble(pair[1]), true);
+                } catch (NumberFormatException e) {
+                    Logger.error(id + " -> No valid number in " + data);
                 }
             }
-            if( !mapped.rttext.isEmpty() )
-                rtvals.setRealtimeText(mapped.rttext,mapped.convert(pair[1]));
-        }else{
-            Logger.warn(id+" -> No mapping found for "+data);
+            if (!mapped.rttext.isEmpty())
+                rtvals.setRealtimeText(mapped.rttext, mapped.convert(pair[1]));
+        } else {
+            Logger.warn(id + " -> No mapping found for " + data);
         }
     }
     public String toString(){
@@ -100,6 +113,7 @@ public class ValMap {
     public static ValMap readFromXML( Element vmEle ){
         var map = ValMap.create(vmEle.getAttribute("id"));
         map.setDelimiter(vmEle.getAttribute("split"));
+        map.setMultiSplit(vmEle.getAttribute("delimiter"));
         Logger.info("Building ValMap "+map.id+" which splits on "+map.getReadableSplit());
 
         for( var pair : XMLtools.getChildElements(vmEle,"map")){

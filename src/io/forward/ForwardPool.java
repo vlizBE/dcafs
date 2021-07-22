@@ -76,7 +76,7 @@ public class ForwardPool implements Commandable {
                     int ffId=1;
                     int mfId=1;
                     int efId=1;
-
+                    String lastFilter="";
                     var steps = XMLtools.getChildElements(child);
                     for( int a=0;a<steps.size();a++  ){
                         Element step = steps.get(a);
@@ -90,9 +90,14 @@ public class ForwardPool implements Commandable {
                             }
                         }
                         // If this step doesn't have a src, alter it
-                        if( !step.hasAttribute("src"))
-                            step.setAttribute("src",src);
-
+                        if( !step.hasAttribute("src")) {
+                            // If it's a filter, use the discarded stuff of the previous one
+                            if( !lastFilter.isEmpty() && step.getTagName().equals("filter")){
+                                step.setAttribute("src", lastFilter);
+                            }else{
+                                step.setAttribute("src", src);
+                            }
+                        }
                         // If this step doesn't have a delimiter, alter it
                         if( !step.hasAttribute("delimiter")&& !delimiter.isEmpty())
                             step.setAttribute("delimiter",delimiter);
@@ -105,6 +110,7 @@ public class ForwardPool implements Commandable {
                                 }
                                 FilterForward ff = new FilterForward( step, dQueue );
                                 src=ff.getID();
+                                lastFilter=src.replace(":",":!");
                                 filters.put(ff.getID().replace("filter:", ""), ff);
                                 break;
                             case "math":

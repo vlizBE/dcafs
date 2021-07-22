@@ -459,6 +459,39 @@ public class DAS implements DeadThreadListener {
         }
         XMLfab.getRootChildren(settingsDoc, "dcafs","valmaps","valmap")
                 .forEach( ele ->  labelWorker.addValMap( ValMap.readFromXML(ele) ) );
+
+        // Find the path ones?
+        XMLfab.getRootChildren(settingsPath, "dcafs","datapaths","path")
+                .forEach( ele -> {
+                        String imp = ele.getAttribute("import");
+
+                        int a=1;
+                        if( !imp.isEmpty() ){ //meaning imported
+                            String file = Path.of(imp).getFileName().toString();
+                            file = file.substring(0,file.length()-4);//remove the .xml
+
+                            for( Element gen : XMLfab.getRootChildren(Path.of(imp), "dcafs","path","valmap").collect(Collectors.toList())){
+                                if( !gen.hasAttribute("id")){ //if it hasn't got an id, give it one
+                                    gen.setAttribute("id",file+"_vm"+a);
+                                    a++;
+                                }
+                                if( !gen.hasAttribute("delimiter") ) //if it hasn't got an id, give it one
+                                    gen.setAttribute("delimiter",gen.getAttribute("delimiter"));
+                                labelWorker.addValMap( ValMap.readFromXML(ele) );
+                            }
+                        }
+                        String delimiter = XMLtools.getStringAttribute(ele,"delimiter","");
+                        for( Element vm : XMLtools.getChildElements(ele,"valmap")){
+                            if( !vm.hasAttribute("id")){ //if it hasn't got an id, give it one
+                                vm.setAttribute("id",ele.getAttribute("id")+"_vm"+a);
+                                a++;
+                            }
+                            if( !vm.hasAttribute("delimiter") && !delimiter.isEmpty()) //if it hasn't got an id, give it one
+                                vm.setAttribute("delimiter",delimiter);
+                            labelWorker.addValMap( ValMap.readFromXML(ele) );
+                        }
+                    }
+            );
     }
     /* ***************************************** M Q T T ******************************************************** */
     public void addMQTTManager(){
