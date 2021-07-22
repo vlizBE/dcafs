@@ -39,6 +39,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 public class DAS implements DeadThreadListener {
 
@@ -423,8 +424,16 @@ public class DAS implements DeadThreadListener {
                 .forEach( ele -> {
                     String imp = ele.getAttribute("import");
                     if( !imp.isEmpty() ){
-                        XMLfab.getRootChildren(Path.of(imp), "dcafs","path","generic")
-                                .forEach( gen ->  labelWorker.addGeneric( Generic.readFromXML(gen) ) );
+                        String file = Path.of(imp).getFileName().toString();
+                        file = file.substring(0,file.length()-4);//remove the .xml
+                        int a=1;
+                        for( Element gen : XMLfab.getRootChildren(Path.of(imp), "dcafs","path","generic").collect(Collectors.toList())){
+                            if( !gen.hasAttribute("id")){ //if it hasn't got an id, give it one
+                                gen.setAttribute("id",file+"_gen"+a);
+                                a++;
+                            }
+                            labelWorker.addGeneric( Generic.readFromXML(gen) );
+                        }
                     }
                 });
     }
