@@ -423,19 +423,34 @@ public class DAS implements DeadThreadListener {
         XMLfab.getRootChildren(settingsPath, "dcafs","datapaths","path")
                 .forEach( ele -> {
                     String imp = ele.getAttribute("import");
-                    if( !imp.isEmpty() ){
+
+                    int a=1;
+                    if( !imp.isEmpty() ){ //meaning imported
                         String file = Path.of(imp).getFileName().toString();
                         file = file.substring(0,file.length()-4);//remove the .xml
-                        int a=1;
+
                         for( Element gen : XMLfab.getRootChildren(Path.of(imp), "dcafs","path","generic").collect(Collectors.toList())){
                             if( !gen.hasAttribute("id")){ //if it hasn't got an id, give it one
                                 gen.setAttribute("id",file+"_gen"+a);
                                 a++;
                             }
+                            if( !gen.hasAttribute("delimiter") ) //if it hasn't got an id, give it one
+                                gen.setAttribute("delimiter",gen.getAttribute("delimiter"));
                             labelWorker.addGeneric( Generic.readFromXML(gen) );
                         }
                     }
-                });
+                    String delimiter = XMLtools.getStringAttribute(ele,"delimiter","");
+                    for( Element gen : XMLtools.getChildElements(ele,"generic")){
+                        if( !gen.hasAttribute("id")){ //if it hasn't got an id, give it one
+                            gen.setAttribute("id",ele.getAttribute("id")+"_gen"+a);
+                            a++;
+                        }
+                        if( !gen.hasAttribute("delimiter") && !delimiter.isEmpty()) //if it hasn't got an id, give it one
+                            gen.setAttribute("delimiter",delimiter);
+                        labelWorker.addGeneric( Generic.readFromXML(gen) );
+                    }
+                }
+                );
     }
     public void loadValMaps(boolean clear){
         if( clear ){
