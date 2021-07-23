@@ -226,14 +226,79 @@ public class Calculations {
     }
 
     /**
-     * Method that calculates the Truewind direction based on apparant wind and
+     * Create a function that calculates the true wind speed
+     * @param windvel The apparent wind velocity in knots
+     * @param winddir The apparent wind direction in degrees
+     * @param sogKnots The speed over ground in knots
+     * @param cog The course over ground in degrees
+     * @param heading  The heading in degrees
+     * @return The true wind speed in knots
+     */
+    public static Function<BigDecimal[],BigDecimal> procTrueWindSpeed( String windvel, String winddir, String sogKnots, String cog,String heading){
+        int windvelIndex,winddirIndex,sogKnotsIndex,cogIndex,headingIndex;
+        double windvelVal,winddirVal,sogKnotsVal,cogVal,headingVal;
+
+        // Apparent Wind Velocity
+        if( windvel.startsWith("i")) {
+            windvelIndex = NumberUtils.toInt(windvel.substring(1), -1);
+            windvelVal=0;
+        }else{
+            windvelIndex=-1;
+            windvelVal=NumberUtils.toDouble(windvel);
+        }
+
+        // Apparent Wind Direction
+        if( winddir.startsWith("i")) {
+            winddirIndex = NumberUtils.toInt(winddir.substring(1), -1);
+            winddirVal=0;
+        }else{
+            winddirIndex=-1;
+            winddirVal=NumberUtils.toDouble(winddir);
+        }
+
+        // Speed over ground in knots
+        if( sogKnots.startsWith("i")) {
+            sogKnotsIndex = NumberUtils.toInt(sogKnots.substring(1), -1);
+            sogKnotsVal=0;
+        }else{
+            sogKnotsIndex=-1;
+            sogKnotsVal=NumberUtils.toDouble(sogKnots);
+        }
+        // Course over ground in knots
+        if( sogKnots.startsWith("i")) {
+            cogIndex = NumberUtils.toInt(cog.substring(1), -1);
+            cogVal=0;
+        }else{
+            cogIndex=-1;
+            cogVal=NumberUtils.toDouble(cog);
+        }
+        // Course over ground in knots
+        if( heading.startsWith("i")) {
+            headingIndex = NumberUtils.toInt(heading.substring(1), -1);
+            headingVal=0;
+        }else{
+            headingIndex=-1;
+            headingVal=NumberUtils.toDouble(heading);
+        }
+        return x -> {
+            var dir = calcTrueWindDirection(
+                    windvelIndex==-1?windvelVal:x[windvelIndex].doubleValue(),
+                    winddirIndex==-1?winddirVal:x[winddirIndex].doubleValue(),
+                    sogKnotsIndex==-1?sogKnotsVal:x[sogKnotsIndex].doubleValue(),
+                    cogIndex==-1?cogVal:x[cogIndex].doubleValue(),
+                    headingIndex==-1?headingVal:x[headingIndex].doubleValue());
+            return BigDecimal.valueOf(dir);
+        };
+    }
+    /**
+     * Method that calculates the True wind direction based on apparent wind and
      * ships navigation Source: http://coaps.fsu.edu/woce/truewind/paper/
      * 
-     * @param windvel The apparant windvelocity in m/s
-     * @param winddir The apparant wind direction in degrees [�]
+     * @param windvel The apparent windvelocity in m/s
+     * @param winddir The apparent wind direction in degrees [°]
      * @param sogKnots The Speed Over Ground in Knots
-     * @param cog     The Course over Ground in degrees [�]
-     * @param heading The ships heading in degrees [�]
+     * @param cog     The Course over Ground in degrees [°]
+     * @param heading The ships heading in degrees [°]
      * @return The Meteorological True Wind Direction in degrees
      */
     public static double calcTrueWindDirection(double windvel, double winddir, double sogKnots, double cog,
@@ -261,6 +326,71 @@ public class Calculations {
 
         }
         return Truedir;
+    }
+    /**
+     * Create a function that calculates the true wind speed
+     * @param windvel The apparent wind velocity in knots
+     * @param winddir The apparent wind direction in degrees
+     * @param sogKnots The speed over ground in knots
+     * @param cog The course over ground in degrees
+     * @param heading  The heading in degrees
+     * @return The true wind speed in knots
+     */
+    public static Function<BigDecimal[],BigDecimal> procTrueWindDirection( String windvel, String winddir, String sogKnots, String cog,String heading){
+        int windvelIndex,winddirIndex,sogKnotsIndex,cogIndex,headingIndex;
+        double windvelVal,winddirVal,sogKnotsVal,cogVal,headingVal;
+
+        // Apparent Wind Velocity
+        if( windvel.startsWith("i")) {
+            windvelIndex = NumberUtils.toInt(windvel.substring(1), -1);
+            windvelVal=0;
+        }else{
+            windvelIndex=-1;
+            windvelVal=NumberUtils.toDouble(windvel);
+        }
+
+        // Apparent Wind Direction
+        if( winddir.startsWith("i")) {
+            winddirIndex = NumberUtils.toInt(winddir.substring(1), -1);
+            winddirVal=0;
+        }else{
+            winddirIndex=-1;
+            winddirVal=NumberUtils.toDouble(winddir);
+        }
+
+        // Speed over ground in knots
+        if( sogKnots.startsWith("i")) {
+            sogKnotsIndex = NumberUtils.toInt(sogKnots.substring(1), -1);
+            sogKnotsVal=0;
+        }else{
+            sogKnotsIndex=-1;
+            sogKnotsVal=NumberUtils.toDouble(sogKnots);
+        }
+        // Course over ground in knots
+        if( sogKnots.startsWith("i")) {
+            cogIndex = NumberUtils.toInt(cog.substring(1), -1);
+            cogVal=0;
+        }else{
+            cogIndex=-1;
+            cogVal=NumberUtils.toDouble(cog);
+        }
+        // Course over ground in knots
+        if( heading.startsWith("i")) {
+            headingIndex = NumberUtils.toInt(heading.substring(1), -1);
+            headingVal=0;
+        }else{
+            headingIndex=-1;
+            headingVal=NumberUtils.toDouble(heading);
+        }
+        return x -> {
+            var dir = calcTrueWindDirection(
+                    windvelIndex==-1?windvelVal:x[windvelIndex].doubleValue(),
+                    winddirIndex==-1?winddirVal:x[winddirIndex].doubleValue(),
+                    sogKnotsIndex==-1?sogKnotsVal:x[sogKnotsIndex].doubleValue(),
+                    cogIndex==-1?cogVal:x[cogIndex].doubleValue(),
+                    headingIndex==-1?headingVal:x[headingIndex].doubleValue());
+            return BigDecimal.valueOf(dir);
+        };
     }
     /**
      * Calculates the sound absorptions for the multibeam

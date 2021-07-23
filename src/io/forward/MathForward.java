@@ -26,7 +26,7 @@ public class MathForward extends AbstractForward {
     private boolean doCmd = false;
     HashMap<String,String> defs = new HashMap<>();
 
-    public enum OP_TYPE{COMPLEX, SCALE, LN, SALINITY, SVC}
+    public enum OP_TYPE{COMPLEX, SCALE, LN, SALINITY, SVC,TRUEWINDSPEED,TRUEWINDDIR}
 
     public MathForward(String id, String source, BlockingQueue<Datagram> dQueue, DataProviding dp){
         super(id,source,dQueue,dp);
@@ -251,6 +251,22 @@ public class MathForward extends AbstractForward {
                 }
                 op = new Operation(expression, Calculations.procSoundVelocity(indexes[0],indexes[1],indexes[2]), index);
                 break;
+            case TRUEWINDSPEED:
+                indexes = expression.split(",");
+                if( indexes.length != 5 ){
+                    Logger.error("Not enough info for true wind calculation");
+                    return false;
+                }
+                op = new Operation(expression, Calculations.procTrueWindSpeed(indexes[0],indexes[1],indexes[2],indexes[3],indexes[4]), index);
+                break;
+            case TRUEWINDDIR:
+                indexes = expression.split(",");
+                if( indexes.length != 5 ){
+                    Logger.error("Not enough info for true wind calculation");
+                    return false;
+                }
+                op = new Operation(expression, Calculations.procTrueWindDirection(indexes[0],indexes[1],indexes[2],indexes[3],indexes[4]), index);
+                break;
             default:
                 return false;
         }
@@ -302,6 +318,8 @@ public class MathForward extends AbstractForward {
             case "ln": return OP_TYPE.LN;
             case "salinity": return OP_TYPE.SALINITY;
             case "svc": return OP_TYPE.SVC;
+            case "truewinddir": return OP_TYPE.TRUEWINDDIR;
+            case "truewindspeed": return OP_TYPE.TRUEWINDSPEED;
         }
         Logger.error("Invalid op type given, valid ones complex,scale");
         return null;
