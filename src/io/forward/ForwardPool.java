@@ -120,7 +120,7 @@ public class ForwardPool implements Commandable {
                                 }
                                 MathForward mf = new MathForward( step,dQueue,dataProviding );
                                 src = mf.getID();
-                                this.maths.put(mf.getID().replace("math:", ""), mf);
+                                maths.put(mf.getID().replace("math:", ""), mf);
                                 break;
                             case "editor":
                                 if( !step.hasAttribute("id")) {
