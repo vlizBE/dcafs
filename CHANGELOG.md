@@ -29,10 +29,11 @@ From 0.5.0 onwards, this should be better documented...
 ## 0.10.5 (work in progress)
 
 ### Datapaths
-- New functionality, allows for filter,math,editor and generic to be added in a single node
+- New functionality, allows for filter,math,editor, generic and valmap to be added in a single node
 - path can be in a separate file instead of the main settings.xml
 - less boilerplate because the path will assume steps are following each other (so step 1 is the src for
   step 2 etc) and will generate id's
+- delimiter can be set globally in a path
 
 ### Digiworker
 - Implemented Commandable
@@ -43,6 +44,8 @@ From 0.5.0 onwards, this should be better documented...
 - StreamManager, the send command now allows optional expected reply `ss:send,id,data(,reply)`
 - BaseStream, now has access to the Netty threadpool and uses it for threaded forwarding  
 - EmailWorker, the email:send command now also replaces {localtime} and {utctime}
+- FilterForward, added regex type to match on regex
+- Valmap, now allows for multiple pairs to be in a single dataline with given delimiter
 
 ### Bugfixes
 - LabelWorker didn't give an error if a generic doesn't exist
