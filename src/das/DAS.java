@@ -434,8 +434,9 @@ public class DAS implements DeadThreadListener {
                                 gen.setAttribute("id",file+"_gen"+a);
                                 a++;
                             }
+                            String delim = ((Element)gen.getParentNode()).getAttribute("delimiter");
                             if( !gen.hasAttribute("delimiter") ) //if it hasn't got an id, give it one
-                                gen.setAttribute("delimiter",gen.getAttribute("delimiter"));
+                                gen.setAttribute("delimiter",delim);
                             labelWorker.addGeneric( Generic.readFromXML(gen) );
                         }
                     }
