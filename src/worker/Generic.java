@@ -192,7 +192,8 @@ public class Generic {
      * @return this object
      */
     public Generic setDelimiter( String deli ){
-        this.delimiter=deli;
+        if( !deli.isEmpty() )
+            this.delimiter=deli;
         return this;
     }
     /**
