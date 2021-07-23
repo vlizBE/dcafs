@@ -6,7 +6,9 @@ import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.*;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.StringJoiner;
 import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
@@ -589,7 +591,21 @@ public class Tools {
         }
         return join.toString();
     }
-
+    public static List<String[]> parseKeyValue(String data){
+        var pairs = new ArrayList<String>();
+        int b =0;
+        while( b!=-1) {
+            int a = data.indexOf("{");
+            b = data.indexOf("}");
+            if (a != -1 && b != -1) {
+                pairs.add(data.substring(a+1, b));
+            }
+            data=data.substring(b+1);
+        }
+        var splits = new ArrayList<String[]>();
+        pairs.forEach( p -> splits.add(p.split(":")));
+        return splits;
+    }
     public static String getLocalIP() {
         try (final DatagramSocket socket = new DatagramSocket()) {
             var sock = InetAddress.getByName("8.8.8.8");

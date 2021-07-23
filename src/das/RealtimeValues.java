@@ -10,6 +10,7 @@ import org.influxdb.dto.Point;
 import org.tinylog.Logger;
 import util.database.QueryWriting;
 import util.tools.TimeTools;
+import util.tools.Tools;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -234,30 +235,27 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		if( !line.contains("{"))
 			return line;
 
-		var vals= rtvalPattern.matcher(line)
-				.results()
-				.map(MatchResult::group)
-				.toArray(String[]::new);
-
-		for( String val:vals){
-			var d = getRealtimeValue(val.substring(7,val.length()-1),Double.NaN);
-			if( Double.isNaN(d)) {
-				line = line.replace(val, error);
-			}else {
-				line = line.replace(val, "" + d);
+		var pairs = Tools.parseKeyValue(line);
+		for( var p : pairs ){
+			if(p.length==2) {
+				if (p[0].equals("rtval")) {
+					var d = getRealtimeValue(p[1], Double.NaN);
+					if (Double.isNaN(d)) {
+						line = line.replace("{rtval:" + p[1] + "}", error);
+					} else {
+						line = line.replace("{rtval:" + p[1] + "}", "" + d);
+					}
+				} else if (p[0].equals("rttext")) {
+					line = line.replace("{rttext:" + p[1] + "}", getRealtimeText(p[1], error));
+				}
+			}else{
+				switch(p[0]){
+					case "utc": line = line.replace("{utc}", TimeTools.formatLongUTCNow());break;
+					case "utclong": line = line.replace("{utclong}", TimeTools.formatLongUTCNow());
+					case "utcshort": line = line.replace("{utcshort}", TimeTools.formatShortUTCNow());
+				}
 			}
 		}
-		vals = rttextPattern.matcher(line)
-				.results()
-				.map(MatchResult::group)
-				.toArray(String[]::new);
-
-		for( String val:vals){
-			line = line.replace(val, getRealtimeText(val.substring(7,val.length()-1),error));
-		}
-		line = line.replace("{utc}", TimeTools.formatLongUTCNow());
-		line = line.replace("{utclong}", TimeTools.formatLongUTCNow());
-		line = line.replace("{utcshort}", TimeTools.formatShortUTCNow());
 		return line;
 	}
 	public DoubleVal getDoubleVal( String param ){
