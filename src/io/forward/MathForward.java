@@ -63,9 +63,9 @@ public class MathForward extends AbstractForward {
 
         if( bds == null ){
             badDataCount++;
-            Logger.error("No valid numbers in the data: "+data+" after split on "+delimiter+ " "+badDataCount+"/"+MAX_BAD_COUNT);
+            Logger.error(id+" (mf)-> No valid numbers in the data: "+data+" after split on "+delimiter+ " "+badDataCount+"/"+MAX_BAD_COUNT);
             if( badDataCount>=MAX_BAD_COUNT) {
-                Logger.error(id+" -> Too many bad data received, no longer accepting data");
+                Logger.error(id+"(mf)-> Too many bad data received, no longer accepting data");
                 return false;
             }else{
                 return true;
@@ -74,7 +74,11 @@ public class MathForward extends AbstractForward {
             badDataCount--;
         }
 
-        ops.forEach( op -> op.solve(bds) ); // Solve the operations with the converted data
+        ops.forEach( op -> {
+            var res = op.solve(bds);
+            if( res==null)
+                Logger.error(id+"(mf) -> Failed to process "+data);
+        } ); // Solve the operations with the converted data
 
         StringJoiner join = new StringJoiner(delimiter); // prepare a joiner to rejoin the data
         for( int a=0;a<bds.length;a++){
@@ -193,12 +197,19 @@ public class MathForward extends AbstractForward {
                 .forEach( def -> defs.put( def.getAttribute("ref"),def.getTextContent()));
 
         boolean oldValid=valid;
+
         XMLtools.getChildElements(math, "op")
-                    .forEach( ops -> addOperation(
-                            Integer.parseInt(ops.getAttribute("index")),
-                            fromStringToOPTYPE(XMLtools.getStringAttribute(ops,"type","complex")),
-                            XMLtools.getStringAttribute(ops,"cmd",""),
-                            ops.getTextContent()) );
+                    .forEach( ops -> {
+                        try {
+                            addOperation(
+                                    Integer.parseInt(ops.getAttribute("index")),
+                                    fromStringToOPTYPE(XMLtools.getStringAttribute(ops, "type", "complex")),
+                                    XMLtools.getStringAttribute(ops, "cmd", ""),
+                                    ops.getTextContent());
+                        }catch( NumberFormatException e){
+                            Logger.error(id+" (mf)-> NumberformatException "+e.getMessage());
+                        }
+                    } );
 
         if( !oldValid && valid )// If math specific things made it valid
             sources.forEach( source -> dQueue.add( Datagram.build( source ).label("system").writable(this) ) );
