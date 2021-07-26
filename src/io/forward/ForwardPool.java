@@ -88,6 +88,10 @@ public class ForwardPool implements Commandable {
                                 if( !step.hasAttribute("label"))
                                     step.setAttribute("label","generic:"+next.getAttribute("id"));
                             }
+                            if(next.getTagName().equalsIgnoreCase("valmap")){
+                                if( !step.hasAttribute("label"))
+                                    step.setAttribute("label","valmap:"+next.getAttribute("id"));
+                            }
                         }
                         // If this step doesn't have a src, alter it
                         if( !step.hasAttribute("src")) {
