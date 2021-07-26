@@ -26,7 +26,7 @@ public class MathUtils {
     static final String[] ORDERED_OPS={"^","^","*","/","%","%","+","-"};
     static final String[] COMPARES={"<","<=","==","!=",">=",">"};
     static final String OPS_REGEX="\\+|/|\\*|-|\\^|%";
-    static final Pattern es = Pattern.compile("\\d*[.]?\\d*[e]?\\d*");
+    static final Pattern es = Pattern.compile("\\de[+-]?\\d");
     /**
      * Splits a simple expression of the type i1+125 etc into distinct parts i1,+,125
      * @param expression The expression to split
@@ -96,7 +96,9 @@ public class MathUtils {
         var ee = es.matcher(formula)
                 .results()
                 .map(MatchResult::group)
+                .distinct()
                 .collect(Collectors.toList());
+
         for( String el : ee ){
             formula = formula.replace(el,el.toUpperCase());
         }
@@ -119,7 +121,8 @@ public class MathUtils {
             if (spl[a].isEmpty()) {
                 spl[a + 1] = "-" + spl[a + 1];
             } else {
-                if( spl[a].matches("\\d*[.]?\\d*[e]\\d*") ){
+                var m = es.matcher(spl[a]);
+                if( m.find() ){
                     full.add(spl[a].replace("e","E-"));
                 }else{
                     full.add(spl[a]);
