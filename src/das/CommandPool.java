@@ -1092,7 +1092,12 @@ public class CommandPool {
 	public String doRTVALS( String[] request, Writable wr, boolean html ){
 		if( request[1].equals("?") )
 			return " -> Get a list of all rtval options";
-		return rtvals.getFilteredRTVals(request[1],html?"<br>":"\r\n");			
+		if( request[1].isEmpty())
+			return rtvals.getFilteredRTVals(request[1],html?"<br>":"\r\n");
+		switch(request[1]){
+			case "store": return rtvals.storeRTVals(settingsPath);
+		}
+		return "unknown command: "+request[0]+":"+request[1];
 	}
 	
 	public String doRTTEXTS( String[] request, Writable wr, boolean html ){

@@ -11,7 +11,9 @@ import org.tinylog.Logger;
 import util.database.QueryWriting;
 import util.tools.TimeTools;
 import util.tools.Tools;
+import util.xml.XMLfab;
 
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -403,10 +405,25 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		}
 		return stream.sorted(Map.Entry.comparingByKey()).map(e -> e.getKey() + " : " + e.getValue()).collect(Collectors.joining(eol));
 	}
-
+	public String storeRTVals(Path settings){
+		XMLfab fab = XMLfab.withRoot(settings,"dcafs","settings","rtvals");
+		var keys = rtvals.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(e->e.getKey()).collect(Collectors.toList());
+		for( var dv : keys ){
+			var dd = rtvals.get(dv);
+			fab.selectOrCreateParent("double","id",dv)
+					.attr("unit",dd.unit)
+					.up();
+		}
+		keys = rttext.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(e->e.getKey()).collect(Collectors.toList());
+		for( var dt : keys ){
+			fab.selectOrCreateParent("text","id",dt).up();
+		}
+		fab.build();
+		return "New rtvals/rttexts added";
+	}
 	/* ******************************************************************************************************/
 	/**
-	 * Get the current timestamp in db approved format, this should be overriden if
+	 * Get the current timestamp in db approved format, this should be overridden if
 	 * a gps is present
 	 * 
 	 * @return The timestamp in a sql valid format yyyy-MM-dd HH:mm:ss.SSS
