@@ -124,7 +124,7 @@ public class Calculations {
     public static double calcSndVelC(double salinity, double temp, double pressDB) {
         /* sound velocity Chen and Millero 1977 */
         /* JASA,62,1129-1135 */
-        // s = salinity, t = temperature deg C ITPS-68, p = pressure in decibars
+        // s = salinity, t = temperature deg C ITS-90, p = pressure in decibars
 
         if (temp == -999 || salinity == -999) {
             return -999;
@@ -193,11 +193,11 @@ public class Calculations {
             pressVal=NumberUtils.toDouble(pressure);
         }
         return x -> {
-            var sal = calcSndVelC(
+            var sv = calcSndVelC(
                     salIndex==-1?salVal:x[salIndex].doubleValue(),
                     tempIndex==-1?tempVal:x[tempIndex].doubleValue(),
                     pressIndex==-1?pressVal:x[pressIndex].doubleValue());
-            return BigDecimal.valueOf(sal);
+            return BigDecimal.valueOf(sv);
         };
     }
     /**

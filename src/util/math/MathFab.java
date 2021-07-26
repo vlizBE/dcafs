@@ -87,9 +87,15 @@ public class MathFab {
                 Logger.error("Didn't find opening bracket");
             }
         }
+
         offset=subFormulas.size()+1; // To store the intermediate results, the array needs to hold space
         for( String[] sub : subFormulas ){ // now convert the subformulas into lambda's
-            steps.add( MathUtils.decodeBigDecimalsOp(sub[0],sub[1],sub[2],offset)); // and add it to the steps list
+            var x = MathUtils.decodeBigDecimalsOp(sub[0],sub[1],sub[2],offset);
+            if( x==null ){
+                Logger.error("Failed to convert "+formula);
+                continue;
+            }
+            steps.add( x ); // and add it to the steps list
         }
         resultIndex = subFormulas.size();// note that the result of the formula will be in the that position
         return this;
@@ -158,7 +164,7 @@ public class MathFab {
                     Logger.info(i +" : "+total[i]);
                 i++;
             }catch (IndexOutOfBoundsException | NullPointerException e){
-                Logger.error("Bad things when it was processed, array size "+data.length+" versus "+requiredInputs);
+                Logger.error("Bad things when it was processed, array size "+data.length+" versus "+requiredInputs +" with step null?"+(f==null));
                 int a=0;
                 for( var big : data){
                     if( big!=null) {

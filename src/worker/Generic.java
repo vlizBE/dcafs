@@ -257,7 +257,7 @@ public class Generic {
                                 rtvals.setRealtimeValue( ref, val, true );
                             }else{
                                 data[a]=null;
-                                rtvals.removeRealtimeValue(ref);
+                               // rtvals.removeRealtimeValue(ref);
                             }
                             break;  
                     case REAL:
@@ -267,7 +267,7 @@ public class Generic {
                                 rtvals.setRealtimeValue( ref, val, true );
                             }else{
                                 data[a]=null;
-                                rtvals.removeRealtimeValue(ref);
+                            //    rtvals.removeRealtimeValue(ref);
                             }
                             break;                
                     case TEXT: case TAG:
