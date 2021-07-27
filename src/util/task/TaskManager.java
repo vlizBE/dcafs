@@ -1155,11 +1155,24 @@ public class TaskManager implements CollectorFuture {
 	 * Shut down all running tasks and clear the lists
 	 */
 	public void shutdownAndClearAll(){
-		//Cancel all running tasks...
-		scheduler.shutdownNow();
+
+		// Make sure the future's are cancelled
+		for( var set : tasksets.values()){
+			for( var task : set.getTasks()){
+				if(task.future!=null)
+					task.future.cancel(true);
+			}
+		}
+		// Clear the sets
 		tasksets.clear();
+
+		// Make sure the futures are cancelled
+		for( var task:tasks ){
+			if(task.future!=null)
+				task.future.cancel(true);
+		}
+		// clear the tasks
 		tasks.clear();
-		scheduler = Executors.newSingleThreadScheduledExecutor();
 	}
 	/**
 	 * Reload the tasks previously loaded.
@@ -1287,12 +1300,12 @@ public class TaskManager implements CollectorFuture {
 		String[] parts = request.split(",");
 
 		switch( parts[0] ){
-			case "reload":case "reloadtasks":     return this.reloadTasks()?"Reloaded tasks...":"Reload Failed";
-			case "forcereload": return this.forceReloadTasks()?"Reloaded tasks":"Reload failed";
+			case "reload":case "reloadtasks":     return reloadTasks()?"Reloaded tasks...":"Reload Failed";
+			case "forcereload": return forceReloadTasks()?"Reloaded tasks":"Reload failed";
 			case "listtasks": case "tasks": return getTaskListing(html?"<br>":"\r\n");
 			case "listsets": case "sets":  return getTaskSetListing(html?"<br>":"\r\n");
 			case "states": case "flags":    return getStatesListing();
-			case "stop":	  return "Cancelled "+this.stopAll("doTaskManager")+ " futures.";
+			case "stop":	  return "Cancelled "+stopAll("doTaskManager")+ " futures.";
 			case "run":		
 				if( parts.length==2){
 					if( parts[1].startsWith("task:")){
