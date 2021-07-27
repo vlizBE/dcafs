@@ -23,6 +23,7 @@ public class SerialStream extends BaseStream implements Writable {
     protected SerialPort serialPort;
     private final byte[] buffer = new byte[1024];
     ByteBuffer recBuffer= ByteBuffer.wrap(buffer);
+    String port ="";
 
     public SerialStream(String port, BlockingQueue<Datagram> dQueue, String label, int priority) {
         super("", label, dQueue);
@@ -38,6 +39,7 @@ public class SerialStream extends BaseStream implements Writable {
     }
     public boolean setPort(String port) {
         try{
+            this.port=port;
             serialPort = SerialPort.getCommPort(port);
         }catch( SerialPortInvalidPortException e ){
             Logger.error("No such serial port: " + port);
@@ -48,7 +50,14 @@ public class SerialStream extends BaseStream implements Writable {
     }
 
     public String getInfo() {
-        return "SERIAL [" + id + "|" + label + "] " + serialPort.getSystemPortName() + " | " + getSerialSettings();
+        String info = "No connection to "+port;
+        if( serialPort!=null){
+            info = serialPort.getSystemPortName();
+            if( info.equalsIgnoreCase("0"))
+                info=port;
+            info += " | "+ getSerialSettings();
+        }
+        return "SERIAL [" + id + "|" + label + "] " + info;
     }
 
     public boolean connect() {
@@ -368,7 +377,7 @@ public class SerialStream extends BaseStream implements Writable {
 
     @Override
     public boolean isConnectionValid() {
-        if (serialPort == null && serialPort.bytesAwaitingWrite()>8000)
+        if (serialPort == null || serialPort.bytesAwaitingWrite()>8000)
             return false;
         return serialPort.isOpen();
     }
