@@ -12,6 +12,7 @@ From 0.5.0 onwards, this should be better documented...
 - Trans as output in taskmanager?
 - Trans command >>>signin:id to claim to be a certain id and pass the ip test
 
+
 ## Work in progress
 ## 0.10.x
 - Goals for this version series (removed when as they are done)
@@ -19,6 +20,7 @@ From 0.5.0 onwards, this should be better documented...
     * Bring javadoc up to date
     * Decide on final class structure (mainly StreamPool)   
   * Rework the TaskManager (will be trigger for 0.11.0)
+- Clock commands get cancelled on reload?
 
 ## Update guide from 0.9.x -> 0.10.5
 - databases node: replace 'setup' with 'flush' and 'flushtime' with 'age'
@@ -46,11 +48,12 @@ From 0.5.0 onwards, this should be better documented...
 - EmailWorker, the email:send command now also replaces {localtime} and {utctime}
 - FilterForward, added regex type to match on regex
 - Valmap, now allows for multiple pairs to be in a single dataline with given delimiter
-
+- SerialStream, better nullpointer catches 
+  
 ### Bugfixes
 - LabelWorker didn't give an error if a generic doesn't exist
 - MathForward, cmd in an op didn't make the forward valid
-
+- TaskManager, clock tasks weren't properly cancelled on a reload
 
 ## 0.10.4 (15/07/2021)
 
