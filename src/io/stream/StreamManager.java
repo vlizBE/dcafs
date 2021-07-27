@@ -886,7 +886,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 				String port = portAndBaud[0];
 				String baud = portAndBaud.length==2?portAndBaud[1]:"19200";
 				
-				if( !SerialStream.portExists(port) && !port.contains("ttyGS"))
+				if( !SerialStream.portExists(port) && !port.contains("ttyGS") && !port.contains("printer"))
 					return "No such port on this system. Options: "+ SerialStream.portList();
 				
 				SerialStream serial = new SerialStream( port, dQueue, serLabel, 1);
