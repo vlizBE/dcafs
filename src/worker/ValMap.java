@@ -67,7 +67,7 @@ public class ValMap {
             if (!mapped.rttext.isEmpty())
                 rtvals.setRealtimeText(mapped.rttext, mapped.convert(pair[1]));
         } else {
-            Logger.warn(id + " -> No mapping found for " + data);
+            //Logger.warn(id + " -> No mapping found for " + data);
         }
     }
     public String toString(){
