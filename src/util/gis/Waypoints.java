@@ -68,7 +68,7 @@ public class Waypoints implements Commandable {
     public void addWaypoint( String id, double lat, double lon, double range) {
     	if(wps.isEmpty())
             scheduler.schedule(() -> checkWaypoints(),checkInterval, TimeUnit.SECONDS);
-        wps.put( id, new Waypoint( id, lat, lon, range) );
+        wps.put( id, Waypoint.build(id).lat(lat).lon(lon).range(range) );
     }
     public boolean addHere(  String id, double range) {
         if( latitude!= null && longitude != null) {
@@ -111,7 +111,7 @@ public class Waypoints implements Commandable {
         		String name = XMLtools.getChildValueByTag(el,"name",id);
                 double range = Tools.parseDouble( el.getAttribute("range"), -999);
 
-                var wp = addWaypoint( id, new Waypoint(name,lat,lon,range) );
+                var wp = addWaypoint( id, Waypoint.build(name).lat(lat).lon(lon).range(range) );
 
                 Logger.info("Checking for travel...");
                 for( Element travelEle : XMLtools.getChildElements(el,XML_TRAVEL)){

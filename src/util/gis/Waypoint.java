@@ -45,29 +45,33 @@ public class Waypoint implements Comparable<Waypoint>{
 	/* Specific movements */
 	ArrayList<Travel> travels = new ArrayList<>();
 
-	public Waypoint ( int id, String name, double lat, double lon, double depth, double range ){
-		this.name=name.trim();
-		this.lat=lat;
-		this.lon=lon;
-		this.range=range;
-		this.id=id;
-		this.depth=depth;
-		Logger.info( "New waypoint added: "+this.name+"\t"+lat+" "+lon+" Req Range:"+range);
-	}
-
-	public Waypoint ( int id, String name, double lat, double lon ){
-		this(id,name,lat,lon,0,50);
-	}	
-	public Waypoint ( String name, double lat, double lon, double range ){
-		this( 0, name,lat,lon,0,range);
-	}
-	public Waypoint( String name, double lat, double lon, double range,boolean temp){
-		this( 0, name,lat,lon,0, range);
-		this.temp=temp;
-	}	
 	public Waypoint( String name ){
 		this.name=name;
 	}
+
+	public static Waypoint build( String name){
+		return new Waypoint(name);
+	}
+	public Waypoint lat( double lat){
+		this.lat=lat;
+		return this;
+	}
+	public Waypoint lon( double lon){
+		this.lon=lon;
+		return this;
+	}
+	public Waypoint range( double range){
+		this.range=range;
+		return this;
+	}
+	public Waypoint depth( double depth){
+		this.depth=depth;
+		return this;
+	}
+	public void makeTemp(){
+		temp=true;
+	}
+
 	public STATE currentState( OffsetDateTime when, double lat, double lon ){
 		lastDist = GisTools.roughDistanceBetween(lon, lat, this.lon, this.lat, 3)*1000;// From km to m				
 		bearing = GisTools.calcBearing( lon, lat, this.lon, this.lat, 2 );

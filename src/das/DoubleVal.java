@@ -47,7 +47,7 @@ public class DoubleVal {
     }
 
     public DoubleVal setValue( double val){
-        this.value=val;
+
         /* Keep history of passed values */
         if( keepHistory ) {
             history.add(val);
@@ -58,15 +58,12 @@ public class DoubleVal {
         if( keepTime )
             timestamp= Instant.now().toEpochMilli();
 
-        /* Respond to thriggered command based on value */
+        /* Respond to triggered command based on value */
         if( dQueue!=null && triggered!=null ) {
             // Execute all the triggers, only if it's the first time
-            triggered.stream()
-                    .filter(tc -> tc.comp.apply(val)&&!tc.triggered)
-                    .forEach(tc -> dQueue.add(Datagram.system(tc.getCmd())));
-            // Reset the triggers that are no longer valid
-            triggered.stream().filter(tc -> !tc.comp.apply(val)&&tc.triggered).forEach(tc -> tc.resetTrigger());
+            triggered.stream().forEach(tc -> tc.apply(val));
         }
+        value=val;
         return this;
     }
 
@@ -144,6 +141,27 @@ public class DoubleVal {
         private void resetTrigger(){
             Logger.info("Trigger reset for "+(group.isEmpty()?"":group+"_")+name+" "+ori+" => "+cmd);
             triggered=false;
+        }
+        public boolean reset( double val ){
+            if( triggered ){
+                triggered = comp.apply(val);
+            }
+            return true;
+        }
+        public void apply( double val ){
+            if( ori.equalsIgnoreCase("always")) { // always run this cmd
+                dQueue.add(Datagram.system(cmd.replace("$",""+value)));
+            }else if( ori.equalsIgnoreCase("changed")) {// run this cmd if the value changed
+                if( val != value )
+                    dQueue.add(Datagram.system(cmd.replace("$",""+value)));
+            }else{
+                boolean ok = comp.apply(val);
+                if( !triggered && ok ){
+                    dQueue.add(Datagram.system(cmd.replace("$",""+value)));
+                }else if( triggered && !ok){
+                    triggered=false;
+                }
+            }
         }
     }
 }
