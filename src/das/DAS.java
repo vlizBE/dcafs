@@ -24,6 +24,7 @@ import util.DeadThreadListener;
 import util.database.*;
 import util.gis.Waypoint;
 import util.gis.Waypoints;
+import util.task.TaskManager;
 import util.task.TaskManagerPool;
 import util.tools.TimeTools;
 import util.tools.Tools;
@@ -356,6 +357,9 @@ public class DAS implements DeadThreadListener {
         }
         taskManagerPool.readFromXML();
         addCommandable("tm", taskManagerPool);
+    }
+    public Optional<TaskManager> getTaskManager( String id){
+        return taskManagerPool.getTaskList(id);
     }
     /* ******************************************  S T R E A M P O O L ***********************************************/
     /**
