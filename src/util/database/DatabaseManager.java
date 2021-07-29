@@ -7,9 +7,7 @@ import org.w3c.dom.Document;
 import util.xml.XMLfab;
 
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.StringJoiner;
+import java.util.*;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -77,6 +75,18 @@ public class DatabaseManager implements QueryWriting{
         return lites.get(id) != null || sqls.get(id) != null;
     }
 
+    /**
+     * Check if a database has a valid connection
+     * @param id The id of the database
+     * @param timeout The timeout in seconds to allow
+     * @return True if it has a valid connection
+     */
+    public boolean isValid(String id,int timeout) {
+        var db = getDatabase(id);
+        if( db == null )
+            return false;
+        return db.isValid(timeout);
+    }
     public SQLiteDB getSQLiteDB(String id) {
         return lites.get(id);
     }
@@ -188,6 +198,26 @@ public class DatabaseManager implements QueryWriting{
             }
         }
         return false;
+    }
+
+    /**
+     * Run a select query on the given database
+     * @param id The database to use
+     * @param query The query to run
+     * @return An optional result
+     */
+    public Optional<List<List<Object>>> doSelect(String id, String query){
+        for( SQLiteDB sqlite : lites.values() ){
+            if( sqlite.getID().equalsIgnoreCase(id)) {
+                return sqlite.doSelect(query);
+            }
+        }
+        for( SQLDB sqldb : sqls.values() ){
+            if( sqldb.getID().equalsIgnoreCase(id)) {
+                return sqldb.doSelect(query);
+            }
+        }
+        return Optional.empty();
     }
     @Override
     public boolean writeInfluxPoint( String id, Point p){
