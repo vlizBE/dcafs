@@ -57,6 +57,12 @@ public class TaskSet {
     public Optional<Task> getTaskByID( String id ){
         return tasks.stream().filter( t-> t.id.equalsIgnoreCase(id)).findFirst();
     }
+    public void setLastIndexRun(int index){
+        this.index=index;
+    }
+    public int getLastIndexRun(){
+        return index;
+    }
     public Task getNextTask( int index ) {
         index ++;
         if( index >= tasks.size()) {

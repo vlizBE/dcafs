@@ -245,6 +245,9 @@ public class StreamManager implements StreamListener, CollectorFuture {
 	 * @return False if stream doesn't exist or doesn't allow being written to otherwise true
 	 */
 	public boolean writeWithReply(CollectorFuture wf, String ref, String id, String txt, String reply){
+		return writeWithReply(wf,ref,id,txt,reply,3,3);
+	}
+	public boolean writeWithReply(CollectorFuture wf, String ref, String id, String txt, String reply,long replyWait,int replyTries){
 		BaseStream stream = this.streams.get( id.toLowerCase() );
 
 		if( stream == null || !stream.isWritable() || !stream.isConnectionValid() ){
@@ -254,7 +257,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 		
 		ConfirmCollector cw = confirmCollectors.get(ref+"_"+id);
 		if( cw==null ){
-			cw = new ConfirmCollector( ref+"_"+id,3,3, (Writable)stream, eventLoopGroup);
+			cw = new ConfirmCollector( ref+"_"+id,replyTries,(int)replyWait, (Writable)stream, eventLoopGroup);
 			cw.addListener(wf);
 			stream.addTarget(cw);
 			confirmCollectors.put(ref+"_"+id, cw );

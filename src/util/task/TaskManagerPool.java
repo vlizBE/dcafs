@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Optional;
 import java.util.StringJoiner;
 
 public class TaskManagerPool implements Commandable {
@@ -70,6 +71,9 @@ public class TaskManagerPool implements Commandable {
         tl.setSMSSending(smsSender);
 
         tasklists.put(id,tl);
+    }
+    public Optional<TaskManager> getTaskList(String id ){
+        return Optional.ofNullable(tasklists.get(id));
     }
     public void addTaskList( String id, Path scriptPath){
         addTaskList(id,new TaskManager(id,scriptPath));
@@ -174,38 +178,39 @@ public class TaskManagerPool implements Commandable {
                 } catch (IOException e) {
                     Logger.error(e);
                 }
+
                 XMLfab tmFab = XMLfab.withRoot(Path.of(workPath,"settings.xml"), "dcafs","settings");
                 tmFab.addChild("taskmanager","tmscripts"+ File.separator+cmd[1]+".xml").attr("id",cmd[1]).build();
                 tmFab.build();
-
-                // Create an empty file
-                XMLfab.withRoot(Path.of(workPath,"tmscripts",cmd[1]+".xml"), "tasklist")
-                        .comment("Any id is case insensitive")
-                        .comment("Reload the script using tm:reload,"+cmd[1])
-                        .comment("If something is considered default, it can be omitted")
-                        .comment("There's no hard limit to the amount of tasks or tasksets")
-                        .comment("Task debug info has a separate log file, check logs/taskmanager.log")
-                        .addParent("tasksets","Tasksets are sets of tasks")
-                        .comment("Below is an example taskset")
-                        .addChild("taskset").attr("run","oneshot").attr("id","example").attr("info","Example taskset that says hey and bye")
-                        .comment("run can be either oneshot (start all at once) or step (one by one), default is oneshot")
-                        .down().addChild("task","Hello World from "+cmd[1]).attr("output","log:info")
-                        .addChild("task","Goodbye :(").attr("output","log:info").attr("trigger","delay:2s")
-                        .up()
-                        .addParent("tasks","Tasks are single commands to execute")
-                        .comment("Below is an example task, this will be called on startup or if the script is reloaded")
-                        .addChild("task","taskset:example").attr("output","system").attr("trigger","delay:1s")
-                        .comment("This task will wait a second and then start the example taskset")
-                        .comment("A task doesn't need an id but it's allowed to have one")
-                        .comment("Possible outputs: stream:id , system (default), log:info, email:ref, manager")
-                        .comment("Possible triggers: delay, interval, while,")
-                        .comment("For more extensive info and examples, check Reference Guide - Taskmanager in the manual")
-                        .build();
-
+                var p = Path.of(workPath,"tmscripts",cmd[1]+".xml");
+                if( Files.notExists(p)) {
+                    // Create an empty file
+                    XMLfab.withRoot(p, "tasklist")
+                            .comment("Any id is case insensitive")
+                            .comment("Reload the script using tm:reload," + cmd[1])
+                            .comment("If something is considered default, it can be omitted")
+                            .comment("There's no hard limit to the amount of tasks or tasksets")
+                            .comment("Task debug info has a separate log file, check logs/taskmanager.log")
+                            .addParent("tasksets", "Tasksets are sets of tasks")
+                            .comment("Below is an example taskset")
+                            .addChild("taskset").attr("run", "oneshot").attr("id", "example").attr("info", "Example taskset that says hey and bye")
+                            .comment("run can be either oneshot (start all at once) or step (one by one), default is oneshot")
+                            .down().addChild("task", "Hello World from " + cmd[1]).attr("output", "log:info")
+                            .addChild("task", "Goodbye :(").attr("output", "log:info").attr("trigger", "delay:2s")
+                            .up()
+                            .addParent("tasks", "Tasks are single commands to execute")
+                            .comment("Below is an example task, this will be called on startup or if the script is reloaded")
+                            .addChild("task", "taskset:example").attr("output", "system").attr("trigger", "delay:1s")
+                            .comment("This task will wait a second and then start the example taskset")
+                            .comment("A task doesn't need an id but it's allowed to have one")
+                            .comment("Possible outputs: stream:id , system (default), log:info, email:ref, manager")
+                            .comment("Possible triggers: delay, interval, while,")
+                            .comment("For more extensive info and examples, check Reference Guide - Taskmanager in the manual")
+                            .build();
+                }
                 // Add it to das
-                addTaskList(cmd[1], Path.of(workPath,"tmscripts",cmd[1]+".xml"));
-
-                return "Tasks script created, use tm:reload,"+cmd[1]+" to run it.";
+                addTaskList(cmd[1], p);
+                return "Tasklist added, use tm:reload,"+cmd[1]+" to run it.";
             case "reload":
                 if( cmd.length != 2)
                     return "Not enough parameters, missing id";

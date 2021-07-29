@@ -614,7 +614,7 @@ public class TaskManager implements CollectorFuture {
 		}
 		boolean verify = ver==1;
 		boolean executed = false;
-		
+
 		if (task.skipExecutions == 0 // Check if the next execution shouldn't be skipped (related to the 'link'
 										// keyword)
 				&& task.doToday // Check if the task is allowed to be executed today (related to the 'link'
@@ -728,7 +728,7 @@ public class TaskManager implements CollectorFuture {
 						boolean ok;
 						if (task.triggerType != TRIGGERTYPE.INTERVAL) { // Interval tasks are executed differently
 							if( !task.reply.isEmpty() ){
-								ok= streams.writeWithReply(this, task.getTaskset(), task.stream, task.value, task.reply);
+								ok= streams.writeWithReply(this, task.getTaskset(), task.stream, task.value, task.reply,task.replyInterval,task.replyRetries);
 							}else{
 								ok=!streams.writeToStream(task.stream, fill, task.reply).isEmpty();
 							}
@@ -927,12 +927,17 @@ public class TaskManager implements CollectorFuture {
 		if( task.hasNext() ) { // If the next task in the set could be executed
 			TaskSet set = tasksets.get( task.getTaskset() );					
 			if( set != null && set.getRunType() == RUNTYPE.STEP ) {	// If the next task in the set should be executed
-				if( executed && task.triggerType != TRIGGERTYPE.RETRY){ // If the task was executed and isn't of the trigger:retry type
-					Task t = set.getNextTask( task.getIndexInTaskset() );	
-					if( t != null ){
-						startTask( t );
+
+				if( executed && task.triggerType != TRIGGERTYPE.RETRY ){ // If the task was executed and isn't of the trigger:retry type
+					if( task.reply.isEmpty() ) {
+						Task t = set.getNextTask(task.getIndexInTaskset());
+						if (t != null) {
+							startTask(t);
+						} else {
+							Logger.tag(TINY_TAG).info("[" + id + "] Executed last task in the taskset [" + set.getDescription() + "]");
+						}
 					}else{
-						Logger.tag(TINY_TAG).info( "["+ id +"] Executed last task in the taskset ["+set.getDescription()+"]");
+						set.setLastIndexRun(task.getIndexInTaskset());
 					}
 				}
 			}
@@ -1357,12 +1362,15 @@ public class TaskManager implements CollectorFuture {
 		// Ok isn't implemented because the manager doesn't care if all went well
 		boolean res= (boolean) result;
 		id = id.split(":")[1];
+		var set = tasksets.get(id.substring(0,id.indexOf("_")));
 		if( !res ){
 			Logger.tag(TINY_TAG).error("Reply send failed (tasksetid_streamid) -> "+id);
 			// somehow cancel the taskset?
 			runFailure(tasksets.get(id.substring(0,id.indexOf("_"))),"confirmfailed");
 		}else{
 			Logger.tag(TINY_TAG).info("["+ this.id +"] Collector '"+id+"' finished fine");
+			startTask( set.getNextTask( set.getLastIndexRun() ));
+			// do the next step?
 		}
 		if(streams !=null){
 			streams.removeConfirm(id);

@@ -120,11 +120,10 @@ public class Task implements Comparable<Task>{
 			id = XMLtools.getStringAttribute( tsk, "id", ""+new Random().nextLong()).toLowerCase();
 
 			reply = XMLtools.getStringAttribute( tsk, "reply", "");
-			String[] rep = reply.split(",");
-			reply=rep[0];
-			if( rep.length==3){ // value,retries, interval?
-				replyRetries=Tools.parseInt(rep[1], -1);
-				replyInterval= TimeTools.parsePeriodStringToSeconds(rep[2]);
+			var wind = XMLtools.getStringAttribute( tsk, "replywindow", "");
+			if( !wind.isEmpty()){
+				replyInterval=TimeTools.parsePeriodStringToSeconds(wind);
+				replyRetries=1;
 			}
 
 			link = XMLtools.getStringAttribute( tsk, "link", "");
