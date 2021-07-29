@@ -28,7 +28,7 @@ From 0.5.0 onwards, this should be better documented...
 - TaskManager script: Replace the @fillin with {fillin}
 - FilterForward: rename source node to src node
 
-## 0.10.5 (work in progress)
+## 0.10.5 (29/07/2021)
 
 ### Datapaths
 - New functionality, allows for filter,math,editor, generic and valmap to be added in a single node
@@ -49,7 +49,14 @@ From 0.5.0 onwards, this should be better documented...
 - FilterForward, added regex type to match on regex
 - Valmap, now allows for multiple pairs to be in a single dataline with given delimiter
 - SerialStream, better nullpointer catches 
-  
+- Waypoint, added fluid api to replace constructor
+
+### TaskManager
+- Task, added replywindow attribute to provide a reply window te replace the standard 3s wait and 3 retries
+ after sending something to a stream that wants a reply, default retries will be 0.
+- tm:addblank now checks if a script with the given name already exists before creating it
+- Fixed run="step" to actually wait for a reply
+
 ### Bugfixes
 - LabelWorker didn't give an error if a generic doesn't exist
 - MathForward, cmd in an op didn't make the forward valid
