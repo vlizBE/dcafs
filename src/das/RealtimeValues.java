@@ -199,11 +199,11 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 	 * @param param The parameter name
 	 * @param value     The value of the parameter
 	 */
-	public void setRealtimeValue(String param, double value, boolean createIfNew) {
-
+	public boolean setRealtimeValue(String param, double value, boolean createIfNew) {
+		boolean ok = false;
 		if( param.isEmpty()) {
 			Logger.error("Empty param given");
-			return;
+			return ok;
 		}
 		var d = rtvals.get(param);
 		if( d==null ) {
@@ -214,6 +214,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 				} else {
 					rtvals.put(param, DoubleVal.newVal("", par[0]).setValue(value));
 				}
+				ok=true;
 			}else{
 				Logger.error("No such rtval "+param+" yet, use create:"+param+","+value+" to create it first");
 			}
@@ -226,6 +227,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 			if( res != null)
 				res.forEach( wr -> wr.writeLine(param + " : " + value));
 		}
+		return ok;
 	}
 	public String parseRTline( String line, String error ){
 
@@ -279,12 +281,12 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		}
 		return rtvals.get(param);
 	}
-	public void setRealtimeText(String parameter, String value) {
+	public boolean setRealtimeText(String parameter, String value) {
 		final String param=parameter.toLowerCase();
 
 		if( param.isEmpty()) {
 			Logger.error("Empty param given");
-			return;
+			return false;
 		}
 		Logger.debug("Setting "+parameter+" to "+value);
 
@@ -295,6 +297,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 			if( res != null)
 				res.forEach( wr -> wr.writeLine(param + " : " + value));
 		}
+		return true;
 	}
 
 	public String getRealtimeText(String parameter, String def) {
