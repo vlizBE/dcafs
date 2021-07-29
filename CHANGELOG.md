@@ -28,6 +28,18 @@ From 0.5.0 onwards, this should be better documented...
 - TaskManager script: Replace the @fillin with {fillin}
 - FilterForward: rename source node to src node
 
+## 0.10.6 (work in progress)
+
+### Updated dependencies minor versions
+- DioZero
+- PostgresSQL
+- mysql-connector-java
+- netty
+
+### Other
+
+### Bugfixes
+
 ## 0.10.5 (29/07/2021)
 
 ### Datapaths
