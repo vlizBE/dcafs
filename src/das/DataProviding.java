@@ -22,7 +22,7 @@ public interface DataProviding {
     boolean hasFlag( String flag);
     boolean isFlagUp( String flag );
     boolean isFlagDown( String flag );
-    boolean raiseFlag( String flag );
-    boolean lowerFlag( String flag );
+    boolean raiseFlag( String... flag );
+    boolean lowerFlag( String... flag );
     ArrayList<String> listFlags();
 }
