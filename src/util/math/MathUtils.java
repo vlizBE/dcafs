@@ -187,6 +187,10 @@ public class MathUtils {
             op=op.replace("between ",">");
             op=op.replace(" and ", ";<");
         }
+        if( op.startsWith("not between") ){
+            op=op.replace("not between ","<=");
+            op=op.replace(" and ", ";>=");
+        }
         if( op.startsWith("from ") ){
             op=op.replace("from ",">");
             op=op.replace(" to ", ";<");
