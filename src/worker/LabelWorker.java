@@ -283,6 +283,12 @@ public class LabelWorker implements Runnable, Labeller {
 					}else{
 						Logger.error("No valid writable in the datagram from "+d.getOriginID());
 					}
+				} else if (d.label.startsWith("log:")) {
+					switch(d.label.split(":")[1]){
+						case "info":Logger.info(d.getData()); break;
+						case "warn":Logger.warn(d.getData()); break;
+						case "error":Logger.error(d.getData()); break;
+					}
 				} else {
 					switch (d.label) {
 						case "readable":
