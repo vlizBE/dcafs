@@ -268,6 +268,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		return line;
 	}
 	public DoubleVal getDoubleVal( String param ){
+		if( rtvals.get(param)==null)
+			Logger.error( "Tried to retrieve non existing doubleval "+param);
 		return rtvals.get(param);
 	}
 
@@ -329,19 +331,25 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 
 	/**
 	 * Raises a flag/sets a boolean.
-	 * @param flag The flag/bit to set
+	 * @param flag The flags/bits to set
 	 * @return True if this is a new flag/bit
 	 */
-	public boolean raiseFlag( String flag ){
-		return flags.put(flag,true)==null;
+	public boolean raiseFlag( String... flag ){
+		int cnt = flags.size();
+		for( var f : flag)
+			flags.put(f,true);
+		return cnt!=flags.size();
 	}
 	/**
 	 * Lowers a flag/clears a boolean.
-	 * @param flag The flag/bit to clear
+	 * @param flag The flags/bits to clear
 	 * @return True if this is a new flag/bit
 	 */
-	public boolean lowerFlag( String flag ){
-		return flags.put(flag,false)==null;
+	public boolean lowerFlag( String... flag ){
+		int cnt = flags.size();
+		for( var f : flag)
+			flags.put(f,false);
+		return cnt!=flags.size();
 	}
 	public ArrayList<String> listFlags(){
 		return flags.entrySet().stream().map( ent -> ent.getKey()+" : "+ent.getValue()).collect(Collectors.toCollection(ArrayList::new));
