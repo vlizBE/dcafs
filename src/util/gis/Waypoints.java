@@ -271,6 +271,14 @@ public class Waypoints implements Commandable {
 		}
 		return wayp;
     }
+
+    /**
+     * Get the waypoints closest to the current coordinates
+      * @return The id found
+     */
+    public String getNearestWaypoint( ){
+        return getClosestWaypoint( latitude.getValue(),longitude.getValue());
+    }
     /**
      * Check the waypoints to see if any travel occurred, if so execute the commands associated with it
      */
@@ -282,6 +290,18 @@ public class Waypoints implements Commandable {
                 travel.getCmds().forEach(cmd -> dQueue.add(Datagram.system(cmd)));
             }
         });
+    }
+
+    /**
+     * Get the distance to a certain waypoint in meters
+     * @param id The id of the waypoint
+     * @return The distance in meters
+     */
+    public double distanceTo(String id){
+        var wp = wps.get(id);
+        if( wp == null)
+            return -1;
+        return wp.distanceTo(latitude.getValue(), longitude.getValue());
     }
     /* ****************************************************************************************************/
     /* ****************************************************************************************************/
