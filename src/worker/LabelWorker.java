@@ -263,7 +263,11 @@ public class LabelWorker implements Runnable, Labeller {
 				} else if (d.label.startsWith("rtval:")) {
 					executor.execute(() -> storeRtval(readID,d.getData(),d.getOriginID()));
 				} else if (d.label.startsWith("rttext:")) {
-					executor.execute(() -> rtvals.setRealtimeText(readID,d.data));
+					executor.execute(() -> rtvals.setRealtimeText(readID, d.data));
+				}else if( d.label.startsWith("raiseflag:")){
+					executor.execute(() -> rtvals.raiseFlag(readID));
+				}else if( d.label.startsWith("lowerflag:")){
+					executor.execute(() -> rtvals.lowerFlag(readID));
 				} else if (d.label.startsWith("read:")) {
 					if( d.getWritable()!=null){
 						if (d.label.split(":").length >= 2) {

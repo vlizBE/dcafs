@@ -1,5 +1,7 @@
 package das;
 
+import java.util.ArrayList;
+
 public interface DataProviding {
 
     /* Parsing */
@@ -17,8 +19,10 @@ public interface DataProviding {
     boolean setRealtimeText(String param, String value );
 
     /* Flags */
-    boolean isFlagUp( String flag, boolean def );
-    boolean isFlagDown( String flag, boolean def );
+    boolean hasFlag( String flag);
+    boolean isFlagUp( String flag );
+    boolean isFlagDown( String flag );
     boolean raiseFlag( String flag );
     boolean lowerFlag( String flag );
+    ArrayList<String> listFlags();
 }

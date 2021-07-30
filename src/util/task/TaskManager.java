@@ -806,8 +806,8 @@ public class TaskManager implements CollectorFuture {
 						}
 
 						switch( com[0] ){
-							case "raiseflag": changeState( com[1]+":1" ); rtvals.raiseFlag(com[1]);break;
-							case "lowerflag": removeState( com[1] ); rtvals.lowerFlag(com[1]); break;
+							case "raiseflag": rtvals.raiseFlag(com[1]);break;
+							case "lowerflag": rtvals.lowerFlag(com[1]); break;
 							case "start": startTaskset(com[1]); break;
 							case "stop": 
 								int a = stopTaskSet( com[1] );
@@ -1137,7 +1137,7 @@ public class TaskManager implements CollectorFuture {
 	public String printCheck(RtvalCheck check) {
 		if( rtvals == null )
 			return "No RealtimeValues defined!";
-		return check.toString(rtvals, commandPool.getActiveIssues());
+		return check.toString(rtvals,commandPool.getActiveIssues());
 	}
 
 	/* *******************************************************************************************************/
@@ -1310,7 +1310,11 @@ public class TaskManager implements CollectorFuture {
 			case "forcereload": return forceReloadTasks()?"Reloaded tasks":"Reload failed";
 			case "listtasks": case "tasks": return getTaskListing(html?"<br>":"\r\n");
 			case "listsets": case "sets":  return getTaskSetListing(html?"<br>":"\r\n");
-			case "states": case "flags":    return getStatesListing();
+			case "states":    return getStatesListing();
+			case "setstate":
+				if( parts.length!=2)
+					return "To few arguments, need setstate,id:state";
+				return changeState(parts[1])?"State changed":"state altered";
 			case "stop":	  return "Cancelled "+stopAll("doTaskManager")+ " futures.";
 			case "run":		
 				if( parts.length==2){

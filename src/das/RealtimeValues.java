@@ -311,19 +311,40 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		return result == null ? def : result;
 	}
 	/* ************************************ F L A G S ************************************************************* */
-	public boolean isFlagUp( String flag, boolean def ){
-		var f = flags.get(flag);
-		return f==null?def:f;
+	public boolean hasFlag( String flag){
+		return flags.get(flag)!=null;
 	}
-	public boolean isFlagDown( String flag, boolean def ){
+	public boolean isFlagUp( String flag ){
 		var f = flags.get(flag);
-		return f==null?def:!f;
+		if( f==null)
+			Logger.warn("No such flag: "+flag);
+		return f==null?false:f;
 	}
+	public boolean isFlagDown( String flag ){
+		var f = flags.get(flag);
+		if( f==null)
+			Logger.warn("No such flag: "+flag);
+		return f==null?false:!f;
+	}
+
+	/**
+	 * Raises a flag/sets a boolean.
+	 * @param flag The flag/bit to set
+	 * @return True if this is a new flag/bit
+	 */
 	public boolean raiseFlag( String flag ){
 		return flags.put(flag,true)==null;
 	}
+	/**
+	 * Lowers a flag/clears a boolean.
+	 * @param flag The flag/bit to clear
+	 * @return True if this is a new flag/bit
+	 */
 	public boolean lowerFlag( String flag ){
 		return flags.put(flag,false)==null;
+	}
+	public ArrayList<String> listFlags(){
+		return flags.entrySet().stream().map( ent -> ent.getKey()+" : "+ent.getValue()).collect(Collectors.toCollection(ArrayList::new));
 	}
 	/* ********************************* O V E R V I E W *********************************************************** */
 	/**

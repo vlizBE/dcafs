@@ -1112,7 +1112,48 @@ public class CommandPool {
 				+(html?"<br>":"\r\n")+(html?"<br>":"\r\n")
 				+rtvals.getFilteredRTTexts(request[1],html?"<br>":"\r\n");
 	}
+	public String doFLAGS( String[] request, Writable wr, boolean html ){
+		if( request[1].isEmpty())
+			request[1]="list";
 
+		var cmds = request[1].split(",");
+		var join = new StringJoiner(html?"<br>":"\r\n");
+		switch( cmds[0] ){
+			case "?":
+				join.add("flags or flags:list -> Give a listing of all current flags and their state")
+					.add("flags:raise,id or flags:set,id -> Raises the flag/Sets the bit, created if new")
+					.add("flags:lower,id or flags:clear,id -> Lowers the flag/Clears the bit, created if new")
+					.add("flags:toggle,id -> Toggles the flag/bit, not created if new");
+			case "list":
+				join.setEmptyValue("No flags yet");
+				rtvals.listFlags().forEach(join::add);
+				return join.toString();
+			case "raise": case "set":
+				if( cmds.length !=2)
+					return "Not enough arguments, need flags:raise,id or flags:set,id";
+				return rtvals.raiseFlag(cmds[1])?"New flag raised":"Flag raised";
+			case "lower": case "clear":
+				if( cmds.length !=2)
+					return "Not enough arguments, need flags:lower,id or flags:clear,id";
+				return rtvals.lowerFlag(cmds[1])?"New flag raised":"Flag raised";
+			case "toggle":
+				if( cmds.length !=2)
+					return "Not enough arguments, need flags:toggle,id";
+
+				if( !rtvals.hasFlag(cmds[1]) )
+					return "No such flag";
+
+				if( rtvals.isFlagUp(cmds[1])) {
+					rtvals.lowerFlag(cmds[1]);
+					return "flag lowered";
+				}
+				rtvals.raiseFlag(cmds[1]);
+				return "Flag raised";
+
+		}
+		return "unknown command "+request[0]+":"+request[1];
+
+	}
 	public String doCONVert( String[] request, Writable wr, boolean html ){
 		if( request[1].equals("?") )
 			return " -> Convert a coordinate in the standard degrees minutes format";		
