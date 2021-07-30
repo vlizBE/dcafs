@@ -144,13 +144,13 @@ public class DAS implements DeadThreadListener {
 
             dbManager = new DatabaseManager(workPath);
 
-            /* IssuePool */
-            issuePool = new IssuePool(dQueue, settingsPath);
-
             /* RealtimeValues */
-            rtvals = new RealtimeValues(issuePool);
+            rtvals = new RealtimeValues();
             readRTvals();
             rtvals.addQueryWriting(dbManager);
+
+            /* IssuePool */
+            issuePool = new IssuePool(dQueue, settingsPath,rtvals);
 
             /* CommandPool */
             commandPool = new CommandPool(rtvals, issuePool, workPath);
