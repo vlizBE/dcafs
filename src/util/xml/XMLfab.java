@@ -554,4 +554,8 @@ public class XMLfab {
             return XMLtools.getChildElements(last);
         return XMLtools.getChildElements(last, tag);
     }
+    public Element getCurrentElement(){
+        return last;
+    }
+
 }
