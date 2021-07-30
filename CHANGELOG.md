@@ -36,7 +36,16 @@ From 0.5.0 onwards, this should be better documented...
 - mysql-connector-java
 - netty
 
+### RealtimeValues
+- Added flags (in addition to rtvals and rttexts)
+- Added commands for it to the pool (flags:cmd)
+- Added labels for it (raisflag:id and lowerflag:id)
+- TaskManagers now use the global flags instead of local ones
+
 ### Other
+- Labelworker, added label 'log' so you can have data written to the info/warn/error logs.
+  label="log:info" etc
+- rtvals, double added support for not between x and y
 
 ### Bugfixes
 
