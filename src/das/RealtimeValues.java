@@ -48,6 +48,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 	protected Map<String, Integer> descriptorID = new HashMap<>();
 	protected ConcurrentHashMap<String, DoubleVal> rtvals = new ConcurrentHashMap<>();
 	protected ConcurrentHashMap<String, String> rttext = new ConcurrentHashMap<>();
+	protected ConcurrentHashMap<String, Boolean> flags = new ConcurrentHashMap<>();
 	protected HashMap<String, List<Writable>> rtvalRequest = new HashMap<>();
 	protected HashMap<String, List<Writable>> rttextRequest = new HashMap<>();
 	protected HashMap<Writable, List<ScheduledFuture<?>>> calcRequest = new HashMap<>();
@@ -77,15 +78,6 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 	Pattern rttextPattern=null;
 
 	/* **************************************  C O N S T R U C T O R **************************************************/
-	/**
-	 * Standard constructor requiring an IssueCollector
-	 * 
-	 * @param issuePool The IssuePool
-	 */
-	public RealtimeValues(IssuePool issuePool) {
-		this.issues = issuePool;
-	}
-
 	/**
 	 * Blank constructor
 	 */
@@ -229,6 +221,20 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		}
 		return ok;
 	}
+	public String simpleParseRT( String line ){
+		var words = line.split(" ");
+		for( var word : words ){
+			var d = getRealtimeValue(word, Double.NaN);
+			if (!Double.isNaN(d)) {
+				line = line.replace(word,""+d);
+			}else{
+				var t = getRealtimeText(word,"");
+				if( !t.isEmpty())
+					line=line.replace(word,t);
+			}
+		}
+		return line;
+	}
 	public String parseRTline( String line, String error ){
 
 		if( rtvalPattern==null) {
@@ -304,7 +310,22 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		String result = rttext.get(parameter);
 		return result == null ? def : result;
 	}
-
+	/* ************************************ F L A G S ************************************************************* */
+	public boolean isFlagUp( String flag, boolean def ){
+		var f = flags.get(flag);
+		return f==null?def:f;
+	}
+	public boolean isFlagDown( String flag, boolean def ){
+		var f = flags.get(flag);
+		return f==null?def:!f;
+	}
+	public boolean raiseFlag( String flag ){
+		return flags.put(flag,true)==null;
+	}
+	public boolean lowerFlag( String flag ){
+		return flags.put(flag,false)==null;
+	}
+	/* ********************************* O V E R V I E W *********************************************************** */
 	/**
 	 * Get a listing of all the parameters-value pairs currently stored
 	 * 

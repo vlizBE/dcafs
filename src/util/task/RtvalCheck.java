@@ -1,5 +1,6 @@
 package util.task;
 
+import das.DataProviding;
 import das.RealtimeValues;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
@@ -14,6 +15,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class RtvalCheck {
+
+    public enum CHECKTYPE {NONE,SINGLE,AND,OR}
 
     Function<double[],Boolean> compare;
     ArrayList<String> is = new ArrayList<>();
@@ -54,34 +57,38 @@ public class RtvalCheck {
     }
     private Function<Double[],Double> getFunction( String equ ){
         List<String> parts;
+        // First check if it's the special diff function (difference between two values)
         if( equ.contains("diff") ){
             parts = new ArrayList<>();
             String[] ops = equ.split("diff");
-            parts.add(ops[0]);
+            parts.add(ops[0].trim());
             parts.add("diff");
-            parts.add(ops[1]);
+            parts.add(ops[1].trim());
         }else {
+            // If it's just a regular mathematical thing
             parts = MathUtils.extractParts(equ);
         }
 
-        // Left side
+        // Left side, first check if it's a valid number
         if( !NumberUtils.isCreatable(parts.get(0)) ){
-            is.add(parts.get(0));
-            parts.set(0,"i" + (is.size()-1));
+            //it's not a number but a reference (rtval,flag,issue etc)'
+            is.add(parts.get(0)); // So store it
+            parts.set(0,"i" + (is.size()-1)); // and replace the parts position with the index of it in is
         }
 
-        if( parts.size()>1){
-            if( !NumberUtils.isCreatable(parts.get(2)) ) {
-                is.add(parts.get(2).toLowerCase());
-                parts.set(2, "i" + (is.size()-1));
+        if( parts.size()>1){ // if there are more than one part (fe. i0+5 instead of just i0)
+            if( !NumberUtils.isCreatable(parts.get(2)) ) { // Check if it's not a number
+                //it's not a number but a reference (rtval,flag,issue etc)'
+                is.add(parts.get(2).toLowerCase()); // So store it
+                parts.set(2, "i" + (is.size()-1));  // and replace the parts position with the index of it in is
             }
-        }else{
+        }else{ // we always want two sides, so add one that doesn't do anything
             parts.add("+");
             parts.add("0");
         }
         return MathUtils.decodeDoublesOp(parts.get(0),parts.get(2),parts.get(1),0);
     }
-    public boolean test(RealtimeValues rtvals, ArrayList<String> flags, ArrayList<String> activeIssues){
+    public boolean test(DataProviding dp, ArrayList<String> activeIssues){
         if( !valid ) {
             Logger.error("Trying to run an invalid RtvalCheck:"+ ori);
             return false;
@@ -89,33 +96,33 @@ public class RtvalCheck {
         Double[] vals = new Double[is.size()];
         for(int a=0;a< vals.length;a++){
             if( is.get(a).startsWith("flag:")){
-                vals[a] = flags.contains(is.get(a).substring(5))?1.0:0;
+                vals[a] = dp.isFlagUp(is.get(a).substring(5),false)?1.0:0;
             }else if( is.get(a).startsWith("issue:")){
                 vals[a] = activeIssues.contains(is.get(a).substring(5))?1.0:0;
             }else{
-                vals[a] = rtvals.getRealtimeValue(is.get(a),-999);
+                vals[a] = dp.getRealtimeValue(is.get(a),-999);
             }
         }
         var val = new double[]{leftCalc.apply(vals),rightCalc.apply(vals)};
         return compare.apply( val );
     }
     public boolean test( RealtimeValues rtvals ){
-        return test(rtvals, new ArrayList<String>(), new ArrayList<String>());
+        return test(rtvals, new ArrayList<String>());
     }
     public String toString(){
         return ori;
     }
-    public String toString(RealtimeValues rtvals, ArrayList<String> flags, ArrayList<String> activeIssues ){
+    public String toString(DataProviding dp, ArrayList<String> activeIssues ){
         String rep = ori;
         for( String i : is){
             if( i.startsWith("flag:")){
-                rep=rep.replace(i,flags.contains(i.substring(5))?"true":"false");
+                rep=rep.replace(i,dp.isFlagUp(i.substring(5),false)?"true":"false");
             }else if( i.startsWith("issue:")){
                 rep=rep.replace(i,activeIssues.contains(i.substring(5))?"true":"false");
             }else{
-                rep=rep.replace(i,""+rtvals.getRealtimeValue(i,-999));
+                rep=rep.replace(i,""+dp.getRealtimeValue(i,-999));
             }
         }
-        return ori +" -> "+rep + "=> "+test(rtvals,flags,activeIssues);
+        return ori +" -> "+rep + "=> "+test(dp,activeIssues);
     }
 }

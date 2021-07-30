@@ -1,5 +1,6 @@
 package util.task;
 
+import das.DataProviding;
 import io.email.Email;
 import io.email.EmailSending;
 import io.sms.SMSSending;
@@ -40,7 +41,7 @@ public class TaskManager implements CollectorFuture {
 	EmailSending emailer = null; // Reference to the email send, so emails can be send
 	SMSSending smsSender = null; 	// Reference to the sms queue, so sms's can be send
 	StreamManager streams; 			// Reference to the streampool, so sensors can be talked to
-	RealtimeValues rtvals;
+	DataProviding rtvals;
 
 	CommandPool commandPool; // Source to get the data from nexus
 	String id;
@@ -58,7 +59,7 @@ public class TaskManager implements CollectorFuture {
 
 	/* ****************************** * C O N S T R U C T O R **************************************************/
 
-	public TaskManager(String id, RealtimeValues rtvals, CommandPool commandPool) {
+	public TaskManager(String id, DataProviding rtvals, CommandPool commandPool) {
 		this.commandPool = commandPool;
 		this.rtvals = rtvals;
 		this.id = id;
@@ -805,8 +806,8 @@ public class TaskManager implements CollectorFuture {
 						}
 
 						switch( com[0] ){
-							case "raiseflag": changeState( com[1]+":1" ); break;
-							case "lowerflag": removeState( com[1] );break;
+							case "raiseflag": changeState( com[1]+":1" ); rtvals.raiseFlag(com[1]);break;
+							case "lowerflag": removeState( com[1] ); rtvals.lowerFlag(com[1]); break;
 							case "start": startTaskset(com[1]); break;
 							case "stop": 
 								int a = stopTaskSet( com[1] );
@@ -1116,11 +1117,11 @@ public class TaskManager implements CollectorFuture {
 		if( checkType == CHECKTYPE.NONE)
 			return 1;
 
-		int ver1 = first==null?0:(first.test(rtvals, states, commandPool.getActiveIssues())?1:0);
+		int ver1 = first==null?0:(first.test(rtvals, commandPool.getActiveIssues())?1:0);
 		if( checkType == CHECKTYPE.SINGLE)
 			return ver1;
 
-		int ver2 = second==null?0:(second.test(rtvals, states, commandPool.getActiveIssues())?1:0);
+		int ver2 = second==null?0:(second.test(rtvals, commandPool.getActiveIssues())?1:0);
 
 		switch(checkType) {
 			case AND: return (ver1 + ver2==2)?1:0;			
@@ -1136,7 +1137,7 @@ public class TaskManager implements CollectorFuture {
 	public String printCheck(RtvalCheck check) {
 		if( rtvals == null )
 			return "No RealtimeValues defined!";
-		return check.toString(rtvals,states,commandPool.getActiveIssues());
+		return check.toString(rtvals, commandPool.getActiveIssues());
 	}
 
 	/* *******************************************************************************************************/
