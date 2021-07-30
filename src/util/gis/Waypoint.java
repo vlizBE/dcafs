@@ -68,8 +68,9 @@ public class Waypoint implements Comparable<Waypoint>{
 		this.depth=depth;
 		return this;
 	}
-	public void makeTemp(){
+	public Waypoint makeTemp(){
 		temp=true;
+		return this;
 	}
 
 	public STATE currentState( OffsetDateTime when, double lat, double lon ){
