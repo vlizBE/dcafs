@@ -3,6 +3,8 @@ package das;
 import io.Writable;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.task.RtvalCheck;
+import util.task.Task;
 import util.tools.TimeTools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
@@ -17,16 +19,19 @@ import java.util.HashMap;
 import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class IssuePool implements Commandable{
 
     private HashMap<String,Issue> issues = new HashMap<>();
     private BlockingQueue<Datagram> dQueue;
     private Path settingsPath;
+    private DataProviding dp;
 
-    public IssuePool( BlockingQueue<Datagram> dQueue, Path settingsPath){
+    public IssuePool( BlockingQueue<Datagram> dQueue, Path settingsPath, DataProviding dp){
         this.dQueue=dQueue;
         this.settingsPath=settingsPath;
+        this.dp=dp;
         readFromXML();
     }
 
@@ -40,6 +45,8 @@ public class IssuePool implements Commandable{
                 {
                     String id = XMLtools.getStringAttribute(issueEle,"id","");
                     var issue = new Issue(XMLtools.getChildValueByTag(issueEle,"message",""));
+                    issue.setTest( XMLtools.getChildValueByTag(issueEle,"test",""));
+
                     for( Element cmd : XMLtools.getChildElements(issueEle,"cmd")){
                         switch( cmd.getAttribute("when") ){
                             case "start": issue.atStart(cmd.getTextContent()); break;
@@ -102,20 +109,29 @@ public class IssuePool implements Commandable{
                 if( cmds.length!=2)
                     return "Not enough parameters: issue:start,issueid";
                 issue = issues.get(cmds[1]);
-                if( issue!=null) {
-                    issue.start();
-                    return "Issue started "+cmds[1];
-                }
+                if( issue!=null)
+                    return issue.start()?"Issue started "+cmds[1]:"Issue already active";
                 return "No such issue: "+cmds[1];
             case "stop":
                 if( cmds.length!=2)
                     return "Not enough parameters: issue:stop,issueid";
                 issue = issues.get(cmds[1]);
                 if( issue!=null){
-                    issue.stop();
-                    return "Issue stopped "+cmds[1];
+                    return issue.stop()?"Issue stopped "+cmds[1]:"Issue not active";
                 }
                 return "No such issue: "+cmds[1];
+            case "test":
+                if( cmds.length!=2)
+                    return "Not enough parameters: issue:test,issueid";
+                issue = issues.get(cmds[1]);
+                if( issue!=null && !issue.test.isEmpty()){
+                    if( issue.doTest() )
+                        return issue.start()?"Issue started "+cmds[1]:"Issue already active";
+
+                        issue.stop();
+
+                }
+                return "Invalid issue or no test";
             case "resetall":
                 issues.values().forEach( is -> is.clear());
                 return "Issues reset";
@@ -213,9 +229,7 @@ public class IssuePool implements Commandable{
         return false;
     }
     public ArrayList<String> getActives(){
-        var list = new ArrayList<String>();
-        issues.keySet().forEach(list::add);
-        return list;
+        return issues.entrySet().stream().filter(ent -> ent.getValue().isActive()).map( ent -> ent.getKey()).collect(Collectors.toCollection(ArrayList::new));
     }
     public class Issue{
 
@@ -225,15 +239,48 @@ public class IssuePool implements Commandable{
         int totalCycles=0;
         private boolean active = false;
         String message;
-
+        String test;
         ArrayList<String> startCmds;
         ArrayList<String> stopCmds;
+
+        RtvalCheck left;
+        RtvalCheck right;
+        RtvalCheck.CHECKTYPE checkType= RtvalCheck.CHECKTYPE.NONE;
 
         /* Creation */
         public Issue( String message ){
             this.message=message;
         }
 
+        public void setTest(String test){
+            if( test.isEmpty())
+                return;
+
+            this.test=test;
+
+            if(test.contains(" and ")) {// Meaning an 'and' check
+                String[] split = test.split(" and ");
+                left = new RtvalCheck(split[0]);
+                right = new RtvalCheck(split[1]);
+                checkType = RtvalCheck.CHECKTYPE.AND;
+            }else if(test.contains(" or ")) { // Meaning an 'or' check
+                String[] split = test.split(" or ");
+                left = new RtvalCheck(split[0]);
+                right = new RtvalCheck(split[1]);
+                checkType = RtvalCheck.CHECKTYPE.OR;
+            }else{	// Meaning only a single verify
+                left = new RtvalCheck(test);
+                checkType = RtvalCheck.CHECKTYPE.SINGLE;
+            }
+        }
+        public boolean doTest( ){
+            switch( checkType ){
+                case AND: return left.test(dp,getActives()) && right.test(dp,getActives());
+                case OR: return left.test(dp,getActives()) || right.test(dp,getActives());
+                case SINGLE: return left.test(dp,getActives());
+                default:return true;
+            }
+        }
         public Issue atStart( String cmd){
             if( cmd==null)
                 return this;
@@ -254,8 +301,8 @@ public class IssuePool implements Commandable{
         }
 
         /* Usage */
-        public void start(){
-            start(LocalDateTime.now(ZoneOffset.UTC));
+        public boolean start(){
+            return start(LocalDateTime.now(ZoneOffset.UTC));
         }
         public boolean start( LocalDateTime dt ){
             if( active )
@@ -281,8 +328,8 @@ public class IssuePool implements Commandable{
             return totalActiveTime+(active?secondsSinceStart():0);
         }
         /* De Activate */
-        public void stop( ){
-            stop(LocalDateTime.now(ZoneOffset.UTC));
+        public boolean stop( ){
+            return stop(LocalDateTime.now(ZoneOffset.UTC));
         }
         public boolean stop( LocalDateTime dt ){
             if( !active )
