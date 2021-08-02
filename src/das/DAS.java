@@ -249,6 +249,9 @@ public class DAS implements DeadThreadListener {
     public Waypoint getWaypoint(String id){
         return waypoints.getWaypoint(id);
     }
+    public Waypoints getWaypoints(){
+        return waypoints;
+    }
     /**
      * Check if the boot up was successful
      * 
@@ -287,7 +290,11 @@ public class DAS implements DeadThreadListener {
                 .build();
     }
     public void readRTvals(){
-        XMLfab.getRootChildren(settingsPath,"dcafs","settings","rtvals","*").forEach(
+        var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
+        double defDouble = XMLtools.getDoubleAttribute(fab.getCurrentElement(),"doubledefault",Double.NaN);
+        String defText = XMLtools.getStringAttribute(fab.getCurrentElement(),"textdefault","");
+        boolean defFlag = XMLtools.getBooleanAttribute(fab.getCurrentElement(),"flagdefault",false);
+        fab.getChildren("*").forEach(
                 rtval -> {
                     String id = XMLtools.getStringAttribute(rtval,"id","");
                     if( id.isEmpty())
@@ -299,13 +306,23 @@ public class DAS implements DeadThreadListener {
                             dv.name(XMLtools.getChildValueByTag(rtval,"name",dv.getName()))
                               .group(XMLtools.getChildValueByTag(rtval,"group",dv.getGroup()))
                               .unit(XMLtools.getStringAttribute(rtval,"unit",""))
-                              .defValue(XMLtools.getDoubleAttribute(rtval,"default",Double.NaN));
+                              .defValue(XMLtools.getDoubleAttribute(rtval,"default",defDouble));
                             if( !XMLtools.getChildElements(rtval,"cmd").isEmpty() )
                                 dv.enableTriggeredCmds(dQueue);
                             for( Element trigCmd : XMLtools.getChildElements(rtval,"cmd")){
                                 String trig = trigCmd.getAttribute("when");
                                 String cmd = trigCmd.getTextContent();
                                 dv.addTriggeredCmd(cmd,trig);
+                            }
+                            break;
+                        case "text":
+                            rtvals.setRealtimeText(id,XMLtools.getStringAttribute(rtval,"default",defText));
+                            break;
+                        case "flag":
+                            if( XMLtools.getBooleanAttribute(rtval,"default",defFlag) ){
+                                rtvals.raiseFlag(id);
+                            }else{
+                                rtvals.lowerFlag(id);
                             }
                             break;
                     }
@@ -360,6 +377,14 @@ public class DAS implements DeadThreadListener {
     }
     public Optional<TaskManager> getTaskManager( String id){
         return taskManagerPool.getTaskList(id);
+    }
+
+    /**
+     * Change a state for all taskmanagers
+     * @param state The new or altered state
+     */
+    public void setTaskManagerState( String state){
+        taskManagerPool.changeManagersState(state);
     }
     /* ******************************************  S T R E A M P O O L ***********************************************/
     /**
