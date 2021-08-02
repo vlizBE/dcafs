@@ -20,7 +20,6 @@ From 0.5.0 onwards, this should be better documented...
     * Bring javadoc up to date
     * Decide on final class structure (mainly StreamPool)   
   * Rework the TaskManager (will be trigger for 0.11.0)
-- Clock commands get cancelled on reload?
 
 ## Update guide from 0.9.x -> 0.10.5
 - databases node: replace 'setup' with 'flush' and 'flushtime' with 'age'
@@ -46,6 +45,7 @@ From 0.5.0 onwards, this should be better documented...
 - Labelworker, added label 'log' so you can have data written to the info/warn/error logs.
   label="log:info" etc
 - rtvals, double added support for not between x and y
+- rtvalcheck, flag or issue no longer require eqauls 1 or 0, flag:state and !flag:state can be used instead 
 
 ### Bugfixes
 
