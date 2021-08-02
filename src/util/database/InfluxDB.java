@@ -1,5 +1,6 @@
 package util.database;
 
+import das.DataProviding;
 import das.DoubleVal;
 import org.apache.commons.lang3.StringUtils;
 import org.influxdb.InfluxDBFactory;
@@ -240,7 +241,7 @@ public class InfluxDB extends Database{
     }
 
     @Override
-    public boolean buildInsert(String table, ConcurrentMap<String, DoubleVal> rtvals, ConcurrentMap<String, String> rttext, String macro) {
+    public boolean buildInsert(String table, DataProviding dp, String macro) {
         return false;
     }
 

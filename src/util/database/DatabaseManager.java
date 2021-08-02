@@ -1,5 +1,6 @@
 package util.database;
 
+import das.DataProviding;
 import das.DoubleVal;
 import org.influxdb.dto.Point;
 import org.tinylog.Logger;
@@ -172,14 +173,14 @@ public class DatabaseManager implements QueryWriting{
     }
 
     @Override
-    public boolean buildInsert(String id, String table, ConcurrentMap<String, DoubleVal> rtvals, ConcurrentMap<String, String> rttext, String macro) {
+    public boolean buildInsert(String id, String table, DataProviding dp, String macro) {
         for( SQLiteDB sqlite : lites.values() ){
             if( sqlite.getID().equalsIgnoreCase(id))
-                return sqlite.buildInsert(table,rtvals,rttext,macro);
+                return sqlite.buildInsert(table,dp,macro);
         }
         for( SQLDB sqldb : sqls.values() ){
             if( sqldb.getID().equalsIgnoreCase(id))
-                return sqldb.buildInsert(table,rtvals,rttext,macro);
+                return sqldb.buildInsert(table,dp,macro);
         }
         return false;
     }

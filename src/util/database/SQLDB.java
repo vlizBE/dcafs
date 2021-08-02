@@ -1,5 +1,6 @@
 package util.database;
 
+import das.DataProviding;
 import das.DoubleVal;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
@@ -434,8 +435,7 @@ public class SQLDB extends Database{
         return Optional.ofNullable(data);
     }
 
-    public synchronized boolean buildInsert(String table, ConcurrentMap<String, DoubleVal> rtvals,
-                                            ConcurrentMap<String, String> rttext, String macro) {
+    public synchronized boolean buildInsert(String table, DataProviding dp, String macro) {
         if (!hasRecords())
             firstPrepStamp = Instant.now().toEpochMilli();
 
@@ -444,7 +444,7 @@ public class SQLDB extends Database{
             return false;
         }
 
-        if (getTable(table).map(t -> t.buildInsert(rtvals, rttext, macro)).orElse(false)) {
+        if (getTable(table).map(t -> t.buildInsert(dp, macro)).orElse(false)) {
             if(tables.values().stream().mapToInt(SqlTable::getRecordCount).sum() > maxQueries)
                 flushPrepared();
             return true;

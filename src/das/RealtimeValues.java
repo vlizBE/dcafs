@@ -119,7 +119,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 	public boolean writeRecord(String[] ids, String table, String macro) {
 		int wrote = 0;
 		for ( String id : ids) {
-			wrote +=queryWriting.buildInsert(id,table,rtvals, rttext, macro)?1:0;
+			wrote +=queryWriting.buildInsert(id,table,this, macro)?1:0;
 		}
 		return wrote!=0;
 	}
@@ -350,6 +350,16 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		for( var f : flag)
 			flags.put(f,false);
 		return cnt!=flags.size();
+	}
+
+	/**
+	 * Set the state of the flag
+	 * @param id The flag id
+	 * @param state The new state for the flag
+	 * @return True if the state was changed, false if a new flag was made
+	 */
+	public boolean setFlagState( String id, boolean state){
+		return flags.put(id,state) != null;
 	}
 	public ArrayList<String> listFlags(){
 		return flags.entrySet().stream().map( ent -> ent.getKey()+" : "+ent.getValue()).collect(Collectors.toCollection(ArrayList::new));

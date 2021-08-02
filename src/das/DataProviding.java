@@ -24,5 +24,6 @@ public interface DataProviding {
     boolean isFlagDown( String flag );
     boolean raiseFlag( String... flag );
     boolean lowerFlag( String... flag );
+    boolean setFlagState( String flag, boolean state);
     ArrayList<String> listFlags();
 }

@@ -1,5 +1,6 @@
 package util.database;
 
+import das.DataProviding;
 import das.DoubleVal;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
@@ -98,7 +99,6 @@ public abstract class Database{
         return doSelect(query,false);
     }
     public abstract void addQuery(String query);
-    public abstract boolean buildInsert(String table, ConcurrentMap<String, DoubleVal> rtvals,
-                                        ConcurrentMap<String, String> rttext, String macro);
+    public abstract boolean buildInsert(String table, DataProviding dp, String macro);
 
 }

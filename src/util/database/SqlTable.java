@@ -1,5 +1,6 @@
 package util.database;
 
+import das.DataProviding;
 import das.DoubleVal;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
@@ -579,22 +580,22 @@ public class SqlTable {
     }
     /**
      * Use the given rtvals to fill in the create statement, alias/title must match elements
-     * @param rtvals The rtvals object containing the values
+     * @param dp The DataProviding object containing the values
      * @return The INSERT statement or an empty string if a value wasn't found
      */
-    public boolean buildInsert( ConcurrentMap<String,DoubleVal> rtvals,ConcurrentMap<String,String> rttext ){
-        return buildInsert("",rtvals,rttext,"");
+    public boolean buildInsert(DataProviding dp ){
+        return buildInsert("",dp,"");
     }
-    public boolean buildInsert( ConcurrentMap<String,DoubleVal> rtvals,ConcurrentMap<String,String> rttext,String macro ){
-        return buildInsert("",rtvals,rttext,macro);
+    public boolean buildInsert( DataProviding dp ,String macro ){
+        return buildInsert("",dp,macro);
     }
     /**
      * Use the given rtvals object and macro to fill in the INSERT statement (@macro defined in xml)
-     * @param rtvals The rtvals object containing the values
+     * @param dp The DataProviding object containing the values
      * @param macro The string to replace the @macro in the alias with
      * @return The INSERT statement or an empty string if a value wasn't found
      */
-    public boolean buildInsert( String id, ConcurrentMap<String,DoubleVal> rtvals,ConcurrentMap<String,String> rttext, String macro ){
+    public boolean buildInsert( String id, DataProviding dp, String macro ){
        
         PrepStatement prep = preps.get(id);
         if( prep==null){
@@ -615,15 +616,15 @@ public class SqlTable {
             Object val = null;
             try{
                 if( col.type==COLUMN_TYPE.TIMESTAMP ){
-                    record[index] = index==0?TimeTools.formatLongUTCNow():rttext.get(ref);
+                    record[index] = index==0?TimeTools.formatLongUTCNow():dp.getRealtimeText(ref,"");
                     continue;
                 }else if( col.type == COLUMN_TYPE.EPOCH){
                     record[index]=Instant.now().toEpochMilli();
                     continue;
                 }else if( col.type == COLUMN_TYPE.TEXT){
-                    val = rttext.get(ref);
+                    val = dp.getRealtimeText(ref,"");
                 }else if( col.type == COLUMN_TYPE.INTEGER){
-                    DoubleVal dv = rtvals.get(ref);
+                    DoubleVal dv = dp.getDoubleVal(ref);
                     if( dv!=null) {
                         val = dv.getValue();
                         if( val instanceof Double){
@@ -635,7 +636,7 @@ public class SqlTable {
                             val = NumberUtils.toInt(def);
                     }
                 }else if( col.type == COLUMN_TYPE.REAL){
-                    val = rtvals.get(ref).getValue();
+                    val = dp.getDoubleVal(ref).getValue();
                     if( val==null && col.hasDefault )
                         val = NumberUtils.createDouble(def);
                 }else if( col.type == COLUMN_TYPE.LOCALDTNOW){
@@ -643,7 +644,7 @@ public class SqlTable {
                 }else if( col.type == COLUMN_TYPE.UTCDTNOW){
                     val = OffsetDateTime.now(ZoneOffset.UTC);
                 }else if( col.type == COLUMN_TYPE.DATETIME){
-                    val = TimeTools.parseDateTime(rttext.get(ref),TimeTools.SQL_LONG_FORMAT);
+                    val = TimeTools.parseDateTime(dp.getRealtimeText(ref,""),TimeTools.SQL_LONG_FORMAT);
                 }
             }catch( NullPointerException e ){
                 Logger.error("Null pointer when looking for "+ref + " type:"+col.type);
