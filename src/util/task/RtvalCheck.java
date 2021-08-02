@@ -44,16 +44,30 @@ public class RtvalCheck {
                 .results()
                 .map(MatchResult::group)
                 .collect(Collectors.joining());
-        if( !comp.isEmpty()) {
-            compare = MathUtils.getCompareFunction(comp);
 
-            String[] split = equ.split(comp);
-            leftCalc = getFunction(split[0]);
-            rightCalc = getFunction(split[1]);
-            valid = true;
-        }else{
-            Logger.error("Req doesn't contain a comparison: "+ori);
+        if( comp.isEmpty() ) {
+            if (equ.contains("flag:") || equ.contains("issue:") ) { //These can only be true or false
+                if( equ.startsWith("!") ) {
+                    equ+= "==1";
+                }else {
+                    equ+="==0";
+                    equ.substring(1); // remove the ! at the start
+                }
+                comp="==";
+            } else {
+                Logger.error("Req doesn't contain a comparison: "+ori);
+                return;
+            }
         }
+
+        compare = MathUtils.getCompareFunction(comp);
+
+        String[] split = equ.split(comp);
+        leftCalc = getFunction(split[0]);
+        rightCalc = getFunction(split[1]);
+        valid = true;
+
+
     }
     private Function<Double[],Double> getFunction( String equ ){
         List<String> parts;
@@ -106,8 +120,8 @@ public class RtvalCheck {
         var val = new double[]{leftCalc.apply(vals),rightCalc.apply(vals)};
         return compare.apply( val );
     }
-    public boolean test( RealtimeValues rtvals ){
-        return test(rtvals, new ArrayList<String>());
+    public boolean test( DataProviding dp ){
+        return test(dp, new ArrayList<String>());
     }
     public String toString(){
         return ori;
