@@ -274,7 +274,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 	}
 
 	/**
-	 * Retrieves the param or add's it if it doesn't exist yet
+	 * Retrieves the param or adds it if it doesn't exist yet
 	 * @param param The group_name or just name of the val
 	 * @return The object if found or made or null if something went wrong
 	 */
@@ -284,8 +284,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 
 		var val = rtvals.get(param);
 		if( val==null){
-			var spl = param.split("_");
-			rtvals.put(param,DoubleVal.newVal(spl[0],spl[1]));
+			rtvals.put(param,DoubleVal.newVal(param));
 		}
 		return rtvals.get(param);
 	}
