@@ -18,6 +18,7 @@ public class MathFab {
     int requiredInputs=0;
     boolean debug = false;
     String lastError="";
+    String ori="";
 
     public MathFab( String formula ){
         build(formula);
@@ -34,7 +35,7 @@ public class MathFab {
     }
     public MathFab build(String formula ){
         steps.clear(); // reset the steps
-
+        ori=formula;
         // First check if the amount of brackets is correct
         int opens = StringUtils.countMatches(formula,"(");
         int closes = StringUtils.countMatches(formula,")");
@@ -165,6 +166,8 @@ public class MathFab {
                 i++;
             }catch (IndexOutOfBoundsException | NullPointerException e){
                 Logger.error("Bad things when it was processed, array size "+data.length+" versus "+requiredInputs +" with step null?"+(f==null));
+                Logger.error("Original formula: "+ori);
+
                 int a=0;
                 for( var big : data){
                     if( big!=null) {
