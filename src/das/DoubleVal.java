@@ -58,6 +58,8 @@ public class DoubleVal {
         if( keepTime )
             timestamp= Instant.now().toEpochMilli();
 
+
+
         /* Respond to triggered command based on value */
         if( dQueue!=null && triggered!=null ) {
             // Execute all the triggers, only if it's the first time
@@ -116,7 +118,7 @@ public class DoubleVal {
         if( triggered==null)
             triggered = new ArrayList<>();
 
-        triggered.add(new TriggeredCmd(cmd,trigger));
+        triggered.add( new TriggeredCmd(cmd,trigger) );
         return this;
     }
     public String toString(){
@@ -131,7 +133,9 @@ public class DoubleVal {
         public TriggeredCmd( String cmd, String trigger){
             this.cmd=cmd;
             this.ori=trigger;
-            this.comp=MathUtils.parseSingleCompareFunction(trigger);
+            if( !trigger.isEmpty() && !trigger.equalsIgnoreCase("always") ){
+                comp=MathUtils.parseSingleCompareFunction(trigger);
+            }
         }
         public String getCmd(){
             Logger.info("Triggered for "+(group.isEmpty()?"":group+"_")+name+" "+ori+" => "+cmd);
@@ -149,15 +153,15 @@ public class DoubleVal {
             return true;
         }
         public void apply( double val ){
-            if( ori.equalsIgnoreCase("always")) { // always run this cmd
-                dQueue.add(Datagram.system(cmd.replace("$",""+value)));
+            if( ori.isEmpty() || ori.equalsIgnoreCase("always") ) { // always run this cmd
+                dQueue.add(Datagram.system(cmd.replace("$",""+val)));
             }else if( ori.equalsIgnoreCase("changed")) {// run this cmd if the value changed
                 if( val != value )
-                    dQueue.add(Datagram.system(cmd.replace("$",""+value)));
+                    dQueue.add(Datagram.system(cmd.replace("$",""+val)));
             }else{
                 boolean ok = comp.apply(val);
                 if( !triggered && ok ){
-                    dQueue.add(Datagram.system(cmd.replace("$",""+value)));
+                    dQueue.add(Datagram.system(cmd.replace("$",""+val)));
                 }else if( triggered && !ok){
                     triggered=false;
                 }
