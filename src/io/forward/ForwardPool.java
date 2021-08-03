@@ -59,7 +59,7 @@ public class ForwardPool implements Commandable {
                     String src = XMLtools.getStringAttribute(child,"src","");
                     String id = XMLtools.getStringAttribute(child,"id","");
                     String imp = XMLtools.getStringAttribute(child,"import","");
-                    String delimiter = "";
+                    String delimiter = XMLtools.getStringAttribute(child,"delimiter","");;
 
                     if( !imp.isEmpty() ) {
                         var p = XMLfab.getRootChildren(Path.of(imp),"dcafs","path").findFirst();
