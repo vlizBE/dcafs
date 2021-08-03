@@ -48,6 +48,9 @@ From 0.5.0 onwards, this should be better documented...
 - rtvalcheck, flag or issue no longer require eqauls 1 or 0, flag:state and !flag:state can be used instead 
 
 ### Bugfixes
+- DoubleVal, used old value instead of new for trigger apply
+- ForwardPool, global path delimiter wasn't read...
+
 
 ## 0.10.5 (29/07/2021)
 
