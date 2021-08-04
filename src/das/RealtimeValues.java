@@ -221,6 +221,12 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		}
 		return ok;
 	}
+
+	/**
+	 * Simple version of the parse realtime line, just checks all the words to see if any matches the hashmaps
+	 * @param line The line to parse
+	 * @return The (possibly) altered line
+	 */
 	public String simpleParseRT( String line ){
 		var words = line.split(" ");
 		for( var word : words ){
@@ -235,11 +241,19 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		}
 		return line;
 	}
+
+	/**
+	 * Stricter version to parse a realtime line, must contain the references within {double:... } or {text:...}.
+	 * This also checks for {utc}/{utclong},{utcshort} to insert current timestamp
+	 * @param line The original line to parse/alter
+	 * @param error Value to put if the reference isn't found
+	 * @return The (possibly) altered line
+	 */
 	public String parseRTline( String line, String error ){
 
 		if( rtvalPattern==null) {
-			rtvalPattern = Pattern.compile("\\{rtval:.*}");
-			rttextPattern = Pattern.compile("\\{rttext:.*}");
+			rtvalPattern = Pattern.compile("\\{double:.*}");
+			rttextPattern = Pattern.compile("\\{text:.*}");
 		}
 		if( !line.contains("{"))
 			return line;
@@ -247,15 +261,15 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		var pairs = Tools.parseKeyValue(line);
 		for( var p : pairs ){
 			if(p.length==2) {
-				if (p[0].equals("rtval")) {
+				if (p[0].equals("double")) {
 					var d = getRealtimeValue(p[1], Double.NaN);
 					if (Double.isNaN(d)) {
-						line = line.replace("{rtval:" + p[1] + "}", error);
+						line = line.replace("{double:" + p[1] + "}", error);
 					} else {
-						line = line.replace("{rtval:" + p[1] + "}", "" + d);
+						line = line.replace("{double:" + p[1] + "}", "" + d);
 					}
-				} else if (p[0].equals("rttext")) {
-					line = line.replace("{rttext:" + p[1] + "}", getRealtimeText(p[1], error));
+				} else if (p[0].equals("text")) {
+					line = line.replace("{text:" + p[1] + "}", getRealtimeText(p[1], error));
 				}
 			}else{
 				switch(p[0]){
