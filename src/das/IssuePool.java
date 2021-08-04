@@ -127,9 +127,10 @@ public class IssuePool implements Commandable{
                 if( cmds.length!=2)
                     return "Not enough parameters: issue:test,issueid";
                 issue = issues.get(cmds[1]);
-                if( issue!=null && issue.isValid()){
-                    issue.doTest();
-                    return "Test run";
+                if( issue!=null){
+                   if(issue.doTest() )
+                       return "Test run";
+                   return "No proper test found";
                 }
                 return "Invalid issue or no test";
             case "resetall":
@@ -261,13 +262,11 @@ public class IssuePool implements Commandable{
                 resolve = new RtvalCheck(resolveTest);
             }
         }
-        public boolean isValid(){
-            return activate.isValid();
-        }
-        public void doTest( ){
+
+        public boolean doTest( ){
             if( activate==null) {
                 Logger.error("Tried to check an issue '"+message+ "' without proper function");
-                return;
+                return false;
             }
             if( resolve!=null){ // meaning both and activate and a resolve
                 if( active ){
@@ -284,6 +283,7 @@ public class IssuePool implements Commandable{
                     stop();
                 }
             }
+            return true;
         }
         public Issue atStart( String cmd){
             if( cmd==null)
