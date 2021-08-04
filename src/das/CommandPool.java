@@ -1034,6 +1034,8 @@ public class CommandPool {
 				return "No EmailWorker defined (yet), use email:addblank to add blank to xml.";
 			}
 		}
+		// Allow a shorter version to email to admin, replace it to match the standard command
+		request[1] = request[1].replace("toadmin,","send,admin,");
 
 		// Check if the content part of a send command is a command itself, if so replace it
 		if( request[1].startsWith("send,") ){ // If it's a send request
