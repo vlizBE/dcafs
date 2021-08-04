@@ -45,7 +45,10 @@ public class IssuePool implements Commandable{
                 {
                     String id = XMLtools.getStringAttribute(issueEle,"id","");
                     var issue = new Issue(XMLtools.getChildValueByTag(issueEle,"message",""));
-                    issue.setTest( XMLtools.getChildValueByTag(issueEle,"test",""));
+                    String start = XMLtools.getChildValueByTag(issueEle,"test","");
+                    start = XMLtools.getChildValueByTag(issueEle,"startif",start);
+                    String stop = XMLtools.getChildValueByTag(issueEle,"stopif","");
+                    issue.setTests( start,stop );
 
                     for( Element cmd : XMLtools.getChildElements(issueEle,"cmd")){
                         switch( cmd.getAttribute("when") ){
@@ -124,12 +127,9 @@ public class IssuePool implements Commandable{
                 if( cmds.length!=2)
                     return "Not enough parameters: issue:test,issueid";
                 issue = issues.get(cmds[1]);
-                if( issue!=null && !issue.test.isEmpty()){
-                    if( issue.doTest() )
-                        return issue.start()?"Issue started "+cmds[1]:"Issue already active";
-
-                        issue.stop();
-
+                if( issue!=null && issue.isValid()){
+                    issue.doTest();
+                    return "Test run";
                 }
                 return "Invalid issue or no test";
             case "resetall":
@@ -239,46 +239,50 @@ public class IssuePool implements Commandable{
         int totalCycles=0;
         private boolean active = false;
         String message;
-        String test;
         ArrayList<String> startCmds;
         ArrayList<String> stopCmds;
 
-        RtvalCheck left;
-        RtvalCheck right;
-        RtvalCheck.CHECKTYPE checkType= RtvalCheck.CHECKTYPE.NONE;
+        RtvalCheck activate;
+        RtvalCheck resolve;
+
+        boolean valid = false;
 
         /* Creation */
         public Issue( String message ){
             this.message=message;
         }
 
-        public void setTest(String test){
-            if( test.isEmpty())
+        public void setTests(String activateTest, String resolveTest){
+            if( activateTest.isEmpty())
                 return;
 
-            this.test=test;
-
-            if(test.contains(" and ")) {// Meaning an 'and' check
-                String[] split = test.split(" and ");
-                left = new RtvalCheck(split[0]);
-                right = new RtvalCheck(split[1]);
-                checkType = RtvalCheck.CHECKTYPE.AND;
-            }else if(test.contains(" or ")) { // Meaning an 'or' check
-                String[] split = test.split(" or ");
-                left = new RtvalCheck(split[0]);
-                right = new RtvalCheck(split[1]);
-                checkType = RtvalCheck.CHECKTYPE.OR;
-            }else{	// Meaning only a single verify
-                left = new RtvalCheck(test);
-                checkType = RtvalCheck.CHECKTYPE.SINGLE;
+            activate = new RtvalCheck(activateTest);
+            if( !resolveTest.isEmpty()){
+                resolve = new RtvalCheck(resolveTest);
             }
         }
-        public boolean doTest( ){
-            switch( checkType ){
-                case AND: return left.test(dp,getActives()) && right.test(dp,getActives());
-                case OR: return left.test(dp,getActives()) || right.test(dp,getActives());
-                case SINGLE: return left.test(dp,getActives());
-                default:return true;
+        public boolean isValid(){
+            return activate.isValid();
+        }
+        public void doTest( ){
+            if( activate==null) {
+                Logger.error("Tried to check an issue '"+message+ "' without proper function");
+                return;
+            }
+            if( resolve!=null){ // meaning both and activate and a resolve
+                if( active ){
+                    if( resolve.test(dp,getActives()) )
+                        stop();
+                }else{
+                    if( activate.test(dp,getActives()))
+                        start();
+                }
+            }else{ //meaning only an activate
+                if( activate.test(dp,getActives()) ){
+                    start();
+                }else{
+                    stop();
+                }
             }
         }
         public Issue atStart( String cmd){

@@ -7,7 +7,6 @@ import io.sms.SMSSending;
 import io.stream.StreamManager;
 import io.collector.CollectorFuture;
 import das.CommandPool;
-import das.RealtimeValues;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
@@ -557,7 +556,7 @@ public class TaskManager implements CollectorFuture {
 					task.reset();
 				}else if (task.triggerType == TRIGGERTYPE.WAITFOR) {
 					failure = false;
-					Logger.info("Requirement not met, resetting counter failed "+task.preReq1.toString());
+					Logger.info("Requirement not met, resetting counter failed "+task.preReq.toString());
 					task.attempts = 0; // reset the counter
 				}else if (task.triggerType == TRIGGERTYPE.RETRY || task.triggerType == TRIGGERTYPE.INTERVAL) {
 					failure = false;
@@ -874,33 +873,6 @@ public class TaskManager implements CollectorFuture {
 			if( !task.doToday ) {
 				Logger.tag(TINY_TAG).info( "["+ id +"] Not executing "+task.value +" because not allowed today.");
 			}
-			if( task.triggerType != TRIGGERTYPE.INTERVAL && task.triggerType != TRIGGERTYPE.RETRY){
-				// UNCOMMENT FOR DEBUG PURPOSES
-				if( !verify ) {
-					switch( task.checkType) {
-						case AND:
-						case OR:
-							Logger.tag(TINY_TAG).warn(""+task.id+"/"+task.value+" => not executed, requirement not met.");
-							Logger.tag(TINY_TAG).warn( printCheck(task.preReq1) );
-							Logger.tag(TINY_TAG).warn( task.checkType);
-							Logger.tag(TINY_TAG).warn( printCheck(task.preReq2) );
-							break;
-						case SINGLE:
-							Logger.tag(TINY_TAG).warn("["+id+"] "+task.id+"/"+task.value+" => not executed, requirement not met.");
-							Logger.tag(TINY_TAG).warn( "["+id+"] Reason: "+ printCheck(task.preReq1) );
-							break;
-						case NONE:
-						default:
-							break;
-					}
-				}else {	
-					Logger.tag(TINY_TAG).info( "["+ id +"] Requirement not met...? Skip Execs: " + (task.skipExecutions==0) );
-					if( task.skipExecutions!=0)
-						Logger.tag(TINY_TAG).info( "["+ id +"] Not executed because execution needed to be skipped");
-					if( !checkState(task.when) )
-						Logger.tag(TINY_TAG).info( "["+ id +"] Not executed because incorrect 'when'" );
-				}
-			}
 		}
 		if( task.value.startsWith("taskset:") || task.value.startsWith("task:")) {
 			String shortName = task.value.split(":")[1];
@@ -1101,33 +1073,18 @@ public class TaskManager implements CollectorFuture {
 	private int checkRequirements(Task task, boolean pre ) {
 
 		if( rtvals == null ){ // If the verify can't be checked, return false
-			Logger.tag(TINY_TAG).info("["+ id +"] Couldn't check because no RealtimeValues defined.");
+			Logger.tag(TINY_TAG).info("["+ id +"] Couldn't check because no DataProviding defined.");
 			return -1;
 		}
 
-		RtvalCheck first = task.preReq1;
-		RtvalCheck second = task.preReq2;
-
-		CHECKTYPE checkType = task.checkType;
+		var check = task.preReq;
 		if( !pre ){
-			first = task.postReq1;
-			second = task.postReq2;
-			checkType=task.postReqType;
+			check = task.postReq;
 		}
-		if( checkType == CHECKTYPE.NONE)
+		if( !check.isEmpty())
 			return 1;
 
-		int ver1 = first==null?0:(first.test(rtvals, commandPool.getActiveIssues())?1:0);
-		if( checkType == CHECKTYPE.SINGLE)
-			return ver1;
-
-		int ver2 = second==null?0:(second.test(rtvals, commandPool.getActiveIssues())?1:0);
-
-		switch(checkType) {
-			case AND: return (ver1 + ver2==2)?1:0;			
-			case OR:  return (ver1 + ver2>0)?1:0;
-		}
-		return -1;
+		return check==null?0:(check.test(rtvals, commandPool.getActiveIssues())?1:0);
 	}
 	/**
 	 * Create a readable string based on the check

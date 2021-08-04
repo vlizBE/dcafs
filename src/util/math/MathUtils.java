@@ -148,6 +148,18 @@ public class MathUtils {
         }
         return proc;
     }
+    public static Function<Double[],Boolean> getCompareFunction( String comp, Function<Double[],Double> f1, Function<Double[],Double> f2 ){
+        Function<Double[],Boolean> proc=null;
+        switch( comp ){
+            case "<": proc = x -> f1.apply(x)<f2.apply(x); break;
+            case "<=": proc = x -> f1.apply(x)<=f2.apply(x); break;
+            case ">": proc = x -> f1.apply(x)>f2.apply(x); break;
+            case ">=": proc = x -> f1.apply(x)>=f2.apply(x); break;
+            case "==": proc = x -> f1.apply(x)==f2.apply(x); break;
+            case "!=": proc = x -> f1.apply(x)!=f2.apply(x); break;
+        }
+        return proc;
+    }
     public static String[] splitCompare( String comparison ){
         var results = Pattern.compile("[><=!][=]?");
         var full = new String[3];

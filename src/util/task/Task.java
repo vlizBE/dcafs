@@ -77,18 +77,8 @@ public class Task implements Comparable<Task>{
 	public enum TRIGGERTYPE {KEYWORD,CLOCK,INTERVAL,DELAY,EXECUTE,RETRY,WHILE,WAITFOR} // The trigger possibilities
 	TRIGGERTYPE triggerType = TRIGGERTYPE.EXECUTE;								  		// Default trigger type is execute (no trigger)
 
-	/* Verify */
-	enum CHECKTYPE {NONE,SINGLE,AND,OR}                                             // The options for combining verifies
-	enum REQTYPE { NONE, BELOW, ABOVE, EQUAL, SMALLER_OR_EQUAL, LARGER_OR_EQUAL} // The options of comparing values in the verify
-	enum MATHTYPE { NONE, DIFF, PLUS, MINUS}                                         // The operation to be executed on the variables
-
-	RtvalCheck preReq1=null;
-	RtvalCheck preReq2=null;							// The check to do before execution
-	CHECKTYPE checkType = CHECKTYPE.NONE;		// How the two pre requirements are linked
-
-	RtvalCheck postReq1=null;
-	RtvalCheck postReq2=null;			// The check to do after execution
-	CHECKTYPE postReqType = CHECKTYPE.NONE;		// How the two post requirements are linked
+	RtvalCheck preReq =null;
+	RtvalCheck postReq =null;
 		
 	/* Taskset */ 
 	private String taskset="";			// The taskset this task is part of
@@ -362,37 +352,15 @@ public class Task implements Comparable<Task>{
 		
 		if( req.isBlank())
 			return;
-		
-		RtvalCheck first;
-		RtvalCheck second=null;
-		CHECKTYPE verify;
 
 		req = req.toLowerCase();
 		req = req.replace(" && ", " and ");
 		req = req.replace(" \\|\\| ", " or ");
-		
-		if(req.contains(" and ")) {// Meaning an 'and' check
-			String[] split = req.split(" and ");
-			first = new RtvalCheck(split[0]);
-			second = new RtvalCheck(split[1]);
-			verify = CHECKTYPE.AND;
-		}else if(req.contains(" or ")) { // Meaning an 'or' check
-			String[] split = req.split(" or ");
-			first = new RtvalCheck(split[0]);
-			second = new RtvalCheck(split[1]);
-			verify = CHECKTYPE.OR;
-		}else{	// Meaning only a single verify
-			first = new RtvalCheck(req);
-			verify = CHECKTYPE.SINGLE;
-		}
+
 		if( isPre ){
-			preReq1 = first;
-			preReq2 = second;
-			checkType = verify;
+			preReq = new RtvalCheck(req);
 		}else{
-			postReq1 = first;
-			postReq2 = second;
-			postReqType = verify;
+			postReq = new RtvalCheck(req);
 		}
 	}
 
@@ -483,8 +451,8 @@ public class Task implements Comparable<Task>{
 		if( !when.equals("always")&&!when.isBlank()) {
 			suffix += " if state is "+when;
 		}
-		if( preReq1 != null) {
-			suffix += preReq1.toString();
+		if( preReq != null) {
+			suffix += preReq.toString();
 		}else{
 			suffix +=".";
 		}

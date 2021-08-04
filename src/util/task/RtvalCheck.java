@@ -18,18 +18,19 @@ public class RtvalCheck {
 
     public enum CHECKTYPE {NONE,SINGLE,AND,OR}
 
-    Function<double[],Boolean> compare;
+    Function<Double[],Boolean> compare;
+
     ArrayList<String> is = new ArrayList<>();
-
+    ArrayList<Function<Double[],Boolean>> comparisons = new ArrayList<>();
+    CHECKTYPE type = CHECKTYPE.NONE;
     String ori;
-
-    Function<Double[],Double> leftCalc;
-    Function<Double[],Double> rightCalc;
-
-    boolean valid = false;
 
     public RtvalCheck(String equ){
         ori=equ;
+
+        if( equ.isEmpty())
+            return;
+
         equ=equ.replace(" not below ",">=");
         equ=equ.replace(" not above ","<=");
         equ=equ.replace(" not ","!=");
@@ -38,7 +39,30 @@ public class RtvalCheck {
         equ=equ.replace(" equals ","=="); // retain support for equals
         equ=equ.replace(" ",""); // remove spaces
 
-        // split on the compare
+        // Split on and/or etc?
+        if( equ.contains(" and ") ){
+            for( String and : equ.split(" and "))
+                comparisons.add(getCompareFunction(and));
+            if( !comparisons.contains(null))
+                type = CHECKTYPE.AND;
+        }else if( equ.contains(" or ") ){
+            for( String and : equ.split(" or "))
+                comparisons.add(getCompareFunction(and));
+            if( !comparisons.contains(null))
+                type = CHECKTYPE.OR;
+        }else{
+            comparisons.add(getCompareFunction(equ));
+            if( !comparisons.contains(null))
+                type = CHECKTYPE.SINGLE;
+        }
+    }
+    public String getOriginalFunction(){
+        return ori;
+    }
+    public boolean isEmpty(){
+        return type==CHECKTYPE.NONE;
+    }
+    private Function<Double[],Boolean> getCompareFunction( String equ){
         var results = Pattern.compile("[><=!][=]?");
         var comp = results.matcher(equ)
                 .results()
@@ -56,18 +80,12 @@ public class RtvalCheck {
                 comp="==";
             } else {
                 Logger.error("Req doesn't contain a comparison: "+ori);
-                return;
+                return null;
             }
         }
 
-        compare = MathUtils.getCompareFunction(comp);
-
         String[] split = equ.split(comp);
-        leftCalc = getFunction(split[0]);
-        rightCalc = getFunction(split[1]);
-        valid = true;
-
-
+        return MathUtils.getCompareFunction(comp,getFunction(split[0]),getFunction(split[1]));
     }
     private Function<Double[],Double> getFunction( String equ ){
         List<String> parts;
@@ -103,7 +121,7 @@ public class RtvalCheck {
         return MathUtils.decodeDoublesOp(parts.get(0),parts.get(2),parts.get(1),0);
     }
     public boolean test(DataProviding dp, ArrayList<String> activeIssues){
-        if( !valid ) {
+        if( type==CHECKTYPE.NONE ) {
             Logger.error("Trying to run an invalid RtvalCheck:"+ ori);
             return false;
         }
@@ -117,8 +135,20 @@ public class RtvalCheck {
                 vals[a] = dp.getRealtimeValue(is.get(a),-999);
             }
         }
-        var val = new double[]{leftCalc.apply(vals),rightCalc.apply(vals)};
-        return compare.apply( val );
+        for( var comp : comparisons ){
+            if( !comp.apply(vals)){
+                if( type == CHECKTYPE.AND || type==CHECKTYPE.SINGLE)
+                    return false;
+            }else{
+                if( type==CHECKTYPE.OR )
+                    return true;
+            }
+        }
+        if( type == CHECKTYPE.AND || type==CHECKTYPE.SINGLE)
+            return true;
+        if( type==CHECKTYPE.OR )
+            return false;
+        return false;
     }
     public boolean test( DataProviding dp ){
         return test(dp, new ArrayList<String>());
