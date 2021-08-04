@@ -41,11 +41,21 @@ From 0.5.0 onwards, this should be better documented...
 - Added labels for it (raisflag:id and lowerflag:id)
 - TaskManagers now use the global flags instead of local ones
 
+### IssuePool
+- Now allows to set a start & stop test to run.
+- Tests allow for dual test split with  'and' or 'or', atm can only be used once
+- Cmd can contain {message}, this will be replaced with the message of the issue
+
+### RTvalcheck
+- flag or issue no longer require equals 1 or 0, flag:state and !flag:state can be used instead
+- Now the check can contain 'and ' or 'or' to divide two tests
+
 ### Other
 - Labelworker, added label 'log' so you can have data written to the info/warn/error logs.
   label="log:info" etc
-- rtvals, double added support for not between x and y
-- rtvalcheck, flag or issue no longer require eqauls 1 or 0, flag:state and !flag:state can be used instead 
+- rtvals, double added support for not between x and y 
+- EmailWorker, added email:toadmin,subject,content for a short way to email admin
+- datapaths, can generate their own src data based on rtvals 
 
 ### Bugfixes
 - DoubleVal, used old value instead of new for trigger apply
