@@ -50,12 +50,14 @@ public class IssuePool implements Commandable{
                     String stop = XMLtools.getChildValueByTag(issueEle,"stopif","");
                     issue.setTests( start,stop );
 
-                    for( Element cmd : XMLtools.getChildElements(issueEle,"cmd")){
-                        switch( cmd.getAttribute("when") ){
-                            case "start": issue.atStart(cmd.getTextContent()); break;
-                            case "stop": issue.atStop(cmd.getTextContent()); break;
+                    for( Element cmdEle : XMLtools.getChildElements(issueEle,"cmd")){
+                        String cmd = cmdEle.getTextContent();
+                        cmd = cmd.replace("{message}",issue.getMessage());
+                        switch( cmdEle.getAttribute("when") ){
+                            case "start": issue.atStart(cmd); break;
+                            case "stop": issue.atStop(cmd); break;
                             default:
-                                Logger.error("Unknown when used: "+cmd.getAttribute("when"));
+                                Logger.error("Unknown when used: "+cmdEle.getAttribute("when"));
                                 continue;
                         }
                     }
