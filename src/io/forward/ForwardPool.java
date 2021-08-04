@@ -2,12 +2,14 @@ package io.forward;
 
 import das.DataProviding;
 import io.Writable;
+import io.netty.channel.EventLoopGroup;
 import io.telnet.TelnetCodes;
 import das.Commandable;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
@@ -16,17 +18,21 @@ import worker.Datagram;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 public class ForwardPool implements Commandable {
     
     HashMap<String, FilterForward> filters = new HashMap<>();
     HashMap<String, EditorForward> editors = new HashMap<>();
     HashMap<String, MathForward> maths = new HashMap<>();
-    HashMap<String, String> paths = new HashMap<>();
+
+    HashMap<String, ForwardPath> paths = new HashMap<>();
 
     BlockingQueue<Datagram> dQueue;
     Path settingsPath;
     DataProviding dataProviding;
+    EventLoopGroup nettyGroup;
 
     public ForwardPool(BlockingQueue<Datagram> dQueue, Path settingsPath, DataProviding dataProviding){
         this.dQueue=dQueue;
@@ -34,7 +40,9 @@ public class ForwardPool implements Commandable {
         this.dataProviding=dataProviding;
         readSettingsFromXML();
     }
-
+    public void setEventLoopGroup( EventLoopGroup group){
+        nettyGroup=group;
+    }
     /**
      * Read the forwards stored in the settings.xml
      */
@@ -56,10 +64,18 @@ public class ForwardPool implements Commandable {
         /* Figure out the datapath? */
         XMLfab.getRootChildren(settingsPath,"dcafs","datapaths","path").forEach(
                 child -> {
+                    ForwardPath path=null;
                     String src = XMLtools.getStringAttribute(child,"src","");
                     String id = XMLtools.getStringAttribute(child,"id","");
                     String imp = XMLtools.getStringAttribute(child,"import","");
                     String delimiter = XMLtools.getStringAttribute(child,"delimiter","");;
+
+                    var predef = XMLtools.getFirstChildByTag(child,"predefine");
+                    if( predef!=null) {
+                        String predefined = predef.getTextContent();
+                        String interval = XMLtools.getStringAttribute(predef,"interval","1s");
+                        path = new ForwardPath(predefined,interval);
+                    }
 
                     if( !imp.isEmpty() ) {
                         var p = XMLfab.getRootChildren(Path.of(imp),"dcafs","path").findFirst();
@@ -78,8 +94,11 @@ public class ForwardPool implements Commandable {
                     int efId=1;
                     String lastFilter="";
                     var steps = XMLtools.getChildElements(child);
+
                     for( int a=0;a<steps.size();a++  ){
                         Element step = steps.get(a);
+                        if(step.getTagName().equalsIgnoreCase("predefine"))
+                            continue;
 
                         // Check if the next step is a generic, if so change the label attribute of the current step
                         if( a<steps.size()-1 ){
@@ -116,6 +135,9 @@ public class ForwardPool implements Commandable {
                                 src=ff.getID();
                                 lastFilter=src.replace(":",":!");
                                 filters.put(ff.getID().replace("filter:", ""), ff);
+                                if( a==0 && path!=null){
+                                    path.setFirstStep(ff);
+                                }
                                 break;
                             case "math":
                                 if( !step.hasAttribute("id")) {
@@ -125,19 +147,30 @@ public class ForwardPool implements Commandable {
                                 MathForward mf = new MathForward( step,dQueue,dataProviding );
                                 src = mf.getID();
                                 maths.put(mf.getID().replace("math:", ""), mf);
+                                if( a==1 && path!=null){
+                                    path.setFirstStep(mf);
+                                }
                                 break;
                             case "editor":
                                 if( !step.hasAttribute("id")) {
                                     step.setAttribute("id", id + "_e" + efId);
                                     efId++;
                                 }
-                                var tf = new EditorForward( step,dQueue,dataProviding );
-                                src = tf.getID();
-                                editors.put(tf.getID().replace("editor:", ""), tf);
+                                var ef = new EditorForward( step,dQueue,dataProviding );
+                                src = ef.getID();
+                                editors.put(ef.getID().replace("editor:", ""), ef);
+                                if( a==0 && path!=null){
+                                    path.setFirstStep(ef);
+                                }
                                 break;
                         }
                     }
-                    paths.put(id,src);
+                    if( path==null) {
+                        path = new ForwardPath(src);
+                    }else{
+                        path.setFinalStep(src);
+                    }
+                    paths.put(id,path);
                 }
         );
     }
@@ -145,14 +178,37 @@ public class ForwardPool implements Commandable {
     @Override
     public String replyToCommand(String[] request, Writable wr, boolean html) {
         boolean ok=false;
+        // Take care of the path commands
         if( request[0].equals("path")){
-            var src = paths.get(request[1]);
-            if( src != null ) {
-                var spl = src.split(":");
-                request[0] = spl[0];
-                request[1] = spl[1];
+            var cmds = request[1].split(",");
+            switch(cmds[0]){
+                case "addblank":
+                    XMLfab.withRoot(settingsPath,"dcafs","datapaths")
+                            .addChild("path").attr("id",cmds[1]).attr("src","")
+                            .build();
+                    return "Blank added";
+                case "list":
+                    StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
+                    join.setEmptyValue("No paths yet");
+                    paths.entrySet().forEach( x -> join.add("path:"+x.getKey()+" -> "+ x.getValue().toString()));
+                    return join.toString();
+                default:
+                    var p = paths.get(request[1]);
+                    var src = p.finalStep;
+
+                    if( p.isPreDefined() ){
+                        p.addTarget(wr);
+                    }
+                    if( !src.isEmpty() ) { // If this is valid, alter the request to match the last step
+                        var spl = src.split(":");
+                        request[0] = spl[0];
+                        request[1] = spl[1];
+                    }else{
+                        return "Received path request";
+                    }
             }
         }
+        // Regular ones
         switch(request[0]){
             // Filter
             case "ff": return replyToFilterCmd(request[1],wr,html);
@@ -167,6 +223,7 @@ public class ForwardPool implements Commandable {
             // Editor
             case "ef": return replyToEditorCmd(request[1],wr,html);
             case "editor": ok = getEditorForward(request[1]).map(tf -> { tf.addTarget(wr); return true;} ).orElse(false); break;
+
             // Math
             case "mf": return replyToMathCmd(request[1],wr,html);
             case "math": ok = getMathForward(request[1]).map(mf -> { mf.addTarget(wr); return true;} ).orElse(false); break;
@@ -183,6 +240,7 @@ public class ForwardPool implements Commandable {
         filters.values().forEach( ff->ff.removeTarget(wr));
         editors.values().forEach( ef->ef.removeTarget(wr));
         maths.values().forEach( mf->mf.removeTarget(wr));
+        paths.values().forEach( p -> p.removeTarget(wr));
         return false;
     }
 
@@ -705,6 +763,63 @@ public class ForwardPool implements Commandable {
                     return "Data failed the filter";
                 }
             default: return "No such command";
+        }
+    }
+    private class ForwardPath{
+        String finalStep="";
+
+        Writable firstStep=null;
+
+        String customSrc = "";
+        long millis = 0;
+        protected final ArrayList<Writable> targets = new ArrayList<>();
+        ScheduledFuture future;
+
+        public ForwardPath( String finalStep){
+            this.finalStep=finalStep;
+        }
+        public String toString(){
+            if( customSrc.isEmpty() ){
+                return " gives the data from "+finalStep;
+            }
+            return "'"+customSrc+"' send to "+targets.size()+" targets every "+TimeTools.convertPeriodtoString(millis,TimeUnit.MILLISECONDS);
+        }
+        public boolean isPreDefined(){
+            return !customSrc.isEmpty();
+        }
+        public ForwardPath(String customSrc, String interval){
+            this.customSrc = customSrc;
+            this.millis = TimeTools.parsePeriodStringToMillis(interval);
+        }
+        public void setFinalStep(String finalStep){
+            this.finalStep = finalStep;
+        }
+        public void setFirstStep(Writable firstStep){
+            this.firstStep = firstStep;
+        }
+        public void addTarget(Writable wr){
+            if( firstStep==null) {
+                if (!targets.contains(wr))
+                    targets.add(wr);
+            }else{
+                targets.add(firstStep);
+            }
+            start();
+        }
+        public void removeTarget( Writable wr){
+            targets.remove(wr);
+        }
+        public void start(){
+            if( future==null || future.isDone())
+                future = nettyGroup.scheduleAtFixedRate(()-> writeData(),millis,millis, TimeUnit.MILLISECONDS);
+        }
+        public void writeData(){
+            String data = dataProviding.parseRTline(customSrc,"-999");
+            targets.forEach( x -> x.writeLine(data));
+            targets.removeIf( x -> !x.isConnectionValid());
+            if( targets.isEmpty() ){
+                future.cancel(true);
+            }
         }
     }
 }

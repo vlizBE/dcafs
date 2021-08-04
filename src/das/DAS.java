@@ -203,6 +203,8 @@ public class DAS implements DeadThreadListener {
 
             /* Forwards */
             forwardPool = new ForwardPool( dQueue, settingsPath,rtvals );
+            forwardPool.setEventLoopGroup(nettyGroup); // needed for th rt line stuff
+
             commandPool.addCommandable("filter", forwardPool);
             commandPool.addCommandable("ff", forwardPool);
             commandPool.addCommandable("math", forwardPool);
