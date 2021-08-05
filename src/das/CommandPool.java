@@ -307,6 +307,8 @@ public class CommandPool {
 		if( wr!=null ) {
 			if (!wr.getID().equalsIgnoreCase("telnet"))
 				Logger.warn("Hidden response for " + wr.getID() + ": " + result);
+		}else{
+			Logger.warn("Hidden response to " + question + ": " + result);
 		}
 		return result + (html ? "<br>" : "\r\n");
 	}
@@ -616,6 +618,7 @@ public class CommandPool {
 		String[] spl = request[1].split(",");
 		double result;
 		if( spl.length==2){
+			spl[1] = rtvals.simpleParseRT(spl[1]); // fill in the stuff we already know
 			var parts = MathUtils.extractParts(spl[1]);
 			if( parts.size()==1 ){
 				if( !NumberUtils.isCreatable(spl[1]))
@@ -632,9 +635,9 @@ public class CommandPool {
 				if( parts.get(0).equalsIgnoreCase("-1234.321")|| parts.get(2).equalsIgnoreCase("-1234.321"))
 					return "Invalid rtval given";
 
-				result= MathUtils.decodeDoublesOp(parts.get(0),parts.get(2),parts.get(1),0).apply(new Double[]{});
+				result = MathUtils.decodeDoublesOp(parts.get(0),parts.get(2),parts.get(1),0).apply(new Double[]{});
 			}else{
-				return "Invalid value part";
+				result = MathUtils.simpleCalculation(spl[1],-999,true);
 			}
 			rtvals.setRealtimeValue(spl[0], result,false);
 			return "Saved "+result+" to "+spl[0];
@@ -652,6 +655,7 @@ public class CommandPool {
 		String[] spl = request[1].split(",");
 		double result;
 		if( spl.length==2){
+			spl[1] = rtvals.simpleParseRT(spl[1]); // fill in the stuff we already know
 			var parts = MathUtils.extractParts(spl[1]);
 			if( parts.size()==1 ){
 				if( !NumberUtils.isCreatable(spl[1]))
@@ -664,7 +668,7 @@ public class CommandPool {
 					parts.set(2, ""+rtvals.getRealtimeValue(parts.get(2),0,true));
 				result= MathUtils.decodeDoublesOp(parts.get(0),parts.get(2),parts.get(1),0).apply(new Double[]{});
 			}else{
-				return "Invalid value part";
+				result = MathUtils.simpleCalculation(spl[1],-999,true);
 			}
 			rtvals.setRealtimeValue(spl[0], result,true);
 			return "Saved "+result+" to "+spl[0];
