@@ -1,5 +1,6 @@
 package util.math;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import util.tools.Tools;
@@ -463,6 +464,88 @@ public class MathUtils {
         }
         return proc;
     }
+    public static double simpleCalculation( String formula,double error, boolean debug ){
+        ArrayList<Function<Double[],Double>> steps = new ArrayList<>();
+
+        // First check if the amount of brackets is correct
+        int opens = StringUtils.countMatches(formula,"(");
+        int closes = StringUtils.countMatches(formula,")");
+
+
+        if( opens != closes ){
+            Logger.error("Brackets don't match, (="+opens+" and )="+closes);
+            return error;
+        }
+
+        formula = checkBrackets(formula); // Then make sure it has surrounding brackets
+        formula=formula.replace(" ",""); // But doesn't contain any spaces
+
+        // Next go through the brackets from left to right (inner)
+        var subFormulas = new ArrayList<String[]>(); // List to contain all the subformulas
+
+        while( formula.contains("(") ){ // Look for an opening bracket
+            int close = formula.indexOf(")"); // Find the first closing bracket
+            int look = close-1; // start looking from one position left of the closing bracket
+            int open = -1; // reset the open position to the not found value
+
+            while( look>=0 ){ // while we didn't traverse the full string
+                if( formula.charAt(look)=='(' ){ // is the current char an opening bracket?
+                    open = look; // if so, store this position
+                    break;// and quite the loop
+                }
+                look --;//if not, decrement the pointer
+            }
+            if( open !=-1 ){ // if the opening bracket was found
+                String part = formula.substring(open+1,close); // get the part between the brackets
+                subFormulas.addAll( MathUtils.splitExpression( part, subFormulas.size(),debug) );    // split that part in the subformulas
+                String piece = formula.substring(open,close+1); // includes the brackets
+                // replace the sub part in the original formula with a reference to the last subformula
+                formula=formula.replace(piece,"o"+(subFormulas.size()));
+                if( debug )
+                    Logger.info("=>Formula: "+formula);
+            }else{
+                Logger.error("Didn't find opening bracket");
+            }
+        }
+
+        for( String[] sub : subFormulas ){ // now convert the subformulas into lambda's
+            var x = MathUtils.decodeDoublesOp(sub[0],sub[1],sub[2],0);
+            if( x==null ){
+                Logger.error("Failed to convert "+formula);
+                continue;
+            }
+            steps.add( x ); // and add it to the steps list
+        }
+        Double[] result = new Double[subFormulas.size()+1];
+        int i=1;
+        try {
+            for (var step : steps) {
+                result[i] = step.apply(result);
+                i++;
+            }
+        }catch( NullPointerException e ){
+            Logger.error( "Nullpointer when processing "+formula+" on step "+i);
+            return error;
+        }
+        return result[i-1];
+    }
+    public static String checkBrackets( String formula ){
+
+        // No total enclosing brackets
+        int cnt=0;
+        for( int a=0;a<formula.length()-1;a++){
+            if( formula.charAt(a)=='(') {
+                cnt++;
+            }else if( formula.charAt(a)==')' ){
+                cnt--;
+            }
+            if( cnt == 0)
+                break;
+        }
+        if( cnt==0)
+            formula="("+formula+")";
+        return formula;
+    }
     /**
      * Converts a simple operation (only two operands) on elements in an array to a function
      * @param first The first element of the operation
@@ -796,6 +879,11 @@ public class MathUtils {
         return nmea.endsWith(Integer.toHexString(checksum).toUpperCase());
     }
 
+    /**
+     * Calculates the nmea checksum for the given string and retunrs it
+     * @param nmea The data to calculate the checksum from
+     * @return The calculated hex value
+     */
     public static String getNMEAchecksum(String nmea) {
         int checksum = 0;
         for (int i = 1; i < nmea.length(); i++) {
