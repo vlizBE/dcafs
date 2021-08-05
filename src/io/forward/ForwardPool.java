@@ -75,6 +75,7 @@ public class ForwardPool implements Commandable {
                         String predefined = predef.getTextContent();
                         String interval = XMLtools.getStringAttribute(predef,"interval","1s");
                         path = new ForwardPath(predefined,interval);
+                        path.setType(XMLtools.getStringAttribute(predef,"type","rtvals"));
                     }
 
                     if( !imp.isEmpty() ) {
@@ -194,6 +195,9 @@ public class ForwardPool implements Commandable {
                     return join.toString();
                 default:
                     var p = paths.get(request[1]);
+                    if( p==null)
+                        return "No such path (yet)";
+
                     var src = p.finalStep;
 
                     if( p.isPreDefined() ){
@@ -766,8 +770,9 @@ public class ForwardPool implements Commandable {
         }
     }
     private class ForwardPath{
-        String finalStep="";
 
+        String finalStep="";
+        String type="rtvals";
         Writable firstStep=null;
 
         String customSrc = "";
@@ -778,6 +783,14 @@ public class ForwardPool implements Commandable {
         public ForwardPath( String finalStep){
             this.finalStep=finalStep;
         }
+        public ForwardPath(String customSrc, String interval){
+            this.customSrc = customSrc;
+            this.millis = TimeTools.parsePeriodStringToMillis(interval);
+        }
+
+        public void setType(String type){
+            this.type=type;
+        }
         public String toString(){
             if( customSrc.isEmpty() ){
                 return " gives the data from "+finalStep;
@@ -786,10 +799,6 @@ public class ForwardPool implements Commandable {
         }
         public boolean isPreDefined(){
             return !customSrc.isEmpty();
-        }
-        public ForwardPath(String customSrc, String interval){
-            this.customSrc = customSrc;
-            this.millis = TimeTools.parsePeriodStringToMillis(interval);
         }
         public void setFinalStep(String finalStep){
             this.finalStep = finalStep;
@@ -814,9 +823,17 @@ public class ForwardPool implements Commandable {
                 future = nettyGroup.scheduleAtFixedRate(()-> writeData(),millis,millis, TimeUnit.MILLISECONDS);
         }
         public void writeData(){
-            String data = dataProviding.parseRTline(customSrc,"-999");
-            targets.forEach( x -> x.writeLine(data));
+
             targets.removeIf( x -> !x.isConnectionValid());
+            switch( type){
+                case "cmd":; targets.forEach( t->dQueue.add( Datagram.build(customSrc).label("telnet").writable(t))); break;
+                default:
+                case "rtvals":
+                    var data = dataProviding.parseRTline(customSrc,"-999");
+                    targets.forEach( x -> x.writeLine(data));
+                break;
+            }
+
             if( targets.isEmpty() ){
                 future.cancel(true);
             }
