@@ -21,13 +21,15 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamPool)   
   * Rework the TaskManager (will be trigger for 0.11.0)
 
-## Update guide from 0.9.x -> 0.10.5
+## Update guide from 0.9.x -> 0.10.7
 - databases node: replace 'setup' with 'flush' and 'flushtime' with 'age'
 - databases node: replace 'idle' attribute with 'idleclose' node
 - TaskManager script: Replace the @fillin with {fillin}
 - FilterForward: rename source node to src node
 
-## 0.10.6 (work in progress)
+## 0.10.7 (work in progress)
+
+## 0.10.6 (05/08/21)
 
 ### Updated dependencies minor versions
 - DioZero
