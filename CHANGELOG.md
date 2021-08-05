@@ -38,7 +38,7 @@ From 0.5.0 onwards, this should be better documented...
 ### RealtimeValues
 - Added flags (in addition to rtvals and rttexts)
 - Added commands for it to the pool (flags:cmd)
-- Added labels for it (raisflag:id and lowerflag:id)
+- Added labels for it (raiseflag:id and lowerflag:id)
 - TaskManagers now use the global flags instead of local ones
 
 ### IssuePool
@@ -56,11 +56,14 @@ From 0.5.0 onwards, this should be better documented...
 - rtvals, double added support for not between x and y 
 - EmailWorker, added email:toadmin,subject,content for a short way to email admin
 - datapaths, can generate their own src data based on rtvals 
+- doCreate,doUpdate now accept complicated formulas (used to be single operand)
+- DoubleVal, history now with defined pool and avg can be calculated
+- DoubleVal, added fractionaldigits to apply rounding
+- Mathforward, now has attribute suffix, for now only nmea to add calc nmea checksum
 
 ### Bugfixes
 - DoubleVal, used old value instead of new for trigger apply
 - ForwardPool, global path delimiter wasn't read...
-
 
 ## 0.10.5 (29/07/2021)
 
