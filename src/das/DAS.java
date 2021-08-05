@@ -346,6 +346,14 @@ public class DAS implements DeadThreadListener {
     public void addCommandable( String id, Commandable cmd ){
         commandPool.addCommandable(id,cmd);
     }
+    /**
+     * Add a commandable to the CommandPool, this is the same as adding commands to dcafs,
+     * bulk means that this can contain multiple 'major' commands but no specific command will trigger it
+     * @param cmd The commandable to add
+     */
+    public void addBulkCommandable( Commandable cmd ){
+        commandPool.addBulkCommandable(cmd);
+    }
     /* **************************************  R E A L T I M E V A L U E S ********************************************/
     /**
      * Change the current RealtimeValues for the extended version

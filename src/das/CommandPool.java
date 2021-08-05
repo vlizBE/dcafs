@@ -46,6 +46,7 @@ public class CommandPool {
 
 	private static DateTimeFormatter secFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+	private ArrayList<Commandable> bulkCommandable = new ArrayList<>();
 	private HashMap<String,Commandable> commandables = new HashMap<>();
 
 	private RealtimeValues rtvals; // To have access to the current values
@@ -99,6 +100,9 @@ public class CommandPool {
 	 */
 	public void addCommandable( String id, Commandable cmdbl){
 		commandables.put(id,cmdbl);
+	}
+	public void addBulkCommandable( Commandable cmdbl){
+		bulkCommandable.add(cmdbl);
 	}
 	/* ****************************  S E T U P - C H E C K U P: Adding different parts from DAS  *********************/
 	/**
@@ -285,20 +289,29 @@ public class CommandPool {
 			 }
 		}
 		if( m == null || result.startsWith(UNKNOWN_CMD) ){
+
+
 			var cmd = commandables.get(split[0]);
 			if( cmd!=null) {
 				result = cmd.replyToCommand(split, wr, html);
 			}else{
 				String res;
-				if( split[1].equals("?")||split[1].equals("list")){
-					var nl = html ? "<br>" : "\r\n";
-					res = doCmd("tm",split[0]+",sets",wr)+nl+doCmd("tm",split[0]+",tasks",wr);
-
-				}else{
-					res = doCmd("tm","run,"+split[0]+":"+split[1],wr);
+				for( var cd : bulkCommandable ){
+					result = cd.replyToCommand(split,wr,html);
+					if( !result.startsWith(UNKNOWN_CMD))
+						continue;
 				}
-				if( !res.startsWith("No ")&&!res.startsWith("Not "))
-					result = res;
+				if( result.startsWith(UNKNOWN_CMD)) {
+					if (split[1].equals("?") || split[1].equals("list")) {
+						var nl = html ? "<br>" : "\r\n";
+						res = doCmd("tm", split[0] + ",sets", wr) + nl + doCmd("tm", split[0] + ",tasks", wr);
+
+					} else {
+						res = doCmd("tm", "run," + split[0] + ":" + split[1], wr);
+					}
+					if (!res.startsWith("No ") && !res.startsWith("Not "))
+						result = res;
+				}
 			}
 		}
 		if( result.startsWith(UNKNOWN_CMD) ) {
