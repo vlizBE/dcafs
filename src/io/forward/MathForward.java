@@ -21,6 +21,8 @@ import java.util.function.Function;
 public class MathForward extends AbstractForward {
 
     private String delimiter = ";";
+    private String suffix="";
+
     private final ArrayList<Operation> ops = new ArrayList<>();
     private BigDecimal scratchpad = BigDecimal.ZERO;
     private boolean doCmd = false;
@@ -85,17 +87,31 @@ public class MathForward extends AbstractForward {
             join.add( bds[a]!=null?bds[a].toPlainString():split[a]); // if no valid bd is found, use the original data
         }
 
+        // append suffix
+        String result;
+        if(!suffix.isEmpty()){
+            // Append the nmea checksum
+            if( suffix.equalsIgnoreCase("nmea")){
+                result=join.toString()+"*"+MathUtils.getNMEAchecksum(join.toString());
+            }else{
+                Logger.error(getID()+" (mf)-> No such suffix "+suffix);
+                result=join.toString();
+            }
+        }else{
+            result=join.toString();
+        }
+
         if( debug ){ // extra info given if debug is active
             Logger.info(getID()+" -> Before: "+data); // how the data looked before
-            Logger.info(getID()+" -> After:  "+join); // after applying the operations
+            Logger.info(getID()+" -> After:  "+result); // after applying the operations
         }
-        targets.removeIf( t-> !t.writeLine(join.toString()) ); // Send this data to the targets, remove those that refuse it
+        targets.removeIf( t-> !t.writeLine(result) ); // Send this data to the targets, remove those that refuse it
 
         if( !label.isEmpty() ){ // If the object has a label associated
-            dQueue.add( Datagram.build(join.toString()).label(label).writable(this) ); // add it to the queue
+            dQueue.add( Datagram.build(result).label(label).writable(this) ); // add it to the queue
         }
         if( log )
-            Logger.tag("RAW").info( "1\t" + (label.isEmpty()?"void":label)+"|"+getID() + "\t" + join);
+            Logger.tag("RAW").info( "1\t" + (label.isEmpty()?"void":label)+"|"+getID() + "\t" + result);
 
         // If there are no target, no label and no ops that build a command, this no longer needs to be a target
         if( targets.isEmpty() && label.isEmpty() && !doCmd && !log){
@@ -185,6 +201,7 @@ public class MathForward extends AbstractForward {
             return false;
 
         setDelimiter(XMLtools.getStringAttribute( math, "delimiter", delimiter));
+        suffix = XMLtools.getStringAttribute(math,"suffix","");
 
         ops.clear();
         String content = math.getTextContent();
@@ -369,8 +386,8 @@ public class MathForward extends AbstractForward {
      * Contains the functions that
      */
     public class Operation {
-        Function<BigDecimal[],BigDecimal> op; // for the scale type
-        MathFab fab;    // for the complex type
+        Function<BigDecimal[],BigDecimal> op=null; // for the scale type
+        MathFab fab=null;    // for the complex type
         int index;      // index for the result
         String ori;     // The expression before it was decoded mainly for listing purposes
         String cmd =""; // Command in which to replace the $ with the result
@@ -378,6 +395,9 @@ public class MathForward extends AbstractForward {
         public Operation(String ori, Function<BigDecimal[],BigDecimal> op, int index ){
             this.op=op;
             this.index=index;
+            this.ori=ori;
+        }
+        public Operation(String ori,int index){
             this.ori=ori;
         }
         public Operation(String ori, MathFab fab, int index ){
@@ -395,7 +415,7 @@ public class MathForward extends AbstractForward {
                     Logger.error("Tried to do an op with to few elements in the array (data="+data.length+" vs index="+index);
                     return null;
                 }
-            }else{
+            }else if(fab!=null){
                 fab.setDebug(debug);
                 try {
                     bd = fab.solve(data, scratchpad);
@@ -403,6 +423,8 @@ public class MathForward extends AbstractForward {
                     Logger.error(id+" -> "+e.getMessage());
                     return null;
                 }
+            }else{ // Somehow figure out this needs to be nmea?
+                return null;
             }
             if( bd == null ){
                 Logger.error(id+" -> Failed to solve the received data");
