@@ -3,6 +3,7 @@ package das;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import util.math.MathUtils;
+import util.tools.Tools;
 import worker.Datagram;
 
 import java.time.Instant;
@@ -19,7 +20,7 @@ public class DoubleVal {
     double defVal=Double.NaN;
 
     String unit="";
-
+    int digits=-1;
 
     /* Keep Time */
     long timestamp;
@@ -27,7 +28,7 @@ public class DoubleVal {
 
     /* History */
     ArrayList<Double> history;
-    boolean keepHistory=false;
+    int keepHistory=0;
 
     /* Triggering */
     ArrayList<TriggeredCmd> triggered;
@@ -38,6 +39,17 @@ public class DoubleVal {
     public DoubleVal(double val){
         setValue(val);
     }
+
+    public static DoubleVal newVal(String group, String name){
+        return new DoubleVal().group(group).name(name);
+    }
+    public static DoubleVal newVal(String combined){
+        String[] spl = combined.split("_");
+        if( spl.length==2)
+            return new DoubleVal().group(spl[0]).name(spl[1]);
+        return new DoubleVal().name(spl[0]);
+    }
+
     public DoubleVal defValue( double defVal){
         if( !Double.isNaN(defVal) ) {
             this.defVal = defVal;
@@ -49,37 +61,42 @@ public class DoubleVal {
     public DoubleVal setValue( double val){
 
         /* Keep history of passed values */
-        if( keepHistory ) {
+        if( keepHistory!=0 ) {
             history.add(val);
-            if( history.size()>100)
+            if( history.size()>keepHistory)
                 history.remove(0);
         }
         /* Keep time of last value */
         if( keepTime )
             timestamp= Instant.now().toEpochMilli();
 
-
-
         /* Respond to triggered command based on value */
         if( dQueue!=null && triggered!=null ) {
             // Execute all the triggers, only if it's the first time
             triggered.stream().forEach(tc -> tc.apply(val));
         }
-        value=val;
+        if( digits != -1) {
+            value = Tools.roundDouble(val, digits);
+        }else{
+            value=val;
+        }
         return this;
     }
 
     public double getValue(){
         return value;
     }
-    public static DoubleVal newVal(String group, String name){
-        return new DoubleVal().group(group).name(name);
-    }
-    public static DoubleVal newVal(String combined){
-        String[] spl = combined.split("_");
-        if( spl.length==2)
-            return new DoubleVal().group(spl[0]).name(spl[1]);
-        return new DoubleVal().name(spl[0]);
+    public double getAvg(){
+        double total=0;
+        if(history!=null){
+            for( var h : history){
+                total+=h;
+            }
+        }else{
+            Logger.warn("Asked for the average of "+name+" but no history kept");
+            return value;
+        }
+        return Tools.roundDouble(total/history.size(),digits==-1?3:digits);
     }
     public DoubleVal name(String name){
         this.name=name;
@@ -99,8 +116,12 @@ public class DoubleVal {
         this.unit=unit;
         return this;
     }
-    public DoubleVal enableHistory(){
-        keepHistory=true;
+    public DoubleVal fractionDigits(int fd){
+        this.digits=fd;
+        return this;
+    }
+    public DoubleVal enableHistory(int count){
+        keepHistory=count;
         history=new ArrayList<>();
         return this;
     }
