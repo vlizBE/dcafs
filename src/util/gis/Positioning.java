@@ -217,9 +217,7 @@ public class Positioning {
 		result += MathUtils.getNMEAchecksum(result+"00");
 		return result;
 	}
-	/***************************************************************************************************************/
-	/************************************ C A L C U L A T I O N S **************************************************/
-	/***************************************************************************************************************/
+	/* *********************************** C A L C U L A T I O N S ************************************************* */
 	/**
 	 * Get the distance between this position and the given one (in meters)
 	 * @param to The position to calculate the distance to

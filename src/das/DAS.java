@@ -291,11 +291,16 @@ public class DAS implements DeadThreadListener {
                     .comment("Defining the various streams that need to be read")
                 .build();
     }
+
+    /**
+     * Read the rtvals node in the settings.xml
+     */
     public void readRTvals(){
         var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
         double defDouble = XMLtools.getDoubleAttribute(fab.getCurrentElement(),"doubledefault",Double.NaN);
         String defText = XMLtools.getStringAttribute(fab.getCurrentElement(),"textdefault","");
         boolean defFlag = XMLtools.getBooleanAttribute(fab.getCurrentElement(),"flagdefault",false);
+
         fab.getChildren("*").forEach(
                 rtval -> {
                     String id = XMLtools.getStringAttribute(rtval,"id","");
@@ -308,6 +313,7 @@ public class DAS implements DeadThreadListener {
                             dv.name(XMLtools.getChildValueByTag(rtval,"name",dv.getName()))
                               .group(XMLtools.getChildValueByTag(rtval,"group",dv.getGroup()))
                               .unit(XMLtools.getStringAttribute(rtval,"unit",""))
+                              .fractionDigits(XMLtools.getIntAttribute(rtval,"fractiondigits",-1))
                               .defValue(XMLtools.getDoubleAttribute(rtval,"default",defDouble));
                             if( !XMLtools.getChildElements(rtval,"cmd").isEmpty() )
                                 dv.enableTriggeredCmds(dQueue);
