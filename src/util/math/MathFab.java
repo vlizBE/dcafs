@@ -57,7 +57,7 @@ public class MathFab {
             return null;
         }
 
-        formula = checkBrackets(formula); // Then make sure it has surrounding brackets
+        formula = MathUtils.checkBrackets(formula); // Then make sure it has surrounding brackets
         formula=formula.replace(" ",""); // But doesn't contain any spaces
         if( debug )
             Logger.info("Building: "+formula);
@@ -101,23 +101,7 @@ public class MathFab {
         resultIndex = subFormulas.size();// note that the result of the formula will be in the that position
         return this;
     }
-    private static String checkBrackets( String formula ){
 
-        // No total enclosing brackets
-        int cnt=0;
-        for( int a=0;a<formula.length()-1;a++){
-            if( formula.charAt(a)=='(') {
-                cnt++;
-            }else if( formula.charAt(a)==')' ){
-                cnt--;
-            }
-            if( cnt == 0)
-                break;
-        }
-        if( cnt==0)
-            formula="("+formula+")";
-        return formula;
-    }
     public BigDecimal solve( String data, String delimiter ){
         return solve( MathUtils.toBigDecimals(data,delimiter),BigDecimal.ZERO );
     }
