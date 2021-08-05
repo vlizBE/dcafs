@@ -20,6 +20,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.*;
+import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -76,6 +77,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 	/* Patterns */
 	Pattern rtvalPattern=null;
 	Pattern rttextPattern=null;
+	Pattern words = Pattern.compile("[a-z_]+");
 
 	/* **************************************  C O N S T R U C T O R **************************************************/
 	/**
@@ -228,8 +230,10 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 	 * @return The (possibly) altered line
 	 */
 	public String simpleParseRT( String line ){
-		var words = line.split(" ");
-		for( var word : words ){
+
+		var found = words.matcher(line).results().map(MatchResult::group).collect(Collectors.toList());
+
+		for( var word : found ){
 			var d = getRealtimeValue(word, Double.NaN);
 			if (!Double.isNaN(d)) {
 				line = line.replace(word,""+d);
