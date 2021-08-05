@@ -354,6 +354,14 @@ public class DAS implements DeadThreadListener {
     public void addBulkCommandable( Commandable cmd ){
         commandPool.addBulkCommandable(cmd);
     }
+
+    /**
+     * Adds a check to do to see if it's allowed to shutdown now
+     * @param sdp
+     */
+    public void addShutdownPreventing( ShutdownPreventing sdp){
+        commandPool.addShutdownPreventing(sdp);
+    }
     /* **************************************  R E A L T I M E V A L U E S ********************************************/
     /**
      * Change the current RealtimeValues for the extended version

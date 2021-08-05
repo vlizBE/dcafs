@@ -49,6 +49,8 @@ public class CommandPool {
 	private ArrayList<Commandable> bulkCommandable = new ArrayList<>();
 	private HashMap<String,Commandable> commandables = new HashMap<>();
 
+	private ArrayList<ShutdownPreventing> sdps;
+
 	private RealtimeValues rtvals; // To have access to the current values
 	private StreamManager streampool = null; // To be able to interact with attached devices
 	private EmailWorker emailWorker; // To be able to send emails and get status
@@ -103,6 +105,11 @@ public class CommandPool {
 	}
 	public void addBulkCommandable( Commandable cmdbl){
 		bulkCommandable.add(cmdbl);
+	}
+	public void addShutdownPreventing( ShutdownPreventing sdp){
+		if( sdps==null)
+			sdps = new ArrayList<>();
+		sdps.add(sdp);
 	}
 	/* ****************************  S E T U P - C H E C K U P: Adding different parts from DAS  *********************/
 	/**
@@ -860,8 +867,17 @@ public class CommandPool {
 	 */
 	public String doShutDown( String[] request, Writable wr, boolean html ){
 		if( request[1].equals("?") )
-			return " -> Shutdown the program ";	
+			return "sd:reason -> Shutdown the program with the given reason, use force as reason to skip checks";
 		String reason = request[1].isEmpty()?"Telnet requested shutdown":request[1];
+		if( !request[1].equalsIgnoreCase("force")) {
+			for (var sdp : sdps) {
+				if (sdp.shutdownNotAllowed()) {
+					if (wr != null)
+						wr.writeLine("Shutdown prevented by " + sdp.getID());
+					return "Shutdown prevented by " + sdp.getID();
+				}
+			}
+		}
 		das.setShutdownReason( reason );
 		System.exit(0);                    
 		return "Shutting down program..."+ (html?"<br>":"\r\n");

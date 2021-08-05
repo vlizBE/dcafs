@@ -18,7 +18,7 @@ From 0.5.0 onwards, this should be better documented...
 - Goals for this version series (removed when as they are done)
   * Code cleanup
     * Bring javadoc up to date
-    * Decide on final class structure (mainly StreamPool)   
+    * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (will be trigger for 0.11.0)
 
 ## Update guide from 0.9.x -> 0.10.7
@@ -28,6 +28,12 @@ From 0.5.0 onwards, this should be better documented...
 - FilterForward: rename source node to src node
 
 ## 0.10.7 (work in progress)
+
+### RealtimeValues
+- simpleRTval, now also checks the flags and replaces them with 0 or 1
+
+### Other
+- Added interface to allow components to prevent shutdown, can be skipped with sd:force
 
 ## 0.10.6 (05/08/21)
 
