@@ -153,14 +153,30 @@ public class IssuePool implements Commandable{
                                 + TimeTools.convertPeriodtoString(is.totalActiveTime, TimeUnit.SECONDS)));
                 return join.toString();
             case "listall":
-                join = new StringJoiner(nl,(html?"<b>Issues</b><br>":"Issues\r\n"),"");
-                join.setEmptyValue("None Yet");
-                issues.forEach( (key,val)->join.add(key+" --> "+val.getMessage()) );
-                return join.toString();
+                return getReport(html,false);
         }
         return "unknown command: "+request[0]+":"+request[1];
     }
+    public String getReport( boolean html, boolean clear ){
+        String nl = html?"<br>":"\r\n";
+        var join = new StringJoiner(nl,html?"<b>Active Issues</b><br>":"Active Issues\r\n","");
+        join.setEmptyValue("None yet.");
+        issues.values().stream().filter( is -> is.active)
+                .forEach( is->join.add(is.message+" --> total time "+ TimeTools.convertPeriodtoString(is.getTotalActiveTime(), TimeUnit.SECONDS)));
 
+
+        var join2 = new StringJoiner(nl,(html?"<b>Resolved Issues</b><br>":"Resolved Issues\r\n"),"");
+        join2.setEmptyValue("None Yet");
+        issues.values().stream().filter( is -> !is.active && is.totalCycles!=0 )
+                .forEach( is->join2.add(is.message+" --> "
+                        + (is.totalCycles==1?"once, ":is.totalCycles+" occurrences, ")+"total time "
+                        + TimeTools.convertPeriodtoString(is.totalActiveTime, TimeUnit.SECONDS)));
+
+        if( clear ){
+            issues.values().forEach( Issue::clear );
+        }
+        return (html?"<b>Issues</b><br>":"Issues\r\n")+join+nl+join2;
+    }
     /**
      * Resets/Clears the issues of which the id starts with the given text
      * @param startswith The text the id should start with
