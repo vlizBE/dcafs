@@ -239,8 +239,11 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 				line = line.replace(word,""+d);
 			}else{
 				var t = getRealtimeText(word,"");
-				if( !t.isEmpty())
-					line=line.replace(word,t);
+				if( !t.isEmpty()) {
+					line = line.replace(word, t);
+				}else if( hasFlag(word)){
+					line = line.replace(word, isFlagUp(word)?"1":"0");
+				}
 			}
 		}
 		return line;
