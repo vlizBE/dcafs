@@ -152,7 +152,7 @@ public class MqttPool implements Commandable, MqttWriting {
     /**
      * Reload the settings from the settings.xml
      *
-     * @return True if this was succesful
+     * @return True if this was successful
      */
     public boolean readXMLsettings() {
 
@@ -163,7 +163,6 @@ public class MqttPool implements Commandable, MqttWriting {
                 String id = XMLtools.getStringAttribute(broker, "id", "general");
                 Logger.info("Adding MQTT broker called " + id);
                 mqttWorkers.put(id, new MqttWorker(broker, dQueue));
-                rtvals.addMQTTworker(id, mqttWorkers.get(id));
             }
             return true;
         }
