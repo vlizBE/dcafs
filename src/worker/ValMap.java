@@ -1,5 +1,6 @@
 package worker;
 
+import das.DataProviding;
 import das.RealtimeValues;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
@@ -35,15 +36,15 @@ public class ValMap {
         return id;
     }
 
-    public void apply(String data, RealtimeValues rtvals){
+    public void apply(String data, DataProviding dp){
         if( multi.isEmpty()) {
-            processSingle(data,rtvals);
+            processSingle(data,dp);
         }else {
             for (String piece : data.split(multi))
-                processSingle(piece,rtvals);
+                processSingle(piece,dp);
         }
     }
-    private void processSingle( String data, RealtimeValues rtvals ){
+    private void processSingle( String data, DataProviding dp ){
         String[] pair = data.split(split);
         Mapping mapped;
 
@@ -59,13 +60,13 @@ public class ValMap {
         if (mapped != null) {
             if (!mapped.rtval.isEmpty()) {
                 try {
-                    rtvals.setRealtimeValue(mapped.rtval, NumberUtils.createDouble(pair[1]), true);
+                    dp.setRealtimeValue(mapped.rtval, NumberUtils.createDouble(pair[1]), true);
                 } catch (NumberFormatException e) {
                     Logger.error(id + " -> No valid number in " + data);
                 }
             }
             if (!mapped.rttext.isEmpty())
-                rtvals.setRealtimeText(mapped.rttext, mapped.convert(pair[1]));
+                dp.setRealtimeText(mapped.rttext, mapped.convert(pair[1]));
         } else {
             //Logger.warn(id + " -> No mapping found for " + data);
         }

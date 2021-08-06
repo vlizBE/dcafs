@@ -173,16 +173,19 @@ public class DatabaseManager implements QueryWriting{
     }
 
     @Override
-    public boolean buildInsert(String id, String table, DataProviding dp, String macro) {
-        for( SQLiteDB sqlite : lites.values() ){
-            if( sqlite.getID().equalsIgnoreCase(id))
-                return sqlite.buildInsert(table,dp,macro);
-        }
-        for( SQLDB sqldb : sqls.values() ){
-            if( sqldb.getID().equalsIgnoreCase(id))
-                return sqldb.buildInsert(table,dp,macro);
-        }
-        return false;
+    public boolean buildInsert(String ids, String table, DataProviding dp, String macro) {
+        int ok=0;
+        for( var id : ids.split(",")) {
+           for (SQLiteDB sqlite : lites.values()) {
+               if (sqlite.getID().equalsIgnoreCase(id))
+                  ok+=sqlite.buildInsert(table, dp, macro)?1:0;
+           }
+           for (SQLDB sqldb : sqls.values()) {
+               if (sqldb.getID().equalsIgnoreCase(id))
+                   ok+=sqldb.buildInsert(table, dp, macro)?1:0;
+           }
+       }
+       return ok==ids.split(",").length;
     }
     @Override
     public boolean addQuery( String id, String query){

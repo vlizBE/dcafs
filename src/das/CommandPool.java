@@ -1579,7 +1579,7 @@ public class CommandPool {
 			case "store":
 				if( cmds.length < 3 )
 					return "Not enough arguments, needs to be dbm:store,dbId,tableid";
-				if( rtvals.writeRecord(cmds[1].split(","),cmds[2]) )
+				if( dbManager.buildInsert(cmds[1],cmds[2],rtvals,"") )
 					return "Wrote record";
 				return "Failed to write record";
 			default:

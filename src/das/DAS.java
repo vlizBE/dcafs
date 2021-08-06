@@ -147,7 +147,6 @@ public class DAS implements DeadThreadListener {
             /* RealtimeValues */
             rtvals = new RealtimeValues();
             readRTvals();
-            rtvals.addQueryWriting(dbManager);
 
             /* IssuePool */
             issuePool = new IssuePool(dQueue, settingsPath,rtvals);
@@ -163,6 +162,9 @@ public class DAS implements DeadThreadListener {
 
             /* TransServer */
             addTransServer(-1);
+
+            /* MQTT worker */
+            addMqttPool();
 
             /* Base Worker */
             addLabelWorker();
@@ -189,8 +191,7 @@ public class DAS implements DeadThreadListener {
                 addDebugWorker();
             }
 
-            /* MQTT worker */
-            addMQTTManager();
+
 
             /* I2C */
             addI2CWorker();
@@ -363,23 +364,9 @@ public class DAS implements DeadThreadListener {
         commandPool.addShutdownPreventing(sdp);
     }
     /* **************************************  R E A L T I M E V A L U E S ********************************************/
-    /**
-     * Change the current RealtimeValues for the extended version
-     * 
-     * @param altered The extended version of the RealtimeValues
-     */
-    public void alterRealtimeValues(RealtimeValues altered) {
-
-        this.rtvals = altered;
-
-        commandPool.setRealtimeValues(rtvals);
-        labelWorker.setRealtimeValues(rtvals);
-    }
-
-    public RealtimeValues getRealtimeValues() {
+    public DataProviding getDataProvider() {
         return rtvals;
     }
-
 
     /* ***************************************  T A S K M A N A G E R ********************************************/
     /**
@@ -440,26 +427,14 @@ public class DAS implements DeadThreadListener {
      */
     public void addLabelWorker() {
         if (this.labelWorker == null)
-            labelWorker = new LabelWorker(dQueue);
+            labelWorker = new LabelWorker(dQueue,rtvals,dbManager);
         labelWorker.setCommandReq(commandPool);
-        labelWorker.setRealtimeValues(rtvals);
         labelWorker.setDebugging(debug);
+        labelWorker.setMqttWriter(mqttPool);
         labelWorker.setEventListener(this);
     }
     public LabelWorker getLabelWorker() {
         return labelWorker;
-    }
-    public void alterLabelWorker(LabelWorker altered) {
-        Logger.info("Using alternate BaseWorker");
-        if ( labelWorker != null)
-            labelWorker.stopWorker();
-        altered.setQueue(dQueue);
-        labelWorker = altered;
-        labelWorker.setCommandReq(commandPool);
-        labelWorker.setRealtimeValues(rtvals);
-        labelWorker.setDebugging(debug);
-        labelWorker.setEventListener(this);
-        loadGenerics(true);
     }
 
     public BlockingQueue<Datagram> getDataQueue() {
@@ -548,7 +523,7 @@ public class DAS implements DeadThreadListener {
             );
     }
     /* ***************************************** M Q T T ******************************************************** */
-    public void addMQTTManager(){
+    public void addMqttPool(){
         mqttPool = new MqttPool(settingsPath,rtvals,dQueue);
         addCommandable("mqtt", mqttPool);
     }

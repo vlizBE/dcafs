@@ -19,11 +19,13 @@ public class TimeTools {
     static final public DateTimeFormatter SHORTDATE_FORMATTER_UTC = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.UTC);
     static final public DateTimeFormatter LONGDATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
-    public static final String SQL_LONG_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS";
-	static final String SHORTDATE_STRING = "yyyy-MM-dd HH:mm:ss";
-	static final String NMEADATE_STRING = "yyyy-MM-dd HHmmss.SS";
+    static final DateTimeFormatter NMEA_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HHmmss.SS");
+    static final DateTimeFormatter DAY_MIN_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    static final DateTimeFormatter DAY_FORMATTER = DateTimeFormatter.ofPattern("yyMMdd");
+
+    static final String SQL_LONG_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS";
 	static final String NMEASHORT_STRING = "yyyy-MM-dd HHmmss";
-    static final DateTimeFormatter NMEA_FORMATTER = DateTimeFormatter.ofPattern(NMEADATE_STRING);
+
     static final TimeZone UTC = TimeZone.getTimeZone("UTC");
     public enum RolloverUnit{NONE,MINUTES,HOURS,DAYS,WEEKS,MONTHS,YEARS}
 

@@ -14,7 +14,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 
-public class MqttPool implements Commandable {
+public class MqttPool implements Commandable, MqttWriting {
 
     Map<String, MqttWorker> mqttWorkers = new HashMap<>();
     Path settingsFile;
@@ -29,7 +29,16 @@ public class MqttPool implements Commandable {
 
         readXMLsettings();
     }
+    public boolean sendToBroker( String id, String device, String param, double value) {
+        MqttWorker worker = mqttWorkers.get(id);
 
+        if (worker != null) {
+            if (value != -999) {
+                return worker.addWork( new MqttWork(device, param, value) );
+            }
+        }
+        return false;
+    }
     /**
      * Get The @see MQTTWorker based on the given id
      *

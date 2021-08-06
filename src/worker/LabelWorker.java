@@ -1,12 +1,15 @@
 package worker;
 
+import das.DataProviding;
 import io.Readable;
 import io.Writable;
 import das.CommandPool;
 import das.RealtimeValues;
+import io.mqtt.MqttWriting;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import util.DeadThreadListener;
+import util.database.QueryWriting;
 import util.math.MathUtils;
 import util.tools.TimeTools;
 import util.tools.Tools;
@@ -37,7 +40,11 @@ public class LabelWorker implements Runnable, Labeller {
 	Map<String, Writable> writables = new HashMap<>();
 	Map<String, Readable> readables = new HashMap<>();
 
-	protected BlockingQueue<Datagram> dQueue = new LinkedBlockingQueue<>();      // The queue holding raw data for processing
+	private BlockingQueue<Datagram> dQueue = new LinkedBlockingQueue<>();      // The queue holding raw data for processing
+	private DataProviding dp;
+	private QueryWriting queryWriting;
+	private MqttWriting mqtt;
+
 	private boolean goOn = true; // General process boolean, clean way of stopping thread
 
 	protected CommandPool reqData;
@@ -48,7 +55,8 @@ public class LabelWorker implements Runnable, Labeller {
 	private long procTime = Instant.now().toEpochMilli();
 	protected boolean printData = false;
 	long waitingSince;
-	protected RealtimeValues rtvals;
+
+
 
 	protected DeadThreadListener listener;
 
@@ -74,20 +82,19 @@ public class LabelWorker implements Runnable, Labeller {
 	 *
 	 * @param dQueue The queue to use
 	 */
-	public LabelWorker(BlockingQueue<Datagram> dQueue) {
-		this();
+	public LabelWorker(BlockingQueue<Datagram> dQueue, DataProviding dp, QueryWriting queryWriting) {
+		getMethodMapping(this.getClass());
+
 		this.dQueue = dQueue;
+		this.dp=dp;
+		this.queryWriting=queryWriting;
+
 		Logger.info("Using " + Math.min(3, Runtime.getRuntime().availableProcessors()) + " threads");
 		debug.scheduleAtFixedRate(new SelfCheck(),5,30,TimeUnit.MINUTES);
 	}
-
-	/**
-	 * Constructor to use its own queue
-	 */
-	public LabelWorker() {
-		getMethodMapping(this.getClass());
+	public void setMqttWriter( MqttWriting mqtt){
+		this.mqtt=mqtt;
 	}
-
 	/**
 	 * Add a listener to be notified of the event the thread fails.
 	 *
@@ -107,12 +114,12 @@ public class LabelWorker implements Runnable, Labeller {
 	}
 
 	/**
-	 * Set the realtimevalues for the worker to use
+	 * Set the DataProvider for the worker to use
 	 *
-	 * @param rtvals The default RealtimeValues or extended one
+	 * @param dp The implementation of the DataProviding interface
 	 */
-	public void setRealtimeValues(RealtimeValues rtvals) {
-		this.rtvals = rtvals;
+	public void setDataProviding(DataProviding dp) {
+		this.dp = dp;
 	}
 
 
@@ -263,11 +270,11 @@ public class LabelWorker implements Runnable, Labeller {
 				} else if (d.label.startsWith("rtval:")) {
 					executor.execute(() -> storeRtval(readID,d.getData(),d.getOriginID()));
 				} else if (d.label.startsWith("rttext:")) {
-					executor.execute(() -> rtvals.setRealtimeText(readID, d.data));
+					executor.execute(() -> dp.setRealtimeText(readID, d.data));
 				}else if( d.label.startsWith("raiseflag:")){
-					executor.execute(() -> rtvals.raiseFlag(readID));
+					executor.execute(() -> dp.raiseFlag(readID));
 				}else if( d.label.startsWith("lowerflag:")){
-					executor.execute(() -> rtvals.lowerFlag(readID));
+					executor.execute(() -> dp.lowerFlag(readID));
 				} else if (d.label.startsWith("read:")) {
 					if( d.getWritable()!=null){
 						if (d.label.split(":").length >= 2) {
@@ -341,7 +348,7 @@ public class LabelWorker implements Runnable, Labeller {
 				val = NumberUtils.createInteger(data);
 			}
 			if( val != Double.NEGATIVE_INFINITY){
-				rtvals.setRealtimeValue(param,val,true);
+				dp.setRealtimeValue(param,val,true);
 			}else{
 				Logger.warn("Tried to convert "+data+" from "+origin+" to an rtval...");
 			}
@@ -601,7 +608,7 @@ public class LabelWorker implements Runnable, Labeller {
 				for (String valmapID : valMapIDs.split(",")) {
 					var map = mappers.get(valmapID);
 					if (map != null) {
-						map.apply(mes, rtvals);
+						map.apply(mes, dp);
 					}else{
 						Logger.error("ValMap requested but unknown id: " + valmapID + " -> Message: " + d.getData());
 					}
@@ -644,13 +651,16 @@ public class LabelWorker implements Runnable, Labeller {
 					generics.stream().forEach(
 							gen -> {
 								if ( mes.startsWith(gen.getStartsWith()) ) {
-									Object[] data = gen.apply(mes, rtvals);
+									Object[] data = gen.apply( mes, dp, queryWriting,mqtt );
 									if (!gen.getTable().isEmpty() && gen.writesInDB()) {
 										if (gen.isTableMatch()) {
-											rtvals.provideRecord( gen.getDBID(), gen.getTable(), data);
+											for( String id : gen.getDBID() )
+												queryWriting.doDirectInsert( id, gen.getTable(), data);
 										} else {
-											if( !rtvals.writeRecord( gen.getDBID(), gen.getTable(), gen.macro) ){
-												Logger.error("Failed to write record for "+gen.getTable());
+											for( String id : gen.getDBID() ){
+												if (!queryWriting.buildInsert(id, gen.getTable(), dp, gen.macro)) {
+													Logger.error("Failed to write record for " + gen.getTable());
+												}
 											}
 										}
 									}

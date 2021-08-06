@@ -644,7 +644,7 @@ public class SqlTable {
                 }else if( col.type == COLUMN_TYPE.UTCDTNOW){
                     val = OffsetDateTime.now(ZoneOffset.UTC);
                 }else if( col.type == COLUMN_TYPE.DATETIME){
-                    val = TimeTools.parseDateTime(dp.getRealtimeText(ref,""),TimeTools.SQL_LONG_FORMAT);
+                    val = TimeTools.parseDateTime(dp.getRealtimeText(ref,""),"yyyy-MM-dd HH:mm:ss.SSS");
                 }
             }catch( NullPointerException e ){
                 Logger.error("Null pointer when looking for "+ref + " type:"+col.type);

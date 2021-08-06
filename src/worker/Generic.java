@@ -1,11 +1,14 @@
 package worker;
 
+import das.DataProviding;
 import das.RealtimeValues;
+import io.mqtt.MqttWriting;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.influxdb.dto.Point;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import util.database.QueryWriting;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
@@ -208,10 +211,10 @@ public class Generic {
     /**
      * Apply this generic to the given line and use the RealtimeValues object store the values
      * @param line The raw data line
-     * @param rtvals The realtimevalues to add the data to
+     * @param dp The DataProviding implementation to add the data to
      * @return an array with the data
      */
-    public Object[] apply( String line, RealtimeValues rtvals ){
+    public Object[] apply(String line, DataProviding dp, QueryWriting queryWriting, MqttWriting mqtt){
          
         for( Filter filter : filters ){
             line = filter.apply(line);
@@ -254,7 +257,7 @@ public class Generic {
                             if( NumberUtils.isCreatable(split[entry.index])){
                                 val=NumberUtils.toInt(split[entry.index],-999);
                                 data[a]=val;
-                                rtvals.setRealtimeValue( ref, val, true );
+                                dp.setRealtimeValue( ref, val, true );
                             }else{
                                 data[a]=null;
                                // rtvals.removeRealtimeValue(ref);
@@ -264,7 +267,7 @@ public class Generic {
                             if( NumberUtils.isCreatable(split[entry.index])) {
                                 val = NumberUtils.toDouble(split[entry.index], val);
                                 data[a] = val;
-                                rtvals.setRealtimeValue( ref, val, true );
+                                dp.setRealtimeValue( ref, val, true );
                             }else{
                                 data[a]=null;
                             //    rtvals.removeRealtimeValue(ref);
@@ -272,7 +275,7 @@ public class Generic {
                             break;                
                     case TEXT: case TAG:
                             data[a]=split[entry.index];
-                            rtvals.setRealtimeText( ref, split[entry.index]); 
+                            dp.setRealtimeText( ref, split[entry.index]);
                             break;
                     case FILLER:
                             if( ref.endsWith("timestamp") ){
@@ -288,13 +291,13 @@ public class Generic {
                             }
                             break;
                     case LOCALDT:
-                        data[a]=OffsetDateTime.parse(split[entry.index], DateTimeFormatter.ofPattern(TimeTools.SQL_LONG_FORMAT));
-                        rtvals.setRealtimeText( ref, split[entry.index]);
+                        data[a]=OffsetDateTime.parse( split[entry.index], TimeTools.LONGDATE_FORMATTER );
+                        dp.setRealtimeText( ref, split[entry.index]);
                         break;
                     case UTCDT:
-                        var ldt = LocalDateTime.parse(split[entry.index], DateTimeFormatter.ofPattern(TimeTools.SQL_LONG_FORMAT));
+                        var ldt = LocalDateTime.parse( split[entry.index], TimeTools.LONGDATE_FORMATTER_UTC );
                         data[a]=OffsetDateTime.of(ldt,ZoneOffset.UTC);
-                        rtvals.setRealtimeText( ref, split[entry.index]);
+                        dp.setRealtimeText( ref, split[entry.index]);
                         break;
                 }
                 if( !influxID.isEmpty() && pb!=null ){
@@ -305,15 +308,15 @@ public class Generic {
                        case TAG: pb.tag(entry.title, data[a].toString()); break;
                    }
                 }
-                if( !mqttID.isEmpty() && !entry.mqttDevice.isEmpty() )
-                        rtvals.sendToMqtt(mqttID, entry.mqttDevice,ref);
+                if( mqtt!=null && !mqttID.isEmpty() && !entry.mqttDevice.isEmpty() )
+                    mqtt.sendToBroker(mqttID, entry.mqttDevice,ref,(double)data[a]);
             }catch( ArrayIndexOutOfBoundsException l ){
                 Logger.error("Invalid index given to process "+id+" index:"+entry.index);
             }            
         }
         if( !influxID.isEmpty() ) {
             //pb.time(Instant.now().toEpochMilli(), TimeUnit.MILLISECONDS); // Set is here because unsure what happens on delayed execution...?
-            rtvals.sendToInflux(influxID,pb.build());
+            queryWriting.writeInfluxPoint(influxID,pb.build());
         }
         return data;
     }
