@@ -30,7 +30,8 @@ From 0.5.0 onwards, this should be better documented...
 ## 0.10.7 (work in progress)
 
 ### RealtimeValues
-- simpleRTval, now also checks the flags and replaces them with 0 or 1
+- simpleRTval, now also checks the flags and replaces them with 0 or 1 and the splitter is more inclusive
+  ( was simple split on space, now regex that looks for words that might contain a _ and end on a number)
 
 ### Other
 - Added interface to allow components to prevent shutdown, can be skipped with sd:force
