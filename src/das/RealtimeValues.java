@@ -52,7 +52,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 	/* Patterns */
 	Pattern rtvalPattern=null;
 	Pattern rttextPattern=null;
-	Pattern words = Pattern.compile("[a-z_]+\\d?");
+	Pattern words = Pattern.compile("[a-zA-Z]+[_0-9]+[a-zA-Z]+\\d*"); // find references to doublevals etc
 
 
 	/**
