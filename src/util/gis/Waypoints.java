@@ -98,7 +98,7 @@ public class Waypoints implements Commandable {
         if( rtvals!=null) {
             Logger.info("Looking for lat, lon, sog");
             latitude = rtvals.getOrAddDoubleVal(XMLtools.getStringAttribute(wpts, "latval", ""));
-            latitude = rtvals.getOrAddDoubleVal(XMLtools.getStringAttribute(wpts, "lonval", ""));
+            longitude = rtvals.getOrAddDoubleVal(XMLtools.getStringAttribute(wpts, "lonval", ""));
             sog = rtvals.getOrAddDoubleVal(XMLtools.getStringAttribute(wpts, "sogval", ""));
         }
 
@@ -299,7 +299,7 @@ public class Waypoints implements Commandable {
      */
     public double distanceTo(String id){
         var wp = wps.get(id);
-        if( wp == null)
+        if( wp == null || longitude==null || latitude==null)
             return -1;
         return wp.distanceTo(latitude.getValue(), longitude.getValue());
     }
