@@ -70,7 +70,7 @@ public class ForwardPool implements Commandable {
                     String imp = XMLtools.getStringAttribute(child,"import","");
                     String delimiter = XMLtools.getStringAttribute(child,"delimiter","");;
 
-                    var predef = XMLtools.getFirstChildByTag(child,"predefine");
+                    var predef = XMLtools.getFirstChildByTag(child,"customsrc");
                     if( predef!=null) {
                         String predefined = predef.getTextContent();
                         String interval = XMLtools.getStringAttribute(predef,"interval","1s");
@@ -98,7 +98,7 @@ public class ForwardPool implements Commandable {
 
                     for( int a=0;a<steps.size();a++  ){
                         Element step = steps.get(a);
-                        if(step.getTagName().equalsIgnoreCase("predefine"))
+                        if(step.getTagName().equalsIgnoreCase("customsrc"))
                             continue;
 
                         // Check if the next step is a generic, if so change the label attribute of the current step
