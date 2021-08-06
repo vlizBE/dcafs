@@ -60,6 +60,7 @@ public class CommandPool {
 	private String title = "";
 
 	private DAS das;
+	boolean debug = false;
 
 	Map<String, Method> methodMapping = new HashMap<>();
 	private int qState = 0;
@@ -111,7 +112,7 @@ public class CommandPool {
 			sdps = new ArrayList<>();
 		sdps.add(sdp);
 	}
-	/* ****************************  S E T U P - C H E C K U P: Adding different parts from DAS  *********************/
+	/* ****************************  S E T U P - C H E C K U P: Adding different parts from dcafs  *********************/
 	/**
 	 * Give the DAS object so it has access to everything it might need
 	 * 
@@ -209,7 +210,7 @@ public class CommandPool {
 		}
 		/* Notification to know if anyone uses the bot. */
 		if ( (!d.getOriginID().startsWith("admin") && !emailWorker.isAddressInRef("admin",d.getOriginID()) ) && header.equalsIgnoreCase("Bot Reply")  ) {
-			sendEmail.get().sendEmail( Email.toAdminAbout("DASbot").content("Received '" + d.getData() + "' command from " + d.getOriginID()) );
+			sendEmail.get().sendEmail( Email.toAdminAbout("DCAFSbot").content("Received '" + d.getData() + "' command from " + d.getOriginID()) );
 		}
 		/* Processing of the question */
 		d.setData( d.getData().toLowerCase());
@@ -326,9 +327,9 @@ public class CommandPool {
 		}
 		if( wr!=null ) {
 			if (!wr.getID().equalsIgnoreCase("telnet"))
-				Logger.warn("Hidden response for " + wr.getID() + ": " + result);
+				Logger.debug("Hidden response for " + wr.getID() + ": " + result);
 		}else{
-			Logger.warn("Hidden response to " + question + ": " + result);
+			Logger.debug("Hidden response to " + question + ": " + result);
 		}
 		return result + (html ? "<br>" : "\r\n");
 	}
@@ -489,7 +490,7 @@ public class CommandPool {
 	/* ********************************************************************************************/
 	/**
 	 * Try to update a file received somehow (email or otherwise)
-	 * Current options: das,script and settings (das is wip)
+	 * Current options: dcafs,script and settings (dcafs is wip)
 	 * 
 	 * @param request The full command update:something
 	 * @param wr The writable of the source of the command
@@ -543,8 +544,6 @@ public class CommandPool {
 				to = Path.of( workPath,"settings_" + TimeTools.formatNow("yyMMdd_HHmm") + ".xml");
 				refr = Path.of( workPath,"attachments"+File.separator+"settings.xml");
 				try {
-
-
 					if( Files.exists(p) && Files.exists(refr) ){
 						Files.copy(p, to );	// Make a backup if it doesn't exist yet
 						Files.copy(refr, p , StandardCopyOption.REPLACE_EXISTING );// Overwrite
@@ -638,7 +637,10 @@ public class CommandPool {
 		String[] spl = request[1].split(",");
 		double result;
 		if( spl.length==2){
-			spl[1] = rtvals.simpleParseRT(spl[1]); // fill in the stuff we already know
+			spl[1] = rtvals.simpleParseRT(spl[1],""); // fill in the stuff we already know
+			if(spl[1].isEmpty() ){
+				return "Failed to parse the op";
+			}
 			var parts = MathUtils.extractParts(spl[1]);
 			if( parts.size()==1 ){
 				if( !NumberUtils.isCreatable(spl[1]))
@@ -657,7 +659,7 @@ public class CommandPool {
 
 				result = MathUtils.decodeDoublesOp(parts.get(0),parts.get(2),parts.get(1),0).apply(new Double[]{});
 			}else{
-				result = MathUtils.simpleCalculation(spl[1],-999,true);
+				result = MathUtils.simpleCalculation(spl[1],-999,debug);
 			}
 			rtvals.setRealtimeValue(spl[0], result,false);
 			return "Saved "+result+" to "+spl[0];
@@ -675,7 +677,7 @@ public class CommandPool {
 		String[] spl = request[1].split(",");
 		double result;
 		if( spl.length==2){
-			spl[1] = rtvals.simpleParseRT(spl[1]); // fill in the stuff we already know
+			spl[1] = rtvals.simpleParseRT(spl[1],"create"); // fill in the stuff we already know
 			var parts = MathUtils.extractParts(spl[1]);
 			if( parts.size()==1 ){
 				if( !NumberUtils.isCreatable(spl[1]))
@@ -688,7 +690,12 @@ public class CommandPool {
 					parts.set(2, ""+rtvals.getRealtimeValue(parts.get(2),0,true));
 				result= MathUtils.decodeDoublesOp(parts.get(0),parts.get(2),parts.get(1),0).apply(new Double[]{});
 			}else{
-				result = MathUtils.simpleCalculation(spl[1],-999,true);
+				try {
+					result = MathUtils.simpleCalculation(spl[1], -999, debug);
+				}catch(IndexOutOfBoundsException e){
+					Logger.error("Index out of bounds while processing "+spl[1]);
+					return "Failed to process "+spl[1];
+				}
 			}
 			rtvals.setRealtimeValue(spl[0], result,true);
 			return "Saved "+result+" to "+spl[0];
@@ -849,7 +856,7 @@ public class CommandPool {
 		StringBuilder response = new StringBuilder();
 		
 		if( request[1].equals("?") )
-			return " -> Get a list of available serial ports on the PC running DAS.";
+			return " -> Get a list of available serial ports on the PC running dcafs.";
 
 		response.append("Ports found: ").append(html ? "<br>" : "\r\n");
 		for( SerialPort p : SerialPort.getCommPorts())
@@ -858,7 +865,7 @@ public class CommandPool {
 		return response.toString();
 	}
 	/**
-	 * Execute command to shutdown DAS, can be either sd or shutdown or sd:reason
+	 * Execute command to shutdown dcafs, can be either sd or shutdown or sd:reason
 	 * 
 	 * @param request The full command split on the first :
 	 * @param wr The writable of the source of the command
@@ -900,7 +907,7 @@ public class CommandPool {
 				break;
 				case "":
 					join.add(TelnetCodes.TEXT_RED+"General commands"+TelnetCodes.TEXT_YELLOW);
-					join.add("  st -> Get the current status of das, lists streams, databases etc");
+					join.add("  st -> Get the current status of dcafs, lists streams, databases etc");
 					join.add("  cmds -> Get al list of all available commands").add("");
 					join.add(TelnetCodes.TEXT_RED+"General tips"+TelnetCodes.TEXT_YELLOW)
 						.add("   -> Look at settings.xml file (in dcafs.jar folder) in a viewer to see what dcafs does")
@@ -960,8 +967,8 @@ public class CommandPool {
 		das.getDataQueue().add( Datagram.build("").writable(wr).label("read:"+request[1]) ); //new Datagram(wr,"",1,"read:"+request[1]));
 		return "Request for readable "+request[1]+" from "+wr.getID()+" issued";
 	}
-	public String doADMIN( String[] request, Writable wr, boolean html ){	
-		
+	public String doADMIN( String[] request, Writable wr, boolean html ){
+
 		String[] cmd = request[1].split(",");
 		switch( cmd[0] ){
 			case "?":
@@ -1017,7 +1024,7 @@ public class CommandPool {
 				return "Trying to send SMS\r\n";
 			case "haw":
 				das.haltWorkers();
-				return "\r\nStopping all worker threads."; 
+				return "\r\nStopping all worker threads.";
 			case "clock": return TimeTools.formatLongUTCNow();
 			case "regex":
 				if( cmd.length != 3 )
@@ -1050,8 +1057,8 @@ public class CommandPool {
 				return "Never gonna happen?";
 
 			default: return UNKNOWN_CMD+" : "+request[1];
-		} 
-	}	
+		}
+	}
 	public String doEMAIL( String[] request, Writable wr, boolean html ){
 		
 		if( request[1].equalsIgnoreCase("addblank") ){
