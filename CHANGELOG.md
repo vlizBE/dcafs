@@ -35,7 +35,11 @@ From 0.5.0 onwards, this should be better documented...
 ### Other
 - Added interface to allow components to prevent shutdown, can be skipped with sd:force
 - Renamed 'predefine' to 'customsrc'
-- 
+- Math, added extra checks and catches to the whole processing chain
+
+### Fixes
+- Waypoints, latitude was set twice instead of lat and lon
+
 ## 0.10.6 (05/08/21)
 
 ### Updated dependencies minor versions
