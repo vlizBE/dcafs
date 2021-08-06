@@ -52,15 +52,16 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 	/* Patterns */
 	Pattern rtvalPattern=null;
 	Pattern rttextPattern=null;
-	Pattern words = Pattern.compile("[a-z_]+");
+	Pattern words = Pattern.compile("[a-z_]+\\d?");
 
 
 	/**
 	 * Simple version of the parse realtime line, just checks all the words to see if any matches the hashmaps
 	 * @param line The line to parse
+	 * @param error The line to return on an error or 'ignore' if errors should be ignored
 	 * @return The (possibly) altered line
 	 */
-	public String simpleParseRT( String line ){
+	public String simpleParseRT( String line,String error ){
 
 		var found = words.matcher(line).results().map(MatchResult::group).collect(Collectors.toList());
 
@@ -74,6 +75,13 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 					line = line.replace(word, t);
 				}else if( hasFlag(word)){
 					line = line.replace(word, isFlagUp(word)?"1":"0");
+				}else if( error.equalsIgnoreCase("create")){
+					getOrAddDoubleVal(word).setValue(0);
+					Logger.warn("Created doubleval "+word+" with value 0");
+					line = line.replace(word, "0");
+				}else if( !error.equalsIgnoreCase("ignore")){
+					Logger.error("Couldn't process "+word+" found in "+line);
+					return error;
 				}
 			}
 		}
@@ -116,6 +124,9 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 					case "utcshort": line = line.replace("{utcshort}", TimeTools.formatShortUTCNow());
 				}
 			}
+		}
+		if( line.contains("{")){
+			Logger.error("Found a {, this means couldn't parse a section of "+line);
 		}
 		return line;
 	}
@@ -210,7 +221,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 				Logger.warn("Parameter "+parameter+" doesn't exist, creating it with value "+defVal);
 				setRealtimeValue(parameter,defVal,true);
 			}else{
-				Logger.error("No such parameter: " + parameter);
+				Logger.debug("No such parameter: " + parameter);
 			}
 			return defVal;
 		}

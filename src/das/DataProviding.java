@@ -5,7 +5,7 @@ import java.util.ArrayList;
 public interface DataProviding {
 
     /* Parsing */
-    String simpleParseRT( String line );
+    String simpleParseRT( String line, String error );
     String parseRTline( String line, String error );
 
     /* Double */
