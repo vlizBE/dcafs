@@ -62,25 +62,33 @@ public class MathForward extends AbstractForward {
     protected boolean addData(String data) {
         String[] split = data.split(delimiter); // Split the data according to the delimiter
         BigDecimal[] bds = MathUtils.toBigDecimals(data,delimiter); // Split the data and convert to bigdecimals
+        int oldBad = badDataCount;
 
         if( bds == null ){
             badDataCount++;
             Logger.error(id+" (mf)-> No valid numbers in the data: "+data+" after split on "+delimiter+ " "+badDataCount+"/"+MAX_BAD_COUNT);
-            if( badDataCount>=MAX_BAD_COUNT) {
-                Logger.error(id+"(mf)-> Too many bad data received, no longer accepting data");
-                return false;
-            }else{
-                return true;
-            }
-        }else if( badDataCount>0){
-            badDataCount--;
         }
 
         ops.forEach( op -> {
-            var res = op.solve(bds);
-            if( res==null)
-                Logger.error(id+"(mf) -> Failed to process "+data);
+            if( op!=null ) {
+                var res = op.solve(bds);
+                if (res == null) {
+                    badDataCount++;
+                    Logger.error(id + "(mf) -> Failed to process " + data + " ("+badDataCount+"/"+MAX_BAD_COUNT+")");
+                }
+            }else{
+                badDataCount++;
+                Logger.error(id + "(mf) -> Invalid op " + data+ " ("+badDataCount+"/"+MAX_BAD_COUNT+")");
+            }
         } ); // Solve the operations with the converted data
+        if( oldBad == badDataCount )
+            badDataCount=0;
+        if( badDataCount>=MAX_BAD_COUNT) {
+            Logger.error(id+"(mf)-> Too many bad data received, no longer accepting data");
+            return false;
+        }
+        if( badDataCount > 0)
+            return true;
 
         StringJoiner join = new StringJoiner(delimiter); // prepare a joiner to rejoin the data
         for( int a=0;a<bds.length;a++){
@@ -406,11 +414,16 @@ public class MathForward extends AbstractForward {
             this.ori=ori;
         }
         public BigDecimal solve( BigDecimal[] data){
-            BigDecimal bd;
+            BigDecimal bd=null;
 
             if( op != null ){
                 if( data.length>index) {
-                    bd = op.apply(data);
+                    try {
+                        bd = op.apply(data);
+                    }catch(NullPointerException e){
+                        Logger.error("Nullpointer when processing for "+ori);
+                        return null;
+                    }
                 }else{
                     Logger.error("Tried to do an op with to few elements in the array (data="+data.length+" vs index="+index);
                     return null;

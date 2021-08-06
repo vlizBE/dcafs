@@ -59,6 +59,10 @@ public class MathUtils {
                     int opIndex = getIndexOfOperand(parts, ORDERED_OPS[a], ORDERED_OPS[a + 1]);
 
                     while (opIndex != -1) {
+                        if( parts.size()<=opIndex+1) {
+                            Logger.error("Not enough data in parts...");
+                            return result;
+                        }
                         String res = parts.get(opIndex - 1) + parts.get(opIndex) + parts.get(opIndex + 1);
                         result.add(new String[]{parts.get(opIndex - 1), parts.get(opIndex + 1), parts.get(opIndex)});
                         parts.remove(opIndex);  // remove the operand

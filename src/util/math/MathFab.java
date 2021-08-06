@@ -78,7 +78,12 @@ public class MathFab {
             }
             if( open !=-1 ){ // if the opening bracket was found
                 String part = formula.substring(open+1,close); // get the part between the brackets
-                subFormulas.addAll( MathUtils.splitExpression( part, subFormulas.size(),debug) );    // split that part in the subformulas
+                var res = MathUtils.splitExpression( part, subFormulas.size(),debug);
+                if( res.isEmpty()) {
+                    Logger.error("Failed to build because of issues during "+part);
+                    break;
+                }
+                subFormulas.addAll( res );    // split that part in the subformulas
                 String piece = formula.substring(open,close+1); // includes the brackets
                 // replace the sub part in the original formula with a reference to the last subformula
                 formula=formula.replace(piece,"o"+(subFormulas.size()));

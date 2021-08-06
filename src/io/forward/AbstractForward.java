@@ -33,7 +33,7 @@ public abstract class AbstractForward implements Writable {
     protected Path xml;                        // Path to the xml file containing the info
     protected String label="";                 // With this the forward can use the dataQueue as a target
     protected int badDataCount=0;               // Keep track of the amount of bad data received
-    static final protected int MAX_BAD_COUNT=10;
+    static final protected int MAX_BAD_COUNT=5;
     protected boolean log = false;
     protected final DataProviding dataProviding;
 
