@@ -307,36 +307,47 @@ public class DAS implements DeadThreadListener {
                     String id = XMLtools.getStringAttribute(rtval,"id","");
                     if( id.isEmpty())
                         return;
-                    switch( rtval.getTagName() ){
-                        case "double":
-                            rtvals.setRealtimeValue(id,-999,true);
-                            var dv = rtvals.getDoubleVal(id);
-                            dv.name(XMLtools.getChildValueByTag(rtval,"name",dv.getName()))
-                              .group(XMLtools.getChildValueByTag(rtval,"group",dv.getGroup()))
-                              .unit(XMLtools.getStringAttribute(rtval,"unit",""))
-                              .fractionDigits(XMLtools.getIntAttribute(rtval,"fractiondigits",-1))
-                              .defValue(XMLtools.getDoubleAttribute(rtval,"default",defDouble));
-                            if( !XMLtools.getChildElements(rtval,"cmd").isEmpty() )
-                                dv.enableTriggeredCmds(dQueue);
-                            for( Element trigCmd : XMLtools.getChildElements(rtval,"cmd")){
-                                String trig = trigCmd.getAttribute("when");
-                                String cmd = trigCmd.getTextContent();
-                                dv.addTriggeredCmd(cmd,trig);
-                            }
-                            break;
-                        case "text":
-                            rtvals.setRealtimeText(id,XMLtools.getStringAttribute(rtval,"default",defText));
-                            break;
-                        case "flag":
-                            if( XMLtools.getBooleanAttribute(rtval,"default",defFlag) ){
-                                rtvals.raiseFlag(id);
-                            }else{
-                                rtvals.lowerFlag(id);
-                            }
-                            break;
+                    if( rtval.getTagName().equals("group")){
+                        id += id.isEmpty()?"":"_";
+                        for( var groupie : XMLtools.getChildElements(rtval)){
+                            var gid = XMLtools.getStringAttribute(groupie,"id","");
+                            gid = id+XMLtools.getStringAttribute(groupie,"name",gid);
+                            processRtvalElement(groupie, gid.toLowerCase(), defDouble, defText, defFlag);
+                        }
+                    }else {
+                        processRtvalElement(rtval, id.toLowerCase(), defDouble, defText, defFlag);
                     }
                 }
         );
+    }
+    private void processRtvalElement( Element rtval, String id, double defDouble, String defText, boolean defFlag ){
+        switch( rtval.getTagName() ){
+            case "double":
+                var dv = rtvals.getOrAddDoubleVal(id);
+                dv.name(XMLtools.getChildValueByTag(rtval,"name",dv.getName()))
+                        .group(XMLtools.getChildValueByTag(rtval,"group",dv.getGroup()))
+                        .unit(XMLtools.getStringAttribute(rtval,"unit",""))
+                        .fractionDigits(XMLtools.getIntAttribute(rtval,"fractiondigits",-1))
+                        .defValue(XMLtools.getDoubleAttribute(rtval,"default",defDouble));
+                if( !XMLtools.getChildElements(rtval,"cmd").isEmpty() )
+                    dv.enableTriggeredCmds(dQueue);
+                for( Element trigCmd : XMLtools.getChildElements(rtval,"cmd")){
+                    String trig = trigCmd.getAttribute("when");
+                    String cmd = trigCmd.getTextContent();
+                    dv.addTriggeredCmd(cmd,trig);
+                }
+                break;
+            case "text":
+                rtvals.setRealtimeText(id,XMLtools.getStringAttribute(rtval,"default",defText));
+                break;
+            case "flag":
+                if( XMLtools.getBooleanAttribute(rtval,"default",defFlag) ){
+                    rtvals.raiseFlag(id);
+                }else{
+                    rtvals.lowerFlag(id);
+                }
+                break;
+        }
     }
     /* **************************************  C O M M A N D R E Q  ********************************************/
     /**

@@ -5,6 +5,7 @@ import io.mqtt.MqttWorker;
 import io.Writable;
 import io.collector.CollectorFuture;
 import io.collector.MathCollector;
+import io.telnet.TelnetCodes;
 import org.influxdb.dto.Point;
 import org.tinylog.Logger;
 import util.database.QueryWriting;
@@ -387,6 +388,50 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 			return join.toString();
 		}
 		return stream.sorted(Map.Entry.comparingByKey()).map(e -> e.getKey() + " : " + e.getValue().toString()).collect(Collectors.joining(eol));
+	}
+
+	/**
+	 * Get a listing of all stored variables that belong to a certain group
+	 * @param group The group they should belong to
+	 * @param html Use html formatting or telnet
+	 * @return The listing
+	 */
+	public String getRTValsGroupList(String group, boolean html) {
+		String eol = html?"<br>":"\r\n";
+		String title = html?"<b>Group: "+group+"</b>": TelnetCodes.TEXT_CYAN+"Group: "+group+TelnetCodes.TEXT_YELLOW;
+		String space = html?"  ":"  ";
+
+		StringJoiner join = new StringJoiner(eol,title+eol,"");
+		join.setEmptyValue("No matches found");
+		doubleVals.values().stream().filter( dv -> dv.getGroup().equalsIgnoreCase(group))
+				.forEach(dv -> join.add(space+dv.getName()+" : "+dv.toString()));
+		rttext.entrySet().stream().filter(ent -> ent.getKey().startsWith(group+"_"))
+				.forEach( ent -> join.add( space+ent.getKey().split("_")[1]+" : "+ent.getValue()) );
+		flags.entrySet().stream().filter(ent -> ent.getKey().startsWith(group+"_"))
+				.forEach( ent -> join.add( space+ent.getKey().split("_")[1]+" : "+ent.getValue()) );
+		return join.toString();
+	}
+
+	/**
+	 * Get a listing of all stored variables that have the given name
+	 * @param name The name of the variable or the string the name starts with if ending it with *
+	 * @param html Use html formatting or telnet
+	 * @return The listing
+	 */
+	public String getRTValsNameList(String name, boolean html) {
+		String eol = html?"<br>":"\r\n";
+		String title = html?"<b>Name: "+name+"</b>":TelnetCodes.TEXT_CYAN+"Name: "+name+TelnetCodes.TEXT_YELLOW;
+		String space = html?"  ":"  ";
+
+		StringJoiner join = new StringJoiner(eol,title+eol,"");
+		join.setEmptyValue("No matches found");
+		doubleVals.values().stream().filter( dv -> dv.getName().matches(name.replace("*",".*")))
+				.forEach(dv -> join.add(space+dv.getGroup()+" -> "+dv.getName()+" : "+dv.toString()));
+		rttext.entrySet().stream().filter(ent -> ent.getKey().matches(name.replace("*",".*")))
+				.forEach( ent -> join.add( space+ent.getKey().replace("_","->")+" : "+ent.getValue()) );
+		flags.entrySet().stream().filter(ent -> ent.getKey().endsWith(name.replace("*",".*")))
+				.forEach( ent -> join.add( space+ent.getKey().replace("_","->")+" : "+ent.getValue()) );
+		return join.toString();
 	}
 	/**
 	 * Get a listing of text parameter : value pairs currently stored that meet the param

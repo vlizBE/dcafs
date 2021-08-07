@@ -1136,8 +1136,16 @@ public class CommandPool {
 			return " -> Get a list of all rtval options";
 		if( request[1].isEmpty())
 			return rtvals.getFilteredRTVals(request[1],html?"<br>":"\r\n");
-		switch(request[1]){
-			case "store": return rtvals.storeRTVals(settingsPath);
+		String[] cmds = request[1].split(",");
+		if( cmds.length==1 ){
+			switch(cmds[0]){
+				case "store": return rtvals.storeRTVals(settingsPath);
+			}
+		}else if(cmds.length==2){
+			switch(cmds[0]){
+				case "group": return rtvals.getRTValsGroupList(cmds[1],html);
+				case "name"	: return rtvals.getRTValsNameList(cmds[1],html);
+			}
 		}
 		return "unknown command: "+request[0]+":"+request[1];
 	}
