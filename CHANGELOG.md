@@ -21,22 +21,19 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (will be trigger for 0.11.0)
 
-## Update guide from 0.9.x -> 0.10.7
-- databases node: replace 'setup' with 'flush' and 'flushtime' with 'age'
-- databases node: replace 'idle' attribute with 'idleclose' node
-- TaskManager script: Replace the @fillin with {fillin}
-- FilterForward: rename source node to src node
-
 ## 0.10.7 (work in progress)
 
 ### RealtimeValues
 - simpleRTval, now also checks the flags and replaces them with 0 or 1 and the splitter is more inclusive
   ( was simple split on space, now regex that looks for words that might contain a _ and end on a number)
+- Added methods that give listings of the stored variables based on name or group
 
 ### Other
 - Added interface to allow components to prevent shutdown, can be skipped with sd:force
 - Renamed 'predefine' to 'customsrc'
 - Math, added extra checks and catches to the whole processing chain
+- The rtvals node now allows for group subnode to group vals
+- EditorForward, Expanded the UI and added option of global delimiter 
 
 ### Fixes
 - Waypoints, latitude was set twice instead of lat and lon

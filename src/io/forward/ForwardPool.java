@@ -473,7 +473,12 @@ public class ForwardPool implements Commandable {
                         .add("  - Forward doesn't do anything if it doesn't have a target (label counts as target)")
                         .add("  - ...");
                 join.add("").add(TelnetCodes.TEXT_GREEN+"Create a EditorForward"+TelnetCodes.TEXT_YELLOW);
-                join.add( "  ef:addblank,id<,source> -> Add a blank filter with an optional source, gets stored in xml.");
+                join.add( "  ef:addblank,id<,source> -> Add a blank filter with an optional source, gets stored in xml.")
+                    .add( "  ef:reload<,id> -> Reload the editor with the given id or all if no id was given.");
+                join.add("").add(TelnetCodes.TEXT_GREEN+"Other commands"+TelnetCodes.TEXT_YELLOW)
+                        .add("  ef:list -> Get a list of all editors")
+                        .add("  ef:edits -> Get a list of all possible edit operations")
+                        .add("  ef:addedit,id,type:value -> Add an edit of the given value, use type:? for format");
                 return join.toString();
             case "addblank":
                 if( cmds.length<2)
@@ -518,18 +523,143 @@ public class ForwardPool implements Commandable {
                     if( eEle.size() != editors.size() ){ // Meaning filters has more
                         // First mark them as invalid, so references also get deleted
                         editors.entrySet().stream().filter(e -> !altered.contains(e.getKey()) ).forEach( e->e.getValue().setInvalid());
-                        //then remove then safely
+                        //then remove them safely
                         editors.entrySet().removeIf( ee -> !ee.getValue().isConnectionValid());
                     }
                 }
-                return "Editor reloaded.";
+                return "Editor(s) reloaded.";
             case "list":
                 join.setEmptyValue("No editors yet");
                 editors.values().forEach( f -> join.add(f.toString()).add("") );
                 return join.toString();
-            case "rules": return EditorForward.getHelp(html?"<br>":"\r\n");
+            case "edits": return EditorForward.getHelp(html?"<br>":"\r\n");
+            case "addedit":
+                if( cmds.length < 3) // might be larger if the value contains  a ,
+                    return "Bad amount of arguments, should be ef:addedit,id,type:value";
+                var eOpt = getEditorForward(cmds[1]);
+                if( eOpt.isEmpty())
+                    return "No such editor";
+
+                var e = eOpt.get();
+                int x = cmd.indexOf(":");
+                if( x==-1)
+                    return "Incorrect format, needs to be ef:addedit,id,type:value";
+                // The value might contain , so make sure to split properly
+                String type = cmds[2].substring(0,cmds[2].indexOf(":"));
+                String value = cmd.substring(x+1);
+                String deli = e.delimiter;
+
+                var p = value.split(",");
+                var fab = XMLfab.withRoot(settingsPath,"dcafs","editors");
+                fab.selectOrCreateParent("editor","id",cmds[1]);
+
+                switch(type){
+                    /* Splitting */
+                    case "rexsplit":
+                        if( value.equals("?"))
+                            return "ef:addedit,rexsplit:regextosplitwith (delimiter will be , )";
+                        e.addRexsplit(deli,value);
+                        addEditNode(fab,type,value,true);
+                        return "Rexsplit to "+value+" added with delimiter "+deli;
+                    case "resplit":
+                        if( value.equals("?"))
+                            return "ef:addedit,resplit:tosplitwith (delimiter will be , )";
+                        e.addResplit(deli,value,"",true);
+                        addEditNode(fab,type,value,false);
+                        fab.attr("leftover","append").build();
+                        return "Resplit to "+value+" added with default delimiter + and leftover";
+                    case "charsplit":
+                        if( value.equals("?"))
+                            return "ef:addedit,rexplit:regextosplitwith";
+                        e.addCharSplit( ",",value );
+                        addEditNode(fab,type,value,true);
+                        return "Charsplit added with default delimiter";
+                    /* Timestamp stuff */
+                    case "redate":
+                        if( value.equals("?"))
+                            return "ef:addedit,redate:index,from,to";
+                        e.addRedate(p[1],p[2],NumberUtils.toInt(p[0]),deli);
+                        addEditNode(fab,"redate",p[2],false);
+                        fab.attr("index",p[0]).build();
+                        return "After splitting on "+deli+" the date on index "+p[0]+" is reformatted from "+p[1]+" to "+p[2];
+                    case "retime":
+                        if( value.equals("?"))
+                            return "ef:addedit,retime:index,from,to";
+                        e.addRetime(p[0],p[2],NumberUtils.toInt(p[1]),",");
+                        addEditNode(fab,"retime",p[2],false);
+                        fab.attr("index",p[1]).build();
+                        return "After splitting on , the time on index "+p[1]+" is reformatted from "+p[0]+" to "+p[2];
+                    /* Replacing */
+                    case "replace":
+                        if( value.equals("?"))
+                            return "ef:addedit,replace:what,with";
+                        e.addReplacement(p[0],p[1]);
+                        fab.addChild("edit",p[1]).attr( "type",type).attr("find",p[0]).build();
+                        return "Replacing "+p[0]+" with "+p[1];
+                    case "rexreplace":
+                        if( value.equals("?"))
+                            return "ef:addedit,rexreplace:regexwhat,with";
+                        e.addRegexReplacement(p[0],p[1]);
+                        fab.addChild("edit",p[1]).attr( "type",type).attr("find",p[0]).build();
+                        return "Replacing "+p[0]+" with "+p[1];
+                    /* Remove stuff */
+                    case "remove":
+                        if( value.equals("?"))
+                            return "ef:addedit,remove:find";
+                        e.addReplacement(value,"");
+                        fab.addChild("edit",value).attr( "type",type).build();
+                        return "Removing "+value+" from the data";
+                    case "rexremove":
+                        if( value.equals("?"))
+                            return "ef:addedit,rexremove:regexfind";
+                        e.addRegexReplacement(value,"");
+                        fab.addChild("edit",value).attr( "type",type).build();
+                        return "Removing matches of "+value+" from the data";
+                    case "trim":
+                        if( value.equals("?"))
+                            return "ef:addedit,trim";
+                        e.addTrim();
+                        fab.addChild("edit").attr( "type",type).build();
+                        return "Trimming spaces from data";
+                    case "cutstart":
+                        if( value.equals("?"))
+                            return "ef:addedit,custart:charcount";
+                        e.addCutStart(NumberUtils.toInt(value));
+                        fab.addChild("edit",value).attr( "type",type).build();
+                        return "Cutting "+value+" char(s) from the start";
+                    case "cutend":
+                        if( value.equals("?"))
+                            return "ef:addedit,custend:charcount";
+                        e.addCutEnd(NumberUtils.toInt(value));
+                        return "Cutting "+value+" char(s) from the end";
+                    /* Adding stuff */
+                    case "prepend": case "prefix":
+                        if( value.equals("?"))
+                            return "ef:addedit,prepend:toprepend or ef:addedit,prefix:toprepend";
+                        e.addPrepend(value);
+                        fab.addChild("edit",value).attr( "type",type).build();
+                        return "Prepending "+value+" to the data";
+                    case "insert":
+                        if( value.equals("?"))
+                            return "ef:addedit,insert:position,toinsert";
+                        e.addInsert(NumberUtils.toInt(p[0]),p[1]);
+                        fab.addChild("edit",p[1]).attr("position",p[0]).attr( "type",type).build();
+                        return "Inserting "+value+" at char "+p[0]+" in the data";
+                    case "append": case "suffix":
+                        if( value.equals("?"))
+                            return "ef:addedit,append:toappend or ef:addedit,suffix:toappend";
+                        e.addAppend(value);
+                        return "Appending "+value+" to the data";
+                }
+                return "Edit added";
         }
         return "Unknown command: "+cmds[0];
+    }
+    private void addEditNode( XMLfab fab, String type, String value, boolean build){
+        fab.addChild("edit",value).attr( "type",type)
+                .attr("delimiter",",");
+        if( build )
+            fab.build();
     }
     /*    ------------------------ Filter ---------------------------------    */
     public FilterForward addFilter(String id, String source, String rule ){
@@ -610,7 +740,7 @@ public class ForwardPool implements Commandable {
                 return "No such filter";
             case "addrule":
                 if( cmds.length < 3)
-                    return "Bad amount of arguments, should be filters:addrule,id,type:value";
+                    return "Bad amount of arguments, should be ff:addrule,id,type:value";
                 String step = cmds.length==4?cmds[2]+","+cmds[3]:cmds[2]; // step might contain a ,
                 var fOpt = getFilterForward(cmds[1].toLowerCase());
                 Logger.info("Filter exists?"+fOpt.isPresent());
@@ -625,7 +755,7 @@ public class ForwardPool implements Commandable {
                 }
             case "delrule":
                 if( cmds.length < 3)
-                    return "Bad amount of arguments, should be filters:delrule,id,index";
+                    return "Bad amount of arguments, should be ff:delrule,id,index";
                 int index = Tools.parseInt( cmds[2], -1);
                 if( getFilterForward(cmds[1]).map(f -> f.removeRule(index) ).orElse(false) )
                     return "Rule removed";

@@ -20,6 +20,7 @@ import java.util.regex.Pattern;
 
 public class EditorForward extends AbstractForward{
     ArrayList<Function<String,String>> edits = new ArrayList<>(); // for the scale type
+    String delimiter = ",";
 
     public EditorForward(String id, String source, BlockingQueue<Datagram> dQueue, DataProviding dataProviding ){
         super(id,source,dQueue,dataProviding);
@@ -36,6 +37,7 @@ public class EditorForward extends AbstractForward{
     public static EditorForward readXML(Element ele, BlockingQueue<Datagram> dQueue, DataProviding dataProviding ){
         return new EditorForward( ele,dQueue, dataProviding );
     }
+
     /**
      * Get an overview of all the available edit types
      * @param eol The end of line to use for the overview
@@ -58,7 +60,10 @@ public class EditorForward extends AbstractForward{
                 .add("prepend -> Add the given data to the front")
                 .add("    fe. <edit type='prepend' >time=</edit>  --> time=16:25:12")
                 .add("append -> Add the given data at the end")
-                .add("    fe. <edit type='append' > (UTC)</edit>  --> time=16:25:12 (UTC)").add("")
+                .add("    fe. <edit type='append' > (UTC)</edit>  --> time=16:25:12 (UTC)")
+                .add("insert -> Add the given data at the chosen position")
+                .add("    fe. <edit type='insert' position='4' >!</edit>  --> time!=16:25:12 (UTC)")
+                .add("")
                 .add("--REMOVE--")
                 .add("remove -> Remove all occurrences of the value given")
                 .add("    fe. <edit type='remove' >1</edit>  --> 6:25:2")
@@ -129,7 +134,7 @@ public class EditorForward extends AbstractForward{
 
         if( !readBasicsFromXml(editor))
             return false;
-
+        delimiter = XMLtools.getStringAttribute(editor,"delimiter",delimiter);
         edits.clear();
         if( XMLtools.hasChildByTag(editor,"edit") ) { // if rules are defined as nodes
             // Process all the types except 'start'
@@ -140,7 +145,7 @@ public class EditorForward extends AbstractForward{
         return true;
     }
     private void processNode( Element edit ){
-        String deli = XMLtools.getStringAttribute(edit,"delimiter",",");
+        String deli = XMLtools.getStringAttribute(edit,"delimiter",delimiter);
         String content = edit.getTextContent();
         String from = XMLtools.getStringAttribute(edit,"from",",");
         String error = XMLtools.getStringAttribute(edit,"error","NaN");
@@ -148,6 +153,7 @@ public class EditorForward extends AbstractForward{
         String leftover = XMLtools.getStringAttribute(edit,"leftover","append");
 
         int index = XMLtools.getIntAttribute(edit,"index",-1);
+        int position = XMLtools.getIntAttribute(edit,"index",-1);
 
         if( content == null ){
             Logger.error(id+" -> Missing content in an edit.");
@@ -185,7 +191,7 @@ public class EditorForward extends AbstractForward{
                     addReplacement(find,content);
                 }
                 break;
-            case "rexreplace": case "regexreplace":
+            case "rexreplace":
                 if( find.isEmpty() ){
                     Logger.error(id+" -> Tried to add an empty replace.");
                 }else{
@@ -215,6 +221,10 @@ public class EditorForward extends AbstractForward{
             case "append": case "suffix":
                 addAppend(content);
                 Logger.info(id+" -> Added append of "+content);
+                break;
+            case "insert":
+                addInsert(position,content);
+                Logger.info(id+" -> Added insert of "+content);
                 break;
             case "cutstart":
                 if( NumberUtils.toInt(content,0)!=0) {
@@ -434,6 +444,10 @@ public class EditorForward extends AbstractForward{
     public void addAppend( String addition ){
         rulesString.add( new String[]{"","append","add:"+addition} );
         edits.add(  input -> input+addition );
+    }
+    public void addInsert( int position, String addition ){
+        rulesString.add( new String[]{"","insert","add:"+addition+" at "+position} );
+        edits.add( input -> input.substring(0,position)+addition+input.substring(position) );
     }
     public void addReplacement( String find, String replace){
         edits.add( input -> input.replace(Tools.fromEscapedStringToBytes(find),Tools.fromEscapedStringToBytes(replace)) );
