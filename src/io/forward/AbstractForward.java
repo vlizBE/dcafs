@@ -99,6 +99,12 @@ public abstract class AbstractForward implements Writable {
     public boolean removeTarget( Writable target ){
         return targets.remove(target);
     }
+    public boolean noTargets(){
+        return targets.isEmpty();
+    }
+    public ArrayList<Writable> getTargets(){
+        return targets;
+    }
     /**
      * The forward will request to be deleted if there are no writables to write to
      */

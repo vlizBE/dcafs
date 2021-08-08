@@ -28,9 +28,14 @@ From 0.5.0 onwards, this should be better documented...
   ( was simple split on space, now regex that looks for words that might contain a _ and end on a number)
 - Added methods that give listings of the stored variables based on name or group
 
+### ForwardPath
+- Renamed 'predefine' to 'customsrc'
+- Moved from innerclass to ForwardPath.java
+- Now it's possible to reload these with path:reload,id targets are maintained
+- No longer uses the central maps to store the forwards, so can't add target to individual steps for now
+
 ### Other
 - Added interface to allow components to prevent shutdown, can be skipped with sd:force
-- Renamed 'predefine' to 'customsrc'
 - Math, added extra checks and catches to the whole processing chain
 - The rtvals node now allows for group subnode to group vals
 - EditorForward, Expanded the UI and added option of global delimiter 

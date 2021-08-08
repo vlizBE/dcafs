@@ -63,115 +63,10 @@ public class ForwardPool implements Commandable {
 
         /* Figure out the datapath? */
         XMLfab.getRootChildren(settingsPath,"dcafs","datapaths","path").forEach(
-                child -> {
-                    ForwardPath path=null;
-                    String src = XMLtools.getStringAttribute(child,"src","");
-                    String id = XMLtools.getStringAttribute(child,"id","");
-                    String imp = XMLtools.getStringAttribute(child,"import","");
-                    String delimiter = XMLtools.getStringAttribute(child,"delimiter","");;
-
-                    var predef = XMLtools.getFirstChildByTag(child,"customsrc");
-                    if( predef!=null) {
-                        String predefined = predef.getTextContent();
-                        String interval = XMLtools.getStringAttribute(predef,"interval","1s");
-                        path = new ForwardPath(predefined,interval);
-                        path.setType(XMLtools.getStringAttribute(predef,"type","rtvals"));
-                    }
-
-                    if( !imp.isEmpty() ) {
-                        var p = XMLfab.getRootChildren(Path.of(imp),"dcafs","path").findFirst();
-                        if(p.isPresent()) {
-                            child = p.get();
-                            delimiter = XMLtools.getStringAttribute(child,"delimiter","");
-                            Logger.info("Valid path script found at "+imp);
-                        }else{
-                            Logger.error("No valid path script found: "+imp);
-                            return;
-                        }
-                    }
-
-                    int ffId=1;
-                    int mfId=1;
-                    int efId=1;
-                    String lastFilter="";
-                    var steps = XMLtools.getChildElements(child);
-
-                    for( int a=0;a<steps.size();a++  ){
-                        Element step = steps.get(a);
-                        if(step.getTagName().equalsIgnoreCase("customsrc"))
-                            continue;
-
-                        // Check if the next step is a generic, if so change the label attribute of the current step
-                        if( a<steps.size()-1 ){
-                            var next = steps.get(a+1);
-                            if(next.getTagName().equalsIgnoreCase("generic")){
-                                if( !step.hasAttribute("label"))
-                                    step.setAttribute("label","generic:"+next.getAttribute("id"));
-                            }
-                            if(next.getTagName().equalsIgnoreCase("valmap")){
-                                if( !step.hasAttribute("label"))
-                                    step.setAttribute("label","valmap:"+next.getAttribute("id"));
-                            }
-                        }
-                        // If this step doesn't have a src, alter it
-                        if( !step.hasAttribute("src")) {
-                            // If it's a filter, use the discarded stuff of the previous one
-                            if( !lastFilter.isEmpty() && step.getTagName().equals("filter")){
-                                step.setAttribute("src", lastFilter);
-                            }else{
-                                step.setAttribute("src", src);
-                            }
-                        }
-                        // If this step doesn't have a delimiter, alter it
-                        if( !step.hasAttribute("delimiter")&& !delimiter.isEmpty())
-                            step.setAttribute("delimiter",delimiter);
-
-                        switch( step.getTagName() ){
-                            case "filter":
-                                if( !step.hasAttribute("id")) {
-                                    step.setAttribute("id", id + "_f" + ffId);
-                                    ffId++;
-                                }
-                                FilterForward ff = new FilterForward( step, dQueue );
-                                src=ff.getID();
-                                lastFilter=src.replace(":",":!");
-                                filters.put(ff.getID().replace("filter:", ""), ff);
-                                if( a==0 && path!=null){
-                                    path.setFirstStep(ff);
-                                }
-                                break;
-                            case "math":
-                                if( !step.hasAttribute("id")) {
-                                    step.setAttribute("id", id + "_m" + mfId);
-                                    mfId++;
-                                }
-                                MathForward mf = new MathForward( step,dQueue,dataProviding );
-                                src = mf.getID();
-                                maths.put(mf.getID().replace("math:", ""), mf);
-                                if( a==1 && path!=null){
-                                    path.setFirstStep(mf);
-                                }
-                                break;
-                            case "editor":
-                                if( !step.hasAttribute("id")) {
-                                    step.setAttribute("id", id + "_e" + efId);
-                                    efId++;
-                                }
-                                var ef = new EditorForward( step,dQueue,dataProviding );
-                                src = ef.getID();
-                                editors.put(ef.getID().replace("editor:", ""), ef);
-                                if( a==0 && path!=null){
-                                    path.setFirstStep(ef);
-                                }
-                                break;
-                        }
-                    }
-                    if( path==null) {
-                        path = new ForwardPath(src);
-                    }else{
-                        path.setFinalStep(src);
-                    }
-                    paths.put(id,path);
+                pathEle -> {
+                    ForwardPath path = new ForwardPath(dataProviding,dQueue,nettyGroup);
+                    path.readFromXML(pathEle);
+                    paths.put(path.getID(),path);
                 }
         );
     }
@@ -183,6 +78,13 @@ public class ForwardPool implements Commandable {
         if( request[0].equals("path")){
             var cmds = request[1].split(",");
             switch(cmds[0]){
+                case "reload":
+                    var ele = XMLfab.withRoot(settingsPath,"dcafs","datapaths")
+                            .getChild("path","id",cmds[1]);
+                    if(ele.isEmpty())
+                        return "No such path "+cmds[1];
+                    paths.get(cmds[1]).readFromXML(ele.get());
+                    return "Path reloaded";
                 case "addblank":
                     XMLfab.withRoot(settingsPath,"dcafs","datapaths")
                             .addChild("path").attr("id",cmds[1]).attr("src","")
@@ -198,18 +100,8 @@ public class ForwardPool implements Commandable {
                     if( p==null)
                         return "No such path (yet)";
 
-                    var src = p.finalStep;
-
-                    if( p.isPreDefined() ){
-                        p.addTarget(wr);
-                    }
-                    if( !src.isEmpty() ) { // If this is valid, alter the request to match the last step
-                        var spl = src.split(":");
-                        request[0] = spl[0];
-                        request[1] = spl[1];
-                    }else{
-                        return "Received path request";
-                    }
+                    p.addTarget(wr);
+                    return "Request received.";
             }
         }
         // Regular ones
@@ -897,76 +789,6 @@ public class ForwardPool implements Commandable {
                     return "Data failed the filter";
                 }
             default: return "No such command";
-        }
-    }
-    private class ForwardPath{
-
-        String finalStep="";
-        String type="rtvals";
-        Writable firstStep=null;
-
-        String customSrc = "";
-        long millis = 0;
-        protected final ArrayList<Writable> targets = new ArrayList<>();
-        ScheduledFuture future;
-
-        public ForwardPath( String finalStep){
-            this.finalStep=finalStep;
-        }
-        public ForwardPath(String customSrc, String interval){
-            this.customSrc = customSrc;
-            this.millis = TimeTools.parsePeriodStringToMillis(interval);
-        }
-
-        public void setType(String type){
-            this.type=type;
-        }
-        public String toString(){
-            if( customSrc.isEmpty() ){
-                return " gives the data from "+finalStep;
-            }
-            return "'"+customSrc+"' send to "+targets.size()+" targets every "+TimeTools.convertPeriodtoString(millis,TimeUnit.MILLISECONDS);
-        }
-        public boolean isPreDefined(){
-            return !customSrc.isEmpty();
-        }
-        public void setFinalStep(String finalStep){
-            this.finalStep = finalStep;
-        }
-        public void setFirstStep(Writable firstStep){
-            this.firstStep = firstStep;
-        }
-        public void addTarget(Writable wr){
-            if( firstStep==null) {
-                if (!targets.contains(wr))
-                    targets.add(wr);
-            }else{
-                targets.add(firstStep);
-            }
-            start();
-        }
-        public void removeTarget( Writable wr){
-            targets.remove(wr);
-        }
-        public void start(){
-            if( future==null || future.isDone())
-                future = nettyGroup.scheduleAtFixedRate(()-> writeData(),millis,millis, TimeUnit.MILLISECONDS);
-        }
-        public void writeData(){
-
-            targets.removeIf( x -> !x.isConnectionValid());
-            switch( type){
-                case "cmd":; targets.forEach( t->dQueue.add( Datagram.build(customSrc).label("telnet").writable(t))); break;
-                default:
-                case "rtvals":
-                    var data = dataProviding.parseRTline(customSrc,"-999");
-                    targets.forEach( x -> x.writeLine(data));
-                break;
-            }
-
-            if( targets.isEmpty() ){
-                future.cancel(true);
-            }
         }
     }
 }
