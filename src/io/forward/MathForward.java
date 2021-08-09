@@ -1,6 +1,7 @@
 package io.forward;
 
 import das.DataProviding;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.math.Calculations;
@@ -12,6 +13,7 @@ import util.xml.XMLtools;
 import worker.Datagram;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.StringJoiner;
@@ -215,7 +217,7 @@ public class MathForward extends AbstractForward {
         String content = math.getTextContent();
 
         if( content != null && XMLtools.getChildElements(math).isEmpty() ){
-            addComplex(content);
+            addComplex(content, XMLtools.getIntAttribute(math,"scale",-1));
         }
         defs.clear();
         XMLtools.getChildElements(math, "def")
@@ -227,7 +229,8 @@ public class MathForward extends AbstractForward {
                     .forEach( ops -> {
                         try {
                             addOperation(
-                                    Integer.parseInt(ops.getAttribute("index")),
+                                    XMLtools.getIntAttribute(ops,"index",-1),
+                                    XMLtools.getIntAttribute(ops,"scale",-1),
                                     fromStringToOPTYPE(XMLtools.getStringAttribute(ops, "type", "complex")),
                                     XMLtools.getStringAttribute(ops, "cmd", ""),
                                     ops.getTextContent());
@@ -248,9 +251,19 @@ public class MathForward extends AbstractForward {
      * @param expression The expression to use
      * @return True if it was added
      */
-    public boolean addOperation(int index, OP_TYPE type, String cmd ,String expression  ){
-        if( index <0 ) {
-            Logger.error(id + " -> Bad index given " + index);
+    public boolean addOperation(int index, int scale, OP_TYPE type, String cmd ,String expression  ){
+
+        if( index <0 && expression.contains("=")){
+            var splt = expression.split("=");
+            if( splt.length!=1) {
+                if (splt[0].startsWith("i")) {
+                    index = NumberUtils.toInt(splt[0].trim().substring(1), -1);
+                    expression = splt[1].trim();
+                }
+            }
+        }
+        if( index == -1 ){
+            Logger.error(id + " -> Bad/No index given");
             return false;
         }
 
@@ -309,15 +322,24 @@ public class MathForward extends AbstractForward {
         op.cmd = cmd;
         ops.add(op);
 
+        if( scale != -1){
+            int pos =index;
+            Function<BigDecimal[],BigDecimal> proc = x -> x[pos].setScale(scale, RoundingMode.HALF_UP);
+            ops.add( new Operation( expression, proc,index));
+            rulesString.add(new String[]{type.toString().toLowerCase(),""+index,"scale("+expression+", "+scale+")"});
+        }else{
+            rulesString.add(new String[]{type.toString().toLowerCase(),""+index,expression});
+        }
+
         if( !cmd.isEmpty() ) {// this counts as a target, so enable it
             valid = true;
             doCmd = true;
         }
 
-        rulesString.add(new String[]{type.toString().toLowerCase(),""+index,expression});
+
         return true;
     }
-    public boolean addComplex( String op ){
+    public boolean addComplex( String op, int scale ){
         op=op.replace(" ",""); //remove spaces
 
         // Support ++ and --
@@ -334,12 +356,12 @@ public class MathForward extends AbstractForward {
             }
             int index = Tools.parseInt(split[0].substring(1),-1);
             if( index == -1 ){
-                Logger.error( id+" -> Incorrect index "+op);
+                Logger.error( id+"(mf) -> Incorrect index "+op);
                 return false;
             }
-            return addOperation(index,OP_TYPE.COMPLEX,"",split[1]);
+            return addOperation(index,scale,OP_TYPE.COMPLEX,"",split[1]);
         }else{
-            Logger.error(id+" -> Content in wrong format "+op);
+            Logger.error(id+"(mf) -> Content in wrong format "+op);
         }
         return false;
     }
