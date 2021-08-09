@@ -40,6 +40,7 @@ public class ForwardPool implements Commandable {
         this.dataProviding=dataProviding;
         readSettingsFromXML();
     }
+    /* **************************************** G E N E R A L ************************************************** */
     public void setEventLoopGroup( EventLoopGroup group){
         nettyGroup=group;
     }
@@ -74,38 +75,11 @@ public class ForwardPool implements Commandable {
     @Override
     public String replyToCommand(String[] request, Writable wr, boolean html) {
         boolean ok=false;
-        // Take care of the path commands
-        if( request[0].equals("path")){
-            var cmds = request[1].split(",");
-            switch(cmds[0]){
-                case "reload":
-                    var ele = XMLfab.withRoot(settingsPath,"dcafs","datapaths")
-                            .getChild("path","id",cmds[1]);
-                    if(ele.isEmpty())
-                        return "No such path "+cmds[1];
-                    paths.get(cmds[1]).readFromXML(ele.get());
-                    return "Path reloaded";
-                case "addblank":
-                    XMLfab.withRoot(settingsPath,"dcafs","datapaths")
-                            .addChild("path").attr("id",cmds[1]).attr("src","")
-                            .build();
-                    return "Blank added";
-                case "list":
-                    StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
-                    join.setEmptyValue("No paths yet");
-                    paths.entrySet().forEach( x -> join.add("path:"+x.getKey()+" -> "+ x.getValue().toString()));
-                    return join.toString();
-                default:
-                    var p = paths.get(request[1]);
-                    if( p==null)
-                        return "No such path (yet)";
 
-                    p.addTarget(wr);
-                    return "Request received.";
-            }
-        }
         // Regular ones
         switch(request[0]){
+            // Path
+            case "path": return replyToPathCmd(request[1],wr,html);
             // Filter
             case "ff": return replyToFilterCmd(request[1],wr,html);
             case "filter":
@@ -209,7 +183,7 @@ public class ForwardPool implements Commandable {
                 }
                 var mm = addMath(cmds[1],src.toString());
                 if( cmds.length==4){
-                    mm.addComplex(cmds[cmds.length-1]);
+                    mm.addComplex(cmds[cmds.length-1],-1);
                 }
                 mm.writeToXML(XMLfab.withRoot(settingsPath, "dcafs"));
                 return "Math with id "+cmds[1]+ " created.";
@@ -315,7 +289,7 @@ public class ForwardPool implements Commandable {
                     return "No valid index given: "+split[0];
                 }
 
-                if( getMathForward(cmds[1]).map(f -> f.addComplex(cmds[2]) ).orElse(false) ){
+                if( getMathForward(cmds[1]).map(f -> f.addComplex(cmds[2],-1) ).orElse(false) ){
                     getMathForward(cmds[1]).get().writeToXML(XMLfab.withRoot(settingsPath, "dcafs"));
                     return "Operation added and written to xml";
                 }
@@ -789,6 +763,37 @@ public class ForwardPool implements Commandable {
                     return "Data failed the filter";
                 }
             default: return "No such command";
+        }
+    }
+    /* ******************************************** P A T H ******************************************************** */
+    public String replyToPathCmd(String cmd, Writable wr, boolean html ){
+        var cmds =cmd.split(",");
+
+        switch(cmds[0]){
+            case "reload":
+                var ele = XMLfab.withRoot(settingsPath,"dcafs","datapaths")
+                        .getChild("path","id",cmds[1]);
+                if(ele.isEmpty())
+                    return "No such path "+cmds[1];
+                paths.get(cmds[1]).readFromXML(ele.get());
+                return "Path reloaded";
+            case "addblank":
+                XMLfab.withRoot(settingsPath,"dcafs","datapaths")
+                        .addChild("path").attr("id",cmds[1]).attr("src","")
+                        .build();
+                return "Blank added";
+            case "list":
+                StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
+                join.setEmptyValue("No paths yet");
+                paths.entrySet().forEach( x -> join.add("path:"+x.getKey()+" -> "+ x.getValue().toString()));
+                return join.toString();
+            default:
+                var p = paths.get(cmd);
+                if( p==null)
+                    return "No such path (yet)";
+
+                p.addTarget(wr);
+                return "Request received.";
         }
     }
 }
