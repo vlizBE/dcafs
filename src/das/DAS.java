@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
 
 public class DAS implements DeadThreadListener {
 
-    private static final String version = "0.10.7";
+    private static final String version = "0.10.8";
 
     private Path settingsPath = Path.of("settings.xml");
     private String workPath=Path.of("").toString();
@@ -328,7 +328,8 @@ public class DAS implements DeadThreadListener {
                         .group(XMLtools.getChildValueByTag(rtval,"group",dv.getGroup()))
                         .unit(XMLtools.getStringAttribute(rtval,"unit",""))
                         .fractionDigits(XMLtools.getIntAttribute(rtval,"fractiondigits",-1))
-                        .defValue(XMLtools.getDoubleAttribute(rtval,"default",defDouble));
+                        .defValue(XMLtools.getDoubleAttribute(rtval,"default",defDouble))
+                        .enableHistory(XMLtools.getChildIntValueByTag(rtval,"history",-1));
                 if( !XMLtools.getChildElements(rtval,"cmd").isEmpty() )
                     dv.enableTriggeredCmds(dQueue);
                 for( Element trigCmd : XMLtools.getChildElements(rtval,"cmd")){

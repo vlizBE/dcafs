@@ -21,12 +21,15 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (will be trigger for 0.11.0)
 
-## 0.10.7 (work in progress)
+## 0.10.8 (work in progress)
+
+## 0.10.7 (09/08/21)
 
 ### RealtimeValues
 - simpleRTval, now also checks the flags and replaces them with 0 or 1 and the splitter is more inclusive
   ( was simple split on space, now regex that looks for words that might contain a _ and end on a number)
 - Added methods that give listings of the stored variables based on name or group
+- The rtvals node now allows for group subnode to group vals
 
 ### ForwardPath
 - Renamed 'predefine' to 'customsrc'
@@ -34,10 +37,26 @@ From 0.5.0 onwards, this should be better documented...
 - Now it's possible to reload these with path:reload,id targets are maintained
 - No longer uses the central maps to store the forwards, so can't add target to individual steps for now
 
+### MathForward
+- Just like the short version of the math, an <op> node can now receive a 'i0=i0+5'  
+  form of expression instead of defining the index attribute
+````xml
+<!-- Both these op's result in the same operation -->
+<op index="0">i0+i2+25</op>
+<op>i0=i0+i2+25.123</op>
+````
+- Added an extra attribute 'scale' so that you don't need to define an extra op just for that
+````xml
+<math id="scale">
+  <op scale="2">i0=i0+i2+25</op>  
+</math>
+<!-- i0 will be scaled to two fractional digits (half up) after the opeation -->
+<!-- Or shorter -->
+<math id="scale" scale="2">i0=i0+i2+25</math>
+````
 ### Other
 - Added interface to allow components to prevent shutdown, can be skipped with sd:force
 - Math, added extra checks and catches to the whole processing chain
-- The rtvals node now allows for group subnode to group vals
 - EditorForward, Expanded the UI and added option of global delimiter 
 
 ### Fixes
@@ -54,7 +73,6 @@ From 0.5.0 onwards, this should be better documented...
 ### RealtimeValues
 - Added flags (in addition to rtvals and rttexts)
 - Added commands for it to the pool (flags:cmd)
-- Added labels for it (raiseflag:id and lowerflag:id)
 - TaskManagers now use the global flags instead of local ones
 
 ### IssuePool
