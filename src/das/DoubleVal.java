@@ -121,7 +121,9 @@ public class DoubleVal {
         return this;
     }
     public DoubleVal enableHistory(int count){
-        keepHistory=count;
+       if(count==-1)
+           return this;
+       keepHistory=count;
         history=new ArrayList<>();
         return this;
     }
