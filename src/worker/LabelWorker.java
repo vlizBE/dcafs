@@ -271,10 +271,6 @@ public class LabelWorker implements Runnable, Labeller {
 					executor.execute(() -> storeRtval(readID,d.getData(),d.getOriginID()));
 				} else if (d.label.startsWith("rttext:")) {
 					executor.execute(() -> dp.setRealtimeText(readID, d.data));
-				}else if( d.label.startsWith("raiseflag:")){
-					executor.execute(() -> dp.raiseFlag(readID));
-				}else if( d.label.startsWith("lowerflag:")){
-					executor.execute(() -> dp.lowerFlag(readID));
 				} else if (d.label.startsWith("read:")) {
 					if( d.getWritable()!=null){
 						if (d.label.split(":").length >= 2) {
