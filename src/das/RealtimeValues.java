@@ -48,7 +48,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	private final HashMap<String, MathCollector> mathCollectors = new HashMap<>();
 
 	/* Patterns */
-	private Pattern words = Pattern.compile("[a-zA-Z]+[_0-9]+[a-zA-Z]+\\d*"); // find references to doublevals etc
+	private Pattern words = Pattern.compile("[a-zA-Z]+[_0-9]*[a-zA-Z]+\\d*"); // find references to doublevals etc
 
 	private Path settingsPath;
 	private BlockingQueue<Datagram> dQueue;
