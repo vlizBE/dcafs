@@ -40,7 +40,7 @@ public class IssuePool implements Commandable{
      * @return True if any were read
      */
     public boolean readFromXML( ){
-        XMLfab.getRootChildren(settingsPath,"dcafs","settings","issues","*").forEach(
+        XMLfab.getRootChildren(settingsPath,"dcafs","issues","*").forEach(
                 issueEle ->
                 {
                     String id = XMLtools.getStringAttribute(issueEle,"id","");
@@ -89,11 +89,11 @@ public class IssuePool implements Commandable{
                 if( cmds.length!=3)
                     return "Not enough parameters: issue:add,issueid,message";
                 addIssue(cmds[1],cmds[2]);
-                XMLfab.withRoot(settingsPath,"dcafs","settings").digRoot("issues")
+                XMLfab.withRoot(settingsPath,"dcafs").digRoot("issues")
                         .addParent("issue").attr("id",cmds[1]).content(cmds[2]).build();
                 return "Issue added";
             case "addblank":
-                XMLfab.withRoot(settingsPath,"dcafs","settings").digRoot("issues")
+                XMLfab.withRoot(settingsPath,"dcafs").digRoot("issues")
                         .addParent("issue","Issue without commands").attr("id","issueid")
                         .content("Message/info on the issue")
                         .addParent("issue","Issue with commands").attr("id","issue2")
