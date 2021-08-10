@@ -362,6 +362,9 @@ public class IssuePool implements Commandable{
             totalActiveTime += Duration.between(lastStartTime, lastEndTime).getSeconds();
             if( stopCmds != null)
                 stopCmds.forEach( c -> dQueue.add(Datagram.system(c)));
+            if( totalCycles < 10 || (totalCycles<100&&totalCycles%10==0) || (totalCycles > 100 && totalCycles%50==0) ){ // Show warning every time if first 10 times, every 10 times till 100 every 50 times afterwards
+                Logger.info( "Issue resolved: "+message +" ("+totalCycles+")");
+            }
             return true;
         }
         public void clear(){
