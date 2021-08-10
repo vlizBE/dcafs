@@ -266,9 +266,9 @@ public class LabelWorker implements Runnable, Labeller {
 					executor.execute(new ProcessNMEA(d));
 				} else if (d.label.startsWith("valmap")) {
 					executor.execute(new ProcessValmap(d));
-				} else if (d.label.startsWith("rtval:")) {
+				} else if (d.label.startsWith("double:")) {
 					executor.execute(() -> storeRtval(readID,d.getData(),d.getOriginID()));
-				} else if (d.label.startsWith("rttext:")) {
+				} else if (d.label.startsWith("text:")) {
 					executor.execute(() -> dp.setText(readID, d.data));
 				} else if (d.label.startsWith("read:")) {
 					if( d.getWritable()!=null){
