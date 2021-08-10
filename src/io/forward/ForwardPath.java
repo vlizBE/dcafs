@@ -147,6 +147,9 @@ public class ForwardPath{
         if( !oldTargets.isEmpty()&&!stepsForward.isEmpty()){ // Restore old requests
             oldTargets.forEach( wr->addTarget(wr) );
         }
+        if( !stepsForward.isEmpty() && !type.isEmpty()){
+            targets.add(stepsForward.get(0));
+        }
     }
     private AbstractForward lastStep(){
         return stepsForward.get(stepsForward.size()-1);
