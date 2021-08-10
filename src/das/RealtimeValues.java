@@ -667,16 +667,16 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				result = processExpression(cmds[1],true);
 				if( Double.isNaN(result) )
 					return "Failed to create new double";
-				setDouble(cmds[0],result);
-				return cmds[0]+" created/updated to "+result;
+				setDouble(cmds[1],result);
+				return cmds[1]+" created/updated to "+result;
 			case "update":
-				if( hasDouble(cmds[1]) )
+				if( !hasDouble(cmds[1]) )
 					return "No such id "+cmds[1];
-				result = processExpression(cmds[1],false);
+				result = processExpression(cmds[2],false);
 				if( Double.isNaN(result) )
 					return "Unknown id(s) in the expression "+cmds[2];
 				updateDouble(cmds[1],result);
-				return cmds[0]+" updated to "+result;
+				return cmds[1]+" updated to "+result;
 			case "updategroup":
 				int up = updateDoubleGroup(cmds[1], NumberUtils.createDouble(cmds[2]));
 				if( up == 0)
