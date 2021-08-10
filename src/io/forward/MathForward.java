@@ -327,7 +327,10 @@ public class MathForward extends AbstractForward {
         if( scale != -1){ // Check if there's a scale op needed
             int pos =index;
             Function<BigDecimal[],BigDecimal> proc = x -> x[pos].setScale(scale, RoundingMode.HALF_UP);
-            ops.add( new Operation( expression, proc,index));
+            var p = new Operation( expression, proc,index);
+            p.setCmd(cmd);  // this is the operation that should get the command
+            op.cmd=""; // remove it from the other one
+            ops.add( p );
             rulesString.add(new String[]{type.toString().toLowerCase(),""+index,"scale("+expression+", "+scale+")"});
         }else{
             rulesString.add(new String[]{type.toString().toLowerCase(),""+index,expression});
