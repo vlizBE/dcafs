@@ -142,7 +142,7 @@ public class CommandPool {
 	/**
 	 * To have access to the realtime values
 	 * 
-	 * @param rtvals A reference to the RealtimeValues
+	 * @param dataProvider A reference to the RealtimeValues
 	 */
 	public void setDataProvider(DataProviding dataProvider) {
 		this.dataProvider = dataProvider;

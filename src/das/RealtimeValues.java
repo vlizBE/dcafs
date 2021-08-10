@@ -1,11 +1,9 @@
 package das;
 
-import io.mqtt.MqttWorker;
 import io.Writable;
 import io.collector.CollectorFuture;
 import io.collector.MathCollector;
 import io.telnet.TelnetCodes;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
@@ -50,8 +48,6 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	private final HashMap<String, MathCollector> mathCollectors = new HashMap<>();
 
 	/* Patterns */
-	private Pattern rtvalPattern=null;
-	private Pattern rttextPattern=null;
 	private Pattern words = Pattern.compile("[a-zA-Z]+[_0-9]+[a-zA-Z]+\\d*"); // find references to doublevals etc
 
 	private Path settingsPath;
@@ -99,6 +95,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 						.fractionDigits(XMLtools.getIntAttribute(rtval,"fractiondigits",-1))
 						.defValue(XMLtools.getDoubleAttribute(rtval,"default",defDouble))
 						.enableHistory(XMLtools.getChildIntValueByTag(rtval,"history",-1));
+					if( XMLtools.getBooleanAttribute(rtval,"keeptime",false) )
+						dv.enableTimekeeping();
 				if( !XMLtools.getChildElements(rtval,"cmd").isEmpty() )
 					dv.enableTriggeredCmds(dQueue);
 				for( Element trigCmd : XMLtools.getChildElements(rtval,"cmd")){
@@ -161,10 +159,6 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	 */
 	public String parseRTline( String line, String error ){
 
-		if( rtvalPattern==null) {
-			rtvalPattern = Pattern.compile("\\{double:.*}");
-			rttextPattern = Pattern.compile("\\{text:.*}");
-		}
 		if( !line.contains("{"))
 			return line;
 
@@ -487,15 +481,6 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	}
 
 	/* ******************************************************************************************************/
-	/**
-	 * Method to override that return the status
-	 * 
-	 * @param html Whether to use html EOL
-	 * @return Status information
-	 */
-	public String getStatus(boolean html) {
-		return "";
-	}
 
 	public String getRequestList( String request ){
 		String[] req = request.split(":");
@@ -602,7 +587,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 						.add( " texts:id,value -> Same as update, so don't call the text new or update...");
 			case "list":
 				return String.join(html?"<br>":"\r\n",getTextPairs());
-			case "new":
+			case "new": case "create":
 				if( setText(cmds[1],cmds[2]) )
 					return cmds[1]+" stored with value "+cmds[2];
 				return cmds[1]+" updated with value "+cmds[2];
@@ -673,7 +658,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 						.add( " doubles:id,value -> Same as update, so don't call the double new or update...");
 			case "list":
 				return String.join(html?"<br>":"\r\n",getTextPairs());
-			case "new":
+			case "new": case "create":
 				result = processExpression(cmds[1],true);
 				if( Double.isNaN(result) )
 					return "Failed to create new double";
