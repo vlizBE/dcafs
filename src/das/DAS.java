@@ -145,8 +145,7 @@ public class DAS implements DeadThreadListener {
             dbManager = new DatabaseManager(workPath);
 
             /* RealtimeValues */
-            rtvals = new RealtimeValues(settingsPath);
-            readRTvals();
+            rtvals = new RealtimeValues( settingsPath, dQueue );
 
             /* IssuePool */
             issuePool = new IssuePool(dQueue, settingsPath,rtvals);
@@ -297,63 +296,6 @@ public class DAS implements DeadThreadListener {
                 .build();
     }
 
-    /**
-     * Read the rtvals node in the settings.xml
-     */
-    public void readRTvals(){
-        var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
-        double defDouble = XMLtools.getDoubleAttribute(fab.getCurrentElement(),"doubledefault",Double.NaN);
-        String defText = XMLtools.getStringAttribute(fab.getCurrentElement(),"textdefault","");
-        boolean defFlag = XMLtools.getBooleanAttribute(fab.getCurrentElement(),"flagdefault",false);
-
-        fab.getChildren("*").forEach(
-                rtval -> {
-                    String id = XMLtools.getStringAttribute(rtval,"id","");
-                    if( id.isEmpty())
-                        return;
-                    if( rtval.getTagName().equals("group")){
-                        id += id.isEmpty()?"":"_";
-                        for( var groupie : XMLtools.getChildElements(rtval)){
-                            var gid = XMLtools.getStringAttribute(groupie,"id","");
-                            gid = id+XMLtools.getStringAttribute(groupie,"name",gid);
-                            processRtvalElement(groupie, gid.toLowerCase(), defDouble, defText, defFlag);
-                        }
-                    }else {
-                        processRtvalElement(rtval, id.toLowerCase(), defDouble, defText, defFlag);
-                    }
-                }
-        );
-    }
-    private void processRtvalElement( Element rtval, String id, double defDouble, String defText, boolean defFlag ){
-        switch( rtval.getTagName() ){
-            case "double":
-                var dv = rtvals.getOrAddDoubleVal(id);
-                dv.name(XMLtools.getChildValueByTag(rtval,"name",dv.getName()))
-                        .group(XMLtools.getChildValueByTag(rtval,"group",dv.getGroup()))
-                        .unit(XMLtools.getStringAttribute(rtval,"unit",""))
-                        .fractionDigits(XMLtools.getIntAttribute(rtval,"fractiondigits",-1))
-                        .defValue(XMLtools.getDoubleAttribute(rtval,"default",defDouble))
-                        .enableHistory(XMLtools.getChildIntValueByTag(rtval,"history",-1));
-                if( !XMLtools.getChildElements(rtval,"cmd").isEmpty() )
-                    dv.enableTriggeredCmds(dQueue);
-                for( Element trigCmd : XMLtools.getChildElements(rtval,"cmd")){
-                    String trig = trigCmd.getAttribute("when");
-                    String cmd = trigCmd.getTextContent();
-                    dv.addTriggeredCmd(cmd,trig);
-                }
-                break;
-            case "text":
-                rtvals.setText(id,XMLtools.getStringAttribute(rtval,"default",defText));
-                break;
-            case "flag":
-                if( XMLtools.getBooleanAttribute(rtval,"default",defFlag) ){
-                    rtvals.raiseFlag(id);
-                }else{
-                    rtvals.lowerFlag(id);
-                }
-                break;
-        }
-    }
     /* **************************************  C O M M A N D R E Q  ********************************************/
     /**
      * Add a commandable to the CommandPool, this is the same as adding commands to dcafs
