@@ -34,16 +34,14 @@ public class ForwardPool implements Commandable {
     DataProviding dataProviding;
     EventLoopGroup nettyGroup;
 
-    public ForwardPool(BlockingQueue<Datagram> dQueue, Path settingsPath, DataProviding dataProviding){
+    public ForwardPool(BlockingQueue<Datagram> dQueue, Path settingsPath, DataProviding dataProviding,EventLoopGroup group){
         this.dQueue=dQueue;
         this.settingsPath=settingsPath;
         this.dataProviding=dataProviding;
+        nettyGroup=group;
         readSettingsFromXML();
     }
     /* **************************************** G E N E R A L ************************************************** */
-    public void setEventLoopGroup( EventLoopGroup group){
-        nettyGroup=group;
-    }
     /**
      * Read the forwards stored in the settings.xml
      */
