@@ -287,7 +287,7 @@ public class ForwardPool implements Commandable {
                     return "No valid index given: "+split[0];
                 }
 
-                if( getMathForward(cmds[1]).map(f -> f.addComplex(cmds[2],-1) ).orElse(false) ){
+                if( getMathForward(cmds[1]).map(f -> f.addComplex(cmds[2],-1).isPresent() ).orElse(false) ){
                     getMathForward(cmds[1]).get().writeToXML(XMLfab.withRoot(settingsPath, "dcafs"));
                     return "Operation added and written to xml";
                 }

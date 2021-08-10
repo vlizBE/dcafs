@@ -204,15 +204,11 @@ public class DAS implements DeadThreadListener {
             addTaskManager();
 
             /* Forwards */
-            forwardPool = new ForwardPool( dQueue, settingsPath,rtvals );
-            forwardPool.setEventLoopGroup(nettyGroup); // needed for th rt line stuff
+            forwardPool = new ForwardPool( dQueue, settingsPath,rtvals,nettyGroup );
 
-            commandPool.addCommandable("filter", forwardPool);
-            commandPool.addCommandable("ff", forwardPool);
-            commandPool.addCommandable("math", forwardPool);
-            commandPool.addCommandable("mf", forwardPool);
-            commandPool.addCommandable("editor", forwardPool);
-            commandPool.addCommandable("ef", forwardPool);
+            addCommandable(forwardPool,"filter","ff");
+            addCommandable(forwardPool,"math","mf");
+            addCommandable(forwardPool,"editor","ef");
             commandPool.addCommandable("path", forwardPool);
 
             /* Math Collectors */
@@ -744,8 +740,6 @@ public class DAS implements DeadThreadListener {
         b.append(TEXT_YELLOW).append("Current mode: ").append(debug ? TEXT_RED + "debug" : TEXT_GREEN + "normal").append("\r\n");
         b.append(TEXT_YELLOW).append("IP: ").append(TEXT_GREEN).append(Tools.getLocalIP());
         b.append(UNDERLINE_OFF).append("\r\n");
-
-        b.append(TEXT_YELLOW).append(rtvals.getStatus(html));
 
         if (html) {
             b.append("<br><b>Streams</b><br>");
