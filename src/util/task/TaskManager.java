@@ -37,7 +37,7 @@ public class TaskManager implements CollectorFuture {
 	Path xmlPath = null; 								// Path to the xml file containing the tasks/tasksets
 
 	/* The different outputs */
-	EmailSending emailer = null; // Reference to the email send, so emails can be send
+	EmailSending emailer = null;    // Reference to the email send, so emails can be send
 	SMSSending smsSender = null; 	// Reference to the sms queue, so sms's can be send
 	StreamManager streams; 			// Reference to the streampool, so sensors can be talked to
 	DataProviding rtvals;
@@ -71,21 +71,17 @@ public class TaskManager implements CollectorFuture {
 		this.id = id;
 	}
 
-	public void setXMLPath(Path xml) {
-		this.xmlPath = xml;
-	}
-
 	public void setWorkPath(String path) {
 		this.workPath = path;
 	}
 
 	/* The different outputs */
 	/**
-	 * Adds the emailQueue to the manager so it can send emails
-	 * @param emailQueue The queue of the EmailWorker
+	 * Adds the emailer to the manager enabling it can send emails
+	 * @param emailer The implementation to send emails
 	 */
-	public void setEmailSending(EmailSending emailQueue) {
-		this.emailer = emailQueue;
+	public void setEmailSending(EmailSending emailer) {
+		this.emailer = emailer;
 	}
 
 	/**
@@ -109,7 +105,6 @@ public class TaskManager implements CollectorFuture {
 
 	public void setCommandReq(CommandPool commandPool) {
 		this.commandPool = commandPool;
-		this.rtvals = commandPool.getRealtimeValues();
 	}
 
 	public void disableStartOnLoad() {
