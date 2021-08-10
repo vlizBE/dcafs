@@ -28,7 +28,7 @@ import java.util.stream.Stream;
  * A storage class
  *
  */
-public class RealtimeValues implements CollectorFuture, DataProviding {
+public class RealtimeValues implements CollectorFuture, DataProviding, Commandable {
 
 	/* Other */
 	protected ConcurrentHashMap<String, DoubleVal> doubleVals = new ConcurrentHashMap<>();
@@ -307,6 +307,41 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		String result = rttext.get(parameter);
 		return result == null ? def : result;
 	}
+	public List<String> getTextPairs() {
+		ArrayList<String> params = new ArrayList<>();
+		rttext.forEach((param, value) -> params.add(param + " : " + value));
+		Collections.sort(params);
+		return params;
+	}
+	public List<String> getTextIDs() {
+		ArrayList<String> params = new ArrayList<>();
+		rttext.forEach((param, value) -> params.add(param));
+		Collections.sort(params);
+		return params;
+	}
+	/**
+	 * Get a listing of text ids : value pairs currently stored that meet the id
+	 * request
+	 *
+	 * @return Readable listing of the parameters
+	 */
+	public String getFilteredTexts(String id, String eol) {
+		Stream<Entry<String, String>> stream;
+		if (id.endsWith("*") && id.startsWith("*")) {
+			stream = rttext.entrySet().stream()
+					.filter(e -> e.getKey().contains(id.substring(1, id.length() - 1)));
+		} else if (id.endsWith("*")) {
+			stream = rttext.entrySet().stream()
+					.filter(e -> e.getKey().startsWith(id.substring(0, id.length() - 1)));
+		} else if (id.startsWith("*")) {
+			stream = rttext.entrySet().stream().filter(e -> e.getKey().endsWith(id.substring(1)));
+		} else if (id.isEmpty()) {
+			stream = rttext.entrySet().stream();
+		} else {
+			stream = rttext.entrySet().stream().filter(e -> e.getKey().equalsIgnoreCase(id));
+		}
+		return stream.sorted(Map.Entry.comparingByKey()).map(e -> e.getKey() + " : " + e.getValue()).collect(Collectors.joining(eol));
+	}
 	/* ************************************ F L A G S ************************************************************* */
 	public boolean hasFlag( String flag){
 		return flags.get(flag)!=null;
@@ -360,152 +395,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		return flags.entrySet().stream().map( ent -> ent.getKey()+" : "+ent.getValue()).collect(Collectors.toCollection(ArrayList::new));
 	}
 	/* ********************************* O V E R V I E W *********************************************************** */
-	/**
-	 * Get a listing of all the parameters-value pairs currently stored
-	 * 
-	 * @return Readable listing of the parameters
-	 */
-	public List<String> getRealtimeValuePairs() {
-		ArrayList<String> params = new ArrayList<>();
-		doubleVals.forEach((param, value) -> params.add(param + " : " + value));
-		Collections.sort(params);
-		return params;
-	}
-	public List<String> getRealtimeTextPairs() {
-		ArrayList<String> params = new ArrayList<>();
-		rttext.forEach((param, value) -> params.add(param + " : " + value));
-		Collections.sort(params);
-		return params;
-	}
-	public List<String> getRealtimeValueParameters() {
-		ArrayList<String> params = new ArrayList<>();
-		doubleVals.forEach((param, value) -> params.add(param));
-		Collections.sort(params);
-		return params;
-	}
-	public List<String> getRealtimeTextParameters() {
-		ArrayList<String> params = new ArrayList<>();
-		rttext.forEach((param, value) -> params.add(param));
-		Collections.sort(params);
-		return params;
-	}
-	/**
-	 * Get a listing of double parameter : value pairs currently stored that meet the param
-	 * request
-	 * 
-	 * @return Readable listing of the parameters
-	 */
-	public String getFilteredRTVals(String param, String eol) {
 
-		Stream<Entry<String, DoubleVal>> stream;
-		if (param.endsWith("*") && param.startsWith("*")) {
-			stream = doubleVals.entrySet().stream()
-					.filter(e -> e.getKey().contains(param.substring(1, param.length() - 1)));
-		} else if (param.endsWith("*")) {
-			stream = doubleVals.entrySet().stream()
-					.filter(e -> e.getKey().startsWith(param.substring(0, param.length() - 1)));
-		} else if (param.startsWith("*")) {
-			stream = doubleVals.entrySet().stream().filter(e -> e.getKey().endsWith(param.substring(1)));
-		} else if (param.isEmpty() || param.equalsIgnoreCase("groups")) {
-			stream = doubleVals.entrySet().stream();
-		} else {
-			stream = doubleVals.entrySet().stream().filter(e -> e.getKey().equalsIgnoreCase(param));
-		}
-		// Stream contains all of it...
-		if( param.equalsIgnoreCase("groups")) {
-			var sorted = stream.sorted(Map.Entry.comparingByKey()).map(e -> e.getKey() + " : " + e.getValue().toString()).collect(Collectors.toList());
-			StringJoiner join = new StringJoiner(eol);
-			String header = "";
-			for (var line : sorted) {
-				var split = line.split("_");
-				if (split.length >= 2) {
-					if (header.isEmpty() || !header.equalsIgnoreCase(split[0])) {
-						if( !header.isEmpty())
-							join.add("<<"+eol); // empty lines between groups
-						header = split[0];
-
-						join.add(">> " + header );
-					}
-					join.add(" -> "+line.substring(line.indexOf("_"+1)));
-				} else {
-					if( !header.isEmpty()) {
-						join.add("<<" + eol);
-						header="";
-					}
-					join.add(line);
-				}
-			}
-			return join.toString();
-		}
-		return stream.sorted(Map.Entry.comparingByKey()).map(e -> e.getKey() + " : " + e.getValue().toString()).collect(Collectors.joining(eol));
-	}
-
-	/**
-	 * Get a listing of all stored variables that belong to a certain group
-	 * @param group The group they should belong to
-	 * @param html Use html formatting or telnet
-	 * @return The listing
-	 */
-	public String getRTValsGroupList(String group, boolean html) {
-		String eol = html?"<br>":"\r\n";
-		String title = html?"<b>Group: "+group+"</b>": TelnetCodes.TEXT_CYAN+"Group: "+group+TelnetCodes.TEXT_YELLOW;
-		String space = html?"  ":"  ";
-
-		StringJoiner join = new StringJoiner(eol,title+eol,"");
-		join.setEmptyValue("No matches found");
-		doubleVals.values().stream().filter( dv -> dv.getGroup().equalsIgnoreCase(group))
-				.forEach(dv -> join.add(space+dv.getName()+" : "+dv.toString()));
-		rttext.entrySet().stream().filter(ent -> ent.getKey().startsWith(group+"_"))
-				.forEach( ent -> join.add( space+ent.getKey().split("_")[1]+" : "+ent.getValue()) );
-		flags.entrySet().stream().filter(ent -> ent.getKey().startsWith(group+"_"))
-				.forEach( ent -> join.add( space+ent.getKey().split("_")[1]+" : "+ent.getValue()) );
-		return join.toString();
-	}
-
-	/**
-	 * Get a listing of all stored variables that have the given name
-	 * @param name The name of the variable or the string the name starts with if ending it with *
-	 * @param html Use html formatting or telnet
-	 * @return The listing
-	 */
-	public String getRTValsNameList(String name, boolean html) {
-		String eol = html?"<br>":"\r\n";
-		String title = html?"<b>Name: "+name+"</b>":TelnetCodes.TEXT_CYAN+"Name: "+name+TelnetCodes.TEXT_YELLOW;
-		String space = html?"  ":"  ";
-
-		StringJoiner join = new StringJoiner(eol,title+eol,"");
-		join.setEmptyValue("No matches found");
-		doubleVals.values().stream().filter( dv -> dv.getName().matches(name.replace("*",".*")))
-				.forEach(dv -> join.add(space+dv.getGroup()+" -> "+dv.getName()+" : "+dv.toString()));
-		rttext.entrySet().stream().filter(ent -> ent.getKey().matches(name.replace("*",".*")))
-				.forEach( ent -> join.add( space+ent.getKey().replace("_","->")+" : "+ent.getValue()) );
-		flags.entrySet().stream().filter(ent -> ent.getKey().endsWith(name.replace("*",".*")))
-				.forEach( ent -> join.add( space+ent.getKey().replace("_","->")+" : "+ent.getValue()) );
-		return join.toString();
-	}
-	/**
-	 * Get a listing of text parameter : value pairs currently stored that meet the param
-	 * request
-	 * 
-	 * @return Readable listing of the parameters
-	 */
-	public String getFilteredRTTexts(String param, String eol) {
-		Stream<Entry<String, String>> stream;
-		if (param.endsWith("*") && param.startsWith("*")) {
-			stream = rttext.entrySet().stream()
-					.filter(e -> e.getKey().contains(param.substring(1, param.length() - 1)));
-		} else if (param.endsWith("*")) {
-			stream = rttext.entrySet().stream()
-					.filter(e -> e.getKey().startsWith(param.substring(0, param.length() - 1)));
-		} else if (param.startsWith("*")) {
-			stream = rttext.entrySet().stream().filter(e -> e.getKey().endsWith(param.substring(1)));
-		} else if (param.isEmpty()) {
-			stream = rttext.entrySet().stream();
-		} else {
-			stream = rttext.entrySet().stream().filter(e -> e.getKey().equalsIgnoreCase(param));
-		}
-		return stream.sorted(Map.Entry.comparingByKey()).map(e -> e.getKey() + " : " + e.getValue()).collect(Collectors.joining(eol));
-	}
 	public String storeRTVals(Path settings){
 		XMLfab fab = XMLfab.withRoot(settings,"dcafs","settings","rtvals");
 		var keys = doubleVals.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(e->e.getKey()).collect(Collectors.toList());
@@ -548,10 +438,6 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		return "";
 	}
 
-	public void removeRequest(Writable writable ) {
-		rtvalRequest.forEach( (key,list) -> list.remove(writable));
-		rttextRequest.forEach( (key,list) -> list.remove(writable));
-	}
 	public String getRequestList( String request ){
 		String[] req = request.split(":");
 		StringJoiner join = new StringJoiner("\r\n");
@@ -612,5 +498,317 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		if(ids[0].equalsIgnoreCase("math")){
 			setDouble(message,(double)result,false);
 		}
+	}
+	/* ************************** C O M M A N D A B L E ***************************************** */
+	@Override
+	public String replyToCommand(String[] request, Writable wr, boolean html) {
+
+		switch( request[0].replace("s","") ){
+			case "double": case "dv":
+				return replyToDoublesCmd(request,html);
+			case "text": case "tv":
+				return replyToTextsCmd(request,html);
+			case "flag": case "fv":
+				return replyToFlagsCmd(request,html);
+			case "rtval":
+				return replyToRtvalsCmd(request,wr,html);
+			default:
+				return "unknown command "+request[0]+":"+request[1];
+		}
+	}
+	public boolean removeWritable(Writable writable ) {
+		int size = doubleRequest.size()+textRequest.size();
+		doubleRequest.forEach( (key, list) -> list.remove(writable));
+		textRequest.forEach( (key, list) -> list.remove(writable));
+		return size - (doubleRequest.size()+textRequest.size())!=0;
+	}
+	public String replyToTextsCmd( String[] request,  boolean html ){
+
+		if( request[1].isEmpty())
+			request[1]="list";
+
+		var cmds = request[1].split(",");
+		if( cmds.length>3){
+			for( int a=3;a<cmds.length;a++){
+				cmds[2]+=","+cmds[3];
+			}
+		}
+		switch( cmds[0] ){
+			case "?":
+				var join = new StringJoiner(html?"<br>":"\r\n");
+				join.add( " texts,? -> Show this message" )
+						.add( " texts or texts:list -> Give a listing of currently stored texts")
+						.add( " texts:new,id,value -> Create a new text (or update) with the given id/value")
+						.add( " texts:update,id,value -> Update an existing text, do nothing if not found")
+						.add( " texts:id,value -> Same as update, so don't call the text new or update...");
+			case "list":
+				return String.join(html?"<br>":"\r\n",getTextPairs());
+			case "new":
+				if( setText(cmds[1],cmds[2]) )
+					return cmds[1]+" stored with value "+cmds[2];
+				return cmds[1]+" updated with value "+cmds[2];
+			case "update":
+				if( updateText(cmds[1],cmds[2]) )
+					return cmds[1]+" updated with value "+cmds[2];
+				return "No such text found: "+cmds[1];
+			default:
+				if( updateText( cmds[0],cmds[1] ) ){
+					return cmds[0]+" updated with value "+cmds[1];
+				}
+				return "unknown command: "+request[0]+":"+request[1];
+		}
+	}
+	public String replyToFlagsCmd( String[] request, boolean html ){
+		if( request[1].isEmpty())
+			request[1]="list";
+
+		var cmds = request[1].split(",");
+		var join = new StringJoiner(html?"<br>":"\r\n");
+		switch( cmds[0] ){
+			case "?":
+				join.add("flags or flags:list -> Give a listing of all current flags and their state")
+						.add("flags:raise,id or flags:set,id -> Raises the flag/Sets the bit, created if new")
+						.add("flags:lower,id or flags:clear,id -> Lowers the flag/Clears the bit, created if new")
+						.add("flags:toggle,id -> Toggles the flag/bit, not created if new");
+			case "list":
+				join.setEmptyValue("No flags yet");
+				listFlags().forEach(join::add);
+				return join.toString();
+			case "raise": case "set":
+				if( cmds.length !=2)
+					return "Not enough arguments, need flags:raise,id or flags:set,id";
+				return raiseFlag(cmds[1])?"New flag raised":"Flag raised";
+			case "lower": case "clear":
+				if( cmds.length !=2)
+					return "Not enough arguments, need flags:lower,id or flags:clear,id";
+				return lowerFlag(cmds[1])?"New flag raised":"Flag raised";
+			case "toggle":
+				if( cmds.length !=2)
+					return "Not enough arguments, need flags:toggle,id";
+
+				if( !hasFlag(cmds[1]) )
+					return "No such flag";
+
+				if( isFlagUp(cmds[1])) {
+					lowerFlag(cmds[1]);
+					return "flag lowered";
+				}
+				raiseFlag(cmds[1]);
+				return "Flag raised";
+		}
+		return "unknown command "+request[0]+":"+request[1];
+	}
+	public String replyToDoublesCmd(String[] request, boolean html ){
+		if( request[1].isEmpty())
+			request[1]="list";
+
+		var cmds = request[1].split(",");
+		double result;
+		switch( cmds[0] ){
+			case "?":
+				var join = new StringJoiner(html?"<br>":"\r\n");
+				join.add( " double:? -> Show this message" )
+						.add( " doubles or doubles:list -> Give a listing of currently stored texts")
+						.add( " doubles:new,id,value -> Create a new double (or update) with the given id/value")
+						.add( " doubles:update,id,value -> Update an existing double, do nothing if not found")
+						.add( " doubles:id,value -> Same as update, so don't call the double new or update...");
+			case "list":
+				return String.join(html?"<br>":"\r\n",getTextPairs());
+			case "new":
+				result = processExpression(cmds[1],true);
+				if( Double.isNaN(result) )
+					return "Failed to create new double";
+				setDouble(cmds[0],result);
+				return cmds[0]+" created/updated to "+result;
+			case "update":
+				if( hasDouble(cmds[1]) )
+					return "No such id "+cmds[1];
+				result = processExpression(cmds[1],false);
+				if( Double.isNaN(result) )
+					return "Unknown id(s) in the expression "+cmds[2];
+				updateDouble(cmds[1],result);
+				return cmds[0]+" updated to "+result;
+			case "updategroup":
+				int up = updateDoubleGroup(cmds[1], NumberUtils.createDouble(cmds[2]));
+				if( up == 0)
+					return "No double's updated";
+				return "Updated "+up+" doubles";
+			default:
+				if( hasDouble(cmds[0]) ) {
+					result = processExpression(cmds[0],false);
+					if( Double.isNaN(result) )
+						return "Unknown id(s) in the expression "+cmds[1];
+					updateDouble(cmds[0],result);
+					return cmds[0]+" updated to "+result;
+				}
+				return "unknown command: "+request[0]+":"+request[1];
+		}
+	}
+	private double processExpression( String exp, boolean create ){
+		double result=Double.NaN;
+
+		exp = simpleParseRT(exp,create?"create":"");
+		if( exp.isEmpty())
+			return result;
+
+		var parts = MathUtils.extractParts(exp);
+		if( parts.size()==1 ){
+			if( !NumberUtils.isCreatable(exp)) {
+				if( hasDouble(exp) || create ) {
+					result = getDouble(exp, 0, create);
+				}else{
+					return Double.NaN;
+				}
+			}else{
+				result = NumberUtils.createDouble(exp);
+			}
+		}else if (parts.size()==3){
+			if( !NumberUtils.isCreatable(parts.get(0))) {
+				if( hasDouble(parts.get(0)) || create ) {
+					parts.set(0, "" + getDouble(parts.get(0), 0, create));
+				}else{
+					return Double.NaN;
+				}
+			}
+			if( !NumberUtils.isCreatable(parts.get(2))) {
+				if( hasDouble(parts.get(2)) || create ) {
+					parts.set(2, "" + getDouble(parts.get(2), 0, create));
+				}else{
+					return Double.NaN;
+				}
+			}
+			result = MathUtils.decodeDoublesOp(parts.get(0),parts.get(2),parts.get(1),0).apply(new Double[]{});
+		}else{
+			try {
+				result = MathUtils.simpleCalculation(exp, Double.NaN, false);
+			}catch(IndexOutOfBoundsException e){
+				Logger.error("Index out of bounds while processing "+exp);
+				return Double.NaN;
+			}
+		}
+		return result;
+	}
+	public String replyToRtvalsCmd( String[] request, Writable wr, boolean html ){
+		if( request[1].equals("?") )
+			return " -> Get a list of all rtvals options";
+
+		if( request[1].isEmpty())
+			return getFullList(html);
+
+		String[] cmds = request[1].split(",");
+		if( cmds.length==1 ){
+			switch(cmds[0]){
+				case "store": return storeRTVals(settingsPath);
+			}
+		}else if(cmds.length==2){
+			switch(cmds[0]){
+				case "group":  return getRTValsGroupList(cmds[1],html);
+				case "groups":
+					String groups = String.join(html?"<br>":"\r\n",getGroups());
+					return groups.isEmpty()?"No groups yet":groups;
+				case "name"	:  return getAllIDsList(cmds[1],html);
+			}
+		}
+		return "unknown command: "+request[0]+":"+request[1];
+	}
+	/**
+	 * Get a listing of all stored variables that belong to a certain group
+	 * @param group The group they should belong to
+	 * @param html Use html formatting or telnet
+	 * @return The listing
+	 */
+	public String getRTValsGroupList(String group, boolean html) {
+		String eol = html?"<br>":"\r\n";
+		String title = html?"<b>Group: "+group+"</b>": TelnetCodes.TEXT_CYAN+"Group: "+group+TelnetCodes.TEXT_YELLOW;
+		String space = html?"  ":"  ";
+
+		StringJoiner join = new StringJoiner(eol,title+eol,"");
+		join.setEmptyValue("No matches found");
+		doubleVals.values().stream().filter( dv -> dv.getGroup().equalsIgnoreCase(group))
+				.forEach(dv -> join.add(space+dv.getName()+" : "+dv));
+		rttext.entrySet().stream().filter(ent -> ent.getKey().startsWith(group+"_"))
+				.forEach( ent -> join.add( space+ent.getKey().split("_")[1]+" : "+ent.getValue()) );
+		flags.entrySet().stream().filter(ent -> ent.getKey().startsWith(group+"_"))
+				.forEach( ent -> join.add( space+ent.getKey().split("_")[1]+" : "+ent.getValue()) );
+		return join.toString();
+	}
+	/**
+	 * Get a listing of all stored variables that have the given name
+	 * @param name The name of the variable or the string the name starts with if ending it with *
+	 * @param html Use html formatting or telnet
+	 * @return The listing
+	 */
+	public String getAllIDsList(String name, boolean html) {
+		String eol = html?"<br>":"\r\n";
+		String title = html?"<b>Name: "+name+"</b>":TelnetCodes.TEXT_CYAN+"Name: "+name+TelnetCodes.TEXT_YELLOW;
+		String space = html?"  ":"  ";
+
+		StringJoiner join = new StringJoiner(eol,title+eol,"");
+		join.setEmptyValue("No matches found");
+		doubleVals.values().stream().filter( dv -> dv.getName().matches(name.replace("*",".*")))
+				.forEach(dv -> join.add(space+dv.getGroup()+" -> "+dv.getName()+" : "+dv.toString()));
+		rttext.entrySet().stream().filter(ent -> ent.getKey().matches(name.replace("*",".*")))
+				.forEach( ent -> join.add( space+ent.getKey().replace("_","->")+" : "+ent.getValue()) );
+		flags.entrySet().stream().filter(ent -> ent.getKey().endsWith(name.replace("*",".*")))
+				.forEach( ent -> join.add( space+ent.getKey().replace("_","->")+" : "+ent.getValue()) );
+		return join.toString();
+	}
+	public String getFullList(boolean html){
+		String eol = html?"<br>":"\r\n";
+		String title = html?"<b>Grouped</b>":TelnetCodes.TEXT_CYAN+"Grouped"+TelnetCodes.TEXT_YELLOW;
+		String space = html?"  ":"  ";
+		StringJoiner join = new StringJoiner(eol,title+eol,"");
+
+		// Find & add the groups
+		getGroups().forEach( group -> {
+			join.add(getRTValsGroupList(group,html));
+		});
+
+		// Add the not grouped ones
+		boolean ngDoubles = doubleVals.values().stream().anyMatch( dv -> dv.getGroup().isEmpty());
+		boolean ngTexts = rttext.keySet().stream().anyMatch( k -> k.contains("_"));
+		boolean ngFlags = flags.keySet().stream().anyMatch( k -> k.contains("_"));
+
+		if( ngDoubles || ngTexts || ngFlags) {
+			join.add("");
+			join.add(html ? "<b>Ungrouped</b>" : TelnetCodes.TEXT_CYAN + "Ungrouped" + TelnetCodes.TEXT_YELLOW);
+
+			if (ngDoubles) {
+				join.add(html ? "<b>Doubles</b>" : TelnetCodes.TEXT_BLUE + "Doubles" + TelnetCodes.TEXT_YELLOW);
+				doubleVals.values().stream().filter(dv -> dv.getGroup().isEmpty())
+						.forEach(dv -> join.add(space + dv.getName() + " : " + dv));
+			}
+			if (ngTexts) {
+				join.add("");
+				join.add(html ? "<b>Texts</b>" : TelnetCodes.TEXT_BLUE + "Texts" + TelnetCodes.TEXT_YELLOW);
+				rttext.entrySet().stream().filter(e -> !e.getKey().contains("_"))
+						.forEach(e -> join.add(space + e.getKey() + " : " + e.getValue()));
+			}
+			if (ngFlags) {
+				join.add("");
+				join.add(html ? "<b>Flags</b>" : TelnetCodes.TEXT_BLUE + "Flags" + TelnetCodes.TEXT_YELLOW);
+				flags.entrySet().stream().filter(e -> !e.getKey().contains("_"))
+						.forEach(e -> join.add(space + e.getKey() + " : " + e.getValue()));
+			}
+		}
+		return join.toString();
+	}
+	public List<String> getGroups(){
+		var groups = doubleVals.values().stream().map( dv -> dv.getGroup()).distinct().collect(Collectors.toList());
+		rttext.keySet().stream()
+						.filter( k -> k.contains("_"))
+						.map( k -> k.split("_")[0] )
+						.distinct()
+						.filter( g -> !groups.contains(g))
+						.forEach( t->groups.add(t));
+		flags.keySet().stream()
+						.filter( k -> k.contains("_"))
+						.map( k -> k.split("_")[0] )
+						.distinct()
+						.filter( g -> !groups.contains(g))
+						.forEach( t->groups.add(t));
+
+		Collections.sort(groups);
+		return groups;
 	}
 }

@@ -26,6 +26,7 @@ import worker.Datagram;
 import worker.DebugWorker;
 import worker.Generic;
 
+import javax.xml.crypto.Data;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -51,7 +52,7 @@ public class CommandPool {
 
 	private ArrayList<ShutdownPreventing> sdps;
 
-	private RealtimeValues rtvals; // To have access to the current values
+	private DataProviding dataProvider; // To have access to the current values
 	private StreamManager streampool = null; // To be able to interact with attached devices
 	private EmailWorker emailWorker; // To be able to send emails and get status
 	private IssuePool issues=null;
@@ -73,6 +74,7 @@ public class CommandPool {
 	private Path settingsPath;
 
 	static final String UNKNOWN_CMD = "unknown command";
+
 	private Optional<EmailSending> sendEmail = Optional.empty();
 	private Optional<SMSSending> sendSMS = Optional.empty();
 	/* ******************************  C O N S T R U C T O R *********************************************************/
@@ -80,8 +82,8 @@ public class CommandPool {
 	 * Constructor requiring a link to the @see RealtimeValues for runtime values
 	 * @param rtvals The current RealtimeValues
 	 */
-	public CommandPool(RealtimeValues rtvals, String workPath){
-		this.rtvals = rtvals;
+	public CommandPool(DataProviding dataProvider, String workPath){
+		this.dataProvider = dataProvider;
 		this.workPath=workPath;
 		settingsPath = Path.of(workPath,"settings.xml");
 		Logger.info("CommandPool started with workpath: "+workPath);
@@ -153,17 +155,8 @@ public class CommandPool {
 	 * 
 	 * @param rtvals A reference to the RealtimeValues
 	 */
-	public void setRealtimeValues(RealtimeValues rtvals) {
-		this.rtvals = rtvals;
-	}
-
-	/**
-	 * Method to retrieve the RealtimeValues used by BaseReq
-	 * 
-	 * @return The currently used RealtimeValues
-	 */
-	public RealtimeValues getRealtimeValues() {
-		return rtvals;
+	public void setDataProvider(DataProviding dataProvider) {
+		this.dataProvider = dataProvider;
 	}
 
 	/**
@@ -623,151 +616,7 @@ public class CommandPool {
 			return "Request for "+request[0]+":"+request[1]+" failed.";
 		}
 	}
-	public String doCALC( String[] request, Writable wr, boolean html ){
-		if( request[1].equals("reqs")){
-			return rtvals.getRequestList("calc:reqs");
-		}
-		rtvals.addRequest(wr, "calc:"+request[1]);
-		return "Request added: calc:"+request[1];
-	}
-	public String doUPDATE( String[] request, Writable wr, boolean html ){
-		if( request[1].equals("?") )
-			return "update:rtval,value/op -> Update the value or result of the operation as the given rtval fe. update:dp1,dp1+5 etc";
 
-		String[] spl = request[1].split(",");
-		double result;
-		if( spl.length==2){
-			spl[1] = rtvals.simpleParseRT(spl[1],""); // fill in the stuff we already know
-			if(spl[1].isEmpty() ){
-				return "Failed to parse the op";
-			}
-			var parts = MathUtils.extractParts(spl[1]);
-			if( parts.size()==1 ){
-				if( !NumberUtils.isCreatable(spl[1]))
-					spl[1] = ""+rtvals.getRealtimeValue(spl[1],-1234.321);
-				if( spl[1].equalsIgnoreCase("-1234.321") )
-					return "Invalid rtval given "+spl[1];
-				result = NumberUtils.createDouble(spl[1]);
-			}else if (parts.size()==3){
-				if( !NumberUtils.isCreatable(parts.get(0)))
-					parts.set(0, ""+rtvals.getRealtimeValue(parts.get(0),-1234.321));
-				if( !NumberUtils.isCreatable(parts.get(2)))
-					parts.set(2, ""+rtvals.getRealtimeValue(parts.get(2),-1234.321));
-
-				if( parts.get(0).equalsIgnoreCase("-1234.321")|| parts.get(2).equalsIgnoreCase("-1234.321"))
-					return "Invalid rtval given";
-
-				result = MathUtils.decodeDoublesOp(parts.get(0),parts.get(2),parts.get(1),0).apply(new Double[]{});
-			}else{
-				result = MathUtils.simpleCalculation(spl[1],-999,debug);
-			}
-			rtvals.setRealtimeValue(spl[0], result,false);
-			return "Saved "+result+" to "+spl[0];
-		}
-		return "Unknown command: "+request[0]+":"+request[1];
-	}
-	public String doCREATE( String[] request, Writable wr, boolean html ){
-		StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
-
-		if( request[1].equals("?") )
-			return join.add("create:rtval,value/op -> Store the value or result of the operation as the given rtval fe. store:dp1,dp1+5 etc")
-						.add("Rtvals that don't exist yet will be created with 0 as default value")
-						.toString();
-
-		String[] spl = request[1].split(",");
-		double result;
-		if( spl.length==2){
-			spl[1] = rtvals.simpleParseRT(spl[1],"create"); // fill in the stuff we already know
-			var parts = MathUtils.extractParts(spl[1]);
-			if( parts.size()==1 ){
-				if( !NumberUtils.isCreatable(spl[1]))
-					spl[1] = ""+rtvals.getRealtimeValue(spl[1],0,true);
-				result = NumberUtils.createDouble(spl[1]);
-			}else if (parts.size()==3){
-				if( !NumberUtils.isCreatable(parts.get(0)))
-					parts.set(0, ""+rtvals.getRealtimeValue(parts.get(0),0,true));
-				if( !NumberUtils.isCreatable(parts.get(2)))
-					parts.set(2, ""+rtvals.getRealtimeValue(parts.get(2),0,true));
-				result= MathUtils.decodeDoublesOp(parts.get(0),parts.get(2),parts.get(1),0).apply(new Double[]{});
-			}else{
-				try {
-					result = MathUtils.simpleCalculation(spl[1], -999, debug);
-				}catch(IndexOutOfBoundsException e){
-					Logger.error("Index out of bounds while processing "+spl[1]);
-					return "Failed to process "+spl[1];
-				}
-			}
-			rtvals.setRealtimeValue(spl[0], result,true);
-			return "Saved "+result+" to "+spl[0];
-		}
-		return "Unknown command: "+request[0]+":"+request[1];
-	}
-	public String doRTVAL( String[] request, Writable wr, boolean html ){
-		if( request[1].equals("reqs") )
-			return rtvals.getRequestList("rtval:reqs");
-
-		if( request[1].equals("?") )
-			return "rtval:x -> Get the realtimevalue x at 1Hz.";
-		try{
-			if( request[1].equals("") ){
-				StringJoiner b = new StringJoiner(html?"<br>":"\r\n");
-				b.setEmptyValue("No options yet.");
-				b.add("");
-				for( String rt : rtvals.getRealtimeValuePairs() )
-					b.add(rt);
-
-				return "RTval options:"+b;
-			}
-			if( request[1].endsWith("*")){
-				request[1] = StringUtils.removeEnd(request[1],"*");
-				rtvals.getRealtimeValueParameters().stream().filter(x -> x.startsWith(request[1]))
-						.forEach( param -> rtvals.addRequest(wr,"rtval:"+param));
-			}else if( request[1].startsWith("*")){
-				request[1] = request[1].substring(1);
-				rtvals.getRealtimeValueParameters().stream().filter(x -> x.startsWith(request[1]))
-						.forEach( param -> rtvals.addRequest(wr,"rtval:"+param));
-			}else{
-				rtvals.addRequest(wr, "rtval:"+request[1]);
-			}
-			return "Request added";
-		}catch(NullPointerException e){
-			Logger.error(e);			
-			return "Null pointer...";
-		}
-	}
-	public String doRTTEXT( String[] request, Writable wr, boolean html ){
-		if( request[1].equals("reqs") )
-			return rtvals.getRequestList("rttext:reqs");
-
-		if( request[1].equals("?") )
-			return "rttext:x -> Get the realtime text x";
-		try{
-			if( request[1].equals("") ){
-				StringJoiner b = new StringJoiner(html?"<br>":"\r\n");
-				b.setEmptyValue("No options yet.");
-				b.add("");
-				for( String rt : rtvals.getRealtimeTextPairs() )
-					b.add(rt);
-
-				return "RTtext options: "+b;
-			}
-			if( request[1].endsWith("*")){
-				request[1] = StringUtils.removeEnd(request[1],"*");
-				rtvals.getRealtimeTextParameters().stream().filter(x -> x.startsWith(request[1]))
-						.forEach( param -> rtvals.addRequest(wr,"rttext:"+param));
-			}else if( request[1].startsWith("*")){
-				request[1] = request[1].substring(1);
-				rtvals.getRealtimeTextParameters().stream().filter(x -> x.startsWith(request[1]))
-						.forEach( param -> rtvals.addRequest(wr,"rttext:"+param));
-			}else{
-				rtvals.addRequest(wr, "rttext:"+request[1]);
-			}
-			return "Request added";
-		}catch(NullPointerException e){
-			Logger.error(e);
-			return "Null pointer...";
-		}
-	}
 	/**
 	 * Execute commands associated with the @see StreamManager
 	 * 
@@ -1109,7 +958,6 @@ public class CommandPool {
 		if( request[1].equals("?") )
 			return " -> Clear the datarequests";
 		if( wr != null ){
-			rtvals.removeRequest(wr);
 			streampool.removeWritable(wr);
 			commandables.values().forEach( c -> c.removeWritable(wr) );
 		}
@@ -1129,81 +977,7 @@ public class CommandPool {
 		}
 		return response;       	
 	}
-	
-	
-	public String doRTVALS( String[] request, Writable wr, boolean html ){
-		if( request[1].equals("?") )
-			return " -> Get a list of all rtval options";
-		if( request[1].isEmpty())
-			return rtvals.getFilteredRTVals(request[1],html?"<br>":"\r\n");
-		String[] cmds = request[1].split(",");
-		if( cmds.length==1 ){
-			switch(cmds[0]){
-				case "store": return rtvals.storeRTVals(settingsPath);
-			}
-		}else if(cmds.length==2){
-			switch(cmds[0]){
-				case "group": return rtvals.getRTValsGroupList(cmds[1],html);
-				case "name"	: return rtvals.getRTValsNameList(cmds[1],html);
-			}
-		}
-		return "unknown command: "+request[0]+":"+request[1];
-	}
-	
-	public String doRTTEXTS( String[] request, Writable wr, boolean html ){
-		if( request[1].equals("?") )
-			return " -> Get a list of all rttext options";
-		return rtvals.getFilteredRTTexts(request[1],html?"<br>":"\r\n");		
-	}
-	public String doRTS( String[] request, Writable wr, boolean html ){
-		if( request[1].equals("?") )
-			return " -> Get a list of all rtvals & rttext options";
-		return rtvals.getFilteredRTVals(request[1],html?"<br>":"\r\n")
-				+(html?"<br>":"\r\n")+(html?"<br>":"\r\n")
-				+rtvals.getFilteredRTTexts(request[1],html?"<br>":"\r\n");
-	}
-	public String doFLAGS( String[] request, Writable wr, boolean html ){
-		if( request[1].isEmpty())
-			request[1]="list";
 
-		var cmds = request[1].split(",");
-		var join = new StringJoiner(html?"<br>":"\r\n");
-		switch( cmds[0] ){
-			case "?":
-				join.add("flags or flags:list -> Give a listing of all current flags and their state")
-					.add("flags:raise,id or flags:set,id -> Raises the flag/Sets the bit, created if new")
-					.add("flags:lower,id or flags:clear,id -> Lowers the flag/Clears the bit, created if new")
-					.add("flags:toggle,id -> Toggles the flag/bit, not created if new");
-			case "list":
-				join.setEmptyValue("No flags yet");
-				rtvals.listFlags().forEach(join::add);
-				return join.toString();
-			case "raise": case "set":
-				if( cmds.length !=2)
-					return "Not enough arguments, need flags:raise,id or flags:set,id";
-				return rtvals.raiseFlag(cmds[1])?"New flag raised":"Flag raised";
-			case "lower": case "clear":
-				if( cmds.length !=2)
-					return "Not enough arguments, need flags:lower,id or flags:clear,id";
-				return rtvals.lowerFlag(cmds[1])?"New flag raised":"Flag raised";
-			case "toggle":
-				if( cmds.length !=2)
-					return "Not enough arguments, need flags:toggle,id";
-
-				if( !rtvals.hasFlag(cmds[1]) )
-					return "No such flag";
-
-				if( rtvals.isFlagUp(cmds[1])) {
-					rtvals.lowerFlag(cmds[1]);
-					return "flag lowered";
-				}
-				rtvals.raiseFlag(cmds[1]);
-				return "Flag raised";
-
-		}
-		return "unknown command "+request[0]+":"+request[1];
-
-	}
 	public String doCONVert( String[] request, Writable wr, boolean html ){
 		if( request[1].equals("?") )
 			return " -> Convert a coordinate in the standard degrees minutes format";		
@@ -1594,7 +1368,7 @@ public class CommandPool {
 			case "store":
 				if( cmds.length < 3 )
 					return "Not enough arguments, needs to be dbm:store,dbId,tableid";
-				if( dbManager.buildInsert(cmds[1],cmds[2],rtvals,"") )
+				if( dbManager.buildInsert(cmds[1],cmds[2],dataProvider,"") )
 					return "Wrote record";
 				return "Failed to write record";
 			default:

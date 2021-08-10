@@ -145,7 +145,7 @@ public class DAS implements DeadThreadListener {
             dbManager = new DatabaseManager(workPath);
 
             /* RealtimeValues */
-            rtvals = new RealtimeValues();
+            rtvals = new RealtimeValues(settingsPath);
             readRTvals();
 
             /* IssuePool */
@@ -155,6 +155,10 @@ public class DAS implements DeadThreadListener {
             commandPool = new CommandPool(rtvals, issuePool, workPath);
             commandPool.setDatabaseManager(dbManager);
             addCommandable("issue",issuePool);
+            addCommandable("flags",rtvals);
+            addCommandable("doubles",rtvals);
+            addCommandable("texts",rtvals);
+            addCommandable("rtvals",rtvals);
 
             /* Waypoints */
             waypoints = new Waypoints( settingsPath, nettyGroup, rtvals, dQueue );
@@ -339,7 +343,7 @@ public class DAS implements DeadThreadListener {
                 }
                 break;
             case "text":
-                rtvals.setRealtimeText(id,XMLtools.getStringAttribute(rtval,"default",defText));
+                rtvals.setText(id,XMLtools.getStringAttribute(rtval,"default",defText));
                 break;
             case "flag":
                 if( XMLtools.getBooleanAttribute(rtval,"default",defFlag) ){
