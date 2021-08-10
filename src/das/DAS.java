@@ -154,9 +154,7 @@ public class DAS implements DeadThreadListener {
             commandPool = new CommandPool(rtvals, issuePool, workPath);
             commandPool.setDatabaseManager(dbManager);
             addCommandable("issue",issuePool);
-            addCommandable("flags",rtvals);
-            addCommandable("doubles",rtvals);
-            addCommandable("texts",rtvals);
+            addCommandable("flags;fv;doubles;dv;texts;tv",rtvals);
             addCommandable("rtvals",rtvals);
 
             /* Waypoints */
@@ -304,6 +302,9 @@ public class DAS implements DeadThreadListener {
      */
     public void addCommandable( String id, Commandable cmd ){
         commandPool.addCommandable(id,cmd);
+    }
+    public void addCommandable( Commandable cmd, String... id  ){
+        commandPool.addCommandable(String.join(";",id),cmd);
     }
     /**
      * Add a commandable to the CommandPool, this is the same as adding commands to dcafs,

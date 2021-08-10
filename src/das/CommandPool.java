@@ -9,7 +9,6 @@ import io.stream.StreamManager;
 import io.Writable;
 import io.collector.FileCollector;
 import io.telnet.TelnetCodes;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
@@ -26,7 +25,6 @@ import worker.Datagram;
 import worker.DebugWorker;
 import worker.Generic;
 
-import javax.xml.crypto.Data;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -39,10 +37,6 @@ import java.nio.file.StandardCopyOption;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-/**
- * Handles a server-side channel.
- */
-@SuppressWarnings("ALL")
 public class CommandPool {
 
 	private static DateTimeFormatter secFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -61,16 +55,11 @@ public class CommandPool {
 	private String title = "";
 
 	private DAS das;
-	boolean debug = false;
 
 	Map<String, Method> methodMapping = new HashMap<>();
-	private int qState = 0;
-	private Element tempElement;
-	private XMLfab fab;
-	private int tempInt=0;
 	Document xml;
 
-	private String workPath=Path.of("").toString();
+	private String workPath;
 	private Path settingsPath;
 
 	static final String UNKNOWN_CMD = "unknown command";
@@ -80,7 +69,7 @@ public class CommandPool {
 	/* ******************************  C O N S T R U C T O R *********************************************************/
 	/**
 	 * Constructor requiring a link to the @see RealtimeValues for runtime values
-	 * @param rtvals The current RealtimeValues
+	 * @param dataProvider The current dataprovider
 	 */
 	public CommandPool(DataProviding dataProvider, String workPath){
 		this.dataProvider = dataProvider;
@@ -90,11 +79,11 @@ public class CommandPool {
 	}
 	/**
 	 * Constructor requiring a link to the @see RealtimeValues for runtime values and @see IssueCollector to notify problems
-	 * @param rtvals The current RealtimeValues
+	 * @param dataProvider The current dataprovider
 	 * @param issues The collector for the issues created by the BaseReq
 	 */
-	public CommandPool(RealtimeValues rtvals, IssuePool issues, String workPath) {
-		this(rtvals,workPath);
+	public CommandPool(RealtimeValues dataProvider, IssuePool issues, String workPath) {
+		this(dataProvider,workPath);
 		this.issues = issues;
 	}
 
@@ -227,7 +216,7 @@ public class CommandPool {
 	 * passed for streaming data questions
 	 * 
 	 * @param question The command/Question to process
-	 * @param wr
+	 * @param wr The writable (if any) this question originates from
 	 * @param remember Whether or not the command should be recorded in the raw data
 	 * @return The response to the command/question
 	 */
@@ -290,11 +279,16 @@ public class CommandPool {
 			 }
 		}
 		if( m == null || result.startsWith(UNKNOWN_CMD) ){
+			var cmdOpt = commandables.entrySet().stream()
+						.filter( ent -> {
+							String key = ent.getKey();
+							if( key.equals(split[0]))
+								return true;
+							return Arrays.stream(key.split(";")).anyMatch(k->k.equals(split[0]));
+						}).map(ent -> ent.getValue()).findFirst();
 
-
-			var cmd = commandables.get(split[0]);
-			if( cmd!=null) {
-				result = cmd.replyToCommand(split, wr, html);
+			if( cmdOpt.isPresent()) {
+				result = cmdOpt.get().replyToCommand(split, wr, html);
 			}else{
 				String res;
 				for( var cd : bulkCommandable ){
