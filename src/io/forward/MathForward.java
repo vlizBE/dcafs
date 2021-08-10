@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
 import java.util.function.Function;
@@ -217,7 +218,8 @@ public class MathForward extends AbstractForward {
         String content = math.getTextContent();
 
         if( content != null && XMLtools.getChildElements(math).isEmpty() ){
-            addComplex(content, XMLtools.getIntAttribute(math,"scale",-1));
+            var op = addComplex(content, XMLtools.getIntAttribute(math,"scale",-1));
+            op.ifPresent( p -> p.cmd = XMLtools.getStringAttribute(math,"cmd",""));
         }
         defs.clear();
         XMLtools.getChildElements(math, "def")
@@ -251,7 +253,7 @@ public class MathForward extends AbstractForward {
      * @param expression The expression to use
      * @return True if it was added
      */
-    public boolean addOperation(int index, int scale, OP_TYPE type, String cmd ,String expression  ){
+    public Optional<Operation> addOperation(int index, int scale, OP_TYPE type, String cmd , String expression  ){
 
         if( index <0 && expression.contains("=")){
             var splt = expression.split("=");
@@ -264,7 +266,7 @@ public class MathForward extends AbstractForward {
         }
         if( index == -1 ){
             Logger.error(id + " -> Bad/No index given");
-            return false;
+            return Optional.empty();
         }
 
         Operation op;
@@ -288,7 +290,7 @@ public class MathForward extends AbstractForward {
                 indexes = expression.split(",");
                 if( indexes.length != 3 ){
                     Logger.error("Not enough info for salinity calculation");
-                    return false;
+                    return Optional.empty();
                 }
                 op = new Operation(expression, Calculations.procSalinity(indexes[0],indexes[1],indexes[2]), index);
                 break;
@@ -296,7 +298,7 @@ public class MathForward extends AbstractForward {
                 indexes = expression.split(",");
                 if( indexes.length != 3 ){
                     Logger.error("Not enough info for salinity calculation");
-                    return false;
+                    return Optional.empty();
                 }
                 op = new Operation(expression, Calculations.procSoundVelocity(indexes[0],indexes[1],indexes[2]), index);
                 break;
@@ -304,7 +306,7 @@ public class MathForward extends AbstractForward {
                 indexes = expression.split(",");
                 if( indexes.length != 5 ){
                     Logger.error("Not enough info for true wind calculation");
-                    return false;
+                    return Optional.empty();
                 }
                 op = new Operation(expression, Calculations.procTrueWindSpeed(indexes[0],indexes[1],indexes[2],indexes[3],indexes[4]), index);
                 break;
@@ -312,17 +314,17 @@ public class MathForward extends AbstractForward {
                 indexes = expression.split(",");
                 if( indexes.length != 5 ){
                     Logger.error("Not enough info for true wind calculation");
-                    return false;
+                    return Optional.empty();
                 }
                 op = new Operation(expression, Calculations.procTrueWindDirection(indexes[0],indexes[1],indexes[2],indexes[3],indexes[4]), index);
                 break;
             default:
-                return false;
+                return Optional.empty();
         }
-        op.cmd = cmd;
+        op.setCmd(cmd);
         ops.add(op);
 
-        if( scale != -1){
+        if( scale != -1){ // Check if there's a scale op needed
             int pos =index;
             Function<BigDecimal[],BigDecimal> proc = x -> x[pos].setScale(scale, RoundingMode.HALF_UP);
             ops.add( new Operation( expression, proc,index));
@@ -330,16 +332,10 @@ public class MathForward extends AbstractForward {
         }else{
             rulesString.add(new String[]{type.toString().toLowerCase(),""+index,expression});
         }
-
-        if( !cmd.isEmpty() ) {// this counts as a target, so enable it
-            valid = true;
-            doCmd = true;
-        }
-
-
-        return true;
+        return Optional.ofNullable(ops.get(ops.size()-1)); // return the one that was added last
     }
-    public boolean addComplex( String op, int scale ){
+
+    public Optional<Operation> addComplex( String op, int scale ){
         op=op.replace(" ",""); //remove spaces
 
         // Support ++ and --
@@ -357,13 +353,13 @@ public class MathForward extends AbstractForward {
             int index = Tools.parseInt(split[0].substring(1),-1);
             if( index == -1 ){
                 Logger.error( id+"(mf) -> Incorrect index "+op);
-                return false;
+                return Optional.empty();
             }
             return addOperation(index,scale,OP_TYPE.COMPLEX,"",split[1]);
         }else{
             Logger.error(id+"(mf) -> Content in wrong format "+op);
         }
-        return false;
+        return Optional.empty();
     }
     /**
      * Convert a string version of OP_TYPE to the enum
@@ -434,6 +430,13 @@ public class MathForward extends AbstractForward {
             this.fab=fab;
             this.index=index;
             this.ori=ori;
+        }
+        public void setCmd(String cmd){
+            if( cmd.isEmpty())
+                return;
+            this.cmd=cmd;
+            valid=true;
+            doCmd = true;
         }
         public BigDecimal solve( BigDecimal[] data){
             BigDecimal bd=null;
