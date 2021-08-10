@@ -618,6 +618,11 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				join.setEmptyValue("No flags yet");
 				listFlags().forEach(join::add);
 				return join.toString();
+			case "new":
+				if( cmds.length !=3)
+					return "Not enough arguments, need flags:new,id,state or fv:new,id,state";
+				setFlagState(cmds[1],Tools.parseBool(cmds[2],false));
+				return "Flag created/updated "+cmds[1];
 			case "raise": case "set":
 				if( cmds.length !=2)
 					return "Not enough arguments, need flags:raise,id or flags:set,id";
