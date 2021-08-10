@@ -10,13 +10,18 @@ public interface DataProviding {
 
     /* Double */
     DoubleVal getDoubleVal( String param );
-    double getRealtimeValue(String parameter, double defVal, boolean createIfNew);
-    double getRealtimeValue(String parameter, double bad);
-    boolean setRealtimeValue(String param, double value, boolean createIfNew);
+
+    boolean hasDouble( String id);
+    double getDouble(String id, double defVal, boolean createIfNew);
+    double getDouble(String id, double bad);
+
+    boolean setDouble(String id, double value);
+    boolean updateDouble(String id, double bad);
+    int updateDoubleGroup(String group, double value);
 
     /* Text */
-    String getRealtimeText(String parameter, String bad);
-    boolean setRealtimeText(String param, String value );
+    String getText(String parameter, String bad);
+    boolean setText(String param, String value );
 
     /* Flags */
     boolean hasFlag( String flag);

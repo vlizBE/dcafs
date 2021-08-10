@@ -16,7 +16,6 @@ import util.xml.XMLfab;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.*;
@@ -33,10 +32,10 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 
 	/* Other */
 	protected ConcurrentHashMap<String, DoubleVal> doubleVals = new ConcurrentHashMap<>();
-	protected HashMap<String, List<Writable>> rtvalRequest = new HashMap<>();
+	protected HashMap<String, List<Writable>> doubleRequest = new HashMap<>();
 
 	protected ConcurrentHashMap<String, String> rttext = new ConcurrentHashMap<>();
-	protected HashMap<String, List<Writable>> rttextRequest = new HashMap<>();
+	protected HashMap<String, List<Writable>> textRequest = new HashMap<>();
 
 	protected ConcurrentHashMap<String, Boolean> flags = new ConcurrentHashMap<>();
 
@@ -67,11 +66,11 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		var found = words.matcher(line).results().map(MatchResult::group).collect(Collectors.toList());
 
 		for( var word : found ){
-			var d = getRealtimeValue(word, Double.NaN);
+			var d = getDouble(word, Double.NaN);
 			if (!Double.isNaN(d)) {
 				line = line.replace(word,""+d);
 			}else{
-				var t = getRealtimeText(word,"");
+				var t = getText(word,"");
 				if( !t.isEmpty()) {
 					line = line.replace(word, t);
 				}else if( hasFlag(word)){
@@ -109,14 +108,14 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		for( var p : pairs ){
 			if(p.length==2) {
 				if (p[0].equals("double")) {
-					var d = getRealtimeValue(p[1], Double.NaN);
+					var d = getDouble(p[1], Double.NaN);
 					if (Double.isNaN(d)) {
 						line = line.replace("{double:" + p[1] + "}", error);
 					} else {
 						line = line.replace("{double:" + p[1] + "}", "" + d);
 					}
 				} else if (p[0].equals("text")) {
-					line = line.replace("{text:" + p[1] + "}", getRealtimeText(p[1], error));
+					line = line.replace("{text:" + p[1] + "}", getText(p[1], error));
 				}
 			}else{
 				switch(p[0]){
@@ -159,22 +158,17 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		}
 		return doubleVals.get(id);
 	}
-
-	/**
-	 * Removes the doubleval with the given id from the hashmap
-	 * @param id The id to remove
-	 * @return True if deleted
-	 */
-	public boolean removeDoubleVal( String id ){
-		return doubleVals.remove(id)!=null;
+	public boolean hasDouble( String id){
+		return doubleVals.containsKey(id);
 	}
 	/**
 	 * Sets the value of a parameter (in a hashmap)
 	 * @param id The parameter name
 	 * @param value The value of the parameter
 	 * @param createIfNew Whether to create a new object if none was found
+	 * @return True if it was created
 	 */
-	public boolean setRealtimeValue(String id, double value, boolean createIfNew) {
+	private boolean setDouble(String id, double value, boolean createIfNew) {
 		boolean ok = false;
 		if( id.isEmpty()) {
 			Logger.error("Empty id given");
@@ -191,50 +185,95 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 				}
 				ok=true;
 			}else{
-				Logger.error("No such rtval "+id+" yet, use create:"+id+","+value+" to create it first");
+				Logger.error("No such double "+id+" yet, create it first");
 			}
 		}else{
 			d.setValue(value);
 		}
 
-		if( !rtvalRequest.isEmpty()){
-			var res = rtvalRequest.get(id);
+		if( !doubleRequest.isEmpty()){
+			var res = doubleRequest.get(id);
 			if( res != null)
 				res.forEach( wr -> wr.writeLine(id + " : " + value));
 		}
 		return ok;
 	}
+	public boolean setDouble(String id, double value){
+		return setDouble(id,value,true);
+	}
+	public boolean updateDouble(String id, double value) {
+		if( id.isEmpty())
+			return false;
+		return !setDouble(id,value,false);
+	}
+	public int updateDoubleGroup(String group, double value){
+		var set = doubleVals.values().stream().filter( dv -> dv.getGroup().equalsIgnoreCase(group)).collect(Collectors.toSet());
+		if( set.isEmpty())
+			return 0;
+		set.forEach(dv->dv.setValue(value));
+		return set.size();
+	}
 	/**
-	 * Get the value of a parameter
+	 * Get the value of a double
 	 *
-	 * @param parameter The parameter to get the value of
-	 * @param bad       The value to return of the parameter wasn't found
+	 * @param id The id to get the value of
+	 * @param bad The value to return of the id wasn't found
 	 * @return The value found or the bad value
 	 */
-	public double getRealtimeValue(String parameter, double bad) {
-		return getRealtimeValue(parameter,bad,false);
+	public double getDouble(String id, double bad) {
+		return getDouble(id,bad,false);
 	}
-	public double getRealtimeValue(String parameter, double defVal, boolean createIfNew) {
+	public double getDouble(String id, double defVal, boolean createIfNew) {
 
-		DoubleVal d = doubleVals.get(parameter.toLowerCase());
+		DoubleVal d = doubleVals.get(id.toLowerCase());
 		if (d == null) {
 			if( createIfNew ){
-				Logger.warn("Parameter "+parameter+" doesn't exist, creating it with value "+defVal);
-				setRealtimeValue(parameter,defVal,true);
+				Logger.warn("ID "+id+" doesn't exist, creating it with value "+defVal);
+				setDouble(id,defVal,true);
 			}else{
-				Logger.debug("No such parameter: " + parameter);
+				Logger.debug("No such id: " + id);
 			}
 			return defVal;
 		}
 		if (Double.isNaN(d.getValue())) {
-			Logger.error("Parameter: " + parameter + " is NaN.");
+			Logger.error("ID: " + id + " is NaN.");
 			return defVal;
 		}
 		return d.getValue();
 	}
-
-	/* *********************************** RT TEXT ************************************************************* */
-	public boolean setRealtimeText(String parameter, String value) {
+	/**
+	 * Get a listing of all the parameters-value pairs currently stored
+	 *
+	 * @return Readable listing of the parameters
+	 */
+	public List<String> getDoublePairs() {
+		ArrayList<String> ids = new ArrayList<>();
+		doubleVals.forEach((id, value) -> ids.add(id + " : " + value));
+		Collections.sort(ids);
+		return ids;
+	}
+	public List<String> getDoubleIDs() {
+		ArrayList<String> ids = new ArrayList<>();
+		doubleVals.forEach((id, value) -> ids.add(id));
+		Collections.sort(ids);
+		return ids;
+	}
+	/**
+	 * Get a listing of double id : value pairs currently stored that meet the id regex request
+	 *
+	 * @return Readable listing of the doubles
+	 */
+	public String getMatchingDoubles(String id, String eol) {
+		return doubleVals.entrySet().stream().filter(e -> e.getKey().matches( id ))
+												.sorted(Map.Entry.comparingByKey())
+												.map(e -> e.getKey() + " : " + e.getValue().toString())
+												.collect(Collectors.joining(eol));
+	}
+	/* *********************************** T E X T S  ************************************************************* */
+	public boolean hasText(String id){
+		return rttext.containsKey(id);
+	}
+	public boolean setText(String parameter, String value) {
 		final String param=parameter.toLowerCase();
 
 		if( param.isEmpty()) {
@@ -243,17 +282,23 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		}
 		Logger.debug("Setting "+parameter+" to "+value);
 
-		rttext.put(parameter, value);
+		boolean created = rttext.put(parameter, value)==null;
 
-		if( !rtvalRequest.isEmpty()){
-			var res = rtvalRequest.get(param);
+		if( !doubleRequest.isEmpty()){
+			var res = doubleRequest.get(param);
 			if( res != null)
 				res.forEach( wr -> wr.writeLine(param + " : " + value));
 		}
-		return true;
+		return created;
 	}
-
-	public String getRealtimeText(String parameter, String def) {
+	public boolean updateText( String id, String value){
+		if( rttext.containsKey(id)) {
+			rttext.put(id, value);
+			return true;
+		}
+		return false;
+	}
+	public String getText(String parameter, String def) {
 		String result = rttext.get(parameter);
 		return result == null ? def : result;
 	}
@@ -504,10 +549,10 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		join.setEmptyValue("None yet");
 		switch (req[0]) {
 			case "rtval":
-				rtvalRequest.forEach((rq,list) -> join.add(rq +" -> "+list.size()+" requesters"));
+				doubleRequest.forEach((rq, list) -> join.add(rq +" -> "+list.size()+" requesters"));
 				break;
 			case "rttext":
-				rttextRequest.forEach((rq,list) -> join.add(rq +" -> "+list.size()+" requesters"));
+				textRequest.forEach((rq, list) -> join.add(rq +" -> "+list.size()+" requesters"));
 				break;
 		}
 		return join.toString();
@@ -516,28 +561,28 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		String[] req = request.split(":");
 		switch (req[0]) {
 			case "rtval":
-				var r = rtvalRequest.get(req[1]);
+				var r = doubleRequest.get(req[1]);
 				if( r == null) {
-					rtvalRequest.put(req[1], new ArrayList<>());
+					doubleRequest.put(req[1], new ArrayList<>());
 					Logger.info("Created new request for: " + req[1]);
 				}else{
 					Logger.info("Appended existing request to: " + r + "," + req[1]);
 				}
-				if( !rtvalRequest.get(req[1]).contains(writable)) {
-					rtvalRequest.get(req[1]).add(writable);
+				if( !doubleRequest.get(req[1]).contains(writable)) {
+					doubleRequest.get(req[1]).add(writable);
 					return true;
 				}
 				break;
 			case "rttext":
-				var t = rttextRequest.get(req[1]);
+				var t = textRequest.get(req[1]);
 				if( t == null) {
-					rttextRequest.put(req[1], new ArrayList<>());
+					textRequest.put(req[1], new ArrayList<>());
 					Logger.info("Created new request for: " + req[1]);
 				}else{
 					Logger.info("Appended existing request to: " + t + "," + req[1]);
 				}
-				if( !rttextRequest.get(req[1]).contains(writable)) {
-					rttextRequest.get(req[1]).add(writable);
+				if( !textRequest.get(req[1]).contains(writable)) {
+					textRequest.get(req[1]).add(writable);
 					return true;
 				}
 				break;
@@ -556,7 +601,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 	public void collectorFinished(String id, String message, Object result) {
 		String[] ids = id.split(":");
 		if(ids[0].equalsIgnoreCase("math")){
-			setRealtimeValue(message,(double)result,false);
+			setDouble(message,(double)result,false);
 		}
 	}
 }

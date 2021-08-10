@@ -4,7 +4,6 @@ import das.DataProviding;
 import io.Readable;
 import io.Writable;
 import das.CommandPool;
-import das.RealtimeValues;
 import io.mqtt.MqttWriting;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
@@ -270,7 +269,7 @@ public class LabelWorker implements Runnable, Labeller {
 				} else if (d.label.startsWith("rtval:")) {
 					executor.execute(() -> storeRtval(readID,d.getData(),d.getOriginID()));
 				} else if (d.label.startsWith("rttext:")) {
-					executor.execute(() -> dp.setRealtimeText(readID, d.data));
+					executor.execute(() -> dp.setText(readID, d.data));
 				} else if (d.label.startsWith("read:")) {
 					if( d.getWritable()!=null){
 						if (d.label.split(":").length >= 2) {
@@ -344,7 +343,7 @@ public class LabelWorker implements Runnable, Labeller {
 				val = NumberUtils.createInteger(data);
 			}
 			if( val != Double.NEGATIVE_INFINITY){
-				dp.setRealtimeValue(param,val,true);
+				dp.setDouble(param,val);
 			}else{
 				Logger.warn("Tried to convert "+data+" from "+origin+" to an rtval...");
 			}

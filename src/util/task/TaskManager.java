@@ -1050,14 +1050,14 @@ public class TaskManager implements CollectorFuture {
 		i = line.indexOf("{rtval:");
 		if( i !=-1 ){
 			int end = line.substring(i).indexOf("}");
-			to = ""+rtvals.getRealtimeValue( line.substring(i+7,i+end),-123456 );
+			to = ""+rtvals.getDouble( line.substring(i+7,i+end),-123456 );
 			line = line.replace(line.substring(i,i+end+1),to);
 		}
 		i = line.indexOf("{rttext:");
 		if( i !=-1 ){
 			int end = line.substring(i).indexOf("}");
 			var look = line.substring(i+8,i+end);
-			to = ""+rtvals.getRealtimeText(look,look );
+			to = ""+rtvals.getText(look,look );
 			line = line.replace(line.substring(i,i+end+1),to);
 		}
     	line = line.replace("[EOL]", "\r\n");

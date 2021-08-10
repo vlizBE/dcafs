@@ -1,12 +1,10 @@
 package worker;
 
 import das.DataProviding;
-import das.RealtimeValues;
 import io.mqtt.MqttWriting;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.influxdb.dto.Point;
 import org.tinylog.Logger;
-import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import util.database.QueryWriting;
 import util.tools.TimeTools;
@@ -18,7 +16,6 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.StringJoiner;
 
@@ -257,7 +254,7 @@ public class Generic {
                             if( NumberUtils.isCreatable(split[entry.index])){
                                 val=NumberUtils.toInt(split[entry.index],-999);
                                 data[a]=val;
-                                dp.setRealtimeValue( ref, val, true );
+                                dp.setDouble( ref, val );
                             }else{
                                 data[a]=null;
                                // rtvals.removeRealtimeValue(ref);
@@ -267,7 +264,7 @@ public class Generic {
                             if( NumberUtils.isCreatable(split[entry.index])) {
                                 val = NumberUtils.toDouble(split[entry.index], val);
                                 data[a] = val;
-                                dp.setRealtimeValue( ref, val, true );
+                                dp.setDouble( ref, val );
                             }else{
                                 data[a]=null;
                             //    rtvals.removeRealtimeValue(ref);
@@ -275,7 +272,7 @@ public class Generic {
                             break;                
                     case TEXT: case TAG:
                             data[a]=split[entry.index];
-                            dp.setRealtimeText( ref, split[entry.index]);
+                            dp.setText( ref, split[entry.index]);
                             break;
                     case FILLER:
                             if( ref.endsWith("timestamp") ){
@@ -292,12 +289,12 @@ public class Generic {
                             break;
                     case LOCALDT:
                         data[a]=OffsetDateTime.parse( split[entry.index], TimeTools.LONGDATE_FORMATTER );
-                        dp.setRealtimeText( ref, split[entry.index]);
+                        dp.setText( ref, split[entry.index]);
                         break;
                     case UTCDT:
                         var ldt = LocalDateTime.parse( split[entry.index], TimeTools.LONGDATE_FORMATTER_UTC );
                         data[a]=OffsetDateTime.of(ldt,ZoneOffset.UTC);
-                        dp.setRealtimeText( ref, split[entry.index]);
+                        dp.setText( ref, split[entry.index]);
                         break;
                 }
                 if( !influxID.isEmpty() && pb!=null ){

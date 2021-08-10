@@ -235,7 +235,7 @@ public class MqttPool implements Commandable, MqttWriting {
                     return "No such MQTTWorker: "+cmd[1];
                 }
                 String[] topVal = cmd[2].split(":");
-                double val = rtvals.getRealtimeValue(topVal[1], -999);
+                double val = rtvals.getDouble(topVal[1], -999);
                 getMqttWorker(cmd[1]).ifPresent( w -> w.addWork(topVal[0],""+val));
                 return "Data send to "+cmd[1];
             case "?":

@@ -1,12 +1,10 @@
 package util.task;
 
 import das.DataProviding;
-import das.RealtimeValues;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import util.math.MathUtils;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -132,7 +130,7 @@ public class RtvalCheck {
             }else if( is.get(a).startsWith("issue:")){
                 vals[a] = activeIssues.contains(is.get(a).substring(5))?1.0:0;
             }else{
-                vals[a] = dp.getRealtimeValue(is.get(a),-999);
+                vals[a] = dp.getDouble(is.get(a),-999);
             }
         }
         for( var comp : comparisons ){
@@ -164,7 +162,7 @@ public class RtvalCheck {
             }else if( i.startsWith("issue:")){
                 rep=rep.replace(i,activeIssues.contains(i.substring(5))?"true":"false");
             }else{
-                rep=rep.replace(i,""+dp.getRealtimeValue(i,-999));
+                rep=rep.replace(i,""+dp.getDouble(i,-999));
             }
         }
         return ori +" -> "+rep + "=> "+test(dp,activeIssues);

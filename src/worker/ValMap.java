@@ -1,7 +1,6 @@
 package worker;
 
 import das.DataProviding;
-import das.RealtimeValues;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
@@ -60,13 +59,13 @@ public class ValMap {
         if (mapped != null) {
             if (!mapped.rtval.isEmpty()) {
                 try {
-                    dp.setRealtimeValue(mapped.rtval, NumberUtils.createDouble(pair[1]), true);
+                    dp.setDouble(mapped.rtval, NumberUtils.createDouble(pair[1]));
                 } catch (NumberFormatException e) {
                     Logger.error(id + " -> No valid number in " + data);
                 }
             }
             if (!mapped.rttext.isEmpty())
-                dp.setRealtimeText(mapped.rttext, mapped.convert(pair[1]));
+                dp.setText(mapped.rttext, mapped.convert(pair[1]));
         } else {
             //Logger.warn(id + " -> No mapping found for " + data);
         }

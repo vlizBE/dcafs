@@ -4,7 +4,6 @@ import das.DataProviding;
 import das.DoubleVal;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
-import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import util.tools.TimeTools;
 import util.xml.XMLfab;
@@ -13,11 +12,9 @@ import util.xml.XMLtools;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
-import java.util.concurrent.ConcurrentMap;
 
 public class SqlTable {
 
@@ -616,13 +613,13 @@ public class SqlTable {
             Object val = null;
             try{
                 if( col.type==COLUMN_TYPE.TIMESTAMP ){
-                    record[index] = index==0?TimeTools.formatLongUTCNow():dp.getRealtimeText(ref,"");
+                    record[index] = index==0?TimeTools.formatLongUTCNow():dp.getText(ref,"");
                     continue;
                 }else if( col.type == COLUMN_TYPE.EPOCH){
                     record[index]=Instant.now().toEpochMilli();
                     continue;
                 }else if( col.type == COLUMN_TYPE.TEXT){
-                    val = dp.getRealtimeText(ref,"");
+                    val = dp.getText(ref,"");
                 }else if( col.type == COLUMN_TYPE.INTEGER){
                     DoubleVal dv = dp.getDoubleVal(ref);
                     if( dv!=null) {
@@ -644,7 +641,7 @@ public class SqlTable {
                 }else if( col.type == COLUMN_TYPE.UTCDTNOW){
                     val = OffsetDateTime.now(ZoneOffset.UTC);
                 }else if( col.type == COLUMN_TYPE.DATETIME){
-                    val = TimeTools.parseDateTime(dp.getRealtimeText(ref,""),"yyyy-MM-dd HH:mm:ss.SSS");
+                    val = TimeTools.parseDateTime(dp.getText(ref,""),"yyyy-MM-dd HH:mm:ss.SSS");
                 }
             }catch( NullPointerException e ){
                 Logger.error("Null pointer when looking for "+ref + " type:"+col.type);
