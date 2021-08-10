@@ -23,6 +23,10 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.10.8 (work in progress)
 
+### RealtimeValues
+- Centralized all code in the class that was in Commandable.java and DAS.java
+- Replaced the update and create commands with double:update etc
+
 ## 0.10.7 (09/08/21)
 
 ### RealtimeValues
