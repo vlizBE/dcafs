@@ -1,14 +1,14 @@
 package das;
 
-import io.mqtt.MqttWork;
 import io.mqtt.MqttWorker;
 import io.Writable;
 import io.collector.CollectorFuture;
 import io.collector.MathCollector;
 import io.telnet.TelnetCodes;
-import org.influxdb.dto.Point;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
-import util.database.QueryWriting;
+import util.math.MathUtils;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
@@ -50,10 +50,15 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 	private final HashMap<String, MathCollector> mathCollectors = new HashMap<>();
 
 	/* Patterns */
-	Pattern rtvalPattern=null;
-	Pattern rttextPattern=null;
-	Pattern words = Pattern.compile("[a-zA-Z]+[_0-9]+[a-zA-Z]+\\d*"); // find references to doublevals etc
+	private Pattern rtvalPattern=null;
+	private Pattern rttextPattern=null;
+	private Pattern words = Pattern.compile("[a-zA-Z]+[_0-9]+[a-zA-Z]+\\d*"); // find references to doublevals etc
 
+	private Path settingsPath;
+
+	public RealtimeValues( Path settingsPath ){
+		this.settingsPath=settingsPath;
+	}
 
 	/**
 	 * Simple version of the parse realtime line, just checks all the words to see if any matches the hashmaps
@@ -514,8 +519,12 @@ public class RealtimeValues implements CollectorFuture, DataProviding {
 		for( var dt : keys ){
 			fab.selectOrCreateParent("text","id",dt).up();
 		}
+		keys = flags.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(e->e.getKey()).collect(Collectors.toList());
+		for( var dt : keys ){
+			fab.selectOrCreateParent("flag","id",dt).up();
+		}
 		fab.build();
-		return "New rtvals/rttexts added";
+		return "New rtvals/rttexts/flags added";
 	}
 	/* ******************************************************************************************************/
 	/**
