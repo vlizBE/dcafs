@@ -1,6 +1,8 @@
 package io.forward;
 
 import das.DataProviding;
+import das.DoubleVal;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
@@ -14,10 +16,7 @@ import worker.Datagram;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Optional;
-import java.util.StringJoiner;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.function.Function;
 
@@ -32,6 +31,8 @@ public class MathForward extends AbstractForward {
     HashMap<String,String> defs = new HashMap<>();
 
     public enum OP_TYPE{COMPLEX, SCALE, LN, SALINITY, SVC,TRUEWINDSPEED,TRUEWINDDIR}
+    private ArrayList<DoubleVal> remoteVals;
+
 
     public MathForward(String id, String source, BlockingQueue<Datagram> dQueue, DataProviding dp){
         super(id,source,dQueue,dp);
@@ -64,7 +65,20 @@ public class MathForward extends AbstractForward {
     @Override
     protected boolean addData(String data) {
         String[] split = data.split(delimiter); // Split the data according to the delimiter
-        BigDecimal[] bds = MathUtils.toBigDecimals(data,delimiter); // Split the data and convert to bigdecimals
+        BigDecimal[] bds;
+        int remoteOffset=0;
+
+        if( !remoteVals.isEmpty()) {
+            var remoteBds = new BigDecimal[remoteVals.size()];
+            remoteOffset=remoteBds.length;
+            for (int a = 0; a < remoteBds.length;a++ ){
+                remoteBds[a]=BigDecimal.valueOf(remoteVals.get(a).getValue());
+            }
+            bds = ArrayUtils.addAll(MathUtils.toBigDecimals(data,delimiter),remoteBds);
+        }else{
+            bds = MathUtils.toBigDecimals(data,delimiter); // Split the data and convert to bigdecimals
+        }
+
         int oldBad = badDataCount;
 
         if( bds == null ){
@@ -94,7 +108,7 @@ public class MathForward extends AbstractForward {
             return true;
 
         StringJoiner join = new StringJoiner(delimiter); // prepare a joiner to rejoin the data
-        for( int a=0;a<bds.length;a++){
+        for( int a=0;a<(bds.length-remoteOffset);a++){
             join.add( bds[a]!=null?bds[a].toPlainString():split[a]); // if no valid bd is found, use the original data
         }
 
@@ -241,6 +255,8 @@ public class MathForward extends AbstractForward {
                         }
                     } );
 
+        Collections.reverse(remoteVals); // reverse it so the first ones are at the end
+
         if( !oldValid && valid )// If math specific things made it valid
             sources.forEach( source -> dQueue.add( Datagram.build( source ).label("system").writable(this) ) );
         return true;
@@ -277,6 +293,25 @@ public class MathForward extends AbstractForward {
                     String exp = expression;
                     for( var entry : defs.entrySet() ){
                         exp = exp.replace(entry.getKey(),entry.getValue());
+                    }
+                    var pairs = Tools.parseKeyValue(exp,true);
+                    for( var p : pairs ) {
+                        if (p.length == 2) {
+                            if (p[0].equals("double") && dataProviding.hasDouble(p[1])) {
+                                var d = dataProviding.getDoubleVal(p[1]);
+                                if( remoteVals==null)
+                                    remoteVals=new ArrayList<>();
+                                int exist = remoteVals.indexOf(d);
+                                if( exist == -1) {
+                                    exp = exp.replace("{double:" + p[1] + "}", "i" + (MathUtils.DV_OFFSET + remoteVals.size()));
+                                    remoteVals.add(d);
+                                }else{
+                                    exp = exp.replace("{double:" + p[1] + "}", "i" + (MathUtils.DV_OFFSET + exist));
+                                }
+                            }
+                        }else{
+                            Logger.error("Operation containing unknown pair: "+p[0]+":"+p[1]);
+                        }
                     }
                     op = new Operation( expression, new MathFab(exp.replace(",",".")),index);
                     break;
@@ -346,12 +381,12 @@ public class MathForward extends AbstractForward {
         op=op.replace("--","-=1");
 
 
-        String[] split = op.split("\\D?[=]");
+        String[] split = op.split("\\D?[=]"); // i0+=1 -> [0]:i0  [1]:1
 
         if( split.length == 2){
-            if( split[0].length()+split[1].length()+1 != op.length()){ // Support += -= *= and /=
-                String[] spl = op.split("=");
-                split[1]=spl[0]+split[1];
+            if( split[0].length()+split[1].length()+1 != op.length()){ // Support += -= *= and /= fe. i0+=1
+                String[] spl = op.split("="); //[0]:i0+ [1]:1
+                split[1]=spl[0]+split[1]; // split[1]=i0+1
             }
             int index = Tools.parseInt(split[0].substring(1),-1);
             if( index == -1 ){

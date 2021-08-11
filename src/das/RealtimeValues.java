@@ -162,7 +162,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		if( !line.contains("{"))
 			return line;
 
-		var pairs = Tools.parseKeyValue(line);
+		var pairs = Tools.parseKeyValue(line,true);
 		for( var p : pairs ){
 			if(p.length==2) {
 				if (p[0].equals("double")) {

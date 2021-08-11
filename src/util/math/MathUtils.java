@@ -28,6 +28,8 @@ public class MathUtils {
     static final String[] COMPARES={"<","<=","==","!=",">=",">"};
     static final String OPS_REGEX="\\+|/|\\*|-|\\^|%";
     static final Pattern es = Pattern.compile("\\de[+-]?\\d");
+
+    public static final int DV_OFFSET=50;
     /**
      * Splits a simple expression of the type i1+125 etc into distinct parts i1,+,125
      * @param expression The expression to split
@@ -312,7 +314,7 @@ public class MathUtils {
             }else{
                 bd1=null;
                 int index = NumberUtils.createInteger( first.substring(1));
-                i1 = first.startsWith("o")?index:index+offset;
+                i1 = first.startsWith("o")||index>=DV_OFFSET?index:index+offset;
             }
             if(NumberUtils.isCreatable(second) ) {
                 bd2 = NumberUtils.createBigDecimal(second);
@@ -320,7 +322,7 @@ public class MathUtils {
             }else{
                 bd2=null;
                 int index = NumberUtils.createInteger( second.substring(1));
-                i2 = second.startsWith("o")?index:index+offset;
+                i2 = second.startsWith("o")||index>=DV_OFFSET?index:index+offset;
             }
         }catch( NumberFormatException e){
             Logger.error("Something went wrong decoding: "+first+" or "+second);
@@ -334,11 +336,28 @@ public class MathUtils {
                     if (bd1 != null && bd2 != null) { // meaning both numbers
                         proc = x -> bd1.add(bd2);
                     } else if (bd1 == null && bd2 != null) { // meaning first is an index and second a number
-                        proc = x -> x[i1].add(bd2);
+                        if( i1>=DV_OFFSET ) { // doubleVal territory
+                            proc = x -> x[x.length-(i1-DV_OFFSET+1)].add(bd2);
+                        }else{
+                            proc = x -> x[i1].add(bd2);
+                        }
                     } else if (bd1 != null && bd2 == null) { // meaning first is a number and second an index
-                        proc = x -> bd1.add(x[i2]);
+                        if( i2>=DV_OFFSET ) {
+                            proc = x -> bd1.add(x[x.length-(i2-DV_OFFSET+1)]);
+                        }else{
+                            proc = x -> bd1.add(x[i2]);
+                        }
                     } else { // meaning both indexes
-                        proc = x -> x[i1].add(x[i2]);
+                        if( i1>=DV_OFFSET && i2>=DV_OFFSET ){
+                            proc = x -> x[x.length-(i1-DV_OFFSET+1)].add(x[x.length-(i2-DV_OFFSET+1)]);
+                        }else if( i1>=DV_OFFSET ){
+                            proc = x -> x[x.length-(i1-DV_OFFSET+1)].add(x[i2]);
+                        }else if( i2>=DV_OFFSET ){
+                            proc = x -> x[i1].add(x[x.length-(i2-DV_OFFSET+1)]);
+                        }else{
+                            proc = x -> x[i1].add(x[i2]);
+                        }
+
                     }
                 }catch (IndexOutOfBoundsException | NullPointerException e){
                     Logger.error("Bad things when "+first+" "+op+" "+second+ " was processed");

@@ -27,6 +27,9 @@ From 0.5.0 onwards, this should be better documented...
 - Centralized all code in the class that was in Commandable.java and DAS.java
 - Replaced the update and create commands with double:update etc
 
+### MathForward
+- Now supports referring to double's in the operations {double:id}
+
 ### Fixes
 - ForwardPool, nettygroup should have been before the xml reading, not after.
 - MathForward, op with scale attribute should give the cmd to the scale op instead

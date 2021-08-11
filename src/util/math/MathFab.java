@@ -50,6 +50,8 @@ public class MathFab {
             requiredInputs = 0;
         }else{
             requiredInputs = 1+Integer.parseInt(is[is.length-1].substring(1));
+            if( requiredInputs >= MathUtils.DV_OFFSET )
+                requiredInputs -= MathUtils.DV_OFFSET;
         }
 
         if( opens != closes ){
