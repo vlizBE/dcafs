@@ -591,7 +591,7 @@ public class Tools {
         }
         return join.toString();
     }
-    public static List<String[]> parseKeyValue(String data){
+    public static List<String[]> parseKeyValue(String data, boolean distinct){
         var pairs = new ArrayList<String>();
         int b =0;
         while( b!=-1) {
@@ -603,7 +603,11 @@ public class Tools {
             data=data.substring(b+1);
         }
         var splits = new ArrayList<String[]>();
-        pairs.forEach( p -> splits.add(p.split(":")));
+        if( distinct ) {
+            pairs.stream().distinct().forEach(p -> splits.add(p.split(":")));
+        }else{
+            pairs.forEach(p -> splits.add(p.split(":")));
+        }
         return splits;
     }
     public static String getLocalIP() {
