@@ -59,7 +59,145 @@ public class MathForward extends AbstractForward {
     protected String getXmlChildTag(){
         return "math";
     }
+    /**
+     * Read the settings for a mathforward from the given element
+     * @param math The math child element
+     * @return True if this was successful
+     */
+    @Override
+    public boolean readFromXML(Element math) {
 
+        if( !readBasicsFromXml(math) )
+            return false;
+
+        // Reset the references
+        referencedDoubles.clear();
+        highestI=-1;
+
+        setDelimiter(XMLtools.getStringAttribute( math, "delimiter", delimiter));
+        suffix = XMLtools.getStringAttribute(math,"suffix","");
+
+        ops.clear();
+        String content = math.getTextContent();
+
+        if( content != null && XMLtools.getChildElements(math).isEmpty() ){
+            if( !findReferences(content) ){
+                return false;
+            }
+
+            var op = addComplex(content, XMLtools.getIntAttribute(math,"scale",-1));
+            op.ifPresent( p -> p.cmd = XMLtools.getStringAttribute(math,"cmd",""));
+        }
+        defs.clear();
+        XMLtools.getChildElements(math, "def")
+                .forEach( def -> defs.put( def.getAttribute("ref"),def.getTextContent()));
+
+        boolean oldValid=valid;
+        for( var ops : XMLtools.getChildElements(math, "op") ){
+            if( !findReferences(ops.getTextContent()))
+                return false;
+        }
+
+        XMLtools.getChildElements(math, "op")
+                .forEach( ops -> {
+                    try {
+                        addOperation(
+                                XMLtools.getIntAttribute(ops,"index",-1),
+                                XMLtools.getIntAttribute(ops,"scale",-1),
+                                fromStringToOPTYPE(XMLtools.getStringAttribute(ops, "type", "complex")),
+                                XMLtools.getStringAttribute(ops, "cmd", ""),
+                                ops.getTextContent());
+                    }catch( NumberFormatException e){
+                        Logger.error(id+" (mf)-> NumberformatException "+e.getMessage());
+                    }
+                } );
+
+        Collections.reverse(referencedDoubles); // reverse it so the first ones are at the end
+
+        if( !oldValid && valid )// If math specific things made it valid
+            sources.forEach( source -> dQueue.add( Datagram.build( source ).label("system").writable(this) ) );
+        return true;
+    }
+    private boolean findReferences(String exp){
+
+        // Find all the double/flag pairs
+        var pairs = Tools.parseKeyValue(exp,true);
+        for( var p : pairs ) {
+            if (p.length == 2) {
+                switch(p[0]){
+                    case "d": case "double":
+                        var d = dataProviding.getDoubleVal(p[1]);
+                        if( referencedDoubles ==null)
+                            referencedDoubles =new ArrayList<>();
+                        d.ifPresent( dv -> referencedDoubles.add(dv) );
+
+                        break;
+                    case "f": case "flag":
+
+                        break;
+                    default:
+                        Logger.error("Operation containing unknown pair: "+p[0]+":"+p[1]);
+                        return false;
+                }
+            }else{
+                Logger.error(getID()+" -> Operation containing unknown pair: "+String.join(":",p));
+            }
+        }
+        // Find the highest used i index
+        var is = Pattern.compile("[i][0-9]{1,2}")
+                .matcher(exp)
+                .results()
+                .map(MatchResult::group)
+                .sorted()
+                .toArray(String[]::new);
+        highestI = Math.max(highestI,Integer.parseInt(is[is.length-1].substring(1)));
+        Logger.info("Highest I: "+highestI);
+        return true;
+    }
+    /**
+     * Store this object's setup to the xml referred to with the given fab
+     * @param fab The XMLfab pointing to where the parent xml should be
+     * @return True if writing was successful
+     */
+    @Override
+    public boolean writeToXML(XMLfab fab) {
+        xml = fab.getXMLPath();
+        xmlOk=true;
+
+        fab.digRoot(getXmlChildTag()+"s"); // go down to <maths>
+        if( fab.selectParent(getXmlChildTag(),"id",id).isEmpty() ){
+            fab.comment("Some info on what the "+id+" "+getXmlChildTag()+" does");
+            fab.addParent(getXmlChildTag()).attr("id",id);
+        }
+
+        fab.attr("delimiter",delimiter);
+        if( !label.isEmpty())
+            fab.attr("label",label);
+
+        fab.clearChildren(); // Remove any existing
+
+        if( sources.size()==1){
+            fab.attr("src",sources.get(0));
+        }else{
+            fab.removeAttr("src");
+            fab.comment("Sources go here");
+            sources.forEach( src -> fab.addChild("src", src) );
+        }
+        if( !defs.isEmpty() ){
+            defs.entrySet().forEach( def -> fab.addChild("def",def.getValue()).attr("ref",def.getKey()));
+        }
+        if( rulesString.size()==1 && sources.size()==1){
+            fab.content("i"+rulesString.get(0)[1]+"="+rulesString.get(0)[2]);
+        }else{
+            fab.comment("Operations go here, possible types: complex (default) ,scale");
+            rulesString.forEach( rule -> {
+                fab.addChild("op",rule[2]).attr("index",rule[1]);
+                if( !rule[0].equalsIgnoreCase("complex"))
+                    fab.attr("type",rule[0]);
+            } );
+        }
+        return fab.build()!=null;
+    }
     /**
      * Give data to this forward for processing
      * @param data The data received
@@ -68,17 +206,8 @@ public class MathForward extends AbstractForward {
     @Override
     protected boolean addData(String data) {
         String[] split = data.split(delimiter); // Split the data according to the delimiter
-        BigDecimal[] bds;
 
-        if( !referencedDoubles.isEmpty()) {
-            var refBds = new BigDecimal[referencedDoubles.size()];
-            for (int a = 0; a < refBds.length;a++ ){
-                refBds[a]=BigDecimal.valueOf(referencedDoubles.get(a).getValue());
-            }
-            bds = ArrayUtils.addAll(MathUtils.toBigDecimals(data,delimiter,highestI),refBds);
-        }else{
-            bds = MathUtils.toBigDecimals(data,delimiter,highestI); // Split the data and convert to bigdecimals
-        }
+        BigDecimal[] bds = makeBDArray(data);
 
         int oldBad = badDataCount;
 
@@ -152,7 +281,17 @@ public class MathForward extends AbstractForward {
         }
         return true;
     }
-
+    private BigDecimal[] makeBDArray( String data ){
+        if( !referencedDoubles.isEmpty()) {
+            var refBds = new BigDecimal[referencedDoubles.size()];
+            for (int a = 0; a < refBds.length;a++ ){
+                refBds[a]=BigDecimal.valueOf(referencedDoubles.get(a).getValue());
+            }
+            return ArrayUtils.addAll(MathUtils.toBigDecimals(data,delimiter,highestI),refBds);
+        }else{
+            return MathUtils.toBigDecimals(data,delimiter,highestI); // Split the data and convert to bigdecimals
+        }
+    }
     /**
      * Alter the delimiter used
      * @param deli The new delimiter to use, eg. \x09  or \t is also valid for a tab
@@ -174,142 +313,9 @@ public class MathForward extends AbstractForward {
             Logger.info(id+" -> Scratchpad received "+value);
     }
 
-    /**
-     * Store this object's setup to the xml referred to with the given fab
-     * @param fab The XMLfab pointing to where the parent xml should be
-     * @return True if writing was successful
-     */
-    @Override
-    public boolean writeToXML(XMLfab fab) {
-        xml = fab.getXMLPath();
-        xmlOk=true;
 
-        fab.digRoot(getXmlChildTag()+"s"); // go down to <maths>
-        if( fab.selectParent(getXmlChildTag(),"id",id).isEmpty() ){
-            fab.comment("Some info on what the "+id+" "+getXmlChildTag()+" does");
-            fab.addParent(getXmlChildTag()).attr("id",id);
-        }
 
-        fab.attr("delimiter",delimiter);
-        if( !label.isEmpty())
-            fab.attr("label",label);
 
-        fab.clearChildren(); // Remove any existing
-
-        if( sources.size()==1){
-            fab.attr("src",sources.get(0));
-        }else{
-            fab.removeAttr("src");
-            fab.comment("Sources go here");
-            sources.forEach( src -> fab.addChild("src", src) );
-        }
-        if( !defs.isEmpty() ){
-            defs.entrySet().forEach( def -> fab.addChild("def",def.getValue()).attr("ref",def.getKey()));
-        }
-        if( rulesString.size()==1 && sources.size()==1){
-            fab.content("i"+rulesString.get(0)[1]+"="+rulesString.get(0)[2]);
-        }else{
-            fab.comment("Operations go here, possible types: complex (default) ,scale");
-            rulesString.forEach( rule -> {
-                fab.addChild("op",rule[2]).attr("index",rule[1]);
-                if( !rule[0].equalsIgnoreCase("complex"))
-                    fab.attr("type",rule[0]);
-            } );
-        }
-        return fab.build()!=null;
-    }
-
-    /**
-     * Read the settings for a mathforward from the given element
-     * @param math The math child element
-     * @return True if this was successful
-     */
-    @Override
-    public boolean readFromXML(Element math) {
-
-        if( !readBasicsFromXml(math) )
-            return false;
-
-        setDelimiter(XMLtools.getStringAttribute( math, "delimiter", delimiter));
-        suffix = XMLtools.getStringAttribute(math,"suffix","");
-
-        ops.clear();
-        String content = math.getTextContent();
-
-        if( content != null && XMLtools.getChildElements(math).isEmpty() ){
-            if( !findReferences(content) ){
-                return false;
-            }
-
-            var op = addComplex(content, XMLtools.getIntAttribute(math,"scale",-1));
-            op.ifPresent( p -> p.cmd = XMLtools.getStringAttribute(math,"cmd",""));
-        }
-        defs.clear();
-        XMLtools.getChildElements(math, "def")
-                .forEach( def -> defs.put( def.getAttribute("ref"),def.getTextContent()));
-
-        boolean oldValid=valid;
-        for( var ops : XMLtools.getChildElements(math, "op") ){
-            if( !findReferences(ops.getTextContent()))
-                return false;
-        }
-
-        XMLtools.getChildElements(math, "op")
-                    .forEach( ops -> {
-                        try {
-                            addOperation(
-                                    XMLtools.getIntAttribute(ops,"index",-1),
-                                    XMLtools.getIntAttribute(ops,"scale",-1),
-                                    fromStringToOPTYPE(XMLtools.getStringAttribute(ops, "type", "complex")),
-                                    XMLtools.getStringAttribute(ops, "cmd", ""),
-                                    ops.getTextContent());
-                        }catch( NumberFormatException e){
-                            Logger.error(id+" (mf)-> NumberformatException "+e.getMessage());
-                        }
-                    } );
-
-        Collections.reverse(referencedDoubles); // reverse it so the first ones are at the end
-
-        if( !oldValid && valid )// If math specific things made it valid
-            sources.forEach( source -> dQueue.add( Datagram.build( source ).label("system").writable(this) ) );
-        return true;
-    }
-    private boolean findReferences(String exp){
-
-        // Find all the double/flag pairs
-        var pairs = Tools.parseKeyValue(exp,true);
-        for( var p : pairs ) {
-            if (p.length == 2) {
-                switch(p[0]){
-                    case "d": case "double":
-                            var d = dataProviding.getDoubleVal(p[1]);
-                            if( referencedDoubles ==null)
-                                referencedDoubles =new ArrayList<>();
-                            d.ifPresent( dv -> referencedDoubles.add(dv) );
-
-                        break;
-                    case "f": case "flag":
-
-                        break;
-                    default:
-                        Logger.error("Operation containing unknown pair: "+p[0]+":"+p[1]);
-                        return false;
-                }
-            }else{
-                Logger.error(getID()+" -> Operation containing unknown pair: "+String.join(":",p));
-            }
-        }
-        // Find the highest used i index
-        var is = Pattern.compile("[i][0-9]{1,2}")
-                .matcher(exp)
-                .results()
-                .map(MatchResult::group)
-                .sorted()
-                .toArray(String[]::new);
-        highestI = Math.max(highestI,Integer.parseInt(is[is.length-1].substring(1)));
-        Logger.info("Highest I: "+highestI);
-        return true;
-    }
     /**
      * Add an operation to this object
      * @param index Which index in the received array should the result be written to
@@ -482,14 +488,20 @@ public class MathForward extends AbstractForward {
      * @return The data after applying all the operations
      */
     public String solveFor(String data){
+
         String[] split = data.split(delimiter);
-    // TODO: Alter this to use referenced stuff
-        BigDecimal[] bds = MathUtils.toBigDecimals(data,delimiter,-1);
+
+        BigDecimal[] bds = makeBDArray(data);
+
         ops.forEach( op -> op.solve(bds) );
 
-        StringJoiner join = new StringJoiner(delimiter);
-        for( int a=0;a<bds.length;a++){
-            join.add( bds[a]!=null?bds[a].toPlainString():split[a]);
+        StringJoiner join = new StringJoiner(delimiter); // prepare a joiner to rejoin the data
+        for( int a=0;a<split.length;a++){
+            if( a <= highestI ) {
+                join.add(bds[a] != null ? bds[a].toPlainString() : split[a]); // if no valid bd is found, use the original data
+            }else{
+                join.add(split[a]);
+            }
         }
         return join.toString();
     }
