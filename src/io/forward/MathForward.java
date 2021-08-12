@@ -323,7 +323,21 @@ public class MathForward extends AbstractForward {
             String[] spl = exp.split("="); //[0]:i0+ [1]:1
             split[1]=spl[0]+split[1]; // split[1]=i0+1
         }
-        int index = Tools.parseInt(split[0].substring(1),-1);
+        int comma = split[0].indexOf(",");
+
+        //int index = Tools.parseInt(split[0].substring(1,comma==-1?split.length-1:comma),-1); // valid if there's only a ix
+
+        var ii = split[0].split(",");
+        int index = Tools.parseInt(ii[0].substring(1),-1); // Check if it's in the first or only position
+        if( index == -1 && ii.length==2){ // if not and there's a second one
+            index = Tools.parseInt(ii[1].substring(1),-1); //check if it's in the second one
+        }else if(ii.length==2){
+            expression=expression.replace(split[0],ii[1]+","+ii[0]); //swap the {d to front
+        }
+
+        if( ii[0].startsWith("{d")&&ii.length==1)
+            index=-2;
+        /*
         if( split[0].startsWith("{d")){
             var b = split[0].split(",");
             if( b.length==2){
@@ -331,7 +345,7 @@ public class MathForward extends AbstractForward {
             }else{
                 index=-2;
             }
-        }
+        }*/
         exp = split[1];
 
         if( index == -1 ){
