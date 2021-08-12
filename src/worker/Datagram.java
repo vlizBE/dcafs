@@ -3,6 +3,8 @@ package worker;
 import io.Writable;
 
 import java.time.Instant;
+import java.util.Locale;
+
 import io.Readable;
 
 /**
@@ -51,7 +53,8 @@ public class Datagram {
     public Readable getReadable(){
         return readable;
     }
-
+    public String getLabel(){ return label.toLowerCase(); }
+    public boolean isSilent(){ return silent;}
     /* ***************************** Fluid API ******************************************* */
     public static Datagram build(String message){
         return new Datagram(message);
