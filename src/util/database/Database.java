@@ -1,7 +1,6 @@
 package util.database;
 
-import das.DataProviding;
-import das.DoubleVal;
+import util.data.DataProviding;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.tools.TimeTools;
@@ -10,7 +9,6 @@ import util.xml.XMLtools;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentMap;
 
 public abstract class Database{
 

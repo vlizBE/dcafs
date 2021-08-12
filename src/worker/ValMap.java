@@ -1,6 +1,6 @@
 package worker;
 
-import das.DataProviding;
+import util.data.DataProviding;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;

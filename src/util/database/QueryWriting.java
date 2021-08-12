@@ -1,12 +1,10 @@
 package util.database;
 
-import das.DataProviding;
-import das.DoubleVal;
+import util.data.DataProviding;
 import org.influxdb.dto.Point;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentMap;
 
 public interface QueryWriting {
 

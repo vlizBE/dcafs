@@ -1,7 +1,6 @@
 package util.database;
 
-import das.DataProviding;
-import das.DoubleVal;
+import util.data.DataProviding;
 import org.apache.commons.lang3.StringUtils;
 import org.influxdb.InfluxDBFactory;
 import org.influxdb.InfluxDBIOException;
@@ -17,7 +16,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
 public class InfluxDB extends Database{

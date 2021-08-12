@@ -1,7 +1,6 @@
 package util.database;
 
-import das.DataProviding;
-import das.DoubleVal;
+import util.data.DataProviding;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;

@@ -1,4 +1,4 @@
-package das;
+package util.data;
 
 import org.tinylog.Logger;
 import util.math.MathUtils;
@@ -146,6 +146,7 @@ public class DoubleVal {
     public String toString(){
         return value+unit;
     }
+
     private class TriggeredCmd{
         String cmd="";
         String ori="";

@@ -1,11 +1,12 @@
 package io.forward;
 
-import das.DataProviding;
-import das.DoubleVal;
+import util.data.DataProviding;
+import util.data.DoubleVal;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.data.FlagVal;
 import util.math.Calculations;
 import util.math.MathFab;
 import util.math.MathUtils;
@@ -14,7 +15,6 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
-import javax.swing.text.html.Option;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
@@ -34,7 +34,8 @@ public class MathForward extends AbstractForward {
     HashMap<String,String> defs = new HashMap<>();
 
     public enum OP_TYPE{COMPLEX, SCALE, LN, SALINITY, SVC,TRUEWINDSPEED,TRUEWINDDIR}
-    private ArrayList<DoubleVal> referencedDoubles;
+    private ArrayList<DoubleVal> referencedDoubles = new ArrayList<>();
+    private ArrayList<FlagVal> referencedFlags;
     private int highestI=-1;
 
     public MathForward(String id, String source, BlockingQueue<Datagram> dQueue, DataProviding dp){
@@ -72,6 +73,9 @@ public class MathForward extends AbstractForward {
 
         // Reset the references
         referencedDoubles.clear();
+        if( referencedFlags!=null)
+            referencedFlags.clear();
+
         highestI=-1;
 
         setDelimiter(XMLtools.getStringAttribute( math, "delimiter", delimiter));
@@ -112,8 +116,6 @@ public class MathForward extends AbstractForward {
                     }
                 } );
 
-        Collections.reverse(referencedDoubles); // reverse it so the first ones are at the end
-
         if( !oldValid && valid )// If math specific things made it valid
             sources.forEach( source -> dQueue.add( Datagram.build( source ).label("system").writable(this) ) );
         return true;
@@ -127,13 +129,13 @@ public class MathForward extends AbstractForward {
                 switch(p[0]){
                     case "d": case "double":
                         var d = dataProviding.getDoubleVal(p[1]);
-                        if( referencedDoubles ==null)
-                            referencedDoubles =new ArrayList<>();
                         d.ifPresent( dv -> referencedDoubles.add(dv) );
-
                         break;
                     case "f": case "flag":
-
+                        var f = dataProviding.getFlagVal(p[1]);
+                        if( referencedFlags ==null)
+                            referencedFlags =new ArrayList<>();
+                        f.ifPresent( fv -> referencedFlags.add(fv) );
                         break;
                     default:
                         Logger.error("Operation containing unknown pair: "+p[0]+":"+p[1]);
@@ -251,7 +253,7 @@ public class MathForward extends AbstractForward {
         if(!suffix.isEmpty()){
             // Append the nmea checksum
             if( suffix.equalsIgnoreCase("nmea")){
-                result=join.toString()+"*"+MathUtils.getNMEAchecksum(join.toString());
+                result=join+"*"+MathUtils.getNMEAchecksum(join.toString());
             }else{
                 Logger.error(getID()+" (mf)-> No such suffix "+suffix);
                 result=join.toString();
@@ -282,10 +284,16 @@ public class MathForward extends AbstractForward {
         return true;
     }
     private BigDecimal[] makeBDArray( String data ){
-        if( !referencedDoubles.isEmpty()) {
-            var refBds = new BigDecimal[referencedDoubles.size()];
-            for (int a = 0; a < refBds.length;a++ ){
+
+        if( !referencedDoubles.isEmpty() || referencedFlags!=null) {
+            var refBds = new BigDecimal[referencedDoubles.size()+(referencedFlags==null?0:referencedFlags.size())];
+            for (int a = 0; a < referencedDoubles.size();a++ ){
                 refBds[a]=BigDecimal.valueOf(referencedDoubles.get(a).getValue());
+            }
+            if( referencedFlags!=null ){
+                for (int a = 0; a < referencedFlags.size();a++ ){
+                    refBds[a+referencedDoubles.size()]=BigDecimal.valueOf(referencedFlags.get(a).getValue());
+                }
             }
             return ArrayUtils.addAll(MathUtils.toBigDecimals(data,delimiter,highestI),refBds);
         }else{
@@ -312,9 +320,6 @@ public class MathForward extends AbstractForward {
         if(debug)
             Logger.info(id+" -> Scratchpad received "+value);
     }
-
-
-
 
     /**
      * Add an operation to this object
@@ -362,7 +367,15 @@ public class MathForward extends AbstractForward {
                                     return Optional.empty();
                                 }
                             }else if ( p[0].startsWith("f") ) {
-
+                                var d = dataProviding.getFlagVal(p[1]);
+                                int exist = referencedFlags.indexOf(d.get());
+                                if( exist != -1) {
+                                    int pos = highestI + exist + 1 + referencedDoubles.size();
+                                    exp = exp.replace("{"+p[0]+":" + p[1] + "}", "i" + pos );
+                                }else{
+                                    Logger.error(getID()+" (mf)-> Didn't find a flag when looking for "+p[1]);
+                                    return Optional.empty();
+                                }
                             }
                         }else{
                             Logger.error("Operation containing unknown pair: "+p[0]+":"+p[1]);

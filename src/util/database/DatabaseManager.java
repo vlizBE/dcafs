@@ -1,7 +1,6 @@
 package util.database;
 
-import das.DataProviding;
-import das.DoubleVal;
+import util.data.DataProviding;
 import org.influxdb.dto.Point;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
@@ -9,7 +8,6 @@ import util.xml.XMLfab;
 
 import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;

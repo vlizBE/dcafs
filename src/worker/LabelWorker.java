@@ -1,6 +1,6 @@
 package worker;
 
-import das.DataProviding;
+import util.data.DataProviding;
 import io.Readable;
 import io.Writable;
 import das.CommandPool;

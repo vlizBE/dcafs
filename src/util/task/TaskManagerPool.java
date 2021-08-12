@@ -6,7 +6,7 @@ import io.stream.StreamManager;
 import io.Writable;
 import das.CommandPool;
 import das.Commandable;
-import das.RealtimeValues;
+import util.data.RealtimeValues;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.xml.XMLfab;

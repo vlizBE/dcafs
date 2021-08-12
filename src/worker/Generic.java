@@ -1,6 +1,6 @@
 package worker;
 
-import das.DataProviding;
+import util.data.DataProviding;
 import io.mqtt.MqttWriting;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.influxdb.dto.Point;

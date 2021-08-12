@@ -1,25 +1,21 @@
 package util.gis;
 
 import das.Commandable;
-import das.DoubleVal;
-import das.RealtimeValues;
+import util.data.DoubleVal;
+import util.data.RealtimeValues;
 import io.Writable;
 import org.tinylog.Logger;
-import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import util.gis.Waypoint.Travel;
-import util.math.MathUtils;
 import util.tools.Tools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
-import javax.xml.crypto.Data;
 import java.nio.file.Path;
 import java.time.*;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 

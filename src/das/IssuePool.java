@@ -3,8 +3,8 @@ package das;
 import io.Writable;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.data.DataProviding;
 import util.task.RtvalCheck;
-import util.task.Task;
 import util.tools.TimeTools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
@@ -286,7 +286,7 @@ public class IssuePool implements Commandable{
                 Logger.error("Tried to check an issue '"+message+ "' without proper function");
                 return false;
             }
-            if( resolve!=null){ // meaning both and activate and a resolve
+            if( resolve!=null){ // meaning both and activate test and a resolve test
                 if( active ){
                     if( resolve.test(dp,getActives()) )
                         stop();
@@ -294,7 +294,7 @@ public class IssuePool implements Commandable{
                     if( activate.test(dp,getActives()))
                         start();
                 }
-            }else{ //meaning only an activate
+            }else{ //meaning only an activate test
                 if( activate.test(dp,getActives()) ){
                     start();
                 }else{

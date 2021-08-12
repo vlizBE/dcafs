@@ -21,6 +21,8 @@ import org.tinylog.provider.ProviderRegistry;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import util.DeadThreadListener;
+import util.data.DataProviding;
+import util.data.RealtimeValues;
 import util.database.*;
 import util.gis.Waypoint;
 import util.gis.Waypoints;

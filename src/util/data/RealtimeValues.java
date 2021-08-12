@@ -1,5 +1,6 @@
-package das;
+package util.data;
 
+import das.Commandable;
 import io.Writable;
 import io.collector.CollectorFuture;
 import io.collector.MathCollector;
