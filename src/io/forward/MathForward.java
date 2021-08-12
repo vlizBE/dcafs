@@ -50,9 +50,41 @@ public class MathForward extends AbstractForward {
      * @param ele The element containing the math info
      * @return The MathForward created based on the xml element
      */
-    public static MathForward readXML(Element ele, BlockingQueue<Datagram> dQueue, DataProviding dp ){
+    public static MathForward fromXML(Element ele, BlockingQueue<Datagram> dQueue, DataProviding dp ){
         return new MathForward( ele,dQueue,dp );
     }
+    /**
+     * Alter the delimiter used
+     * @param deli The new delimiter to use, eg. \x09  or \t is also valid for a tab
+     */
+    public void setDelimiter( String deli ){
+        if( deli.contains("\\")){
+            delimiter = Tools.fromEscapedStringToBytes(deli);
+        }else{
+            delimiter = deli;
+        }
+    }
+    /**
+     * Set the value of this objects scratchpad, this can then be used in an op when referring to o0
+     * @param value The new value for the scratchpad
+     */
+    public void setScratchpad( double value ){
+        scratchpad=BigDecimal.valueOf(value);
+        if(debug)
+            Logger.info(id+" -> Scratchpad received "+value);
+    }
+    @Override
+    public String getRules(){
+        int index=0;
+        StringJoiner join = new StringJoiner("\r\n");
+        join.setEmptyValue(" -> No rules yet.");
+
+        for( String[] x : rulesString ){
+            join.add("\t"+(index++) +" : i"+x[1]+ " = "+x[2]);
+        }
+        return join.toString();
+    }
+    /* ***************************************** X M L ************************************************************ */
     /**
      * Get the tag that is used for the child nodes, this way the abstract class can refer to it
      * @return The child tag for this forward, parent tag is same with added s
@@ -139,104 +171,6 @@ public class MathForward extends AbstractForward {
         if( !oldValid && valid )// If math specific things made it valid
             sources.forEach( source -> dQueue.add( Datagram.build( source ).label("system").writable(this) ) );
         return true;
-    }
-
-    /**
-     * Check the expression for references to:
-     * - doubles -> {d:id} or {double:id}
-     * - flags -> {f:id} or{flag:id}
-     * If found check if those exist and if so add them to the corresponding list
-     *
-     * @param exp The expression to check
-     * @return True if everything went ok and all references were found
-     */
-    private boolean findReferences(String exp){
-
-        // Find all the double/flag pairs
-        var pairs = Tools.parseKeyValue(exp,true);
-        for( var p : pairs ) {
-            if (p.length == 2) {
-                switch(p[0]){
-                    case "d": case "double":
-                        var d = dataProviding.getDoubleVal(p[1]);
-                        d.ifPresent( dv -> referencedDoubles.add(dv) );
-                        break;
-                    case "f": case "flag":
-                        var f = dataProviding.getFlagVal(p[1]);
-                        if( referencedFlags ==null)
-                            referencedFlags =new ArrayList<>();
-                        f.ifPresent( fv -> referencedFlags.add(fv) );
-                        break;
-                    default:
-                        Logger.error(getID()+" (mf)-> Operation containing unknown pair: "+p[0]+":"+p[1]);
-                        return false;
-                }
-            }else{
-                Logger.error(getID()+" (mf)-> Pair containing odd amount of elements: "+String.join(":",p));
-            }
-        }
-        // Find the highest used i index
-        var is = Pattern.compile("[i][0-9]{1,2}")
-                .matcher(exp)
-                .results()
-                .map(MatchResult::group)
-                .sorted()
-                .toArray(String[]::new);
-        highestI = Math.max(highestI,Integer.parseInt(is[is.length-1].substring(1)));
-
-        return true;
-    }
-
-    /**
-     * Use the earlier found references and replace them with the corresponding index.
-     * The indexes will be altered so that they match if the correct index of an array containing
-     * - The received data split according to the delimeter up to the highest used index
-     * - The doubleVals found
-     * - The flagVals found
-     *
-     * So if highest is 5 then the first double will be 6 and first flag will be 5 + size of double list + 1
-     *
-     * @param exp The expression to replace the references in
-     * @return The altered expression or an empty string if something failed
-     */
-    private String replaceReferences( String exp ){
-        // Find the pairs in the expression
-        for( var p : Tools.parseKeyValue(exp,true) ) {
-            if (p.length == 2) { // The pair should be an actual pair
-                boolean ok=false; // will be used at the end to check if ok
-                if ( p[0].equals("d")||p[0].equals("double") ) { // if the left of the pair is a double
-                    for( int pos=0;pos<referencedDoubles.size();pos++ ){ // go through the known doubleVals
-                        var d = referencedDoubles.get(pos);
-                        if( d.getID().equalsIgnoreCase(p[1])) { // If a match is found
-                            exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + (highestI + pos + 1));
-                            ok=true;
-                            break;
-                        }
-                    }
-                }else if ( p[0].equals("f")||p[0].equals("flag") ) { // if the left of the pair is a flag
-                    for( int pos=0;pos<referencedFlags.size();pos++ ){// go through the known flags
-                        var d = referencedFlags.get(pos);
-                        if( d.getID().equalsIgnoreCase(p[1])) {// if a match is found
-                            int i = highestI + referencedDoubles.size()+ pos + 1;
-                            exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + i);
-                            ok=true;
-                            break;
-                        }
-                    }
-                }else{
-                    Logger.error(getID()+" (mf)-> Operation containing unknown pair: "+String.join(":",p));
-                    return "";
-                }
-                if(!ok){
-                    Logger.error(getID()+" (mf)-> Didn't find a match when looking for "+String.join(":",p));
-                    return "";
-                }
-            }else{
-                Logger.error(getID()+" (mf)-> Pair containing to many elements: "+String.join(":",p));
-                return "";
-            }
-        }
-        return exp;
     }
     /**
      * Store this object's setup to the xml referred to with the given fab
@@ -365,44 +299,7 @@ public class MathForward extends AbstractForward {
         }
         return true;
     }
-    private BigDecimal[] makeBDArray( String data ){
-
-        if( !referencedDoubles.isEmpty() || referencedFlags!=null) {
-            var refBds = new BigDecimal[referencedDoubles.size()+(referencedFlags==null?0:referencedFlags.size())];
-            for (int a = 0; a < referencedDoubles.size();a++ ){
-                refBds[a]=BigDecimal.valueOf(referencedDoubles.get(a).getValue());
-            }
-            if( referencedFlags!=null ){
-                for (int a = 0; a < referencedFlags.size();a++ ){
-                    refBds[a+referencedDoubles.size()]=BigDecimal.valueOf(referencedFlags.get(a).getValue());
-                }
-            }
-            return ArrayUtils.addAll(MathUtils.toBigDecimals(data,delimiter,highestI),refBds);
-        }else{
-            return MathUtils.toBigDecimals(data,delimiter,highestI); // Split the data and convert to bigdecimals
-        }
-    }
-    /**
-     * Alter the delimiter used
-     * @param deli The new delimiter to use, eg. \x09  or \t is also valid for a tab
-     */
-    public void setDelimiter( String deli ){
-        if( deli.contains("\\")){
-            delimiter = Tools.fromEscapedStringToBytes(deli);
-        }else{
-            delimiter = deli;
-        }
-    }
-    /**
-     * Set the value of this objects scratchpad, this can then be used in an op when referring to o0
-     * @param value The new value for the scratchpad
-     */
-    public void setScratchpad( double value ){
-        scratchpad=BigDecimal.valueOf(value);
-        if(debug)
-            Logger.info(id+" -> Scratchpad received "+value);
-    }
-
+    /* ************************************** ADDING OPERATIONS **************************************************** */
     /**
      * Add an operation to this object
      * @param cmd Send the result as part of a command
@@ -416,7 +313,7 @@ public class MathForward extends AbstractForward {
         expression=expression.replace("--","-=1");
         expression=expression.replace(" ",""); //remove spaces
 
-        if( !expression.contains("=") )
+        if( !expression.contains("=") ) // If this doesn't contain a '=' it's no good
             return Optional.empty();
 
         String exp = expression;
@@ -444,11 +341,11 @@ public class MathForward extends AbstractForward {
 
         Operation op;
 
-        for( var entry : defs.entrySet() ){
+        for( var entry : defs.entrySet() ){ // Check for the defaults and replace
             exp = exp.replace(entry.getKey(),entry.getValue());
         }
 
-        exp=replaceReferences(exp);
+        exp = replaceReferences(exp);
         if( exp.isEmpty() )
             return Optional.empty();
 
@@ -469,6 +366,7 @@ public class MathForward extends AbstractForward {
         }
         return Optional.ofNullable(ops.get(ops.size()-1)); // return the one that was added last
     }
+
     public Optional<Operation> addOperation( int index, int scale, OP_TYPE type, String cmd , String expression  ){
 
         expression=expression.replace(" ",""); //remove spaces
@@ -493,28 +391,28 @@ public class MathForward extends AbstractForward {
                 break;
             case SALINITY:
                 if( indexes.length != 3 ){
-                    Logger.error("Not enough info for salinity calculation");
+                    Logger.error(getID()+" (mf)-> Not enough args for salinity calculation");
                     return Optional.empty();
                 }
                 op = new Operation(expression, Calculations.procSalinity(indexes[0],indexes[1],indexes[2]), index);
                 break;
             case SVC:
                 if( indexes.length != 3 ){
-                    Logger.error("Not enough info for salinity calculation");
+                    Logger.error(getID()+" (mf)-> Not enough args for soundvelocity calculation");
                     return Optional.empty();
                 }
                 op = new Operation(expression, Calculations.procSoundVelocity(indexes[0],indexes[1],indexes[2]), index);
                 break;
             case TRUEWINDSPEED:
                 if( indexes.length != 5 ){
-                    Logger.error("Not enough info for true wind calculation");
+                    Logger.error(getID()+" (mf)-> Not enough args for True wind speed calculation");
                     return Optional.empty();
                 }
                 op = new Operation(expression, Calculations.procTrueWindSpeed(indexes[0],indexes[1],indexes[2],indexes[3],indexes[4]), index);
                 break;
             case TRUEWINDDIR:
                 if( indexes.length != 5 ){
-                    Logger.error("Not enough info for true wind calculation");
+                    Logger.error(getID()+" (mf)-> Not enough args for True wind direction calculation");
                     return Optional.empty();
                 }
                 op = new Operation(expression, Calculations.procTrueWindDirection(indexes[0],indexes[1],indexes[2],indexes[3],indexes[4]), index);
@@ -555,17 +453,7 @@ public class MathForward extends AbstractForward {
         Logger.error("Invalid op type given, valid ones complex,scale");
         return null;
     }
-    @Override
-    public String getRules(){
-        int index=0;
-        StringJoiner join = new StringJoiner("\r\n");
-        join.setEmptyValue(" -> No rules yet.");
 
-        for( String[] x : rulesString ){
-            join.add("\t"+(index++) +" : i"+x[1]+ " = "+x[2]);
-        }
-        return join.toString();
-    }
     /**
      * Solve the operations based on the given data
      * @param data The data to use in solving the operations
@@ -589,7 +477,128 @@ public class MathForward extends AbstractForward {
         }
         return join.toString();
     }
+    /* ************************************* R E F E R E N C E S *************************************************** */
+    /**
+     * Build the BigDecimal array base on received data and the local references.
+     * From the received data only the part that holds used i's is converted (so if i1 and i5 is used, i0-i5 is taken)
+     * @param data The data received, to be split
+     * @return The created array
+     */
+    private BigDecimal[] makeBDArray( String data ){
 
+        if( !referencedDoubles.isEmpty() || referencedFlags!=null) {
+            var refBds = new BigDecimal[referencedDoubles.size()+(referencedFlags==null?0:referencedFlags.size())];
+            for (int a = 0; a < referencedDoubles.size();a++ ){
+                refBds[a]=BigDecimal.valueOf(referencedDoubles.get(a).getValue());
+            }
+            if( referencedFlags!=null ){
+                for (int a = 0; a < referencedFlags.size();a++ ){
+                    refBds[a+referencedDoubles.size()]=BigDecimal.valueOf(referencedFlags.get(a).getValue());
+                }
+            }
+            return ArrayUtils.addAll(MathUtils.toBigDecimals(data,delimiter,highestI),refBds);
+        }else{
+            return MathUtils.toBigDecimals(data,delimiter,highestI); // Split the data and convert to bigdecimals
+        }
+    }
+    /**
+     * Check the expression for references to:
+     * - doubles -> {d:id} or {double:id}
+     * - flags -> {f:id} or{flag:id}
+     * If found check if those exist and if so add them to the corresponding list
+     *
+     * @param exp The expression to check
+     * @return True if everything went ok and all references were found
+     */
+    private boolean findReferences(String exp){
+
+        // Find all the double/flag pairs
+        var pairs = Tools.parseKeyValue(exp,true);
+        for( var p : pairs ) {
+            if (p.length == 2) {
+                switch(p[0]){
+                    case "d": case "double":
+                        var d = dataProviding.getDoubleVal(p[1]);
+                        d.ifPresent( dv -> referencedDoubles.add(dv) );
+                        break;
+                    case "f": case "flag":
+                        var f = dataProviding.getFlagVal(p[1]);
+                        if( referencedFlags ==null)
+                            referencedFlags =new ArrayList<>();
+                        f.ifPresent( fv -> referencedFlags.add(fv) );
+                        break;
+                    default:
+                        Logger.error(getID()+" (mf)-> Operation containing unknown pair: "+p[0]+":"+p[1]);
+                        return false;
+                }
+            }else{
+                Logger.error(getID()+" (mf)-> Pair containing odd amount of elements: "+String.join(":",p));
+            }
+        }
+        // Find the highest used i index
+        var is = Pattern.compile("[i][0-9]{1,2}")
+                .matcher(exp)
+                .results()
+                .map(MatchResult::group)
+                .sorted()
+                .toArray(String[]::new);
+        highestI = Math.max(highestI,Integer.parseInt(is[is.length-1].substring(1)));
+
+        return true;
+    }
+
+    /**
+     * Use the earlier found references and replace them with the corresponding index.
+     * The indexes will be altered so that they match if the correct index of an array containing
+     * - The received data split according to the delimeter up to the highest used index
+     * - The doubleVals found
+     * - The flagVals found
+     *
+     * So if highest is 5 then the first double will be 6 and first flag will be 5 + size of double list + 1
+     *
+     * @param exp The expression to replace the references in
+     * @return The altered expression or an empty string if something failed
+     */
+    private String replaceReferences( String exp ){
+        // Find the pairs in the expression
+        for( var p : Tools.parseKeyValue(exp,true) ) {
+            if (p.length == 2) { // The pair should be an actual pair
+                boolean ok=false; // will be used at the end to check if ok
+                if ( p[0].equals("d")||p[0].equals("double") ) { // if the left of the pair is a double
+                    for( int pos=0;pos<referencedDoubles.size();pos++ ){ // go through the known doubleVals
+                        var d = referencedDoubles.get(pos);
+                        if( d.getID().equalsIgnoreCase(p[1])) { // If a match is found
+                            exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + (highestI + pos + 1));
+                            ok=true;
+                            break;
+                        }
+                    }
+                }else if ( p[0].equals("f")||p[0].equals("flag") ) { // if the left of the pair is a flag
+                    for( int pos=0;pos<referencedFlags.size();pos++ ){// go through the known flags
+                        var d = referencedFlags.get(pos);
+                        if( d.getID().equalsIgnoreCase(p[1])) {// if a match is found
+                            int i = highestI + referencedDoubles.size()+ pos + 1;
+                            exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + i);
+                            ok=true;
+                            break;
+                        }
+                    }
+                }else{
+                    Logger.error(getID()+" (mf)-> Operation containing unknown pair: "+String.join(":",p));
+                    return "";
+                }
+                if(!ok){
+                    Logger.error(getID()+" (mf)-> Didn't find a match when looking for "+String.join(":",p));
+                    return "";
+                }
+            }else{
+                Logger.error(getID()+" (mf)-> Pair containing to many elements: "+String.join(":",p));
+                return "";
+            }
+        }
+        return exp;
+    }
+    /* ************************************* O P E R A T I O N ***************************************************** */
     /**
      * Storage class for everything related to an operation.
      * Contains the functions that
@@ -597,9 +606,9 @@ public class MathForward extends AbstractForward {
     public class Operation {
         Function<BigDecimal[],BigDecimal> op=null; // for the scale type
         MathFab fab=null;    // for the complex type
-        int index;      // index for the result
-        String ori;     // The expression before it was decoded mainly for listing purposes
-        String cmd =""; // Command in which to replace the $ with the result
+        int index;           // index for the result
+        String ori;          // The expression before it was decoded mainly for listing purposes
+        String cmd ="";      // Command in which to replace the $ with the result
         DoubleVal update;
 
 
@@ -641,11 +650,11 @@ public class MathForward extends AbstractForward {
                     try {
                         bd = op.apply(data);
                     }catch(NullPointerException e){
-                        Logger.error("Nullpointer when processing for "+ori);
+                        Logger.error(getID()+"(mf) -> Nullpointer when processing for "+ori);
                         return null;
                     }
                 }else{
-                    Logger.error("Tried to do an op with to few elements in the array (data="+data.length+" vs index="+index);
+                    Logger.error(getID()+"(mf) -> Tried to do an op with to few elements in the array (data="+data.length+" vs index="+index);
                     return null;
                 }
             }else if(fab!=null){
@@ -656,11 +665,11 @@ public class MathForward extends AbstractForward {
                     Logger.error(id+" -> "+e.getMessage());
                     return null;
                 }
-            }else{ // Somehow figure out this needs to be nmea?
+            }else{
                 return null;
             }
             if( bd == null ){
-                Logger.error(id+" -> Failed to solve the received data");
+                Logger.error(getID()+"(mf) -> Failed to solve the received data");
                 return null;
             }
             if( index>= 0 && index < data.length)
