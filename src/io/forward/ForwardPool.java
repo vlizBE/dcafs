@@ -234,7 +234,7 @@ public class ForwardPool implements Commandable {
                                     mOp.get().readFromXML(ee);
                                     altered.add(id);
                                 }else{ //if doesn't exist yet
-                                    maths.put(id,MathForward.readXML(ee,dQueue,dataProviding));
+                                    maths.put(id,MathForward.fromXML(ee,dQueue,dataProviding));
                                 }
                             }
                     );

@@ -874,8 +874,6 @@ public class CommandPool {
 				if( cmd.length != 3 )
 					return "Invalid amount of parameters";
 				return "Matches? "+cmd[1].matches(cmd[2]);
-			case "methodcall":
-				return das.getLabelWorker().getMethodCallAge( html?"<br>":"\r\n" );
 			case "ipv4": return Tools.getIP("", true);
 			case "ipv6": return Tools.getIP("", false);
 			case "gc":
