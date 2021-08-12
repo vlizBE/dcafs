@@ -140,6 +140,16 @@ public class MathForward extends AbstractForward {
             sources.forEach( source -> dQueue.add( Datagram.build( source ).label("system").writable(this) ) );
         return true;
     }
+
+    /**
+     * Check the expression for references to:
+     * - doubles -> {d:id} or {double:id}
+     * - flags -> {f:id} or{flag:id}
+     * If found check if those exist and if so add them to the corresponding list
+     *
+     * @param exp The expression to check
+     * @return True if everything went ok and all references were found
+     */
     private boolean findReferences(String exp){
 
         // Find all the double/flag pairs
@@ -158,11 +168,11 @@ public class MathForward extends AbstractForward {
                         f.ifPresent( fv -> referencedFlags.add(fv) );
                         break;
                     default:
-                        Logger.error("Operation containing unknown pair: "+p[0]+":"+p[1]);
+                        Logger.error(getID()+" (mf)-> Operation containing unknown pair: "+p[0]+":"+p[1]);
                         return false;
                 }
             }else{
-                Logger.error(getID()+" -> Operation containing unknown pair: "+String.join(":",p));
+                Logger.error(getID()+" (mf)-> Pair containing odd amount of elements: "+String.join(":",p));
             }
         }
         // Find the highest used i index
@@ -173,27 +183,40 @@ public class MathForward extends AbstractForward {
                 .sorted()
                 .toArray(String[]::new);
         highestI = Math.max(highestI,Integer.parseInt(is[is.length-1].substring(1)));
-        Logger.info("Highest I: "+highestI);
+
         return true;
     }
-    public String replaceReferences( String exp ){
-        var pairs = Tools.parseKeyValue(exp,true);
-        for( var p : pairs ) {
-            if (p.length == 2) {
-                boolean ok=false;
-                if ( p[0].equals("d")||p[0].equals("double") ) {
-                    for( int pos=0;pos<referencedDoubles.size();pos++ ){
+
+    /**
+     * Use the earlier found references and replace them with the corresponding index.
+     * The indexes will be altered so that they match if the correct index of an array containing
+     * - The received data split according to the delimeter up to the highest used index
+     * - The doubleVals found
+     * - The flagVals found
+     *
+     * So if highest is 5 then the first double will be 6 and first flag will be 5 + size of double list + 1
+     *
+     * @param exp The expression to replace the references in
+     * @return The altered expression or an empty string if something failed
+     */
+    private String replaceReferences( String exp ){
+        // Find the pairs in the expression
+        for( var p : Tools.parseKeyValue(exp,true) ) {
+            if (p.length == 2) { // The pair should be an actual pair
+                boolean ok=false; // will be used at the end to check if ok
+                if ( p[0].equals("d")||p[0].equals("double") ) { // if the left of the pair is a double
+                    for( int pos=0;pos<referencedDoubles.size();pos++ ){ // go through the known doubleVals
                         var d = referencedDoubles.get(pos);
-                        if( d.getID().equalsIgnoreCase(p[1])) {
+                        if( d.getID().equalsIgnoreCase(p[1])) { // If a match is found
                             exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + (highestI + pos + 1));
                             ok=true;
                             break;
                         }
                     }
-                }else if ( p[0].equals("f")||p[0].equals("flag") ) {
-                    for( int pos=0;pos<referencedFlags.size();pos++ ){
+                }else if ( p[0].equals("f")||p[0].equals("flag") ) { // if the left of the pair is a flag
+                    for( int pos=0;pos<referencedFlags.size();pos++ ){// go through the known flags
                         var d = referencedFlags.get(pos);
-                        if( d.getID().equalsIgnoreCase(p[1])) {
+                        if( d.getID().equalsIgnoreCase(p[1])) {// if a match is found
                             int i = highestI + referencedDoubles.size()+ pos + 1;
                             exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + i);
                             ok=true;
@@ -643,7 +666,7 @@ public class MathForward extends AbstractForward {
             if( index>= 0 && index < data.length)
                 data[index]=bd;
 
-            if( update!= null ) {
+            if( update != null ) {
                 update.setValue(bd.doubleValue());
             }else if( !cmd.isEmpty()){
                 dQueue.add(Datagram.system(cmd.replace("$", bd.toString())));
