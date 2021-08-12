@@ -14,11 +14,14 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
+import javax.swing.text.html.Option;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.function.Function;
+import java.util.regex.MatchResult;
+import java.util.regex.Pattern;
 
 public class MathForward extends AbstractForward {
 
@@ -31,8 +34,8 @@ public class MathForward extends AbstractForward {
     HashMap<String,String> defs = new HashMap<>();
 
     public enum OP_TYPE{COMPLEX, SCALE, LN, SALINITY, SVC,TRUEWINDSPEED,TRUEWINDDIR}
-    private ArrayList<DoubleVal> remoteVals;
-
+    private ArrayList<DoubleVal> referencedDoubles;
+    private int highestI=-1;
 
     public MathForward(String id, String source, BlockingQueue<Datagram> dQueue, DataProviding dp){
         super(id,source,dQueue,dp);
@@ -66,17 +69,15 @@ public class MathForward extends AbstractForward {
     protected boolean addData(String data) {
         String[] split = data.split(delimiter); // Split the data according to the delimiter
         BigDecimal[] bds;
-        int remoteOffset=0;
 
-        if( !remoteVals.isEmpty()) {
-            var remoteBds = new BigDecimal[remoteVals.size()];
-            remoteOffset=remoteBds.length;
-            for (int a = 0; a < remoteBds.length;a++ ){
-                remoteBds[a]=BigDecimal.valueOf(remoteVals.get(a).getValue());
+        if( !referencedDoubles.isEmpty()) {
+            var refBds = new BigDecimal[referencedDoubles.size()];
+            for (int a = 0; a < refBds.length;a++ ){
+                refBds[a]=BigDecimal.valueOf(referencedDoubles.get(a).getValue());
             }
-            bds = ArrayUtils.addAll(MathUtils.toBigDecimals(data,delimiter),remoteBds);
+            bds = ArrayUtils.addAll(MathUtils.toBigDecimals(data,delimiter,highestI),refBds);
         }else{
-            bds = MathUtils.toBigDecimals(data,delimiter); // Split the data and convert to bigdecimals
+            bds = MathUtils.toBigDecimals(data,delimiter,highestI); // Split the data and convert to bigdecimals
         }
 
         int oldBad = badDataCount;
@@ -108,8 +109,12 @@ public class MathForward extends AbstractForward {
             return true;
 
         StringJoiner join = new StringJoiner(delimiter); // prepare a joiner to rejoin the data
-        for( int a=0;a<(bds.length-remoteOffset);a++){
-            join.add( bds[a]!=null?bds[a].toPlainString():split[a]); // if no valid bd is found, use the original data
+        for( int a=0;a<split.length;a++){
+            if( a <= highestI ) {
+                join.add(bds[a] != null ? bds[a].toPlainString() : split[a]); // if no valid bd is found, use the original data
+            }else{
+                join.add(split[a]);
+            }
         }
 
         // append suffix
@@ -232,6 +237,10 @@ public class MathForward extends AbstractForward {
         String content = math.getTextContent();
 
         if( content != null && XMLtools.getChildElements(math).isEmpty() ){
+            if( !findReferences(content) ){
+                return false;
+            }
+
             var op = addComplex(content, XMLtools.getIntAttribute(math,"scale",-1));
             op.ifPresent( p -> p.cmd = XMLtools.getStringAttribute(math,"cmd",""));
         }
@@ -240,6 +249,10 @@ public class MathForward extends AbstractForward {
                 .forEach( def -> defs.put( def.getAttribute("ref"),def.getTextContent()));
 
         boolean oldValid=valid;
+        for( var ops : XMLtools.getChildElements(math, "op") ){
+            if( !findReferences(ops.getTextContent()))
+                return false;
+        }
 
         XMLtools.getChildElements(math, "op")
                     .forEach( ops -> {
@@ -255,10 +268,46 @@ public class MathForward extends AbstractForward {
                         }
                     } );
 
-        Collections.reverse(remoteVals); // reverse it so the first ones are at the end
+        Collections.reverse(referencedDoubles); // reverse it so the first ones are at the end
 
         if( !oldValid && valid )// If math specific things made it valid
             sources.forEach( source -> dQueue.add( Datagram.build( source ).label("system").writable(this) ) );
+        return true;
+    }
+    private boolean findReferences(String exp){
+
+        // Find all the double/flag pairs
+        var pairs = Tools.parseKeyValue(exp,true);
+        for( var p : pairs ) {
+            if (p.length == 2) {
+                switch(p[0]){
+                    case "d": case "double":
+                            var d = dataProviding.getDoubleVal(p[1]);
+                            if( referencedDoubles ==null)
+                                referencedDoubles =new ArrayList<>();
+                            d.ifPresent( dv -> referencedDoubles.add(dv) );
+
+                        break;
+                    case "f": case "flag":
+
+                        break;
+                    default:
+                        Logger.error("Operation containing unknown pair: "+p[0]+":"+p[1]);
+                        return false;
+                }
+            }else{
+                Logger.error(getID()+" -> Operation containing unknown pair: "+String.join(":",p));
+            }
+        }
+        // Find the highest used i index
+        var is = Pattern.compile("[i][0-9]{1,2}")
+                .matcher(exp)
+                .results()
+                .map(MatchResult::group)
+                .sorted()
+                .toArray(String[]::new);
+        highestI = Math.max(highestI,Integer.parseInt(is[is.length-1].substring(1)));
+        Logger.info("Highest I: "+highestI);
         return true;
     }
     /**
@@ -297,17 +346,17 @@ public class MathForward extends AbstractForward {
                     var pairs = Tools.parseKeyValue(exp,true);
                     for( var p : pairs ) {
                         if (p.length == 2) {
-                            if (p[0].equals("double") && dataProviding.hasDouble(p[1])) {
+                            if ( p[0].startsWith("d") ) {
                                 var d = dataProviding.getDoubleVal(p[1]);
-                                if( remoteVals==null)
-                                    remoteVals=new ArrayList<>();
-                                int exist = remoteVals.indexOf(d);
-                                if( exist == -1) {
-                                    exp = exp.replace("{double:" + p[1] + "}", "i" + (MathUtils.DV_OFFSET + remoteVals.size()));
-                                    remoteVals.add(d);
+                                int exist = referencedDoubles.indexOf(d.get());
+                                if( exist != -1) {
+                                    exp = exp.replace("{"+p[0]+":" + p[1] + "}", "i" + (highestI + exist + 1));
                                 }else{
-                                    exp = exp.replace("{double:" + p[1] + "}", "i" + (MathUtils.DV_OFFSET + exist));
+                                    Logger.error(getID()+" (mf)-> Didn't find a double when looking for "+p[1]);
+                                    return Optional.empty();
                                 }
+                            }else if ( p[0].startsWith("f") ) {
+
                             }
                         }else{
                             Logger.error("Operation containing unknown pair: "+p[0]+":"+p[1]);
@@ -434,8 +483,8 @@ public class MathForward extends AbstractForward {
      */
     public String solveFor(String data){
         String[] split = data.split(delimiter);
-
-        BigDecimal[] bds = MathUtils.toBigDecimals(data,delimiter);
+    // TODO: Alter this to use referenced stuff
+        BigDecimal[] bds = MathUtils.toBigDecimals(data,delimiter,-1);
         ops.forEach( op -> op.solve(bds) );
 
         StringJoiner join = new StringJoiner(delimiter);

@@ -50,8 +50,6 @@ public class MathFab {
             requiredInputs = 0;
         }else{
             requiredInputs = 1+Integer.parseInt(is[is.length-1].substring(1));
-            if( requiredInputs >= MathUtils.DV_OFFSET )
-                requiredInputs -= MathUtils.DV_OFFSET;
         }
 
         if( opens != closes ){
@@ -110,7 +108,7 @@ public class MathFab {
     }
 
     public BigDecimal solve( String data, String delimiter ){
-        return solve( MathUtils.toBigDecimals(data,delimiter),BigDecimal.ZERO );
+        return solve( MathUtils.toBigDecimals(data,delimiter,-1),BigDecimal.ZERO );
     }
     public double solveFor( double... val){
         var bds = new BigDecimal[val.length];
