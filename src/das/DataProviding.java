@@ -1,6 +1,7 @@
 package das;
 
 import java.util.ArrayList;
+import java.util.Optional;
 
 public interface DataProviding {
 
@@ -9,7 +10,7 @@ public interface DataProviding {
     String parseRTline( String line, String error );
 
     /* Double */
-    DoubleVal getDoubleVal( String param );
+    Optional<DoubleVal> getDoubleVal(String param );
 
     boolean hasDouble( String id);
     double getDouble(String id, double defVal, boolean createIfNew);

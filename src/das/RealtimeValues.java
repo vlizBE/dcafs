@@ -195,10 +195,10 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	 * @param id The reference with which the object was stored
 	 * @return The requested DoubleVal or null if not found
 	 */
-	public DoubleVal getDoubleVal( String id ){
+	public Optional<DoubleVal> getDoubleVal( String id ){
 		if( doubleVals.get(id)==null)
 			Logger.error( "Tried to retrieve non existing doubleval "+id);
-		return doubleVals.get(id);
+		return Optional.ofNullable(doubleVals.get(id));
 	}
 
 	/**

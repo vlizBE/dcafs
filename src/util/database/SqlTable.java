@@ -621,9 +621,9 @@ public class SqlTable {
                 }else if( col.type == COLUMN_TYPE.TEXT){
                     val = dp.getText(ref,"");
                 }else if( col.type == COLUMN_TYPE.INTEGER){
-                    DoubleVal dv = dp.getDoubleVal(ref);
-                    if( dv!=null) {
-                        val = dv.getValue();
+                    var dvOpt = dp.getDoubleVal(ref);
+                    if( dvOpt.isPresent()) {
+                        val = dvOpt.get().getValue();
                         if( val instanceof Double){
                             val = ((Double)val).intValue();
                         }
@@ -633,7 +633,8 @@ public class SqlTable {
                             val = NumberUtils.toInt(def);
                     }
                 }else if( col.type == COLUMN_TYPE.REAL){
-                    val = dp.getDoubleVal(ref).getValue();
+                    var dvOpt = dp.getDoubleVal(ref);
+                    val = dvOpt.isPresent()?dvOpt.get():null;
                     if( val==null && col.hasDefault )
                         val = NumberUtils.createDouble(def);
                 }else if( col.type == COLUMN_TYPE.LOCALDTNOW){
