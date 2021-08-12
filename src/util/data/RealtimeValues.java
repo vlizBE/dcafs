@@ -39,7 +39,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	protected ConcurrentHashMap<String, String> rttext = new ConcurrentHashMap<>();
 	protected HashMap<String, List<Writable>> textRequest = new HashMap<>();
 
-	protected ConcurrentHashMap<String, Boolean> flags = new ConcurrentHashMap<>();
+	protected ConcurrentHashMap<String, FlagVal> flagVals = new ConcurrentHashMap<>();
 
 	protected String workPath = "";
 
@@ -110,11 +110,12 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				setText(id,XMLtools.getStringAttribute(rtval,"default",defText));
 				break;
 			case "flag":
-				if( XMLtools.getBooleanAttribute(rtval,"default",defFlag) ){
-					raiseFlag(id);
-				}else{
-					lowerFlag(id);
-				}
+				var fv = getOrAddFlagVal(id);
+				fv.name(XMLtools.getChildValueByTag(rtval,"name",fv.getName()))
+						.group(XMLtools.getChildValueByTag(rtval,"group",fv.getGroup()))
+						.defState(XMLtools.getBooleanAttribute(rtval,"default",defFlag));
+				if( XMLtools.getBooleanAttribute(rtval,"keeptime",false) )
+					fv.enableTimekeeping();
 				break;
 		}
 	}
@@ -397,20 +398,33 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		return stream.sorted(Map.Entry.comparingByKey()).map(e -> e.getKey() + " : " + e.getValue()).collect(Collectors.joining(eol));
 	}
 	/* ************************************ F L A G S ************************************************************* */
+	public FlagVal getOrAddFlagVal( String id ){
+		if( id.isEmpty())
+			return null;
+
+		var val = flagVals.get(id);
+		if( val==null){
+			flagVals.put(id,FlagVal.newVal(id));
+		}
+		return flagVals.get(id);
+	}
+	public Optional<FlagVal> getFlagVal( String flag){
+		return Optional.ofNullable(flagVals.get(flag));
+	}
 	public boolean hasFlag( String flag){
-		return flags.get(flag)!=null;
+		return flagVals.get(flag)!=null;
 	}
 	public boolean isFlagUp( String flag ){
-		var f = flags.get(flag);
+		var f = flagVals.get(flag);
 		if( f==null)
 			Logger.warn("No such flag: "+flag);
-		return f==null?false:f;
+		return f==null?false:f.isUp();
 	}
 	public boolean isFlagDown( String flag ){
-		var f = flags.get(flag);
+		var f = flagVals.get(flag);
 		if( f==null)
 			Logger.warn("No such flag: "+flag);
-		return f==null?false:!f;
+		return f==null?false:!f.isDown();
 	}
 
 	/**
@@ -419,10 +433,11 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	 * @return True if this is a new flag/bit
 	 */
 	public boolean raiseFlag( String... flag ){
-		int cnt = flags.size();
-		for( var f : flag)
-			flags.put(f,true);
-		return cnt!=flags.size();
+		int cnt = flagVals.size();
+		for( var f : flag) {
+			setFlagState(f,true);
+		}
+		return cnt!= flagVals.size();
 	}
 	/**
 	 * Lowers a flag/clears a boolean.
@@ -430,12 +445,12 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	 * @return True if this is a new flag/bit
 	 */
 	public boolean lowerFlag( String... flag ){
-		int cnt = flags.size();
-		for( var f : flag)
-			flags.put(f,false);
-		return cnt!=flags.size();
+		int cnt = flagVals.size();
+		for( var f : flag){
+			setFlagState(f,false);
+		}
+		return cnt!= flagVals.size();
 	}
-
 	/**
 	 * Set the state of the flag
 	 * @param id The flag id
@@ -443,10 +458,16 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	 * @return True if the state was changed, false if a new flag was made
 	 */
 	public boolean setFlagState( String id, boolean state){
-		return flags.put(id,state) != null;
+		var opt = getFlagVal(id);
+		if( opt.isPresent()){
+			opt.get().setState(state);
+			return false;
+		}
+		flagVals.put(id, FlagVal.newVal(id).setState(state));
+		return true;
 	}
 	public ArrayList<String> listFlags(){
-		return flags.entrySet().stream().map( ent -> ent.getKey()+" : "+ent.getValue()).collect(Collectors.toCollection(ArrayList::new));
+		return flagVals.entrySet().stream().map(ent -> ent.getKey()+" : "+ent.getValue()).collect(Collectors.toCollection(ArrayList::new));
 	}
 	/* ********************************* O V E R V I E W *********************************************************** */
 
@@ -463,7 +484,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		for( var dt : keys ){
 			fab.selectOrCreateParent("text","id",dt).up();
 		}
-		keys = flags.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(e->e.getKey()).collect(Collectors.toList());
+		keys = flagVals.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(e->e.getKey()).collect(Collectors.toList());
 		for( var dt : keys ){
 			fab.selectOrCreateParent("flag","id",dt).up();
 		}
@@ -778,7 +799,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				.forEach(dv -> join.add(space+dv.getName()+" : "+dv));
 		rttext.entrySet().stream().filter(ent -> ent.getKey().startsWith(group+"_"))
 				.forEach( ent -> join.add( space+ent.getKey().split("_")[1]+" : "+ent.getValue()) );
-		flags.entrySet().stream().filter(ent -> ent.getKey().startsWith(group+"_"))
+		flagVals.entrySet().stream().filter(ent -> ent.getKey().startsWith(group+"_"))
 				.forEach( ent -> join.add( space+ent.getKey().split("_")[1]+" : "+ent.getValue()) );
 		return join.toString();
 	}
@@ -799,7 +820,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				.forEach(dv -> join.add(space+dv.getGroup()+" -> "+dv.getName()+" : "+dv.toString()));
 		rttext.entrySet().stream().filter(ent -> ent.getKey().matches(name.replace("*",".*")))
 				.forEach( ent -> join.add( space+ent.getKey().replace("_","->")+" : "+ent.getValue()) );
-		flags.entrySet().stream().filter(ent -> ent.getKey().endsWith(name.replace("*",".*")))
+		flagVals.entrySet().stream().filter(ent -> ent.getKey().endsWith(name.replace("*",".*")))
 				.forEach( ent -> join.add( space+ent.getKey().replace("_","->")+" : "+ent.getValue()) );
 		return join.toString();
 	}
@@ -817,7 +838,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		// Add the not grouped ones
 		boolean ngDoubles = doubleVals.values().stream().anyMatch( dv -> dv.getGroup().isEmpty());
 		boolean ngTexts = rttext.keySet().stream().anyMatch( k -> k.contains("_"));
-		boolean ngFlags = flags.keySet().stream().anyMatch( k -> k.contains("_"));
+		boolean ngFlags = flagVals.keySet().stream().anyMatch(k -> k.contains("_"));
 
 		if( ngDoubles || ngTexts || ngFlags) {
 			join.add("");
@@ -837,7 +858,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			if (ngFlags) {
 				join.add("");
 				join.add(html ? "<b>Flags</b>" : TelnetCodes.TEXT_BLUE + "Flags" + TelnetCodes.TEXT_YELLOW);
-				flags.entrySet().stream().filter(e -> !e.getKey().contains("_"))
+				flagVals.entrySet().stream().filter(e -> !e.getKey().contains("_"))
 						.forEach(e -> join.add(space + e.getKey() + " : " + e.getValue()));
 			}
 		}
@@ -851,7 +872,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 						.distinct()
 						.filter( g -> !groups.contains(g))
 						.forEach( t->groups.add(t));
-		flags.keySet().stream()
+		flagVals.keySet().stream()
 						.filter( k -> k.contains("_"))
 						.map( k -> k.split("_")[0] )
 						.distinct()

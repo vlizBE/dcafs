@@ -25,6 +25,7 @@ public interface DataProviding {
     boolean setText(String param, String value );
 
     /* Flags */
+    Optional<FlagVal> getFlagVal( String flag);
     boolean hasFlag( String flag);
     boolean isFlagUp( String flag );
     boolean isFlagDown( String flag );
