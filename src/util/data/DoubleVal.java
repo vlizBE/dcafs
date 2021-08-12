@@ -111,6 +111,9 @@ public class DoubleVal {
     public String getGroup(){
         return group;
     }
+    public String getID(){
+        return group.isEmpty()?name:(group+"_"+name);
+    }
     public DoubleVal unit(String unit){
         this.unit=unit;
         return this;

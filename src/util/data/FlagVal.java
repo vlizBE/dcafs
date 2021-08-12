@@ -47,7 +47,9 @@ public class FlagVal {
     public String getName(){
         return name;
     }
-
+    public String getID(){
+        return group.isEmpty()?name:(group+"_"+name);
+    }
     public FlagVal setState( boolean val){
 
         /* Keep time of last value */
