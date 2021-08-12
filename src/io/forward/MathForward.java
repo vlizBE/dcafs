@@ -88,11 +88,11 @@ public class MathForward extends AbstractForward {
             if( !findReferences(content) ){
                 return false;
             }
-            var op = addOperation(
+            var op = addStdOperation(
+                    content,
                     XMLtools.getIntAttribute(math,"scale",-1),
-                    OP_TYPE.COMPLEX,
-                    XMLtools.getStringAttribute(math,"cmd",""),
-                    content);
+                    XMLtools.getStringAttribute(math,"cmd","")
+                    );
             if(op.isEmpty()){
                 Logger.error("No valid operation found in: "+content);
                 return false;
@@ -112,11 +112,25 @@ public class MathForward extends AbstractForward {
         XMLtools.getChildElements(math, "op")
                 .forEach( ops -> {
                     try {
-                        addOperation(
-                                XMLtools.getIntAttribute(ops,"scale",-1),
-                                fromStringToOPTYPE(XMLtools.getStringAttribute(ops, "type", "complex")),
-                                XMLtools.getStringAttribute(ops, "cmd", ""),
-                                ops.getTextContent());
+                        var type= fromStringToOPTYPE(XMLtools.getStringAttribute(ops, "type", "complex"));
+                        switch(type){
+                            case COMPLEX:
+                                addStdOperation(
+                                        ops.getTextContent(),
+                                        XMLtools.getIntAttribute(ops,"scale",-1),
+                                        XMLtools.getStringAttribute(ops, "cmd", "")
+                                    );
+                                break;
+                            case LN: case SALINITY:case SVC:case TRUEWINDSPEED:case TRUEWINDDIR:
+                                addOperation(
+                                        XMLtools.getIntAttribute(ops,"index",-1),
+                                        XMLtools.getIntAttribute(ops,"scale",-1),
+                                        type,
+                                        XMLtools.getStringAttribute(ops, "cmd", ""),
+                                        ops.getTextContent());
+                                break;
+                        }
+
                     }catch( NumberFormatException e){
                         Logger.error(id+" (mf)-> NumberformatException "+e.getMessage());
                     }
@@ -161,6 +175,45 @@ public class MathForward extends AbstractForward {
         highestI = Math.max(highestI,Integer.parseInt(is[is.length-1].substring(1)));
         Logger.info("Highest I: "+highestI);
         return true;
+    }
+    public String replaceReferences( String exp ){
+        var pairs = Tools.parseKeyValue(exp,true);
+        for( var p : pairs ) {
+            if (p.length == 2) {
+                boolean ok=false;
+                if ( p[0].equals("d")||p[0].equals("double") ) {
+                    for( int pos=0;pos<referencedDoubles.size();pos++ ){
+                        var d = referencedDoubles.get(pos);
+                        if( d.getID().equalsIgnoreCase(p[1])) {
+                            exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + (highestI + pos + 1));
+                            ok=true;
+                            break;
+                        }
+                    }
+                }else if ( p[0].equals("f")||p[0].equals("flag") ) {
+                    for( int pos=0;pos<referencedFlags.size();pos++ ){
+                        var d = referencedFlags.get(pos);
+                        if( d.getID().equalsIgnoreCase(p[1])) {
+                            int i = highestI + referencedDoubles.size()+ pos + 1;
+                            exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + i);
+                            ok=true;
+                            break;
+                        }
+                    }
+                }else{
+                    Logger.error(getID()+" (mf)-> Operation containing unknown pair: "+String.join(":",p));
+                    return "";
+                }
+                if(!ok){
+                    Logger.error(getID()+" (mf)-> Didn't find a match when looking for "+String.join(":",p));
+                    return "";
+                }
+            }else{
+                Logger.error(getID()+" (mf)-> Pair containing to many elements: "+String.join(":",p));
+                return "";
+            }
+        }
+        return exp;
     }
     /**
      * Store this object's setup to the xml referred to with the given fab
@@ -326,17 +379,14 @@ public class MathForward extends AbstractForward {
         if(debug)
             Logger.info(id+" -> Scratchpad received "+value);
     }
-    public Optional<Operation> addComplex( String cmd , String expression  ){
-        return addOperation(-1,OP_TYPE.COMPLEX,cmd,expression);
-    }
+
     /**
      * Add an operation to this object
-     * @param type Which kind of operation, for now only COMPLEX, SCALE
      * @param cmd Send the result as part of a command
      * @param expression The expression to use
      * @return True if it was added
      */
-    public Optional<Operation> addOperation( int scale, OP_TYPE type, String cmd , String expression  ){
+    public Optional<Operation> addStdOperation( String expression, int scale, String cmd ){
 
         // Support ++ and --
         expression=expression.replace("++","+=1");
@@ -363,66 +413,62 @@ public class MathForward extends AbstractForward {
             }
         }
         exp = split[1];
-        /*
-        if( index < 0 ){
-            var splt = exp.split("=");
-            if( splt.length!=1) {
-                if (splt[0].startsWith("i")) {
-                    index = NumberUtils.toInt(splt[0].trim().substring(1), -1);
-                    exp = splt[1].trim();
-                }
-            }
-        }*/
+
         if( index == -1 ){
             Logger.error(id + " -> Bad/No index given");
             return Optional.empty();
         }
 
         Operation op;
-        String[] indexes;
+
+        for( var entry : defs.entrySet() ){
+            exp = exp.replace(entry.getKey(),entry.getValue());
+        }
+
+        exp=replaceReferences(exp);
+        if( exp.isEmpty() )
+            return Optional.empty();
+
+        op = new Operation( expression, new MathFab(exp.replace(",",".")),index);
+
+        ops.add(op);
+
+        if( scale != -1){ // Check if there's a scale op needed
+            int pos =index;
+            Function<BigDecimal[],BigDecimal> proc = x -> x[pos].setScale(scale, RoundingMode.HALF_UP);
+            var p = new Operation( expression, proc,index);
+            p.setCmd(cmd);  // this is the operation that should get the command
+            ops.add( p );
+            rulesString.add(new String[]{"std",""+index,"scale("+expression+", "+scale+")"});
+        }else{
+            op.setCmd(cmd);
+            rulesString.add(new String[]{"std",""+index,expression});
+        }
+        return Optional.ofNullable(ops.get(ops.size()-1)); // return the one that was added last
+    }
+    public Optional<Operation> addOperation( int index, int scale, OP_TYPE type, String cmd , String expression  ){
+
+        expression=expression.replace(" ",""); //remove spaces
+
+        String exp = expression;
+
+        if( index == -1 ){
+            Logger.error(id + " -> Bad/No index given");
+            return Optional.empty();
+        }
+
+        exp=replaceReferences(exp);
+        if( exp.isEmpty() )
+            return Optional.empty();
+
+        Operation op;
+        String[] indexes = exp.split(",");
+
         switch( type ){
-              case COMPLEX:
-                    // Apply defs
-                    for( var entry : defs.entrySet() ){
-                        exp = exp.replace(entry.getKey(),entry.getValue());
-                    }
-                    var pairs = Tools.parseKeyValue(exp,true);
-                    for( var p : pairs ) {
-                        if (p.length == 2) {
-                            if ( p[0].equals("d")||p[0].equals("double") ) {
-                                var d = dataProviding.getDoubleVal(p[1]);
-                                int exist = referencedDoubles.indexOf(d.get());
-                                if( exist != -1) {
-                                    exp = exp.replace("{"+p[0]+":" + p[1] + "}", "i" + (highestI + exist + 1));
-                                }else{
-                                    Logger.error(getID()+" (mf)-> Didn't find a double when looking for "+p[1]);
-                                    return Optional.empty();
-                                }
-                            }else if ( p[0].equals("f")||p[0].equals("flag") ) {
-                                var d = dataProviding.getFlagVal(p[1]);
-                                int exist = referencedFlags.indexOf(d.get());
-                                if( exist != -1) {
-                                    int pos = highestI + exist + 1 + referencedDoubles.size();
-                                    exp = exp.replace("{"+p[0]+":" + p[1] + "}", "i" + pos );
-                                }else{
-                                    Logger.error(getID()+" (mf)-> Didn't find a flag when looking for "+p[1]);
-                                    return Optional.empty();
-                                }
-                            }
-                        }else{
-                            Logger.error("Operation containing unknown pair: "+p[0]+":"+p[1]);
-                        }
-                    }
-                    op = new Operation( expression, new MathFab(exp.replace(",",".")),index);
-                    break;
-            case SCALE: // round a number half up with the amount of digits specified
-                    op = new Operation( expression, MathUtils.decodeBigDecimalsOp("i"+index,expression,"scale",0),index);
-                    break;
             case LN:
-                op = new Operation( expression, MathUtils.decodeBigDecimalsOp("i"+index,expression,"ln",0),index);
+                op = new Operation( expression, MathUtils.decodeBigDecimalsOp("i"+index,exp,"ln",0),index);
                 break;
             case SALINITY:
-                indexes = expression.split(",");
                 if( indexes.length != 3 ){
                     Logger.error("Not enough info for salinity calculation");
                     return Optional.empty();
@@ -430,7 +476,6 @@ public class MathForward extends AbstractForward {
                 op = new Operation(expression, Calculations.procSalinity(indexes[0],indexes[1],indexes[2]), index);
                 break;
             case SVC:
-                indexes = expression.split(",");
                 if( indexes.length != 3 ){
                     Logger.error("Not enough info for salinity calculation");
                     return Optional.empty();
@@ -438,7 +483,6 @@ public class MathForward extends AbstractForward {
                 op = new Operation(expression, Calculations.procSoundVelocity(indexes[0],indexes[1],indexes[2]), index);
                 break;
             case TRUEWINDSPEED:
-                indexes = expression.split(",");
                 if( indexes.length != 5 ){
                     Logger.error("Not enough info for true wind calculation");
                     return Optional.empty();
@@ -446,7 +490,6 @@ public class MathForward extends AbstractForward {
                 op = new Operation(expression, Calculations.procTrueWindSpeed(indexes[0],indexes[1],indexes[2],indexes[3],indexes[4]), index);
                 break;
             case TRUEWINDDIR:
-                indexes = expression.split(",");
                 if( indexes.length != 5 ){
                     Logger.error("Not enough info for true wind calculation");
                     return Optional.empty();
@@ -472,7 +515,6 @@ public class MathForward extends AbstractForward {
         }
         return Optional.ofNullable(ops.get(ops.size()-1)); // return the one that was added last
     }
-
     /**
      * Convert a string version of OP_TYPE to the enum
      * @return The resulting enum value

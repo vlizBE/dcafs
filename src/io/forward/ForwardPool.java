@@ -178,7 +178,7 @@ public class ForwardPool implements Commandable {
                 }
                 var mm = addMath(cmds[1],src.toString());
                 if( cmds.length==4){
-                    mm.addOperation(-1, MathForward.OP_TYPE.COMPLEX,"",cmds[cmds.length-1]);
+                    mm.addStdOperation(cmds[cmds.length-1], -1,"");
                 }
                 mm.writeToXML(XMLfab.withRoot(settingsPath, "dcafs"));
                 return "Math with id "+cmds[1]+ " created.";
@@ -284,7 +284,7 @@ public class ForwardPool implements Commandable {
                     return "No valid index given: "+split[0];
                 }
 
-                if( getMathForward(cmds[1]).map(f -> f.addComplex("",cmds[2]).isPresent() ).orElse(false) ){
+                if( getMathForward(cmds[1]).map(f -> f.addStdOperation(cmds[2],-1,"").isPresent() ).orElse(false) ){
                     getMathForward(cmds[1]).get().writeToXML(XMLfab.withRoot(settingsPath, "dcafs"));
                     return "Operation added and written to xml";
                 }
