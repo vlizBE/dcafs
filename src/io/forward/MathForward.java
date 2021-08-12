@@ -80,7 +80,7 @@ public class MathForward extends AbstractForward {
 
         setDelimiter(XMLtools.getStringAttribute( math, "delimiter", delimiter));
         suffix = XMLtools.getStringAttribute(math,"suffix","");
-
+        defs.clear();
         ops.clear();
         String content = math.getTextContent();
 
@@ -88,11 +88,18 @@ public class MathForward extends AbstractForward {
             if( !findReferences(content) ){
                 return false;
             }
+            var op = addOperation(
+                    XMLtools.getIntAttribute(math,"scale",-1),
+                    OP_TYPE.COMPLEX,
+                    XMLtools.getStringAttribute(math,"cmd",""),
+                    content);
+            if(op.isEmpty()){
+                Logger.error("No valid operation found in: "+content);
+                return false;
+            }
 
-            var op = addComplex(content, XMLtools.getIntAttribute(math,"scale",-1));
-            op.ifPresent( p -> p.cmd = XMLtools.getStringAttribute(math,"cmd",""));
         }
-        defs.clear();
+
         XMLtools.getChildElements(math, "def")
                 .forEach( def -> defs.put( def.getAttribute("ref"),def.getTextContent()));
 
@@ -106,7 +113,6 @@ public class MathForward extends AbstractForward {
                 .forEach( ops -> {
                     try {
                         addOperation(
-                                XMLtools.getIntAttribute(ops,"index",-1),
                                 XMLtools.getIntAttribute(ops,"scale",-1),
                                 fromStringToOPTYPE(XMLtools.getStringAttribute(ops, "type", "complex")),
                                 XMLtools.getStringAttribute(ops, "cmd", ""),
@@ -320,26 +326,53 @@ public class MathForward extends AbstractForward {
         if(debug)
             Logger.info(id+" -> Scratchpad received "+value);
     }
-
+    public Optional<Operation> addComplex( String cmd , String expression  ){
+        return addOperation(-1,OP_TYPE.COMPLEX,cmd,expression);
+    }
     /**
      * Add an operation to this object
-     * @param index Which index in the received array should the result be written to
      * @param type Which kind of operation, for now only COMPLEX, SCALE
      * @param cmd Send the result as part of a command
      * @param expression The expression to use
      * @return True if it was added
      */
-    public Optional<Operation> addOperation(int index, int scale, OP_TYPE type, String cmd , String expression  ){
+    public Optional<Operation> addOperation( int scale, OP_TYPE type, String cmd , String expression  ){
 
-        if( index <0 && expression.contains("=")){
-            var splt = expression.split("=");
+        // Support ++ and --
+        expression=expression.replace("++","+=1");
+        expression=expression.replace("--","-=1");
+        expression=expression.replace(" ",""); //remove spaces
+
+        if( !expression.contains("=") )
+            return Optional.empty();
+
+        String exp = expression;
+        var split = expression.split("[+-\\/*^]?[=]");
+
+        if( split[0].length()+split[1].length()+1 != exp.length()){ // Support += -= *= and /= fe. i0+=1
+            String[] spl = exp.split("="); //[0]:i0+ [1]:1
+            split[1]=spl[0]+split[1]; // split[1]=i0+1
+        }
+        int index = Tools.parseInt(split[0].substring(1),-1);
+        if( split[0].startsWith("{d")){
+            var b = split[0].split(",");
+            if( b.length==2){
+                index = Tools.parseInt(b[1].substring(1),-1);
+            }else{
+                index=-2;
+            }
+        }
+        exp = split[1];
+        /*
+        if( index < 0 ){
+            var splt = exp.split("=");
             if( splt.length!=1) {
                 if (splt[0].startsWith("i")) {
                     index = NumberUtils.toInt(splt[0].trim().substring(1), -1);
-                    expression = splt[1].trim();
+                    exp = splt[1].trim();
                 }
             }
-        }
+        }*/
         if( index == -1 ){
             Logger.error(id + " -> Bad/No index given");
             return Optional.empty();
@@ -350,7 +383,6 @@ public class MathForward extends AbstractForward {
         switch( type ){
               case COMPLEX:
                     // Apply defs
-                    String exp = expression;
                     for( var entry : defs.entrySet() ){
                         exp = exp.replace(entry.getKey(),entry.getValue());
                     }
@@ -424,7 +456,7 @@ public class MathForward extends AbstractForward {
             default:
                 return Optional.empty();
         }
-        op.setCmd(cmd);
+
         ops.add(op);
 
         if( scale != -1){ // Check if there's a scale op needed
@@ -432,41 +464,15 @@ public class MathForward extends AbstractForward {
             Function<BigDecimal[],BigDecimal> proc = x -> x[pos].setScale(scale, RoundingMode.HALF_UP);
             var p = new Operation( expression, proc,index);
             p.setCmd(cmd);  // this is the operation that should get the command
-            op.cmd=""; // remove it from the other one
             ops.add( p );
             rulesString.add(new String[]{type.toString().toLowerCase(),""+index,"scale("+expression+", "+scale+")"});
         }else{
+            op.setCmd(cmd);
             rulesString.add(new String[]{type.toString().toLowerCase(),""+index,expression});
         }
         return Optional.ofNullable(ops.get(ops.size()-1)); // return the one that was added last
     }
 
-    public Optional<Operation> addComplex( String op, int scale ){
-        op=op.replace(" ",""); //remove spaces
-
-        // Support ++ and --
-        op=op.replace("++","+=1");
-        op=op.replace("--","-=1");
-
-
-        String[] split = op.split("\\D?[=]"); // i0+=1 -> [0]:i0  [1]:1
-
-        if( split.length == 2){
-            if( split[0].length()+split[1].length()+1 != op.length()){ // Support += -= *= and /= fe. i0+=1
-                String[] spl = op.split("="); //[0]:i0+ [1]:1
-                split[1]=spl[0]+split[1]; // split[1]=i0+1
-            }
-            int index = Tools.parseInt(split[0].substring(1),-1);
-            if( index == -1 ){
-                Logger.error( id+"(mf) -> Incorrect index "+op);
-                return Optional.empty();
-            }
-            return addOperation(index,scale,OP_TYPE.COMPLEX,"",split[1]);
-        }else{
-            Logger.error(id+"(mf) -> Content in wrong format "+op);
-        }
-        return Optional.empty();
-    }
     /**
      * Convert a string version of OP_TYPE to the enum
      * @return The resulting enum value
@@ -529,19 +535,25 @@ public class MathForward extends AbstractForward {
         int index;      // index for the result
         String ori;     // The expression before it was decoded mainly for listing purposes
         String cmd =""; // Command in which to replace the $ with the result
+        DoubleVal update;
 
-        public Operation(String ori, Function<BigDecimal[],BigDecimal> op, int index ){
-            this.op=op;
-            this.index=index;
-            this.ori=ori;
-        }
+
         public Operation(String ori,int index){
             this.ori=ori;
+            this.index=index;
+
+            if( ori.startsWith("{d")){
+                var opt = dataProviding.getDoubleVal(ori.substring(ori.indexOf(":")+1,ori.indexOf("}")));
+                opt.ifPresent( dv-> update=dv );
+            }
+        }
+        public Operation(String ori, Function<BigDecimal[],BigDecimal> op, int index ){
+            this(ori,index);
+            this.op=op;
         }
         public Operation(String ori, MathFab fab, int index ){
+            this(ori,index);
             this.fab=fab;
-            this.index=index;
-            this.ori=ori;
         }
         public void setCmd(String cmd){
             if( cmd.isEmpty())
@@ -549,6 +561,12 @@ public class MathForward extends AbstractForward {
             this.cmd=cmd;
             valid=true;
             doCmd = true;
+
+            if( ((cmd.startsWith("doubles:update")||cmd.startsWith("dv")) && cmd.endsWith(",$"))  ){
+                String val = cmd.substring(8).split(",")[1];
+                var opt = dataProviding.getDoubleVal(val);
+                opt.ifPresent( dv-> update=dv );
+            }
         }
         public BigDecimal solve( BigDecimal[] data){
             BigDecimal bd=null;
@@ -580,12 +598,15 @@ public class MathForward extends AbstractForward {
                 Logger.error(id+" -> Failed to solve the received data");
                 return null;
             }
-            if( index!= -1 && index < data.length)
+            if( index>= 0 && index < data.length)
                 data[index]=bd;
 
-            if( !cmd.isEmpty()){
-                dQueue.add( Datagram.system(cmd.replace("$",bd.toString())) );
+            if( update!= null ) {
+                update.setValue(bd.doubleValue());
+            }else if( !cmd.isEmpty()){
+                dQueue.add(Datagram.system(cmd.replace("$", bd.toString())));
             }
+
             return bd;
         }
     }

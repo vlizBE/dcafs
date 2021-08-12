@@ -26,9 +26,23 @@ From 0.5.0 onwards, this should be better documented...
 ### RealtimeValues
 - Centralized all code in the class that was in Commandable.java and DAS.java
 - Replaced the update and create commands with double:update etc
+- Moved to other package
+- Added FlagVal
 
 ### MathForward
-- Now supports referring to double's in the operations {double:id}
+- Now supports referring to double's in the operations {double:id} or {d:id}
+- Now supports referring to flags in the operations {flag:id} or {f:id}
+- Should be a bit more efficient (doesn't convert indexes higher than used, writes straight to
+the DoubleVal if possible)
+- Allows for the part left of the = to be a {d:id} and or index (in that order)
+
+````xml
+<!-- Before -->
+<editor type="resplit">i0;{d:offset}</editor>
+<math cmd="double:update,temp,$">i0=i0+2*i1</math>
+<!-- Now -->
+<cmd>{d:temp},i0=i0+2*{d:offset}</cmd>
+````
 
 ### Fixes
 - ForwardPool, nettygroup should have been before the xml reading, not after.
