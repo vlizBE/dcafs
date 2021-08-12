@@ -21,7 +21,7 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (will be trigger for 0.11.0)
 
-## 0.10.8 (work in progress)
+## 0.10.8 (12/08/21)
 
 ### RealtimeValues
 - Centralized all code in the class that was in Commandable.java and DAS.java
@@ -32,9 +32,8 @@ From 0.5.0 onwards, this should be better documented...
 ### MathForward
 - Now supports referring to double's in the operations {double:id} or {d:id}
 - Now supports referring to flags in the operations {flag:id} or {f:id}
-- Should be a bit more efficient (doesn't convert indexes higher than used, writes straight to
-the DoubleVal if possible)
-- Allows for the part left of the = to be a {d:id} and or index (in that order)
+- Experimental way of working with DoubleVal/FlagVal, if positive this will be replicated.
+- Allows for the part left of the = to be a {d:id} and/or index ( , delimited)
 
 ````xml
 <!-- Before -->
