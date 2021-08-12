@@ -231,7 +231,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		boolean ok = false;
 		if( id.isEmpty()) {
 			Logger.error("Empty id given");
-			return ok;
+			return false;
 		}
 		var d = doubleVals.get(id);
 		if( d==null ) {
@@ -267,8 +267,6 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	}
 	public int updateDoubleGroup(String group, double value){
 		var set = doubleVals.values().stream().filter( dv -> dv.getGroup().equalsIgnoreCase(group)).collect(Collectors.toSet());
-		if( set.isEmpty())
-			return 0;
 		set.forEach(dv->dv.setValue(value));
 		return set.size();
 	}
@@ -457,13 +455,9 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	 * @return True if the state was changed, false if a new flag was made
 	 */
 	public boolean setFlagState( String id, boolean state){
-		var opt = getFlagVal(id);
-		if( opt.isPresent()){
-			opt.get().setState(state);
-			return false;
-		}
-		flagVals.put(id, FlagVal.newVal(id).setState(state));
-		return true;
+		int size = flagVals.size();
+		getFlagVal(id).ifPresentOrElse(f->f.setState(state),()->flagVals.put(id, FlagVal.newVal(id).setState(state)));
+		return size==flagVals.size();
 	}
 	public ArrayList<String> listFlags(){
 		return flagVals.entrySet().stream().map(ent -> ent.getKey()+" : "+ent.getValue()).collect(Collectors.toCollection(ArrayList::new));

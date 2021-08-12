@@ -523,8 +523,8 @@ public class MathForward extends AbstractForward {
                         break;
                     case "f": case "flag":
                         var f = dataProviding.getFlagVal(p[1]);
-                        if( referencedFlags ==null)
-                            referencedFlags =new ArrayList<>();
+                        if( referencedFlags == null)
+                            referencedFlags = new ArrayList<>();
                         f.ifPresent( fv -> referencedFlags.add(fv) );
                         break;
                     default:
@@ -617,8 +617,8 @@ public class MathForward extends AbstractForward {
             this.index=index;
 
             if( ori.startsWith("{d")){
-                var opt = dataProviding.getDoubleVal(ori.substring(ori.indexOf(":")+1,ori.indexOf("}")));
-                opt.ifPresent( dv-> update=dv );
+                dataProviding.getDoubleVal(ori.substring(ori.indexOf(":")+1,ori.indexOf("}")))
+                                .ifPresent( dv-> update=dv );
             }
         }
         public Operation(String ori, Function<BigDecimal[],BigDecimal> op, int index ){
@@ -638,8 +638,10 @@ public class MathForward extends AbstractForward {
 
             if( ((cmd.startsWith("doubles:update")||cmd.startsWith("dv")) && cmd.endsWith(",$"))  ){
                 String val = cmd.substring(8).split(",")[1];
-                var opt = dataProviding.getDoubleVal(val);
-                opt.ifPresent( dv-> update=dv );
+                this.cmd = dataProviding.getDoubleVal(val).map( dv-> {
+                    update=dv;
+                    return "";
+                } ).orElse(cmd);
             }
         }
         public BigDecimal solve( BigDecimal[] data){

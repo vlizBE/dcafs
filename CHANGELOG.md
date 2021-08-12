@@ -38,11 +38,13 @@ the DoubleVal if possible)
 
 ````xml
 <!-- Before -->
-<editor type="resplit">i0;{d:offset}</editor>
+<editor type="resplit">i0;{double:offset}</editor>
 <math cmd="double:update,temp,$">i0=i0+2*i1</math>
 <!-- Now -->
 <cmd>{d:temp},i0=i0+2*{d:offset}</cmd>
 ````
+### Other
+- LabelWorker, removed method reference functionality
 
 ### Fixes
 - ForwardPool, nettygroup should have been before the xml reading, not after.

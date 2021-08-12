@@ -807,16 +807,15 @@ public class CommandPool {
 		return response.toString();   
 	}
 	public String doREAD( String[] request, Writable wr, boolean html ){
-		Datagram.build("").writable(wr).label("read:"+request[1]);
 		das.getDataQueue().add( Datagram.build("").writable(wr).label("read:"+request[1]) ); //new Datagram(wr,"",1,"read:"+request[1]));
 		return "Request for readable "+request[1]+" from "+wr.getID()+" issued";
 	}
 	public String doADMIN( String[] request, Writable wr, boolean html ){
-
+		String nl = html?"<br":"\r\n";
 		String[] cmd = request[1].split(",");
 		switch( cmd[0] ){
 			case "?":
-				StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
+				StringJoiner join = new StringJoiner(nl);
 				join.add("admin:getlogs -> Get the latest logfiles")
 					.add("admin:gettasklog -> Get the taskmananger log")
 					.add("admin:adddebugnode -> Adds a debug node with default values")
@@ -827,30 +826,32 @@ public class CommandPool {
 					.add("admin:ipv4 -> Get the IPv4 and MAC of all network interfaces")
 					.add("admin:ipv6 -> Get the IPv6 and MAC of all network interfaces")
 					.add("admin:gc -> Fore a java garbage collection")
-					.add("admin:reboot -> Reboot the computer (linux only)")
-					.add("admin:methodcall -> Get the time passed since a certain BaseWorker method was called");
+					.add("admin:reboot -> Reboot the computer (linux only)");
 				return join.toString();
 			case "getlogs":
-				if( sendEmail.isEmpty() )
-					return "Failed to send logs to admin, no worker.";
-				sendEmail.get().sendEmail( Email.toAdminAbout("Statuslog").subject("File attached (probably)")
-						.attachment( Path.of(workPath,"logs","info.log") ));
-				sendEmail.get().sendEmail( Email.toAdminAbout("Errorlog").subject("File attached (probably)")
-						.attachment(Path.of(workPath,"logs","errors_"+TimeTools.formatUTCNow("yyMMdd")+".log" )) );
-				return "Sending logs (info,errors) to admin...";
+				return sendEmail.map( e -> {
+					e.sendEmail( Email.toAdminAbout("Statuslog").subject("File attached (probably)")
+							.attachment( Path.of(workPath,"logs","info.log") ));
+					e.sendEmail( Email.toAdminAbout("Errorlog").subject("File attached (probably)")
+									.attachment(Path.of(workPath,"logs","errors_"+TimeTools.formatUTCNow("yyMMdd")+".log" )) );
+					return "Sending logs (info,errors) to admin...";
+				}).orElse("No email functionality active.");
 			case "gettasklog":
-				if( sendEmail.isEmpty() )
-					return "Failed to send logs to admin, no worker.";
-				sendEmail.get().sendEmail( Email.toAdminAbout("Taskmanager.log").subject("File attached (probably)")
-						.attachment( Path.of(workPath,"logs","taskmanager.log" ) ));
-				return "Trying to send taskmanager log";
+				return sendEmail.map( e -> {
+					e.sendEmail(Email.toAdminAbout("Taskmanager.log").subject("File attached (probably)")
+							.attachment(Path.of(workPath, "logs", "taskmanager.log")));
+					return "Trying to send taskmanager log";
+				}).orElse("No email functionality active.");
+
 			case "getlastraw":
 				Path it = Path.of(workPath,"raw",TimeTools.formatUTCNow("yyyy-MM"));
 				try {
 					var last = Files.list(it).filter( f -> !Files.isDirectory(f)).max( Comparator.comparingLong( f -> f.toFile().lastModified()));
 					if( last.isPresent() ){
-						sendEmail.get().sendEmail( Email.toAdminAbout("Taskmanager.log").subject("File attached (probably)").attachment( last.get() ));
-						return "Tried sending "+last.get();
+						return sendEmail.map( e-> {
+							e.sendEmail( Email.toAdminAbout("Taskmanager.log").subject("File attached (probably)").attachment( last.get() ));
+							return "Tried sending "+last.get();
+						}).orElse("No email functionality active.");
 					}else{
 						return "File not found";
 					}
@@ -862,13 +863,14 @@ public class CommandPool {
 				DebugWorker.addBlank(XMLfab.withRoot(settingsPath,"dcafs","settings"));
 				return "Tried to add node";
 			case "sms":
-				if(sendSMS.isEmpty())
-					return "No SMS sending defined";
-				sendSMS.get().sendSMS("admin","test");
-				return "Trying to send SMS\r\n";
+				return sendSMS.map( s ->{
+					s.sendSMS("admin","test");
+					return "Trying to send SMS";
+				}).orElse("No SMS functionality present");
+
 			case "haw":
 				das.haltWorkers();
-				return "\r\nStopping all worker threads.";
+				return nl+"Stopping all worker threads.";
 			case "clock": return TimeTools.formatLongUTCNow();
 			case "regex":
 				if( cmd.length != 3 )
