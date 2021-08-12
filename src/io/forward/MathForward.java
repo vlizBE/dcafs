@@ -357,7 +357,7 @@ public class MathForward extends AbstractForward {
                     var pairs = Tools.parseKeyValue(exp,true);
                     for( var p : pairs ) {
                         if (p.length == 2) {
-                            if ( p[0].startsWith("d") ) {
+                            if ( p[0].equals("d")||p[0].equals("double") ) {
                                 var d = dataProviding.getDoubleVal(p[1]);
                                 int exist = referencedDoubles.indexOf(d.get());
                                 if( exist != -1) {
@@ -366,7 +366,7 @@ public class MathForward extends AbstractForward {
                                     Logger.error(getID()+" (mf)-> Didn't find a double when looking for "+p[1]);
                                     return Optional.empty();
                                 }
-                            }else if ( p[0].startsWith("f") ) {
+                            }else if ( p[0].equals("f")||p[0].equals("flag") ) {
                                 var d = dataProviding.getFlagVal(p[1]);
                                 int exist = referencedFlags.indexOf(d.get());
                                 if( exist != -1) {

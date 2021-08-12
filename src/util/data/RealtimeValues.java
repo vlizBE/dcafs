@@ -167,15 +167,14 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		var pairs = Tools.parseKeyValue(line,true);
 		for( var p : pairs ){
 			if(p.length==2) {
-				if (p[0].equals("double")) {
+				if (p[0].equals("d")||p[0].equals("double")) {
 					var d = getDouble(p[1], Double.NaN);
-					if (Double.isNaN(d)) {
-						line = line.replace("{double:" + p[1] + "}", error);
-					} else {
-						line = line.replace("{double:" + p[1] + "}", "" + d);
-					}
-				} else if (p[0].equals("text")) {
-					line = line.replace("{text:" + p[1] + "}", getText(p[1], error));
+					line = line.replace("{"+p[0] + ":" + p[1] + "}", Double.isNaN(d)?error:""+d );
+				} else if (p[0].equals("t")||p[0].equals("text")) {
+					line = line.replace("{"+p[0] + ":" + p[1] + "}", getText(p[1], error));
+				} else if( p[0].equals("f")||p[0].equals("flag")){
+					var d = getFlagVal(p[1]);
+					line = line.replace("{"+p[0] + ":" + p[1] + "}",d.isEmpty()?error:""+d.get().getValue() );
 				}
 			}else{
 				switch(p[0]){
