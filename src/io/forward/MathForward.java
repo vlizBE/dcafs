@@ -29,7 +29,6 @@ public class MathForward extends AbstractForward {
     private String suffix="";
 
     private final ArrayList<Operation> ops = new ArrayList<>();
-    private BigDecimal scratchpad = BigDecimal.ZERO;
     private boolean doCmd = false;
     private boolean doUpdate=false;
     HashMap<String,String> defs = new HashMap<>();
@@ -65,15 +64,7 @@ public class MathForward extends AbstractForward {
             delimiter = deli;
         }
     }
-    /**
-     * Set the value of this objects scratchpad, this can then be used in an op when referring to o0
-     * @param value The new value for the scratchpad
-     */
-    public void setScratchpad( double value ){
-        scratchpad=BigDecimal.valueOf(value);
-        if(debug)
-            Logger.info(id+" -> Scratchpad received "+value);
-    }
+
     @Override
     public String getRules(){
         int index=0;
@@ -280,7 +271,7 @@ public class MathForward extends AbstractForward {
         }
 
         if( debug ){ // extra info given if debug is active
-            Logger.info(getID()+" -> Before: "+data); // how the data looked before
+            Logger.info(getID()+" -> Before: "+data);   // how the data looked before
             Logger.info(getID()+" -> After:  "+result); // after applying the operations
         }
         targets.removeIf( t-> !t.writeLine(result) ); // Send this data to the targets, remove those that refuse it
@@ -338,15 +329,7 @@ public class MathForward extends AbstractForward {
 
         if( ii[0].startsWith("{d")&&ii.length==1)
             index=-2;
-        /*
-        if( split[0].startsWith("{d")){
-            var b = split[0].split(",");
-            if( b.length==2){
-                index = Tools.parseInt(b[1].substring(1),-1);
-            }else{
-                index=-2;
-            }
-        }*/
+
         exp = split[1];
 
         if( index == -1 ){
@@ -693,7 +676,7 @@ public class MathForward extends AbstractForward {
             }else if(fab!=null){
                 fab.setDebug(debug);
                 try {
-                    bd = fab.solve(data, scratchpad);
+                    bd = fab.solve(data);
                 }catch ( ArrayIndexOutOfBoundsException | ArithmeticException | NullPointerException e){
                     Logger.error(id+" -> "+e.getMessage());
                     return null;

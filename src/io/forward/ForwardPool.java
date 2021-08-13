@@ -250,15 +250,6 @@ public class ForwardPool implements Commandable {
                 join.setEmptyValue("No maths yet");
                 maths.values().forEach(m -> join.add(m.toString()).add(""));
                 return join.toString();
-            case "scratchpad":
-                if( cmds.length < 3)
-                    return "Bad amount of arguments, should be mf:scratchpad,id,value";
-                if( cmds[1].equalsIgnoreCase("*")) {
-                    maths.forEach((id, m) -> m.setScratchpad(NumberUtils.createDouble(cmds[2])));
-                }else{
-                    getMathForward(cmds[1]).ifPresent(m -> m.setScratchpad(NumberUtils.createDouble(cmds[2])));
-                }
-                return "Scratchpad value ("+cmds[2]+") given to "+cmds[1];
             case "addsource": case "addsrc":
                 String source = cmds[2].startsWith("i2c:")?cmds[2]+","+cmds[3]:cmds[2];
                 if( getMathForward(cmds[1]).map(m -> m.addSource(source) ).orElse(false) )

@@ -94,7 +94,7 @@ public class MathFab {
             }
         }
 
-        offset=subFormulas.size()+1; // To store the intermediate results, the array needs to hold space
+        offset=subFormulas.size(); // To store the intermediate results, the array needs to hold space
         for( String[] sub : subFormulas ){ // now convert the subformulas into lambda's
             var x = MathUtils.decodeBigDecimalsOp(sub[0],sub[1],sub[2],offset);
             if( x==null ){
@@ -103,18 +103,18 @@ public class MathFab {
             }
             steps.add( x ); // and add it to the steps list
         }
-        resultIndex = subFormulas.size();// note that the result of the formula will be in the that position
+        resultIndex = subFormulas.size()-1;// note that the result of the formula will be in the that position
         return this;
     }
 
     public BigDecimal solve( String data, String delimiter ){
-        return solve( MathUtils.toBigDecimals(data,delimiter,-1),BigDecimal.ZERO );
+        return solve( MathUtils.toBigDecimals(data,delimiter,-1) );
     }
     public double solveFor( double... val){
         var bds = new BigDecimal[val.length];
         for(int a=0;a<val.length;a++)
             bds[a]=BigDecimal.valueOf(val[a]);
-        var bd = solve(bds,BigDecimal.ZERO);
+        var bd = solve(bds);
 
         return bd.doubleValue();
     }
@@ -122,11 +122,10 @@ public class MathFab {
     /**
      *
      * @param data The bigdecimals used in the operation
-     * @param scratchpad Scratchpad variable
      * @return Result of the operation
      * @throws ArrayIndexOutOfBoundsException Indicating lack of elements
      */
-    public BigDecimal solve( BigDecimal[] data, BigDecimal scratchpad ) throws ArrayIndexOutOfBoundsException{
+    public BigDecimal solve( BigDecimal[] data ) throws ArrayIndexOutOfBoundsException{
         if( resultIndex == -1 ){
             Logger.error("No valid formula present");
             return null;
@@ -143,10 +142,7 @@ public class MathFab {
         if(debug)
             Logger.info("Highest expected index: "+total.length+" from offset="+offset+" and data "+data.length);
 
-        total[0]=scratchpad;
-        int i=1;
-        if( debug )
-            Logger.info("0 : "+total[0]);
+        int i=0;
         for( var f : steps ){
             try{
                 total[i] = f.apply(total);
