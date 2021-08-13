@@ -100,7 +100,7 @@ public abstract class AbstractForward implements Writable {
         return targets.remove(target);
     }
     public boolean noTargets(){
-        return targets.isEmpty();
+        return targets.isEmpty() && label.isEmpty() ;
     }
     public ArrayList<Writable> getTargets(){
         return targets;
