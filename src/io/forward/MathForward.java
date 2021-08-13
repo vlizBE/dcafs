@@ -271,7 +271,7 @@ public class MathForward extends AbstractForward {
             if( suffix.equalsIgnoreCase("nmea")){
                 result=join+"*"+MathUtils.getNMEAchecksum(join.toString());
             }else{
-                Logger.error(getID()+" (mf)-> No such suffix "+suffix);
+                Logger.error(id+" (mf)-> No such suffix "+suffix);
                 result=join.toString();
             }
         }else{
@@ -405,28 +405,28 @@ public class MathForward extends AbstractForward {
                 break;
             case SALINITY:
                 if( indexes.length != 3 ){
-                    Logger.error(getID()+" (mf)-> Not enough args for salinity calculation");
+                    Logger.error(id+" (mf)-> Not enough args for salinity calculation");
                     return Optional.empty();
                 }
                 op = new Operation(expression, Calculations.procSalinity(indexes[0],indexes[1],indexes[2]), index);
                 break;
             case SVC:
                 if( indexes.length != 3 ){
-                    Logger.error(getID()+" (mf)-> Not enough args for soundvelocity calculation");
+                    Logger.error(id+" (mf)-> Not enough args for soundvelocity calculation");
                     return Optional.empty();
                 }
                 op = new Operation(expression, Calculations.procSoundVelocity(indexes[0],indexes[1],indexes[2]), index);
                 break;
             case TRUEWINDSPEED:
                 if( indexes.length != 5 ){
-                    Logger.error(getID()+" (mf)-> Not enough args for True wind speed calculation");
+                    Logger.error(id+" (mf)-> Not enough args for True wind speed calculation");
                     return Optional.empty();
                 }
                 op = new Operation(expression, Calculations.procTrueWindSpeed(indexes[0],indexes[1],indexes[2],indexes[3],indexes[4]), index);
                 break;
             case TRUEWINDDIR:
                 if( indexes.length != 5 ){
-                    Logger.error(getID()+" (mf)-> Not enough args for True wind direction calculation");
+                    Logger.error(id+" (mf)-> Not enough args for True wind direction calculation");
                     return Optional.empty();
                 }
                 op = new Operation(expression, Calculations.procTrueWindDirection(indexes[0],indexes[1],indexes[2],indexes[3],indexes[4]), index);
@@ -542,11 +542,11 @@ public class MathForward extends AbstractForward {
                         f.ifPresent( fv -> referencedFlags.add(fv) );
                         break;
                     default:
-                        Logger.error(getID()+" (mf)-> Operation containing unknown pair: "+p[0]+":"+p[1]);
+                        Logger.error(id+" (mf)-> Operation containing unknown pair: "+p[0]+":"+p[1]);
                         return false;
                 }
             }else{
-                Logger.error(getID()+" (mf)-> Pair containing odd amount of elements: "+String.join(":",p));
+                Logger.error(id+" (mf)-> Pair containing odd amount of elements: "+String.join(":",p));
             }
         }
         // Find the highest used i index
@@ -556,8 +556,11 @@ public class MathForward extends AbstractForward {
                 .map(MatchResult::group)
                 .sorted()
                 .toArray(String[]::new);
-        highestI = Math.max(highestI,Integer.parseInt(is[is.length-1].substring(1)));
-
+        if( is.length==0 ) {
+            Logger.warn(id+" (mf)->No i's found in "+exp);
+        }else{
+            highestI = Math.max(highestI,Integer.parseInt(is[is.length-1].substring(1)));
+        }
         return true;
     }
 
@@ -598,15 +601,15 @@ public class MathForward extends AbstractForward {
                         }
                     }
                 }else{
-                    Logger.error(getID()+" (mf)-> Operation containing unknown pair: "+String.join(":",p));
+                    Logger.error(id+" (mf)-> Operation containing unknown pair: "+String.join(":",p));
                     return "";
                 }
                 if(!ok){
-                    Logger.error(getID()+" (mf)-> Didn't find a match when looking for "+String.join(":",p));
+                    Logger.error(id+" (mf)-> Didn't find a match when looking for "+String.join(":",p));
                     return "";
                 }
             }else{
-                Logger.error(getID()+" (mf)-> Pair containing to many elements: "+String.join(":",p));
+                Logger.error(id+" (mf)-> Pair containing to many elements: "+String.join(":",p));
                 return "";
             }
         }
