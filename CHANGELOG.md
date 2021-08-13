@@ -21,6 +21,12 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (will be trigger for 0.11.0)
 
+## 0.10.9 (work in progress)
+
+### Fixes
+- MathUtils,Extractparts to split an expression removed spaces but shouldn't anymore
+- MathForward, if no i's are in the expression settings highestI wasn't skipped
+
 ## 0.10.8 (12/08/21)
 
 ### RealtimeValues
