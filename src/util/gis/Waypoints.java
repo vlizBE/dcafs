@@ -183,7 +183,6 @@ public class Waypoints implements Commandable {
             Logger.error("No such waypoint "+id+" in list of "+wps.size());
             return null;
         }else{
-            Logger.info("Waypoint found "+id+" in list of "+wps.size());
             return wp;
         }
     }
