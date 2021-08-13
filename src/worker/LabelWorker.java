@@ -433,10 +433,12 @@ public class LabelWorker implements Runnable, Labeller {
 						Logger.error("No such generic " + genericID + " for " + d.getOriginID());
 						continue;
 					}
+					Double[] doubles = (Double[]) d.getPayload();
+
 					generics.stream().forEach(
 							gen -> {
 								if ( mes.startsWith(gen.getStartsWith()) ) {
-									Object[] data = gen.apply( mes, dp, queryWriting,mqtt );
+									Object[] data = gen.apply( mes, doubles, dp, queryWriting,mqtt );
 									if (!gen.getTable().isEmpty() && gen.writesInDB()) {
 										if (gen.isTableMatch()) {
 											for( String id : gen.getDBID() )

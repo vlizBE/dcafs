@@ -249,7 +249,7 @@ public class MathForward extends AbstractForward {
 
         StringJoiner join = new StringJoiner(delimiter); // prepare a joiner to rejoin the data
         for( int a=0;a<split.length;a++){
-            if( a <= highestI ) {
+            if( a <= (highestI==-1?0:highestI) ) {
                 join.add(bds[a] != null ? bds[a].toPlainString() : split[a]); // if no valid bd is found, use the original data
             }else{
                 join.add(split[a]);
@@ -277,7 +277,10 @@ public class MathForward extends AbstractForward {
         targets.removeIf( t-> !t.writeLine(result) ); // Send this data to the targets, remove those that refuse it
 
         if( !label.isEmpty() ){ // If the object has a label associated
-            dQueue.add( Datagram.build(result).label(label).writable(this) ); // add it to the queue
+            Double[] d = new Double[bds.length];
+            for( int a=0;a<bds.length;a++)
+                d[a]=bds[a]==null?null:bds[a].doubleValue();  // don't try to convert null
+            dQueue.add( Datagram.build(result).label(label).writable(this).payload(d) ); // add it to the queue
         }
         if( log )
             Logger.tag("RAW").info( "1\t" + (label.isEmpty()?"void":label)+"|"+getID() + "\t" + result);
@@ -499,9 +502,9 @@ public class MathForward extends AbstractForward {
                     refBds[a+referencedDoubles.size()]=BigDecimal.valueOf(referencedFlags.get(a).getValue());
                 }
             }
-            return ArrayUtils.addAll(MathUtils.toBigDecimals(data,delimiter,highestI),refBds);
+            return ArrayUtils.addAll(MathUtils.toBigDecimals(data,delimiter,highestI==-1?0:highestI),refBds);
         }else{
-            return MathUtils.toBigDecimals(data,delimiter,highestI); // Split the data and convert to bigdecimals
+            return MathUtils.toBigDecimals(data,delimiter,highestI==-1?0:highestI); // Split the data and convert to bigdecimals
         }
     }
     /**

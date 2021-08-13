@@ -208,10 +208,11 @@ public class Generic {
     /**
      * Apply this generic to the given line and use the RealtimeValues object store the values
      * @param line The raw data line
+     * @param doubles The double array if any
      * @param dp The DataProviding implementation to add the data to
      * @return an array with the data
      */
-    public Object[] apply(String line, DataProviding dp, QueryWriting queryWriting, MqttWriting mqtt){
+    public Object[] apply(String line, Double[] doubles, DataProviding dp, QueryWriting queryWriting, MqttWriting mqtt){
          
         for( Filter filter : filters ){
             line = filter.apply(line);
@@ -251,23 +252,27 @@ public class Generic {
                 double val=-999;
                 switch( entry.type ){
                     case INTEGER:
-                            if( NumberUtils.isCreatable(split[entry.index])){
+                            if( doubles!=null && doubles.length>a && doubles[a]!=null){
+                                data[a] = doubles[a].intValue();
+                                dp.setDouble( ref, doubles[a] );
+                            }else if( NumberUtils.isCreatable(split[entry.index])){
                                 val=NumberUtils.toInt(split[entry.index],-999);
                                 data[a]=val;
                                 dp.setDouble( ref, val );
                             }else{
                                 data[a]=null;
-                               // rtvals.removeRealtimeValue(ref);
                             }
-                            break;  
+                            break;
                     case REAL:
-                            if( NumberUtils.isCreatable(split[entry.index])) {
+                            if( doubles!=null && doubles.length>a && doubles[a]!=null){
+                                data[a]=doubles[a];
+                                dp.setDouble( ref, doubles[a] );
+                            }else if( NumberUtils.isCreatable(split[entry.index])) {
                                 val = NumberUtils.toDouble(split[entry.index], val);
                                 data[a] = val;
                                 dp.setDouble( ref, val );
                             }else{
                                 data[a]=null;
-                            //    rtvals.removeRealtimeValue(ref);
                             }
                             break;                
                     case TEXT: case TAG:
