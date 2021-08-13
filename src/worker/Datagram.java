@@ -23,6 +23,7 @@ public class Datagram {
     Writable writable;  //
     Readable readable;
     boolean silent = false;     
+    Object payload=null;
 
     public Datagram(String data){
         this.data = data;
@@ -55,6 +56,8 @@ public class Datagram {
     }
     public String getLabel(){ return label.toLowerCase(); }
     public boolean isSilent(){ return silent;}
+    public Object getPayload(){return payload;}
+
     /* ***************************** Fluid API ******************************************* */
     public static Datagram build(String message){
         return new Datagram(message);
@@ -78,7 +81,10 @@ public class Datagram {
         this.priority=priority;
         return this;
     }
-
+    public Datagram payload(Object payload){
+        this.payload=payload;
+        return this;
+    }
     /**
      * Set the writable in this datagram, also overwrites the origin with id from writable
      * @param writable The writable to set
