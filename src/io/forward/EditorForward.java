@@ -160,7 +160,6 @@ public class EditorForward extends AbstractForward{
             return;
         }
         if( index == -1 ){
-            Logger.warn(id+" -> Using default index of 0");
             index=0;
         }
         switch(edit.getAttribute("type")){
