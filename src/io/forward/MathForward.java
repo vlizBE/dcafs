@@ -31,6 +31,7 @@ public class MathForward extends AbstractForward {
     private final ArrayList<Operation> ops = new ArrayList<>();
     private BigDecimal scratchpad = BigDecimal.ZERO;
     private boolean doCmd = false;
+    private boolean doUpdate=false;
     HashMap<String,String> defs = new HashMap<>();
 
     public enum OP_TYPE{COMPLEX, SCALE, LN, SALINITY, SVC,TRUEWINDSPEED,TRUEWINDDIR}
@@ -635,7 +636,10 @@ public class MathForward extends AbstractForward {
 
             if( ori.startsWith("{d")){
                 dataProviding.getDoubleVal(ori.substring(ori.indexOf(":")+1,ori.indexOf("}")))
-                                .ifPresent( dv-> update=dv );
+                                .ifPresent( dv-> {
+                                    update=dv;
+                                    doUpdate=true;
+                                } );
             }
         }
         public Operation(String ori, Function<BigDecimal[],BigDecimal> op, int index ){
@@ -657,6 +661,7 @@ public class MathForward extends AbstractForward {
                 String val = cmd.substring(8).split(",")[1];
                 this.cmd = dataProviding.getDoubleVal(val).map( dv-> {
                     update=dv;
+                    doUpdate=true;
                     return "";
                 } ).orElse(cmd);
             }
@@ -702,5 +707,10 @@ public class MathForward extends AbstractForward {
 
             return bd;
         }
+    }
+    /* ************************************************************************************************************* */
+    @Override
+    public boolean noTargets(){
+        return !(!targets.isEmpty() || !label.isEmpty() || doCmd || doUpdate);
     }
 }
