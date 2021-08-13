@@ -858,16 +858,18 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		return join.toString();
 	}
 	public List<String> getGroups(){
-		var groups = doubleVals.values().stream().map( dv -> dv.getGroup()).distinct().collect(Collectors.toList());
+		var groups = doubleVals.values().stream()
+				.filter( dv -> !dv.getGroup().isEmpty())
+				.map( dv -> dv.getGroup()).distinct().collect(Collectors.toList());
 		rttext.keySet().stream()
 						.filter( k -> k.contains("_"))
 						.map( k -> k.split("_")[0] )
 						.distinct()
 						.filter( g -> !groups.contains(g))
 						.forEach( t->groups.add(t));
-		flagVals.keySet().stream()
-						.filter( k -> k.contains("_"))
-						.map( k -> k.split("_")[0] )
+		flagVals.values().stream()
+						.filter( f -> !f.getGroup().isEmpty() )
+						.map( f -> f.getGroup())
 						.distinct()
 						.filter( g -> !groups.contains(g))
 						.forEach( t->groups.add(t));

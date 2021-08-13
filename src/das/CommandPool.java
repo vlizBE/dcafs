@@ -290,6 +290,9 @@ public class CommandPool {
 
 			if( cmdOpt.isPresent()) {
 				result = cmdOpt.get().replyToCommand(split, wr, html);
+				if( result.startsWith(UNKNOWN_CMD) ) {
+					Logger.warn("Found "+find+" but corresponding cmd to do: " + question);
+				}
 			}else{
 				String res;
 				for( var cd : bulkCommandable ){
@@ -308,11 +311,12 @@ public class CommandPool {
 					if (!res.startsWith("No ") && !res.startsWith("Not "))
 						result = res;
 				}
+				if( result.startsWith(UNKNOWN_CMD) ) {
+					Logger.warn("Not defined:" + question + " because no method named " + find + ".");
+				}
 			}
 		}
-		if( result.startsWith(UNKNOWN_CMD) ) {
-			Logger.warn("Not defined:" + question + " because no method named " + find + ".");
-		}
+
 		if( wr!=null ) {
 			if (!wr.getID().equalsIgnoreCase("telnet"))
 				Logger.debug("Hidden response for " + wr.getID() + ": " + result);

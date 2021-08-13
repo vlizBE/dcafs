@@ -20,8 +20,18 @@ From 0.5.0 onwards, this should be better documented...
     * Bring javadoc up to date
     * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (will be trigger for 0.11.0)
+
 ## 0.10.9 (work in progress)
-  
+
+
+### Fixes
+- MathUtils, extractParts didn't remove _ (in doublevals) or : (in flags/issues)
+- MathForward, if no i's are in the expression settings highestI wasn't skipped
+- RtvalCheck, the ! in front of a flag/issue wasn't processed correctly
+- FilterForward, successive filters (so if no other steps are inbetween) will use data given by
+that filter instead of the reverse
+- DoubleVal/FlagVal, didn't take in account the use of _ in the name
+
 ## 0.10.8 (12/08/21)
 
 ### RealtimeValues
@@ -49,7 +59,6 @@ From 0.5.0 onwards, this should be better documented...
 ### Fixes
 - ForwardPool, nettygroup should have been before the xml reading, not after.
 - MathForward, op with scale attribute should give the cmd to the scale op instead
-- 
 
 ## 0.10.7 (09/08/21)
 

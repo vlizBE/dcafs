@@ -31,6 +31,7 @@ public class MathForward extends AbstractForward {
     private final ArrayList<Operation> ops = new ArrayList<>();
     private BigDecimal scratchpad = BigDecimal.ZERO;
     private boolean doCmd = false;
+    private boolean doUpdate=false;
     HashMap<String,String> defs = new HashMap<>();
 
     public enum OP_TYPE{COMPLEX, SCALE, LN, SALINITY, SVC,TRUEWINDSPEED,TRUEWINDDIR}
@@ -271,7 +272,7 @@ public class MathForward extends AbstractForward {
             if( suffix.equalsIgnoreCase("nmea")){
                 result=join+"*"+MathUtils.getNMEAchecksum(join.toString());
             }else{
-                Logger.error(getID()+" (mf)-> No such suffix "+suffix);
+                Logger.error(id+" (mf)-> No such suffix "+suffix);
                 result=join.toString();
             }
         }else{
@@ -363,7 +364,12 @@ public class MathForward extends AbstractForward {
         if( exp.isEmpty() )
             return Optional.empty();
 
-        op = new Operation( expression, new MathFab(exp.replace(",",".")),index);
+        if( NumberUtils.isCreatable(exp.replace(",","."))) {
+            op = new Operation( expression, exp.replace(",","."),index);
+        }else{
+            op = new Operation( expression, new MathFab(exp.replace(",",".")),index);
+        }
+
 
         ops.add(op);
 
@@ -405,28 +411,28 @@ public class MathForward extends AbstractForward {
                 break;
             case SALINITY:
                 if( indexes.length != 3 ){
-                    Logger.error(getID()+" (mf)-> Not enough args for salinity calculation");
+                    Logger.error(id+" (mf)-> Not enough args for salinity calculation");
                     return Optional.empty();
                 }
                 op = new Operation(expression, Calculations.procSalinity(indexes[0],indexes[1],indexes[2]), index);
                 break;
             case SVC:
                 if( indexes.length != 3 ){
-                    Logger.error(getID()+" (mf)-> Not enough args for soundvelocity calculation");
+                    Logger.error(id+" (mf)-> Not enough args for soundvelocity calculation");
                     return Optional.empty();
                 }
                 op = new Operation(expression, Calculations.procSoundVelocity(indexes[0],indexes[1],indexes[2]), index);
                 break;
             case TRUEWINDSPEED:
                 if( indexes.length != 5 ){
-                    Logger.error(getID()+" (mf)-> Not enough args for True wind speed calculation");
+                    Logger.error(id+" (mf)-> Not enough args for True wind speed calculation");
                     return Optional.empty();
                 }
                 op = new Operation(expression, Calculations.procTrueWindSpeed(indexes[0],indexes[1],indexes[2],indexes[3],indexes[4]), index);
                 break;
             case TRUEWINDDIR:
                 if( indexes.length != 5 ){
-                    Logger.error(getID()+" (mf)-> Not enough args for True wind direction calculation");
+                    Logger.error(id+" (mf)-> Not enough args for True wind direction calculation");
                     return Optional.empty();
                 }
                 op = new Operation(expression, Calculations.procTrueWindDirection(indexes[0],indexes[1],indexes[2],indexes[3],indexes[4]), index);
@@ -542,11 +548,11 @@ public class MathForward extends AbstractForward {
                         f.ifPresent( fv -> referencedFlags.add(fv) );
                         break;
                     default:
-                        Logger.error(getID()+" (mf)-> Operation containing unknown pair: "+p[0]+":"+p[1]);
+                        Logger.error(id+" (mf)-> Operation containing unknown pair: "+p[0]+":"+p[1]);
                         return false;
                 }
             }else{
-                Logger.error(getID()+" (mf)-> Pair containing odd amount of elements: "+String.join(":",p));
+                Logger.error(id+" (mf)-> Pair containing odd amount of elements: "+String.join(":",p));
             }
         }
         // Find the highest used i index
@@ -556,8 +562,11 @@ public class MathForward extends AbstractForward {
                 .map(MatchResult::group)
                 .sorted()
                 .toArray(String[]::new);
-        highestI = Math.max(highestI,Integer.parseInt(is[is.length-1].substring(1)));
-
+        if( is.length==0 ) {
+            Logger.warn(id+" (mf)->No i's found in "+exp);
+        }else{
+            highestI = Math.max(highestI,Integer.parseInt(is[is.length-1].substring(1)));
+        }
         return true;
     }
 
@@ -598,15 +607,15 @@ public class MathForward extends AbstractForward {
                         }
                     }
                 }else{
-                    Logger.error(getID()+" (mf)-> Operation containing unknown pair: "+String.join(":",p));
+                    Logger.error(id+" (mf)-> Operation containing unknown pair: "+String.join(":",p));
                     return "";
                 }
                 if(!ok){
-                    Logger.error(getID()+" (mf)-> Didn't find a match when looking for "+String.join(":",p));
+                    Logger.error(id+" (mf)-> Didn't find a match when looking for "+String.join(":",p));
                     return "";
                 }
             }else{
-                Logger.error(getID()+" (mf)-> Pair containing to many elements: "+String.join(":",p));
+                Logger.error(id+" (mf)-> Pair containing to many elements: "+String.join(":",p));
                 return "";
             }
         }
@@ -624,7 +633,7 @@ public class MathForward extends AbstractForward {
         String ori;          // The expression before it was decoded mainly for listing purposes
         String cmd ="";      // Command in which to replace the $ with the result
         DoubleVal update;
-
+        BigDecimal directSet;
 
         public Operation(String ori,int index){
             this.ori=ori;
@@ -632,7 +641,10 @@ public class MathForward extends AbstractForward {
 
             if( ori.startsWith("{d")){
                 dataProviding.getDoubleVal(ori.substring(ori.indexOf(":")+1,ori.indexOf("}")))
-                                .ifPresent( dv-> update=dv );
+                                .ifPresent( dv-> {
+                                    update=dv;
+                                    doUpdate=true;
+                                } );
             }
         }
         public Operation(String ori, Function<BigDecimal[],BigDecimal> op, int index ){
@@ -642,6 +654,10 @@ public class MathForward extends AbstractForward {
         public Operation(String ori, MathFab fab, int index ){
             this(ori,index);
             this.fab=fab;
+        }
+        public Operation(String ori, String value, int index ){
+            this(ori,index);
+            this.directSet = NumberUtils.createBigDecimal(value);
         }
         public void setCmd(String cmd){
             if( cmd.isEmpty())
@@ -654,6 +670,7 @@ public class MathForward extends AbstractForward {
                 String val = cmd.substring(8).split(",")[1];
                 this.cmd = dataProviding.getDoubleVal(val).map( dv-> {
                     update=dv;
+                    doUpdate=true;
                     return "";
                 } ).orElse(cmd);
             }
@@ -681,6 +698,8 @@ public class MathForward extends AbstractForward {
                     Logger.error(id+" -> "+e.getMessage());
                     return null;
                 }
+            }else if( directSet!= null ){
+                bd = directSet;
             }else{
                 return null;
             }
@@ -699,5 +718,10 @@ public class MathForward extends AbstractForward {
 
             return bd;
         }
+    }
+    /* ************************************************************************************************************* */
+    @Override
+    public boolean noTargets(){
+        return !(!targets.isEmpty() || !label.isEmpty() || doCmd || doUpdate);
     }
 }

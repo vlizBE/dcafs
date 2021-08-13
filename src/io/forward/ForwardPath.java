@@ -113,15 +113,24 @@ public class ForwardPath{
                         step.setAttribute("label","valmap:"+next.getAttribute("id"));
                 }
             }
+            boolean lastGenMap = false;
+            if( !stepsForward.isEmpty() ) {
+                var prev = steps.get(a - 1);
+                lastGenMap = prev.getTagName().equalsIgnoreCase("generic")
+                                ||prev.getTagName().equalsIgnoreCase("valmap");
+            }
 
             // If this step doesn't have a delimiter, alter it
             if( !step.hasAttribute("delimiter")&& !delimiter.isEmpty())
                 step.setAttribute("delimiter",delimiter);
+
             step.setAttribute("id",id+"_"+a);
+            if( stepsForward.isEmpty()&& !src.isEmpty())
+                step.setAttribute("src",src);
             switch( step.getTagName() ){
                 case "filter":
                     FilterForward ff = new FilterForward( step, dQueue );
-                    if( lastff != null ) {
+                    if( lastff != null && (!(lastStep() instanceof FilterForward) || lastGenMap)) {
                         lastff.addReverseTarget(ff);
                     }else if( !stepsForward.isEmpty() ){
                         lastStep().addTarget(ff);
@@ -148,7 +157,17 @@ public class ForwardPath{
         }
         if( !stepsForward.isEmpty() && !type.isEmpty()){
             targets.add(stepsForward.get(0));
+        }else{
+
         }
+    }
+    public boolean debugStep( int step, Writable wr ){
+        if( step >= stepsForward.size() || step == -1 || wr==null )
+            return false;
+        for( var ab : stepsForward )
+            ab.removeTarget(wr);
+        stepsForward.get(step).addTarget(wr);
+        return true;
     }
     private AbstractForward lastStep(){
         return stepsForward.get(stepsForward.size()-1);
@@ -188,17 +207,11 @@ public class ForwardPath{
         if( stepsForward.isEmpty() ) {
             targets.remove(wr);// Stop giving data
         }else{
-            var step = stepsForward.get(stepsForward.size()-1);
-            if( step.noTargets() )// Nothing to remove
-                return;
+            for( var step : stepsForward )
+                step.removeTarget(wr);
 
-            if( !step.removeTarget(wr))// Stop giving data
-                return; // return if nothing was removed
-
-            if( step.noTargets() ){ // if the final step has no more targets, stop the first step
-               if( type.isEmpty() ) {
-                   dQueue.add(Datagram.system("nothing").writable(stepsForward.get(0)));
-               }else{
+            if( lastStep().noTargets() ){ // if the final step has no more targets, stop the first step
+               if( !type.isEmpty() ) {
                    if(future!=null)
                        future.cancel(true);
                }

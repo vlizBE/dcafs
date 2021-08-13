@@ -35,21 +35,20 @@ public class RtvalCheck {
         equ=equ.replace(" below ","<");   // retain support for below
         equ=equ.replace(" above ",">");   // retain support for above
         equ=equ.replace(" equals ","=="); // retain support for equals
-        equ=equ.replace(" ",""); // remove spaces
 
         // Split on and/or etc?
         if( equ.contains(" and ") ){
             for( String and : equ.split(" and "))
-                comparisons.add(getCompareFunction(and));
+                comparisons.add(getCompareFunction(and.replace(" ","")));
             if( !comparisons.contains(null))
                 type = CHECKTYPE.AND;
         }else if( equ.contains(" or ") ){
-            for( String and : equ.split(" or "))
-                comparisons.add(getCompareFunction(and));
+            for( String or : equ.split(" or "))
+                comparisons.add(getCompareFunction(or.replace(" ","")));
             if( !comparisons.contains(null))
                 type = CHECKTYPE.OR;
         }else{
-            comparisons.add(getCompareFunction(equ));
+            comparisons.add(getCompareFunction(equ.replace(" ","")));
             if( !comparisons.contains(null))
                 type = CHECKTYPE.SINGLE;
         }
@@ -67,13 +66,13 @@ public class RtvalCheck {
                 .map(MatchResult::group)
                 .collect(Collectors.joining());
 
-        if( comp.isEmpty() ) {
+        if( comp.isEmpty()|| comp.equalsIgnoreCase("!") ) {
             if (equ.contains("flag:") || equ.contains("issue:") ) { //These can only be true or false
                 if( equ.startsWith("!") ) {
-                    equ+= "==1";
+                    equ+= "==0";
+                    equ=equ.substring(1); // remove the ! at the start
                 }else {
-                    equ+="==0";
-                    equ.substring(1); // remove the ! at the start
+                    equ+="==1";
                 }
                 comp="==";
             } else {
@@ -83,9 +82,16 @@ public class RtvalCheck {
         }
 
         String[] split = equ.split(comp);
-        return MathUtils.getCompareFunction(comp,getFunction(split[0]),getFunction(split[1]));
+        try {
+            var f1 = getFunction(split[0]);
+            var f2 = getFunction(split[1]);
+            return MathUtils.getCompareFunction(comp,f1,f2);
+        }catch(IndexOutOfBoundsException e ){
+            Logger.error("Out of bounds when processing: " +equ);
+        }
+        return null;
     }
-    private Function<Double[],Double> getFunction( String equ ){
+    private Function<Double[],Double> getFunction( String equ ) throws IndexOutOfBoundsException{
         List<String> parts;
         // First check if it's the special diff function (difference between two values)
         if( equ.contains("diff") ){

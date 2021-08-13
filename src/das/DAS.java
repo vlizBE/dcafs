@@ -156,7 +156,7 @@ public class DAS implements DeadThreadListener {
             commandPool = new CommandPool(rtvals, issuePool, workPath);
             commandPool.setDatabaseManager(dbManager);
             addCommandable("issue",issuePool);
-            addCommandable("flags;fv;doubles;dv;texts;tv",rtvals);
+            addCommandable("flags;fv;doubles;double;dv;texts;tv",rtvals);
             addCommandable("rtvals",rtvals);
 
             /* Waypoints */
@@ -193,8 +193,6 @@ public class DAS implements DeadThreadListener {
             if (DebugWorker.inXML(settingsDoc)) {
                 addDebugWorker();
             }
-
-
 
             /* I2C */
             addI2CWorker();
