@@ -782,6 +782,19 @@ public class ForwardPool implements Commandable {
                 join.setEmptyValue("No paths yet");
                 paths.entrySet().forEach( x -> join.add("path:"+x.getKey()+" -> "+ x.getValue().toString()));
                 return join.toString();
+            case "debug":
+                if( cmds.length!=3)
+                    return "Incorrect number of arguments, needs to be path:debug,pathid,stepnr (from 0)";
+                int nr = NumberUtils.toInt(cmds[2],-1);
+                var pp = paths.get(cmds[1]);
+                if( pp==null)
+                    return "No such path: "+cmds[1];
+                if( wr==null)
+                    return "No valid writable";
+                if( pp.debugStep(nr,wr) )
+                    return "Debugging step "+cmds[2];
+                return "Invalid step nr "+cmds[2];
+
             default:
                 var p = paths.get(cmd);
                 if( p==null)
