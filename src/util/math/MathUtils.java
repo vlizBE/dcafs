@@ -113,7 +113,7 @@ public class MathUtils {
 
         String[] spl = alt.split(OPS_REGEX);
 
-        String ops = alt.replaceAll("[a-zA-Z0-9]", "");
+        String ops = alt.replaceAll("[a-zA-Z0-9_]", "");
         ops=ops.replace(".","");
         // The above replace all doesn't handle it properly if the formula starts with a - (fe. -5*i1)
         // So if this is the case, remove it from the ops line
