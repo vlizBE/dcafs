@@ -364,7 +364,12 @@ public class MathForward extends AbstractForward {
         if( exp.isEmpty() )
             return Optional.empty();
 
-        op = new Operation( expression, new MathFab(exp.replace(",",".")),index);
+        if( NumberUtils.isCreatable(exp.replace(",","."))) {
+            op = new Operation( expression, exp.replace(",","."),index);
+        }else{
+            op = new Operation( expression, new MathFab(exp.replace(",",".")),index);
+        }
+
 
         ops.add(op);
 
@@ -628,7 +633,7 @@ public class MathForward extends AbstractForward {
         String ori;          // The expression before it was decoded mainly for listing purposes
         String cmd ="";      // Command in which to replace the $ with the result
         DoubleVal update;
-
+        BigDecimal directSet;
 
         public Operation(String ori,int index){
             this.ori=ori;
@@ -649,6 +654,10 @@ public class MathForward extends AbstractForward {
         public Operation(String ori, MathFab fab, int index ){
             this(ori,index);
             this.fab=fab;
+        }
+        public Operation(String ori, String value, int index ){
+            this(ori,index);
+            this.directSet = NumberUtils.createBigDecimal(value);
         }
         public void setCmd(String cmd){
             if( cmd.isEmpty())
@@ -689,6 +698,8 @@ public class MathForward extends AbstractForward {
                     Logger.error(id+" -> "+e.getMessage());
                     return null;
                 }
+            }else if( directSet!= null ){
+                bd = directSet;
             }else{
                 return null;
             }
