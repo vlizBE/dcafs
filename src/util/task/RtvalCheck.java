@@ -35,7 +35,6 @@ public class RtvalCheck {
         equ=equ.replace(" below ","<");   // retain support for below
         equ=equ.replace(" above ",">");   // retain support for above
         equ=equ.replace(" equals ","=="); // retain support for equals
-        equ=equ.replace(" ",""); // remove spaces
 
         // Split on and/or etc?
         if( equ.contains(" and ") ){
@@ -83,9 +82,16 @@ public class RtvalCheck {
         }
 
         String[] split = equ.split(comp);
-        return MathUtils.getCompareFunction(comp,getFunction(split[0]),getFunction(split[1]));
+        try {
+            var f1 = getFunction(split[0]);
+            var f2 = getFunction(split[1]);
+            return MathUtils.getCompareFunction(comp,f1,f2);
+        }catch(IndexOutOfBoundsException e ){
+            Logger.error("Out of bounds whan processing:" +equ);
+        }
+        return null;
     }
-    private Function<Double[],Double> getFunction( String equ ){
+    private Function<Double[],Double> getFunction( String equ ) throws IndexOutOfBoundsException{
         List<String> parts;
         // First check if it's the special diff function (difference between two values)
         if( equ.contains("diff") ){
