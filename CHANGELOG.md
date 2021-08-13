@@ -23,12 +23,20 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.10.9 (work in progress)
 
+### Other
+- Datagram, now has an optional 'payload' (Object) 
+
+### MathForward
+- Now only converts the part of the raw data that contains the used indexes
+- Adds the converted (altered) data in the payload of the datagram so fe. generic doesn't parse it again
+- Removed scratchpad functionality, recent addition of {d:doubleid} made it obsolete
 
 ### Fixes
 - MathUtils, extractParts didn't remove _ (in doublevals) or : (in flags/issues)
-- MathForward, if no i's are in the expression settings highestI wasn't skipped
+- MathForward, if no i's are in the expression settings highestI wasn't skipped so tried to check what was higher
+previous value or null (=not good)
 - RtvalCheck, the ! in front of a flag/issue wasn't processed correctly
-- FilterForward, successive filters (so if no other steps are inbetween) will use data given by
+- FilterForward, successive filters (so if no other steps are inbetween, generics aren't steps) will use data given by
 that filter instead of the reverse
 - DoubleVal/FlagVal, didn't take in account the use of _ in the name
 

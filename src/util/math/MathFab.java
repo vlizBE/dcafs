@@ -17,7 +17,6 @@ public class MathFab {
     int resultIndex=-1;
     int requiredInputs=0;
     boolean debug = false;
-    String lastError="";
     String ori="";
 
     public MathFab( String formula ){
@@ -62,7 +61,7 @@ public class MathFab {
         if( debug )
             Logger.info("Building: "+formula);
         // Next go through the brackets from left to right (inner)
-        var subFormulas = new ArrayList<String[]>(); // List to contain all the subformulas
+        var subFormulas = new ArrayList<String[]>(); // List to contain all the sub-formulas
 
         while( formula.contains("(") ){ // Look for an opening bracket
             int close = formula.indexOf(")"); // Find the first closing bracket
@@ -83,9 +82,9 @@ public class MathFab {
                     Logger.error("Failed to build because of issues during "+part);
                     break;
                 }
-                subFormulas.addAll( res );    // split that part in the subformulas
+                subFormulas.addAll( res );    // split that part in the sub-formulas
                 String piece = formula.substring(open,close+1); // includes the brackets
-                // replace the sub part in the original formula with a reference to the last subformula
+                // replace the sub part in the original formula with a reference to the last sub-formula
                 formula=formula.replace(piece,"o"+(subFormulas.size()));
                 if( debug )
                     Logger.info("=>Formula: "+formula);
@@ -95,7 +94,7 @@ public class MathFab {
         }
 
         offset=subFormulas.size(); // To store the intermediate results, the array needs to hold space
-        for( String[] sub : subFormulas ){ // now convert the subformulas into lambda's
+        for( String[] sub : subFormulas ){ // now convert the sub-formulas into lambda's
             var x = MathUtils.decodeBigDecimalsOp(sub[0],sub[1],sub[2],offset);
             if( x==null ){
                 Logger.error("Failed to convert "+formula);
@@ -121,7 +120,7 @@ public class MathFab {
 
     /**
      *
-     * @param data The bigdecimals used in the operation
+     * @param data The bigDecimals used in the operation
      * @return Result of the operation
      * @throws ArrayIndexOutOfBoundsException Indicating lack of elements
      */

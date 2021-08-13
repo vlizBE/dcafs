@@ -31,10 +31,10 @@ public class MathForward extends AbstractForward {
     private final ArrayList<Operation> ops = new ArrayList<>();
     private boolean doCmd = false;
     private boolean doUpdate=false;
-    HashMap<String,String> defs = new HashMap<>();
+    HashMap<String,String> defines = new HashMap<>();
 
     public enum OP_TYPE{COMPLEX, SCALE, LN, SALINITY, SVC,TRUEWINDSPEED,TRUEWINDDIR}
-    private ArrayList<DoubleVal> referencedDoubles = new ArrayList<>();
+    private final ArrayList<DoubleVal> referencedDoubles = new ArrayList<>();
     private ArrayList<FlagVal> referencedFlags;
     private int highestI=-1;
 
@@ -46,7 +46,7 @@ public class MathForward extends AbstractForward {
         readFromXML(ele);
     }
     /**
-     * Read a mathforward from an element in the xml
+     * Read a mathForward from an element in the xml
      * @param ele The element containing the math info
      * @return The MathForward created based on the xml element
      */
@@ -55,7 +55,7 @@ public class MathForward extends AbstractForward {
     }
     /**
      * Alter the delimiter used
-     * @param deli The new delimiter to use, eg. \x09  or \t is also valid for a tab
+     * @param deli The new delimiter to use, fe. \x09  or \t is also valid for a tab
      */
     public void setDelimiter( String deli ){
         if( deli.contains("\\")){
@@ -85,7 +85,7 @@ public class MathForward extends AbstractForward {
         return "math";
     }
     /**
-     * Read the settings for a mathforward from the given element
+     * Read the settings for a mathForward from the given element
      * @param math The math child element
      * @return True if this was successful
      */
@@ -104,28 +104,28 @@ public class MathForward extends AbstractForward {
 
         setDelimiter(XMLtools.getStringAttribute( math, "delimiter", delimiter));
         suffix = XMLtools.getStringAttribute(math,"suffix","");
-        defs.clear();
+        defines.clear();
         ops.clear();
         String content = math.getTextContent();
 
         if( content != null && XMLtools.getChildElements(math).isEmpty() ){
-            if( !findReferences(content) ){
+            if( findReferences(content) ){
+                var op = addStdOperation(
+                        content,
+                        XMLtools.getIntAttribute(math,"scale",-1),
+                        XMLtools.getStringAttribute(math,"cmd","")
+                );
+                if(op.isEmpty()){
+                    Logger.error("No valid operation found in: "+content);
+                    return false;
+                }
+            }else {
                 return false;
             }
-            var op = addStdOperation(
-                    content,
-                    XMLtools.getIntAttribute(math,"scale",-1),
-                    XMLtools.getStringAttribute(math,"cmd","")
-                    );
-            if(op.isEmpty()){
-                Logger.error("No valid operation found in: "+content);
-                return false;
-            }
-
         }
 
         XMLtools.getChildElements(math, "def")
-                .forEach( def -> defs.put( def.getAttribute("ref"),def.getTextContent()));
+                .forEach( def -> defines.put( def.getAttribute("ref"),def.getTextContent()));
 
         boolean oldValid=valid;
         for( var ops : XMLtools.getChildElements(math, "op") ){
@@ -137,7 +137,7 @@ public class MathForward extends AbstractForward {
                 .forEach( ops -> {
                     try {
                         var type= fromStringToOPTYPE(XMLtools.getStringAttribute(ops, "type", "complex"));
-                        switch(type){
+                        switch(Objects.requireNonNull(type)){
                             case COMPLEX:
                                 addStdOperation(
                                         ops.getTextContent(),
@@ -156,7 +156,7 @@ public class MathForward extends AbstractForward {
                         }
 
                     }catch( NumberFormatException e){
-                        Logger.error(id+" (mf)-> NumberformatException "+e.getMessage());
+                        Logger.error(id+" (mf)-> Number format Exception "+e.getMessage());
                     }
                 } );
 
@@ -193,8 +193,8 @@ public class MathForward extends AbstractForward {
             fab.comment("Sources go here");
             sources.forEach( src -> fab.addChild("src", src) );
         }
-        if( !defs.isEmpty() ){
-            defs.entrySet().forEach( def -> fab.addChild("def",def.getValue()).attr("ref",def.getKey()));
+        if( !defines.isEmpty() ){
+            defines.forEach((key, value) -> fab.addChild("def", value).attr("ref", key));
         }
         if( rulesString.size()==1 && sources.size()==1){
             fab.content("i"+rulesString.get(0)[1]+"="+rulesString.get(0)[2]);
@@ -244,7 +244,7 @@ public class MathForward extends AbstractForward {
             Logger.error(id+"(mf)-> Too many bad data received, no longer accepting data");
             return false;
         }
-        if( badDataCount > 0)
+        if( badDataCount > 0 || bds == null)
             return true;
 
         StringJoiner join = new StringJoiner(delimiter); // prepare a joiner to rejoin the data
@@ -312,15 +312,12 @@ public class MathForward extends AbstractForward {
             return Optional.empty();
 
         String exp = expression;
-        var split = expression.split("[+-\\/*^]?[=]");
+        var split = expression.split("[+-/*^]?[=]");
 
         if( split[0].length()+split[1].length()+1 != exp.length()){ // Support += -= *= and /= fe. i0+=1
             String[] spl = exp.split("="); //[0]:i0+ [1]:1
             split[1]=spl[0]+split[1]; // split[1]=i0+1
         }
-        int comma = split[0].indexOf(",");
-
-        //int index = Tools.parseInt(split[0].substring(1,comma==-1?split.length-1:comma),-1); // valid if there's only a ix
 
         var ii = split[0].split(",");
         int index = Tools.parseInt(ii[0].substring(1),-1); // Check if it's in the first or only position
@@ -342,7 +339,7 @@ public class MathForward extends AbstractForward {
 
         Operation op;
 
-        for( var entry : defs.entrySet() ){ // Check for the defaults and replace
+        for( var entry : defines.entrySet() ){ // Check for the defaults and replace
             exp = exp.replace(entry.getKey(),entry.getValue());
         }
 
@@ -430,8 +427,7 @@ public class MathForward extends AbstractForward {
         ops.add(op);
 
         if( scale != -1){ // Check if there's a scale op needed
-            int pos =index;
-            Function<BigDecimal[],BigDecimal> proc = x -> x[pos].setScale(scale, RoundingMode.HALF_UP);
+            Function<BigDecimal[],BigDecimal> proc = x -> x[index].setScale(scale, RoundingMode.HALF_UP);
             var p = new Operation( expression, proc,index);
             p.setCmd(cmd);  // this is the operation that should get the command
             ops.add( p );
@@ -486,7 +482,7 @@ public class MathForward extends AbstractForward {
     /* ************************************* R E F E R E N C E S *************************************************** */
     /**
      * Build the BigDecimal array base on received data and the local references.
-     * From the received data only the part that holds used i's is converted (so if i1 and i5 is used, i0-i5 is taken)
+     * From the received data only the part that holds used 'i's is converted (so if i1 and i5 is used, i0-i5 is taken)
      * @param data The data received, to be split
      * @return The created array
      */
@@ -504,14 +500,14 @@ public class MathForward extends AbstractForward {
             }
             return ArrayUtils.addAll(MathUtils.toBigDecimals(data,delimiter,highestI==-1?0:highestI),refBds);
         }else{
-            return MathUtils.toBigDecimals(data,delimiter,highestI==-1?0:highestI); // Split the data and convert to bigdecimals
+            return MathUtils.toBigDecimals(data,delimiter,highestI==-1?0:highestI); // Split the data and convert to big decimals
         }
     }
     /**
      * Check the expression for references to:
      * - doubles -> {d:id} or {double:id}
      * - flags -> {f:id} or{flag:id}
-     * If found check if those exist and if so add them to the corresponding list
+     * If found, check if those exist and if so, add them to the corresponding list
      *
      * @param exp The expression to check
      * @return True if everything went ok and all references were found
@@ -525,13 +521,13 @@ public class MathForward extends AbstractForward {
                 switch(p[0]){
                     case "d": case "double":
                         var d = dataProviding.getDoubleVal(p[1]);
-                        d.ifPresent( dv -> referencedDoubles.add(dv) );
+                        d.ifPresent(  referencedDoubles::add );
                         break;
                     case "f": case "flag":
                         var f = dataProviding.getFlagVal(p[1]);
                         if( referencedFlags == null)
                             referencedFlags = new ArrayList<>();
-                        f.ifPresent( fv -> referencedFlags.add(fv) );
+                        f.ifPresent( referencedFlags::add );
                         break;
                     default:
                         Logger.error(id+" (mf)-> Operation containing unknown pair: "+p[0]+":"+p[1]);
@@ -541,7 +537,7 @@ public class MathForward extends AbstractForward {
                 Logger.error(id+" (mf)-> Pair containing odd amount of elements: "+String.join(":",p));
             }
         }
-        // Find the highest used i index
+        // Find the highest used 'i' index
         var is = Pattern.compile("[i][0-9]{1,2}")
                 .matcher(exp)
                 .results()
@@ -559,7 +555,7 @@ public class MathForward extends AbstractForward {
     /**
      * Use the earlier found references and replace them with the corresponding index.
      * The indexes will be altered so that they match if the correct index of an array containing
-     * - The received data split according to the delimeter up to the highest used index
+     * - The received data split according to the delimiter up to the highest used index
      * - The doubleVals found
      * - The flagVals found
      *
@@ -662,14 +658,14 @@ public class MathForward extends AbstractForward {
             }
         }
         public BigDecimal solve( BigDecimal[] data){
-            BigDecimal bd=null;
+            BigDecimal bd;
 
             if( op != null ){
                 if( data.length>index) {
                     try {
                         bd = op.apply(data);
                     }catch(NullPointerException e){
-                        Logger.error(getID()+"(mf) -> Nullpointer when processing for "+ori);
+                        Logger.error(getID()+"(mf) -> Null pointer when processing for "+ori);
                         return null;
                     }
                 }else{

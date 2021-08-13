@@ -252,9 +252,8 @@ public class MathUtils {
 
         double fi2 = NumberUtils.toDouble(op.substring( op.lastIndexOf(cc.get(1))+cc.get(1).length()));
         var fu2 = getSingleCompareFunction(fi2,cc.get(1));
-        Function<Double,Boolean> ff = x -> fu1.apply(x) && fu2.apply(x);
 
-        return ff;
+        return x -> fu1.apply(x) && fu2.apply(x);
     }
 
     /**
@@ -335,7 +334,7 @@ public class MathUtils {
                         proc = x -> bd1.add(bd2);
                     } else if (bd1 == null && bd2 != null) { // meaning first is an index and second a number
                         proc = x -> x[i1].add(bd2);
-                    } else if (bd1 != null && bd2 == null) { // meaning first is a number and second an index
+                    } else if (bd1 != null) { // meaning first is a number and second an index
                         proc = x -> bd1.add(x[i2]);
                     } else { // meaning both indexes
                         proc = x -> x[i1].add(x[i2]);
@@ -351,7 +350,7 @@ public class MathUtils {
                         proc = x -> bd1.subtract(bd2);
                     }else if( bd1==null && bd2!=null){ // meaning first is an index and second a number
                         proc = x -> x[i1].subtract(bd2);
-                    }else if( bd1!=null && bd2==null ){ // meaning first is a number and second an index
+                    }else if(bd1 != null){ // meaning first is a number and second an index
                         proc = x -> bd1.subtract(x[i2]);
                     }else{ // meaning both indexes
                         proc = x -> x[i1].subtract(x[i2]);
@@ -367,7 +366,7 @@ public class MathUtils {
                         proc = x -> bd1.multiply(bd2);
                     }else if( bd1==null && bd2!=null){ // meaning first is an index and second a number
                         proc = x -> x[i1].multiply(bd2);
-                    }else if( bd1!=null && bd2==null ){ // meaning first is a number and second an index
+                    }else if(bd1 != null){ // meaning first is a number and second an index
                         proc = x -> bd1.multiply(x[i2]);
                     }else{ // meaning both indexes
                         proc = x -> x[i1].multiply(x[i2]);
@@ -384,7 +383,7 @@ public class MathUtils {
                         proc = x -> bd1.divide(bd2, DIV_SCALE, RoundingMode.HALF_UP);
                     } else if (bd1 == null && bd2 != null) { // meaning first is an index and second a number
                         proc = x -> x[i1].divide(bd2, DIV_SCALE, RoundingMode.HALF_UP);
-                    } else if (bd1 != null && bd2 == null) { //  meaning first is a number and second an index
+                    } else if (bd1 != null) { //  meaning first is a number and second an index
                         proc = x -> bd1.divide(x[i2], DIV_SCALE, RoundingMode.HALF_UP);
                     } else { // meaning both indexes
                         proc = x -> x[i1].divide(x[i2], DIV_SCALE, RoundingMode.HALF_UP);
@@ -401,7 +400,7 @@ public class MathUtils {
                         proc = x -> bd1.remainder(bd2);
                     }else if( bd1==null && bd2!=null){ // meaning first is an index and second a number
                         proc = x -> x[i1].remainder(bd2);
-                    }else if( bd1!=null && bd2==null ){ //  meaning first is a number and second an index
+                    }else if(bd1 != null){ //  meaning first is a number and second an index
                         proc = x -> bd1.remainder(x[i2]);
                     }else{ // meaning both indexes
                         proc = x -> x[i1].remainder(x[i2]);
@@ -422,7 +421,7 @@ public class MathUtils {
                             proc = x -> x[i1].pow(bd2.intValue());
                         }
 
-                    }else if( bd1!=null && bd2==null ){ //  meaning first is a number and second an index
+                    }else if(bd1 != null){ //  meaning first is a number and second an index
                         proc = x -> bd1.pow(x[i2].intValue());
                     }else{ // meaning both indexes
                         proc = x -> x[i1].pow(x[i2].intValue());
@@ -438,7 +437,7 @@ public class MathUtils {
                         proc = x -> bd1.setScale(bd2.intValue(),RoundingMode.HALF_UP);
                     }else if( bd1==null && bd2!=null){ // meaning first is an index and second a number
                         proc = x -> x[i1].setScale(bd2.intValue(),RoundingMode.HALF_UP);
-                    }else if( bd1!=null && bd2==null ){ //  meaning first is a number and second an index
+                    }else if(bd1 != null){ //  meaning first is a number and second an index
                         proc = x -> bd1.setScale(x[i2].intValue(),RoundingMode.HALF_UP);
                     }else{ // meaning both indexes
                         proc = x -> x[i1].setScale(x[i2].intValue(),RoundingMode.HALF_UP);
@@ -454,7 +453,7 @@ public class MathUtils {
                         Logger.error("Todo - ln bd,bd");
                     }else if( bd1==null && bd2!=null){ // meaning first is an index and second a number
                         Logger.error("Todo - ln ix,bd");
-                    }else if( bd1!=null && bd2==null ){ //  meaning first is a number and second an index
+                    }else if(bd1 != null){ //  meaning first is a number and second an index
                         proc = x -> BigDecimal.valueOf(Math.log(x[i2].doubleValue()));
                     }else{ // meaning both indexes
                         proc = x -> BigDecimal.valueOf(Math.log(x[i2].doubleValue()));
@@ -595,7 +594,7 @@ public class MathUtils {
                         proc = x -> db1+db2;
                     } else if (db1 == null && db2 != null) { // meaning first is an index and second a number
                         proc = x -> x[i1]+db2;
-                    } else if (db1 != null && db2 == null) { // meaning first is a number and second an index
+                    } else if (db1 != null) { // meaning first is a number and second an index
                         proc = x -> db1+x[i2];
                     } else { // meaning both indexes
                         proc = x -> x[i1]+x[i2];
@@ -611,7 +610,7 @@ public class MathUtils {
                         proc = x -> db1-db2;
                     }else if( db1==null && db2!=null){ // meaning first is an index and second a number
                         proc = x -> x[i1]-db2;
-                    }else if( db1!=null && db2==null ){ // meaning first is a number and second an index
+                    }else if(db1 != null){ // meaning first is a number and second an index
                         proc = x -> db1-x[i2];
                     }else{ // meaning both indexes
                         proc = x -> x[i1]-x[i2];
@@ -627,7 +626,7 @@ public class MathUtils {
                         proc = x -> db1*db2;
                     }else if( db1==null && db2!=null){ // meaning first is an index and second a number
                         proc = x -> x[i1]*db2;
-                    }else if( db1!=null && db2==null ){ // meaning first is a number and second an index
+                    }else if(db1 != null){ // meaning first is a number and second an index
                         proc = x -> db1*x[i2];
                     }else{ // meaning both indexes
                         proc = x -> x[i1]*x[i2];
@@ -644,7 +643,7 @@ public class MathUtils {
                         proc = x -> db1/db2;
                     } else if (db1 == null && db2 != null) { // meaning first is an index and second a number
                         proc = x -> x[i1]/db2;
-                    } else if (db1 != null && db2 == null) { //  meaning first is a number and second an index
+                    } else if (db1 != null) { //  meaning first is a number and second an index
                         proc = x -> db1/x[i2];
                     } else { // meaning both indexes
                         proc = x ->x[i1]/x[i2];
@@ -661,7 +660,7 @@ public class MathUtils {
                         proc = x -> db1%db2;
                     }else if( db1==null && db2!=null){ // meaning first is an index and second a number
                         proc = x -> x[i1]%db2;
-                    }else if( db1!=null && db2==null ){ //  meaning first is a number and second an index
+                    }else if(db1 != null){ //  meaning first is a number and second an index
                         proc = x -> db1%x[i2];
                     }else{ // meaning both indexes
                         proc = x -> x[i1]%x[i2];
@@ -682,7 +681,7 @@ public class MathUtils {
                             proc = x -> Math.pow(x[i1],db2);
                         }
 
-                    }else if( db1!=null && db2==null ){ //  meaning first is a number and second an index
+                    }else if(db1 != null){ //  meaning first is a number and second an index
                         proc = x -> Math.pow(db1,x[i2]);
                     }else{ // meaning both indexes
                         proc = x -> Math.pow(x[i1],x[i2]);
@@ -698,7 +697,7 @@ public class MathUtils {
                         proc = x -> Tools.roundDouble(db1,db2.intValue());
                     }else if( db1==null && db2!=null){ // meaning first is an index and second a number
                         proc = x -> Tools.roundDouble(x[i1],db2.intValue());
-                    }else if( db1!=null && db2==null ){ //  meaning first is a number and second an index
+                    }else if(db1 != null){ //  meaning first is a number and second an index
                         proc = x -> Tools.roundDouble(db1,x[i2].intValue());
                     }else{ // meaning both indexes
                         proc = x -> Tools.roundDouble(x[i1],x[i2].intValue());
@@ -714,7 +713,7 @@ public class MathUtils {
                         proc = x -> Math.abs(db1-db2);
                     }else if( db1==null && db2!=null){ // meaning first is an index and second a number
                         proc = x -> Math.abs(x[i1]-db2);
-                    }else if( db1!=null && db2==null ){ //  meaning first is a number and second an index
+                    }else if(db1 != null){ //  meaning first is a number and second an index
                         proc = x -> Math.abs(db1-x[i2]);
                     }else{ // meaning both indexes
                         proc = x -> Math.abs(x[i1]-x[i2]);
@@ -730,7 +729,7 @@ public class MathUtils {
                         proc = x -> Math.log(db2);
                     }else if( db1==null && db2!=null){ // meaning first is an index and second a number
                         proc = x -> Math.log(db2);
-                    }else if( db1!=null && db2==null ){ //  meaning first is a number and second an index
+                    }else if(db1 != null){ //  meaning first is a number and second an index
                         proc = x -> Math.log(x[i2]);
                     }else{ // meaning both indexes
                         proc = x -> Math.log(x[i2]);

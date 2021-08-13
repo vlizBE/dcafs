@@ -69,7 +69,7 @@ public class ForwardPool implements Commandable {
 
     @Override
     public String replyToCommand(String[] request, Writable wr, boolean html) {
-        boolean ok=false;
+        boolean ok;
 
         // Regular ones
         switch(request[0]){
@@ -86,11 +86,11 @@ public class ForwardPool implements Commandable {
                 break;
 
             // Editor
-            case "ef": return replyToEditorCmd(request[1],wr,html);
+            case "ef": return replyToEditorCmd(request[1],html);
             case "editor": ok = getEditorForward(request[1]).map(tf -> { tf.addTarget(wr); return true;} ).orElse(false); break;
 
             // Math
-            case "mf": return replyToMathCmd(request[1],wr,html);
+            case "mf": return replyToMathCmd(request[1],html);
             case "math": ok = getMathForward(request[1]).map(mf -> { mf.addTarget(wr); return true;} ).orElse(false); break;
             default:
                 return "unknown command: "+request[0]+":"+request[1];
@@ -125,7 +125,7 @@ public class ForwardPool implements Commandable {
             maths.put(id.replace("math:", ""), mf);
         }
     }
-    private String replyToMathCmd( String cmd, Writable wr, boolean html ){
+    private String replyToMathCmd( String cmd, boolean html ){
         if( cmd.isEmpty() )
             cmd = "list";
 
@@ -219,9 +219,10 @@ public class ForwardPool implements Commandable {
                         return "No such math";
 
                     getMathForward(cmds[1]).ifPresent(m ->
-                            m.readFromXML(
-                                    XMLfab.withRoot(settingsPath, "dcafs", "maths").getChild("math", "id", cmds[1]).get()
-                            ));
+                                    XMLfab.withRoot(settingsPath, "dcafs", "maths")
+                                            .getChild("math", "id", cmds[1])
+                                            .ifPresent( m::readFromXML )
+                                    );
                     return "Math reloaded: "+cmds[1];
                 }else{ //reload all
                     var mEle = XMLfab.withRoot(settingsPath, "dcafs", "maths").getChildren("math");
@@ -229,13 +230,11 @@ public class ForwardPool implements Commandable {
                     mEle.forEach(
                             ee ->{
                                 var id = ee.getAttribute("id");
-                                var mOp = getMathForward(id);
-                                if( mOp.isPresent()){ // If already exists
-                                    mOp.get().readFromXML(ee);
-                                    altered.add(id);
-                                }else{ //if doesn't exist yet
-                                    maths.put(id,MathForward.fromXML(ee,dQueue,dataProviding));
-                                }
+                                getMathForward(id).ifPresentOrElse(
+                                        m ->{
+                                            m.readFromXML(ee);
+                                            altered.add(id);
+                                        }, ()->maths.put(id,MathForward.fromXML(ee,dQueue,dataProviding)));
                             }
                     );
                     // Remove the ones that no longer exist
@@ -307,7 +306,7 @@ public class ForwardPool implements Commandable {
             editors.put(tf.getID().replace("editor:", ""), tf);
         }
     }
-    public String replyToEditorCmd( String cmd, Writable wr, boolean html ){
+    public String replyToEditorCmd( String cmd, boolean html ){
         if( cmd.isEmpty() )
             cmd = "list";
 
@@ -672,13 +671,12 @@ public class ForwardPool implements Commandable {
                 if( fab.selectParent("filter","id",cmds[1]).isEmpty() )
                     return "No such filter node '"+cmds[1]+"'";
 
-                switch( param ){
-                    case "label":
-                        ff.setLabel(value);
-                        fab.attr("label",value);
-                        return fab.build()!=null?"Label changed":"Label change failed";
-                    default:return "No valid alter target: "+param;
+                if (param.equals("label")) {
+                    ff.setLabel(value);
+                    fab.attr("label", value);
+                    return fab.build() != null ? "Label changed" : "Label change failed";
                 }
+                return "No valid alter target: " + param;
             case "swaprawsrc":
                 if( cmds.length<4)
                     return "Not enough arguments, needs to be ff:swaprawsrc,id,ori,new";
@@ -771,7 +769,7 @@ public class ForwardPool implements Commandable {
             case "list":
                 StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
                 join.setEmptyValue("No paths yet");
-                paths.entrySet().forEach( x -> join.add("path:"+x.getKey()+" -> "+ x.getValue().toString()));
+                paths.forEach((key, value) -> join.add("path:" + key + " -> " + value.toString()));
                 return join.toString();
             case "debug":
                 if( cmds.length!=3)

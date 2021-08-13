@@ -27,12 +27,11 @@ public class LabelWorker implements Runnable, Labeller {
 
 	Map<String, Generic> generics = new HashMap<>();
 	Map<String, ValMap> mappers = new HashMap<>();
-	Map<String, Writable> writables = new HashMap<>();
 	Map<String, Readable> readables = new HashMap<>();
 
-	private BlockingQueue<Datagram> dQueue = new LinkedBlockingQueue<>();      // The queue holding raw data for processing
+	private BlockingQueue<Datagram> dQueue;      // The queue holding raw data for processing
 	private DataProviding dp;
-	private QueryWriting queryWriting;
+	private final QueryWriting queryWriting;
 	private MqttWriting mqtt;
 
 	private boolean goOn = true; // General process boolean, clean way of stopping thread
@@ -50,7 +49,7 @@ public class LabelWorker implements Runnable, Labeller {
 	ThreadPoolExecutor executor = new ThreadPoolExecutor(1,
 			Math.min(3, Runtime.getRuntime().availableProcessors()), // max allowed threads
 			30L, TimeUnit.SECONDS,
-			new LinkedBlockingQueue<Runnable>());
+			new LinkedBlockingQueue<>());
 
 	ScheduledExecutorService debug = Executors.newSingleThreadScheduledExecutor();
 
@@ -174,12 +173,6 @@ public class LabelWorker implements Runnable, Labeller {
 		generics.clear();
 	}
 
-	public Generic addGeneric(String id) {
-		Generic gen = new Generic("");
-		generics.put(id, gen);
-		return gen;
-	}
-
 	public String getGenericInfo() {
 		StringJoiner join = new StringJoiner("\r\n", "Generics:\r\n", "\r\n");
 		for (Generic gen : generics.values()) {
@@ -210,13 +203,6 @@ public class LabelWorker implements Runnable, Labeller {
 		this.dQueue = d;
 	}
 
-	/**
-	 * Clear this workers queue
-	 */
-	public void clearQueue() {
-		dQueue.clear();
-	}
-
 	/* *******************************************************************************************/
 	@Override
 	public void run() {
@@ -230,10 +216,6 @@ public class LabelWorker implements Runnable, Labeller {
 				Datagram d = dQueue.take();
 				readCount++;
 
-				if (d == null) {
-					Logger.error("Invalid datagram received");
-					continue;
-				}
 				lastOrigin=d.getOriginID();
 				String label = d.getLabel();
 
@@ -294,13 +276,10 @@ public class LabelWorker implements Runnable, Labeller {
 					procTime = Instant.now().toEpochMilli();
 					Logger.info("Processed " + (proc / 1000) + "k lines in " + TimeTools.convertPeriodtoString(millis, TimeUnit.MILLISECONDS));
 				}
-			} catch (InterruptedException  e) {
-				Logger.error(e);
-			}catch( RejectedExecutionException e){
+			} catch( RejectedExecutionException e){
 				Logger.error(e.getMessage());
-			} catch( Exception e){
+			} catch (Exception e) {
 				Logger.error(e);
-
 			}
 		}
 		listener.notifyCancelled("BaseWorker");
@@ -450,10 +429,6 @@ public class LabelWorker implements Runnable, Labeller {
 												}
 											}
 										}
-									}
-								} else {
-									if (gen == null) {
-										Logger.error("Generic requested but unknown id: " + genericID + " -> Message: " + d.getData());
 									}
 								}
 							}
