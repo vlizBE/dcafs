@@ -39,16 +39,16 @@ public class RtvalCheck {
         // Split on and/or etc?
         if( equ.contains(" and ") ){
             for( String and : equ.split(" and "))
-                comparisons.add(getCompareFunction(and));
+                comparisons.add(getCompareFunction(and.replace(" ","")));
             if( !comparisons.contains(null))
                 type = CHECKTYPE.AND;
         }else if( equ.contains(" or ") ){
-            for( String and : equ.split(" or "))
-                comparisons.add(getCompareFunction(and));
+            for( String or : equ.split(" or "))
+                comparisons.add(getCompareFunction(or.replace(" ","")));
             if( !comparisons.contains(null))
                 type = CHECKTYPE.OR;
         }else{
-            comparisons.add(getCompareFunction(equ));
+            comparisons.add(getCompareFunction(equ.replace(" ","")));
             if( !comparisons.contains(null))
                 type = CHECKTYPE.SINGLE;
         }
@@ -66,13 +66,13 @@ public class RtvalCheck {
                 .map(MatchResult::group)
                 .collect(Collectors.joining());
 
-        if( comp.isEmpty() ) {
+        if( comp.isEmpty()|| comp.equalsIgnoreCase("!") ) {
             if (equ.contains("flag:") || equ.contains("issue:") ) { //These can only be true or false
                 if( equ.startsWith("!") ) {
-                    equ+= "==1";
+                    equ+= "==0";
+                    equ=equ.substring(1); // remove the ! at the start
                 }else {
-                    equ+="==0";
-                    equ.substring(1); // remove the ! at the start
+                    equ+="==1";
                 }
                 comp="==";
             } else {
@@ -87,7 +87,7 @@ public class RtvalCheck {
             var f2 = getFunction(split[1]);
             return MathUtils.getCompareFunction(comp,f1,f2);
         }catch(IndexOutOfBoundsException e ){
-            Logger.error("Out of bounds whan processing:" +equ);
+            Logger.error("Out of bounds when processing: " +equ);
         }
         return null;
     }
