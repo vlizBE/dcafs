@@ -34,7 +34,7 @@ From 0.5.0 onwards, this should be better documented...
 ### Telnet
 - added broadcast command to broadcast a message to all telnet sessions
   - `telnet:broadcast,info,message` or`telnet:broadcast,message` will display it in green
-  - `telnet:broadcast,warn,message` will display it in magenta (no orange...)
+  - `telnet:broadcast,warn,message` will display it in 'orange' (as close as it gets to the color...)
   - `telnet:broadcast,error,message` or`telnet:broadcast,!message` will display it in red
   - Sending `nb` stops the current session from receiving broadcasts 
 
@@ -43,6 +43,7 @@ From 0.5.0 onwards, this should be better documented...
 - Added 'telnet' output to broadcast text to telnet instances
 - Fixed, previous version of checks were predefined, current one aren't so nullpointer wasn't checked for.
   This caused all task without req/check to fail the test.
+- Changed the blank taskmanager to use the new broadcast functionality
 
 ### Fixes
 - MathUtils, extractParts didn't remove _ (in doublevals) or : (in flags/issues)
@@ -53,6 +54,10 @@ previous value or null (=not good)
 that filter instead of the reverse
 - DoubleVal/FlagVal, didn't take in account the use of _ in the name
 - TCPserver, removeTarget didn't take in account that it uses arraylists in the map
+- CommandPool, new shutdown prevention prevented shut down because of nullpointer...
+- MathFab, ox start index depended on the scratchpad that was removed
+- MathUtils, break was missing after diff
+- MathUtils, comparing doubles should be done with Double.compare
 
 ## 0.10.8 (12/08/21)
 
