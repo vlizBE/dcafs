@@ -3,9 +3,17 @@ package io.telnet;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.DelimiterBasedFrameDecoder;
+import io.netty.handler.codec.Delimiters;
+import io.netty.handler.codec.bytes.ByteArrayDecoder;
+import io.netty.handler.codec.bytes.ByteArrayEncoder;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.timeout.ReadTimeoutHandler;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -76,7 +84,26 @@ public class TelnetServer {
         ServerBootstrap b = new ServerBootstrap();			// Server bootstrap connection
         b.group(bossGroup, workerGroup)						// Adding thread groups to the connection
             .channel(NioServerSocketChannel.class)				// Setting up the connection/channel             
-            .childHandler(new TelnetServerInitializer(title,ignore,dQueue));	// Let clients connect to the DAS interface
+                .childHandler(new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    public void initChannel(SocketChannel ch){
+                        var pipeline = ch.pipeline();
+                        pipeline.addLast("framer",
+                                new DelimiterBasedFrameDecoder(512, true, Delimiters.lineDelimiter())); // Max 512
+                        // char,
+                        // strip
+                        // delimiter
+                        pipeline.addLast("decoder", new ByteArrayDecoder())
+                                .addLast("encoder", new ByteArrayEncoder())
+                                .addLast( new ReadTimeoutHandler(600) );// close connection after set time without traffic
+
+                        // and then business logic.
+                        TelnetHandler handler = new TelnetHandler( dQueue,ignore ) ;
+                        handler.setTitle(title);
+                        writables.add(handler.getWritable());
+                        pipeline.addLast( handler );
+                    }
+                });	// Let clients connect to the DAS interface
 
         try {
             Logger.info("Trying to start the telnet server on port "+port);
