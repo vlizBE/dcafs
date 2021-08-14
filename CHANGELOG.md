@@ -23,8 +23,6 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.10.9 (work in progress)
 
-
-
 ### Other
 - Datagram, now has an optional 'payload' (Object)
 
@@ -35,9 +33,16 @@ From 0.5.0 onwards, this should be better documented...
 
 ### Telnet
 - added broadcast command to broadcast a message to all telnet sessions
-- `telnet:broadcast,info,message` or`telnet:broadcast,message` will display it in green
-- `telnet:broadcast,warn,message` will display it in magenta (no orange...)
-- `telnet:broadcast,error,message` or`telnet:broadcast,!message` will display it in red
+  - `telnet:broadcast,info,message` or`telnet:broadcast,message` will display it in green
+  - `telnet:broadcast,warn,message` will display it in magenta (no orange...)
+  - `telnet:broadcast,error,message` or`telnet:broadcast,!message` will display it in red
+  - Sending `nb` stops the current session from receiving broadcasts 
+
+### TaskManager
+- Added 'load' command to load a script from file
+- Added 'telnet' output to broadcast text to telnet instances
+- Fixed, previous version of checks were predefined, current one aren't so nullpointer wasn't checked for.
+  This caused all task without req/check to fail the test.
 
 ### Fixes
 - MathUtils, extractParts didn't remove _ (in doublevals) or : (in flags/issues)
@@ -47,6 +52,7 @@ previous value or null (=not good)
 - FilterForward, successive filters (so if no other steps are in between, generics aren't steps) will use data given by
 that filter instead of the reverse
 - DoubleVal/FlagVal, didn't take in account the use of _ in the name
+- TCPserver, removeTarget didn't take in account that it uses arraylists in the map
 
 ## 0.10.8 (12/08/21)
 
