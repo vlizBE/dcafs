@@ -6,6 +6,7 @@ import io.stream.StreamManager;
 import io.Writable;
 import das.CommandPool;
 import das.Commandable;
+import util.data.DataProviding;
 import util.data.RealtimeValues;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
@@ -25,7 +26,7 @@ public class TaskManagerPool implements Commandable {
 
     private String workPath;
     HashMap<String, TaskManager> tasklists = new HashMap<>();
-    RealtimeValues rtvals;
+    DataProviding dp;
     CommandPool cmdReq;
     StreamManager streamManager;
     EmailSending emailSender;
@@ -33,9 +34,9 @@ public class TaskManagerPool implements Commandable {
 
     static final String UNKNOWN_CMD = "unknown command";
 
-    public TaskManagerPool(String workpath, RealtimeValues rtvals, CommandPool cmdReq){
+    public TaskManagerPool(String workpath, DataProviding dp, CommandPool cmdReq){
         this.workPath=workpath;
-        this.rtvals=rtvals;
+        this.dp=dp;
         this.cmdReq=cmdReq;
 
     }
@@ -63,7 +64,7 @@ public class TaskManagerPool implements Commandable {
             }
         }
     }
-    public void addTaskList( String id, TaskManager tl){
+    public TaskManager addTaskList( String id, TaskManager tl){
         tl.setStreamPool(streamManager);
         tl.setCommandReq(cmdReq);
         tl.setWorkPath(workPath);
@@ -71,12 +72,15 @@ public class TaskManagerPool implements Commandable {
         tl.setSMSSending(smsSender);
 
         tasklists.put(id,tl);
+        return tl;
     }
     public Optional<TaskManager> getTaskList(String id ){
         return Optional.ofNullable(tasklists.get(id));
     }
-    public void addTaskList( String id, Path scriptPath){
-        addTaskList(id,new TaskManager(id,scriptPath));
+    public TaskManager addTaskList( String id, Path scriptPath){
+        var tm = new TaskManager(id,dp,cmdReq);
+        tm.setScriptPath(scriptPath);
+        return addTaskList(id,tm);
     }
     /**
      * Check the TaskManager for tasks with the given keyword and start those
@@ -142,7 +146,7 @@ public class TaskManagerPool implements Commandable {
         StringJoiner response = new StringJoiner(nl);
         String[] cmd = request[1].split(",");
 
-        if( tasklists.isEmpty() && !cmd[0].equalsIgnoreCase("addblank"))
+        if( tasklists.isEmpty() && !cmd[0].equalsIgnoreCase("addblank") && !cmd[0].equalsIgnoreCase("load"))
             return "No TaskManagers active, only tm:addblank available.";
 
         TaskManager tl;
@@ -211,6 +215,14 @@ public class TaskManagerPool implements Commandable {
                 // Add it to das
                 addTaskList(cmd[1], p);
                 return "Tasklist added, use tm:reload,"+cmd[1]+" to run it.";
+            case "load":
+                if( cmd.length != 2)
+                    return "Not enough parameters, missing id";
+                if( Files.notExists( Path.of(workPath,"tmscripts",cmd[1]+".xml") ))
+                    return "No such script in the defauly location";
+                if( addTaskList(cmd[1], Path.of(workPath,"tmscripts",cmd[1]+".xml")).reloadTasks())
+                    return "Loaded "+cmd[1];
+                return "Failed to load tasks from "+cmd[1];
             case "reload":
                 if( cmd.length != 2)
                     return "Not enough parameters, missing id";

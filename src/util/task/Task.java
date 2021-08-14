@@ -63,7 +63,7 @@ public class Task implements Comparable<Task>{
 	boolean utc = false;											// If the time is in UTC or not
 
 	/* Output */
-	enum OUTPUT { SYSTEM, MANAGER, LOG, FILE, EMAIL, SMS, STREAM, MQTT, I2C }    // The different options for the output, see manual for further explanation
+	enum OUTPUT { SYSTEM, MANAGER, LOG, FILE, EMAIL, SMS, STREAM, MQTT, I2C, TELNET }    // The different options for the output, see manual for further explanation
 	OUTPUT out = OUTPUT.SYSTEM;											// The output of the task, default is system
 	String outputRef="";												// The actual output ie. channel, email address, filename, sms number etc
 
@@ -77,8 +77,8 @@ public class Task implements Comparable<Task>{
 	public enum TRIGGERTYPE {KEYWORD,CLOCK,INTERVAL,DELAY,EXECUTE,RETRY,WHILE,WAITFOR} // The trigger possibilities
 	TRIGGERTYPE triggerType = TRIGGERTYPE.EXECUTE;								  		// Default trigger type is execute (no trigger)
 
-	RtvalCheck preReq =null;
-	RtvalCheck postReq =null;
+	RtvalCheck preReq = null;
+	RtvalCheck postReq = null;
 		
 	/* Taskset */ 
 	private String taskset="";			// The taskset this task is part of
@@ -333,6 +333,10 @@ public class Task implements Comparable<Task>{
 				case "i2c": 
 					out = OUTPUT.I2C; 
 					stream = o.length==2?o[1].toLowerCase():""; 
+					break;
+				case "telnet":
+					out = OUTPUT.TELNET;
+					stream = o[1].toLowerCase();
 					break;
 				case "system": case "": default: out = OUTPUT.SYSTEM; break;
 			}

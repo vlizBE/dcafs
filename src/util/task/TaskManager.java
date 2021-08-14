@@ -40,7 +40,7 @@ public class TaskManager implements CollectorFuture {
 	EmailSending emailer = null;    // Reference to the email send, so emails can be send
 	SMSSending smsSender = null; 	// Reference to the sms queue, so sms's can be send
 	StreamManager streams; 			// Reference to the streampool, so sensors can be talked to
-	DataProviding rtvals;
+	DataProviding dp;
 
 	CommandPool commandPool; // Source to get the data from nexus
 	String id;
@@ -58,14 +58,17 @@ public class TaskManager implements CollectorFuture {
 
 	/* ****************************** * C O N S T R U C T O R **************************************************/
 
-	public TaskManager(String id, DataProviding rtvals, CommandPool commandPool) {
+	public TaskManager(String id, DataProviding dp, CommandPool commandPool) {
 		this.commandPool = commandPool;
-		this.rtvals = rtvals;
+		this.dp = dp;
 		this.id = id;
 	}
 	public TaskManager(String id, Path xml ){
 		this(id,null,null);
 		this.xmlPath=xml;
+	}
+	public void setScriptPath(Path p){
+		xmlPath=p;
 	}
 	public void setId(String id) {
 		this.id = id;
@@ -503,7 +506,7 @@ public class TaskManager implements CollectorFuture {
 			try {
 				executed = doTask(task);
 			} catch (Exception e) {
-				Logger.tag(TINY_TAG).error("Nullpointer in doTask " + e);
+				Logger.tag(TINY_TAG).error("Nullpointer in doTask " + e.getMessage());
 			}
 
 			TaskSet set = tasksets.get(task.getTaskset());
@@ -559,10 +562,11 @@ public class TaskManager implements CollectorFuture {
 						task.reset();
 						task.runs=task.retries;
 						Logger.tag(TINY_TAG).error("[" + id + "] Maximum retries executed, aborting!\t" + task.toString());
-						if (!waitForRestore.contains(task.stream))
+						if( task.out==OUTPUT.STREAM && !waitForRestore.contains(task.stream)) {
 							waitForRestore.add(task.stream);
-
-						scheduler.schedule(new ChannelRestoreChecker(), 15, TimeUnit.SECONDS);
+							if (waitForRestore.size()==1) // Only start this if it's not suppposed to be active
+								scheduler.schedule(new ChannelRestoreChecker(), 15, TimeUnit.SECONDS);
+						}
 						failure = true;
 					} else if (task.runs > 0) {
 						task.runs--;
@@ -651,7 +655,7 @@ public class TaskManager implements CollectorFuture {
 						splits[0] += ";";
 					}
 				}
-				if (task.value.startsWith("cmd") || ( task.out != OUTPUT.MQTT && task.out != OUTPUT.STREAM && task.out != OUTPUT.MANAGER)) {
+				if (task.value.startsWith("cmd") || ( task.out != OUTPUT.MQTT && task.out != OUTPUT.STREAM && task.out != OUTPUT.MANAGER && task.out != OUTPUT.TELNET)) {
 					// This is not supposed to be used when the output is a channel or no reqdata defined
 
 					if (commandPool == null) {
@@ -793,6 +797,10 @@ public class TaskManager implements CollectorFuture {
 							default: Logger.error("Tried to use unknown outputref: "+task.outputRef); break;
 						}
 						break;
+					case TELNET:
+						var send = dp.parseRTline(task.value,"");
+						commandPool.createResponse("telnet:broadcast,"+task.stream+","+send,null,false);
+						break;
 					case MANAGER:
 						String[] com = task.value.split(":");
 						if( com.length != 2 ){
@@ -800,8 +808,8 @@ public class TaskManager implements CollectorFuture {
 						}
 
 						switch( com[0] ){
-							case "raiseflag": rtvals.raiseFlag(com[1]);break;
-							case "lowerflag": rtvals.lowerFlag(com[1]); break;
+							case "raiseflag": dp.raiseFlag(com[1]);break;
+							case "lowerflag": dp.lowerFlag(com[1]); break;
 							case "start": startTaskset(com[1]); break;
 							case "stop": 
 								int a = stopTaskSet( com[1] );
@@ -1045,14 +1053,14 @@ public class TaskManager implements CollectorFuture {
 		i = line.indexOf("{rtval:");
 		if( i !=-1 ){
 			int end = line.substring(i).indexOf("}");
-			to = ""+rtvals.getDouble( line.substring(i+7,i+end),-123456 );
+			to = ""+ dp.getDouble( line.substring(i+7,i+end),-123456 );
 			line = line.replace(line.substring(i,i+end+1),to);
 		}
 		i = line.indexOf("{rttext:");
 		if( i !=-1 ){
 			int end = line.substring(i).indexOf("}");
 			var look = line.substring(i+8,i+end);
-			to = ""+rtvals.getText(look,look );
+			to = ""+ dp.getText(look,look );
 			line = line.replace(line.substring(i,i+end+1),to);
 		}
     	line = line.replace("[EOL]", "\r\n");
@@ -1067,7 +1075,7 @@ public class TaskManager implements CollectorFuture {
 	 */
 	private int checkRequirements(Task task, boolean pre ) {
 
-		if( rtvals == null ){ // If the verify can't be checked, return false
+		if( dp == null ){ // If the verify can't be checked, return false
 			Logger.tag(TINY_TAG).info("["+ id +"] Couldn't check because no DataProviding defined.");
 			return -1;
 		}
@@ -1076,10 +1084,10 @@ public class TaskManager implements CollectorFuture {
 		if( !pre ){
 			check = task.postReq;
 		}
-		if( !check.isEmpty())
+		if( check==null||!check.isEmpty())
 			return 1;
 
-		return check==null?0:(check.test(rtvals, commandPool.getActiveIssues())?1:0);
+		return check.test(dp, commandPool.getActiveIssues())?1:0;
 	}
 	/**
 	 * Create a readable string based on the check
@@ -1087,9 +1095,9 @@ public class TaskManager implements CollectorFuture {
 	 * @return The string representation of the check
 	 */
 	public String printCheck(RtvalCheck check) {
-		if( rtvals == null )
+		if( dp == null )
 			return "No RealtimeValues defined!";
-		return check.toString(rtvals,commandPool.getActiveIssues());
+		return check.toString(dp,commandPool.getActiveIssues());
 	}
 
 	/* *******************************************************************************************************/
