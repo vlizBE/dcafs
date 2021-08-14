@@ -153,7 +153,7 @@ public class TelnetServer implements Commandable {
                 case "broadcast":
                     String send;
                     switch(cmds[1]){
-                        case "warn": send = TelnetCodes.TEXT_MAGENTA+request[1].substring(15)+TelnetCodes.TEXT_YELLOW; break;
+                        case "warn": send = TelnetCodes.TEXT_ORANGE+request[1].substring(15)+TelnetCodes.TEXT_YELLOW; break;
                         case "error": send = TelnetCodes.TEXT_RED+request[1].substring(16)+TelnetCodes.TEXT_YELLOW; break;
                         case "info": send = TelnetCodes.TEXT_GREEN+request[1].substring(15)+TelnetCodes.TEXT_YELLOW; break;
                         default:

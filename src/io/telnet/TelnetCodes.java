@@ -28,6 +28,7 @@ public class TelnetCodes {
 	public static final String TEXT_BRIGHT_BLUE    =  ESCAPE+"[1;34m";
 	public static final String TEXT_MAGENTA = ESCAPE+"[35m";
 	public static final String TEXT_CYAN    = ESCAPE+"[36m";
+	public static final String TEXT_ORANGE    = ESCAPE+"[38;5;208m";
 	public static final String TEXT_WHITE   = ESCAPE + "[37m";
 
 	public static final String BACK_RED = ESCAPE + "[41m";
