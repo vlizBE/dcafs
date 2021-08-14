@@ -157,7 +157,12 @@ public class TelnetServer implements Commandable {
                         case "error": send = TelnetCodes.TEXT_RED+request[1].substring(16)+TelnetCodes.TEXT_YELLOW; break;
                         case "info": send = TelnetCodes.TEXT_GREEN+request[1].substring(15)+TelnetCodes.TEXT_YELLOW; break;
                         default:
-                            send = TelnetCodes.TEXT_GREEN+request[1].substring(10)+TelnetCodes.TEXT_YELLOW;
+                            var d = request[1].substring(10);
+                            if( d.startsWith("!")){
+                                send =  TelnetCodes.TEXT_RED + d.substring(1) + TelnetCodes.TEXT_YELLOW;
+                            }else {
+                                send = TelnetCodes.TEXT_GREEN + d + TelnetCodes.TEXT_YELLOW;
+                            }
                             break;
                     }
 
