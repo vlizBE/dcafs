@@ -45,7 +45,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
     public TelnetHandler(BlockingQueue<Datagram> dQueue, String ignoreIPlist){
 		this.dQueue = dQueue;
 		ignoreIP.addAll(Arrays.asList(ignoreIPlist.split(";")));
-		ignoreIP.trimToSize();	
+		ignoreIP.trimToSize();
 	}
 
 	/* ************************************** N E T T Y  O V E R R I D E S ********************************************/
@@ -78,6 +78,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
     @Override
     public void channelUnregistered(ChannelHandlerContext ctx) { 
 		Logger.debug("Not implemented yet - channelUnregistered");
+		dQueue.add( Datagram.system("nb").writable(this)); // Remove this from the writables when closed
     }
     @Override
     public void channelRead0(ChannelHandlerContext ctx, byte[] data) throws Exception {
@@ -120,7 +121,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 			if( d.getData().length()>2) {
 				repeat = d.getData().replace("!!", "");
 				d.label( "telnet:"+repeat);
-				this.writeString("Mode changed to '"+repeat+"'\r\n");
+				writeString("Mode changed to '"+repeat+"'\r\n");
 				return;
 			}else {
 				d.label(LABEL);
@@ -149,7 +150,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         // Close the connection when an exception is raised, but don't send messages if it's related to remote ignore	
 		String addr = ctx.channel().remoteAddress().toString();
-
+		dQueue.add( Datagram.system("nb"));
 		if (cause instanceof TooLongFrameException){	
 			Logger.warn("Unexpected exception caught"+cause.getMessage()+" "+addr, true); 
 			ctx.flush();

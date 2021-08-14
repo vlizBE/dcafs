@@ -537,6 +537,7 @@ public class DAS implements DeadThreadListener {
      */
     public void addTelnetServer() {
         telnet = new TelnetServer(this.getDataQueue(), settingsDoc, nettyGroup);
+        addCommandable(telnet,"telnet","nb");
     }
 
     /* ********************************   B U S ************************************************/
@@ -585,14 +586,14 @@ public class DAS implements DeadThreadListener {
     }
 
     /**
-     * Attach a hook to the shutdown process so we're sure that all queue's etc get
+     * Attach a hook to the shutdown process, so we're sure that all queue's etc. get
      * processed first
      */
     private void attachShutDownHook() {
         Runtime.getRuntime().addShutdownHook(new Thread("shutdownHook") {
             @Override
             public void run() {
-                Logger.info("DAS Shutting down");
+                Logger.info("Dcafs shutting down!");
 
                 // Run shutdown tasks
                 taskManagerPool.startTaskset("shutdown");
@@ -601,7 +602,7 @@ public class DAS implements DeadThreadListener {
                 Logger.info("Flushing database buffers");
                 dbManager.flushAll();
 
-                // Filecollectors
+                // File collectors
                 fileCollectors.values().forEach(FileCollector::flushNow);
 
                 // Try to send email...

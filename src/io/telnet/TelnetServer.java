@@ -1,5 +1,7 @@
 package io.telnet;
 
+import das.Commandable;
+import io.Writable;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -21,12 +23,14 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
+import java.util.ArrayList;
+import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
 
 /**
  * Simplistic telnet server.
  */
-public class TelnetServer {
+public class TelnetServer implements Commandable {
 
     EventLoopGroup bossGroup = new NioEventLoopGroup(1);	// Server thread group
     EventLoopGroup workerGroup;	// Worker thread group
@@ -39,6 +43,8 @@ public class TelnetServer {
     
     BlockingQueue<Datagram> dQueue;
     static final String XML_PARENT_TAG = "telnet";
+    ArrayList<Writable> writables = new ArrayList<>();
+    private final SslContext sslCtx=null;
 
     public TelnetServer( String title, String ignore, BlockingQueue<Datagram> dQueue, int port ) {
         this.title=title;
@@ -128,5 +134,45 @@ public class TelnetServer {
             // Restore interrupted state...
             Thread.currentThread().interrupt();
         }
+    }
+
+    @Override
+    public String replyToCommand(String[] request, Writable wr, boolean html) {
+        var cmds = request[1].split(",");
+        if( request[0].equalsIgnoreCase("nb")){
+            int s = writables.size();
+            writables.remove(wr);
+            return (s==writables.size())?"Failed to remove":"Removed from targets";
+        }else {
+            switch (cmds[0]) {
+                case "?":
+                    var join = new StringJoiner("\r\n");
+                    join.add( "telnet:broadcast,message -> Broadcast the message to all active telnet sessions.")
+                            .add( "bt -> Get the broadcast target count");
+                    return join.toString();
+                case "broadcast":
+                    String send;
+                    switch(cmds[1]){
+                        case "warn": send = TelnetCodes.TEXT_MAGENTA+request[1].substring(15)+TelnetCodes.TEXT_YELLOW; break;
+                        case "error": send = TelnetCodes.TEXT_RED+request[1].substring(16)+TelnetCodes.TEXT_YELLOW; break;
+                        case "info": send = TelnetCodes.TEXT_GREEN+request[1].substring(15)+TelnetCodes.TEXT_YELLOW; break;
+                        default:
+                            send = TelnetCodes.TEXT_GREEN+request[1].substring(10)+TelnetCodes.TEXT_YELLOW;
+                            break;
+                    }
+
+                    writables.removeIf(w -> !w.writeLine(send));
+                    return "";
+                case "bt":
+                    return "Currently has " + writables.size() + " broadcast targets.";
+
+            }
+        }
+        return "unknown command "+ String.join(":",request);
+    }
+
+    @Override
+    public boolean removeWritable(Writable wr) {
+        return false;
     }
 }

@@ -321,6 +321,8 @@ public class CommandPool {
 		}else{
 			Logger.debug("Hidden response to " + question + ": " + result);
 		}
+		if( result.isEmpty())
+			return "";
 		return result + (html ? "<br>" : "\r\n");
 	}
 
