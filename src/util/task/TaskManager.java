@@ -799,7 +799,7 @@ public class TaskManager implements CollectorFuture {
 						break;
 					case TELNET:
 						var send = dp.parseRTline(task.value,"");
-						commandPool.createResponse("telnet:broadcast,"+task.stream+","+send,null,false);
+						commandPool.createResponse("telnet:broadcast,"+task.outputRef+","+send,null,false);
 						break;
 					case MANAGER:
 						String[] com = task.value.split(":");

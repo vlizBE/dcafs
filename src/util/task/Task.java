@@ -336,7 +336,6 @@ public class Task implements Comparable<Task>{
 					break;
 				case "telnet":
 					out = OUTPUT.TELNET;
-					stream = o[1].toLowerCase();
 					break;
 				case "system": case "": default: out = OUTPUT.SYSTEM; break;
 			}
@@ -469,6 +468,7 @@ public class Task implements Comparable<Task>{
 			case MANAGER: return "Executing manager command: '"+ value +"'  "+ suffix;
 			case MQTT:	  return "Executing mqtt command: '"+ value +"'  "+ suffix;
 			case I2C:	  return "Sending "+ value +" to I2C device "+ suffix;
+			case TELNET:  return "Sending "+value+ " to telnet sessions at level "+outputRef+suffix;
 			case SYSTEM:
 			default:
 				return "Executing '"+ value +"'" + suffix ;
