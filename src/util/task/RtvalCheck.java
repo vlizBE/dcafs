@@ -107,20 +107,29 @@ public class RtvalCheck {
 
         // Left side, first check if it's a valid number
         if( !NumberUtils.isCreatable(parts.get(0)) ){
-            //it's not a number but a reference (rtval,flag,issue etc)'
-            is.add(parts.get(0)); // So store it
-            parts.set(0,"i" + (is.size()-1)); // and replace the parts position with the index of it in is
+            //it's not a number but a reference (double,flag,issue etc)'
+            int index = is.indexOf(parts.get(0));
+            if( index ==-1 ) {
+                is.add(parts.get(0)); // So store it
+                parts.set(0, "i" + (is.size() - 1)); // and replace the parts position with the index of it in is
+            }else{
+                parts.set(0,"i"+index);
+            }
         }
 
         if( parts.size()>1){ // if there are more than one part (fe. i0+5 instead of just i0)
             if( !NumberUtils.isCreatable(parts.get(2)) ) { // Check if it's not a number
                 //it's not a number but a reference (rtval,flag,issue etc)'
-                is.add(parts.get(2).toLowerCase()); // So store it
-                parts.set(2, "i" + (is.size()-1));  // and replace the parts position with the index of it in is
+                int index = is.indexOf(parts.get(2));
+                if( index ==-1 ) {
+                    is.add(parts.get(2).toLowerCase()); // So store it
+                    parts.set(2, "i" + (is.size() - 1));  // and replace the parts position with the index of it in is
+                }else{
+                    parts.set(2,"i"+index);
+                }
             }
         }else{ // we always want two sides, so add one that doesn't do anything
-            parts.add("+");
-            parts.add("0");
+            return MathUtils.decodeDoublesOp(parts.get(0),"","",0);
         }
         return MathUtils.decodeDoublesOp(parts.get(0),parts.get(2),parts.get(1),0);
     }
