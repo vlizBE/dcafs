@@ -44,7 +44,7 @@ public class TcpServer implements StreamListener, Commandable {
 	static final String XML_PARENT_TAG = "transserver";
 	private final HashMap<String,ArrayList<Writable>> targets = new HashMap<>();
 
-	private boolean active=false;
+	private boolean active;
 
 	public TcpServer(Path xml, EventLoopGroup workerGroup) {
 		this.workerGroup = workerGroup;
@@ -392,14 +392,10 @@ public class TcpServer implements StreamListener, Commandable {
 						list.add(wr);
 					}
 				}
-
-				if( !hOpt.isEmpty() ) {
-					hOpt.get().addTarget(wr);
+				return hOpt.map( h -> {
+					h.addTarget(wr);
 					return "Added to target for "+cmds[1];
-				}else{
-					return cmds[1]+" not active yet, but recorded request";
-				}
-
+				}).orElse(cmds[1]+" not active yet, but recorded request");
 			case "": case "list": 
 				return "Server running on port "+serverPort+"\r\n"+getClientList();
 			default: 
@@ -409,7 +405,12 @@ public class TcpServer implements StreamListener, Commandable {
 
 	@Override
 	public boolean removeWritable(Writable wr) {
-		return targets.entrySet().removeIf( ent->ent.getValue().equals(wr));
+		boolean removed=false;
+		for( var list : targets.values()) {
+			if( list.removeIf(w -> w.equals(wr)))
+				removed=true;
+		}
+		return removed;
 	}
 
 	/**
