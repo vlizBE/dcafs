@@ -594,6 +594,7 @@ public class DAS implements DeadThreadListener {
             @Override
             public void run() {
                 Logger.info("Dcafs shutting down!");
+                telnet.replyToCommand(new String[]{"telnet","broadcast,error,Dcafs shutting down!"},null,false);
 
                 // Run shutdown tasks
                 taskManagerPool.startTaskset("shutdown");
