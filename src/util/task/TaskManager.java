@@ -1084,7 +1084,7 @@ public class TaskManager implements CollectorFuture {
 		if( !pre ){
 			check = task.postReq;
 		}
-		if( check==null||!check.isEmpty())
+		if( check==null||check.isEmpty())
 			return 1;
 
 		return check.test(dp, commandPool.getActiveIssues())?1:0;
