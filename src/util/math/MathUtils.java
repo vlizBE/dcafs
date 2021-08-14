@@ -722,6 +722,7 @@ public class MathUtils {
                     Logger.error("Bad things when "+first+" "+op+" "+second+ " was processed");
                     Logger.error(e);
                 }
+                break;
             case "ln":
                 try{
                     if( db1!=null && db2!=null ){ // meaning both numbers
