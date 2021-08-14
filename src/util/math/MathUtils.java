@@ -144,25 +144,27 @@ public class MathUtils {
     public static Function<double[],Boolean> getCompareFunction( String comp ){
         Function<double[],Boolean> proc=null;
         switch( comp ){
-            case "<": proc = x -> x[0]<x[1]; break;
-            case "<=": proc = x -> x[0]<=x[1]; break;
-            case ">": proc = x -> x[0]>x[1]; break;
-            case ">=": proc = x -> x[0]>=x[1]; break;
-            case "==": proc = x -> x[0]==x[1]; break;
-            case "!=": proc = x -> x[0]!=x[1]; break;
+            case "<":  proc = x -> Double.compare(x[0],x[1])<0;  break;
+            case "<=": proc = x -> Double.compare(x[0],x[1])<=0; break;
+            case ">":  proc = x -> Double.compare(x[0],x[1])>0;  break;
+            case ">=": proc = x -> Double.compare(x[0],x[1])>=0; break;
+            case "==": proc = x -> Double.compare(x[0],x[1])==0; break;
+            case "!=": proc = x -> Double.compare(x[0],x[1])!=0; break;
         }
         return proc;
     }
     public static Function<Double[],Boolean> getCompareFunction( String comp, Function<Double[],Double> f1, Function<Double[],Double> f2 ){
         Function<Double[],Boolean> proc=null;
         switch( comp ){
-            case "<": proc = x -> f1.apply(x)<f2.apply(x); break;
-            case "<=": proc = x -> f1.apply(x)<=f2.apply(x); break;
-            case ">": proc = x -> f1.apply(x)>f2.apply(x); break;
-            case ">=": proc = x -> f1.apply(x)>=f2.apply(x); break;
-            case "==": proc = x -> f1.apply(x)==f2.apply(x); break;
-            case "!=": proc = x -> f1.apply(x)!=f2.apply(x); break;
+            case "<":  proc = x -> Double.compare(f1.apply(x),f2.apply(x))<0;  break;
+            case "<=": proc = x -> Double.compare(f1.apply(x),f2.apply(x))<=0; break;
+            case ">":  proc = x -> Double.compare(f1.apply(x),f2.apply(x))>0;  break;
+            case ">=": proc = x -> Double.compare(f1.apply(x),f2.apply(x))>=0; break;
+            case "==": proc = x -> Double.compare(f1.apply(x),f2.apply(x))==0; break;
+            case "!=": proc = x -> Double.compare(f1.apply(x),f2.apply(x))!=0; break;
+
         }
+
         return proc;
     }
     public static String[] splitCompare( String comparison ){
@@ -563,6 +565,7 @@ public class MathUtils {
         final int i1;
         final Double db2 ;
         final int i2;
+        Function<Double[],Double> proc=null;
 
         try{
             if(NumberUtils.isCreatable(first) ) {
@@ -573,6 +576,9 @@ public class MathUtils {
                 int index = NumberUtils.createInteger( first.substring(1));
                 i1 = first.startsWith("o")?index:index+offset;
             }
+            if(second.isEmpty())
+                return i1==-1?x->db1:x->x[i1];
+
             if(NumberUtils.isCreatable(second) ) {
                 db2 = NumberUtils.createDouble(second);
                 i2=-1;
@@ -581,12 +587,15 @@ public class MathUtils {
                 int index = NumberUtils.createInteger( second.substring(1));
                 i2 = second.startsWith("o")?index:index+offset;
             }
+            if(first.isEmpty())
+                return i2==-1?x->db2:x->x[i2];
+
         }catch( NumberFormatException e){
             Logger.error("Something went wrong decoding: "+first+" or "+second);
             return null;
         }
 
-        Function<Double[],Double> proc=null;
+
         switch( op ){
             case "+":
                 try {
