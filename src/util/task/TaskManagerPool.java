@@ -182,11 +182,12 @@ public class TaskManagerPool implements Commandable {
                     Logger.error(e);
                 }
 
-                XMLfab tmFab = XMLfab.withRoot(Path.of(workPath,"settings.xml"), "dcafs","settings");
-                tmFab.addChild("taskmanager","tmscripts"+ File.separator+cmd[1]+".xml").attr("id",cmd[1]).build();
-                tmFab.build();
                 var p = Path.of(workPath,"tmscripts",cmd[1]+".xml");
                 if( Files.notExists(p)) {
+                    XMLfab tmFab = XMLfab.withRoot(Path.of(workPath,"settings.xml"), "dcafs","settings");
+                    tmFab.addChild("taskmanager","tmscripts"+ File.separator+cmd[1]+".xml").attr("id",cmd[1]).build();
+                    tmFab.build();
+
                     // Create an empty file
                     XMLfab.withRoot(p, "tasklist")
                             .comment("Any id is case insensitive")
@@ -210,6 +211,8 @@ public class TaskManagerPool implements Commandable {
                             .comment("Possible triggers: delay, interval, while,")
                             .comment("For more extensive info and examples, check Reference Guide - Taskmanager in the manual")
                             .build();
+                }else{
+                    return "Already a file in the tmscripts folder with that name, load it with tm:load,"+cmd[1];
                 }
                 // Add it to das
                 addTaskList(cmd[1], p);
