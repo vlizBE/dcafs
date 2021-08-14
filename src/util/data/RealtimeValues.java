@@ -169,12 +169,17 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			if(p.length==2) {
 				if (p[0].equals("d")||p[0].equals("double")) {
 					var d = getDouble(p[1], Double.NaN);
-					line = line.replace("{"+p[0] + ":" + p[1] + "}", Double.isNaN(d)?error:""+d );
+					if( !Double.isNaN(d)||!error.isEmpty())
+						line = line.replace("{"+p[0] + ":" + p[1] + "}", Double.isNaN(d)?error:""+d );
 				} else if (p[0].equals("t")||p[0].equals("text")) {
-					line = line.replace("{"+p[0] + ":" + p[1] + "}", getText(p[1], error));
+						String t = getText(p[1],error);
+						if( !t.isEmpty())
+							line = line.replace("{"+p[0] + ":" + p[1] + "}", t);
 				} else if( p[0].equals("f")||p[0].equals("flag")){
 					var d = getFlagVal(p[1]);
-					line = line.replace("{"+p[0] + ":" + p[1] + "}",d.isEmpty()?error:""+d.get().getValue() );
+					var r = d.map(f->f.toString()).orElse(error);
+					if( !r.isEmpty())
+						line = line.replace("{"+p[0] + ":" + p[1] + "}",r );
 				}
 			}else{
 				switch(p[0]){
