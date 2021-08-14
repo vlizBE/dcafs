@@ -21,7 +21,9 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (will be trigger for 0.11.0)
 
-## 0.10.9 (work in progress)
+## 0.10.10 (work in progress)
+
+## 0.10.9 (14/08/21)
 
 ### Other
 - Datagram, now has an optional 'payload' (Object)
@@ -30,6 +32,8 @@ From 0.5.0 onwards, this should be better documented...
 - Now only converts the part of the raw data that contains the used indexes
 - Adds the converted (altered) data in the payload of the datagram so fe. generic doesn't parse it again
 - Removed scratchpad functionality, recent addition of {d:doubleid} made it obsolete
+- fixed, if no i's are in the expression settings highestI wasn't skipped so tried to check what was higher
+  previous value or null (=not good)
 
 ### Telnet
 - added broadcast command to broadcast a message to all telnet sessions
@@ -41,14 +45,16 @@ From 0.5.0 onwards, this should be better documented...
 ### TaskManager
 - Added 'load' command to load a script from file
 - Added 'telnet' output to broadcast text to telnet instances
+- Changed the blank taskmanager to use the new broadcast functionality
 - Fixed, previous version of checks were predefined, current one aren't so nullpointer wasn't checked for.
   This caused all task without req/check to fail the test.
-- Changed the blank taskmanager to use the new broadcast functionality
+- fixed, fillin didn't use the new references {d: instead of {rtval: etc
 
 ### Fixes
-- MathUtils, extractParts didn't remove _ (in doublevals) or : (in flags/issues)
-- MathForward, if no i's are in the expression settings highestI wasn't skipped so tried to check what was higher
-previous value or null (=not good)
+- MathUtils
+  - extractParts didn't remove _ (in doublevals) or : (in flags/issues)
+  - break was missing after diff
+  - comparing doubles should be done with Double.compare
 - RtvalCheck, the '!' in front of a flag/issue wasn't processed correctly
 - FilterForward, successive filters (so if no other steps are in between, generics aren't steps) will use data given by
 that filter instead of the reverse
@@ -56,8 +62,7 @@ that filter instead of the reverse
 - TCPserver, removeTarget didn't take in account that it uses arraylists in the map
 - CommandPool, new shutdown prevention prevented shut down because of nullpointer...
 - MathFab, ox start index depended on the scratchpad that was removed
-- MathUtils, break was missing after diff
-- MathUtils, comparing doubles should be done with Double.compare
+
 
 ## 0.10.8 (12/08/21)
 
