@@ -153,20 +153,20 @@ public class TelnetServer implements Commandable {
                 case "broadcast":
                     String send;
                     switch(cmds[1]){
-                        case "warn": send = TelnetCodes.TEXT_ORANGE+request[1].substring(15)+TelnetCodes.TEXT_YELLOW; break;
-                        case "error": send = TelnetCodes.TEXT_RED+request[1].substring(16)+TelnetCodes.TEXT_YELLOW; break;
-                        case "info": send = TelnetCodes.TEXT_GREEN+request[1].substring(15)+TelnetCodes.TEXT_YELLOW; break;
+                        case "warn":  send = TelnetCodes.TEXT_ORANGE+request[1].substring(15); break;
+                        case "error": send = TelnetCodes.TEXT_RED+request[1].substring(16);    break;
+                        case "info":  send = TelnetCodes.TEXT_GREEN+request[1].substring(15);  break;
                         default:
                             var d = request[1].substring(10);
                             if( d.startsWith("!")){
-                                send =  TelnetCodes.TEXT_RED + d.substring(1) + TelnetCodes.TEXT_YELLOW;
+                                send =  TelnetCodes.TEXT_RED + d.substring(1);
                             }else {
-                                send = TelnetCodes.TEXT_GREEN + d + TelnetCodes.TEXT_YELLOW;
+                                send = TelnetCodes.TEXT_GREEN + d;
                             }
                             break;
                     }
 
-                    writables.removeIf(w -> !w.writeLine(send));
+                    writables.removeIf(w -> !w.writeLine(send+TelnetCodes.TEXT_YELLOW));
                     return "";
                 case "bt":
                     return "Currently has " + writables.size() + " broadcast targets.";

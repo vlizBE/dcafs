@@ -312,7 +312,7 @@ public class TaskManager implements CollectorFuture {
 				return startTask(task);//doTask(task);
 			}
 		}
-		Logger.tag(TINY_TAG).info("[" + this.id + "] Task with id '" + id + "' not found.");
+		Logger.tag(TINY_TAG).warn("[" + this.id + "] Task with id '" + id + "' not found.");
 		return false;
 	}
 
@@ -427,7 +427,7 @@ public class TaskManager implements CollectorFuture {
 			Logger.tag(TINY_TAG).error("[" + id + "] Trying to start a task that is still NULL (fe. end of taskset)");
 			return false;
 		}
-		Logger.tag(TINY_TAG).info("[" + id + "] Trying to start task of type: " + task.triggerType + "(" + task.value + ")");
+		Logger.tag(TINY_TAG).debug("[" + id + "] Trying to start task of type: " + task.triggerType + "(" + task.value + ")");
 		switch (task.triggerType) {
 			case CLOCK:
 				long min = calculateSeconds(task);
