@@ -684,7 +684,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			case "list":
 				return String.join(html?"<br>":"\r\n",getTextPairs());
 			case "new": case "create":
-				result = processExpression(cmds[1],true);
+				result = processExpression(cmds[2],true);
 				if( Double.isNaN(result) )
 					return "Failed to create new double";
 				setDouble(cmds[1],result);
