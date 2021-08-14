@@ -7,7 +7,6 @@ import io.Writable;
 import das.CommandPool;
 import das.Commandable;
 import util.data.DataProviding;
-import util.data.RealtimeValues;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.xml.XMLfab;
@@ -218,10 +217,15 @@ public class TaskManagerPool implements Commandable {
             case "load":
                 if( cmd.length != 2)
                     return "Not enough parameters, missing id";
+                if( tasklists.get(cmd[1])!=null)
+                    return "Already a taskmanager with that id";
                 if( Files.notExists( Path.of(workPath,"tmscripts",cmd[1]+".xml") ))
-                    return "No such script in the defauly location";
-                if( addTaskList(cmd[1], Path.of(workPath,"tmscripts",cmd[1]+".xml")).reloadTasks())
-                    return "Loaded "+cmd[1];
+                    return "No such script in the default location";
+                if( addTaskList(cmd[1], Path.of(workPath,"tmscripts",cmd[1]+".xml")).reloadTasks()) {
+                    XMLfab.withRoot(Path.of(workPath,"settings.xml"), "dcafs","settings")
+                            .addChild("taskmanager","tmscripts"+ File.separator+cmd[1]+".xml").attr("id",cmd[1]).build();
+                    return "Loaded " + cmd[1];
+                }
                 return "Failed to load tasks from "+cmd[1];
             case "reload":
                 if( cmd.length != 2)
