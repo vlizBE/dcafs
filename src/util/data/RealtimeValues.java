@@ -689,6 +689,20 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					return "Failed to create new double";
 				setDouble(cmds[1],result);
 				return cmds[1]+" created/updated to "+result;
+			case "alter":
+				if( cmds.length<3)
+					return "Not enough arguments: doubles:alter,id,param:value";
+				var vals = cmds[2].split(":");
+				if( vals.length==1)
+					return "Incorrect param:value pair: "+cmds[2];
+				return getDoubleVal(cmds[1]).map( d -> {
+					if( vals[0].equals("scale")) {
+						d.fractionDigits(NumberUtils.toInt(vals[1]));
+						return "Scaling for " +cmds[1]+" set to " + d.digits + " digits";
+					}else{
+						return "Unknown param: "+vals[0];
+					}
+				}).orElse("No such DoubleVal");
 			case "update":
 				if( !hasDouble(cmds[1]) )
 					return "No such id "+cmds[1];
