@@ -23,20 +23,28 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.10.9 (work in progress)
 
+
+
 ### Other
-- Datagram, now has an optional 'payload' (Object) 
+- Datagram, now has an optional 'payload' (Object)
 
 ### MathForward
 - Now only converts the part of the raw data that contains the used indexes
 - Adds the converted (altered) data in the payload of the datagram so fe. generic doesn't parse it again
 - Removed scratchpad functionality, recent addition of {d:doubleid} made it obsolete
 
+### Telnet
+- added broadcast command to broadcast a message to all telnet sessions
+- `telnet:broadcast,info,message` or`telnet:broadcast,message` will display it in green
+- `telnet:broadcast,warn,message` will display it in magenta (no orange...)
+- `telnet:broadcast,error,message` or`telnet:broadcast,!message` will display it in red
+
 ### Fixes
 - MathUtils, extractParts didn't remove _ (in doublevals) or : (in flags/issues)
 - MathForward, if no i's are in the expression settings highestI wasn't skipped so tried to check what was higher
 previous value or null (=not good)
-- RtvalCheck, the ! in front of a flag/issue wasn't processed correctly
-- FilterForward, successive filters (so if no other steps are inbetween, generics aren't steps) will use data given by
+- RtvalCheck, the '!' in front of a flag/issue wasn't processed correctly
+- FilterForward, successive filters (so if no other steps are in between, generics aren't steps) will use data given by
 that filter instead of the reverse
 - DoubleVal/FlagVal, didn't take in account the use of _ in the name
 
@@ -56,10 +64,14 @@ that filter instead of the reverse
 
 ````xml
 <!-- Before -->
-<editor type="resplit">i0;{double:offset}</editor>
-<math cmd="double:update,temp,$">i0=i0+2*i1</math>
+<path id="example">
+    <editor type="resplit">i0;{double:offset}</editor>
+    <math cmd="double:update,temp,$">i0=i0+2*i1</math>
+</path>
+````
+````xml
 <!-- Now -->
-<cmd>{d:temp},i0=i0+2*{d:offset}</cmd>
+<math id="example">{d:temp},i0=i0+2*{d:offset}</math>
 ````
 ### Other
 - LabelWorker, removed method reference functionality
@@ -150,7 +162,7 @@ that filter instead of the reverse
 - New functionality, allows for filter,math,editor, generic and valmap to be added in a single node
 - path can be in a separate file instead of the main settings.xml
 - less boilerplate because the path will assume steps are following each other (so step 1 is the src for
-  step 2 etc) and will generate id's
+  step 2 etc.) and will generate id's
 - delimiter can be set globally in a path
 
 ### Digiworker
