@@ -724,7 +724,7 @@ public class CommandPool {
 		if( request[1].equals("?") )
 			return "sd:reason -> Shutdown the program with the given reason, use force as reason to skip checks";
 		String reason = request[1].isEmpty()?"Telnet requested shutdown":request[1];
-		if( !request[1].equalsIgnoreCase("force")) {
+		if( !request[1].equalsIgnoreCase("force") && sdps!=null) {
 			for (var sdp : sdps) {
 				if (sdp.shutdownNotAllowed()) {
 					if (wr != null)
