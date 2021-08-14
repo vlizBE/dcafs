@@ -11,7 +11,7 @@ public interface DataProviding {
 
     /* Double */
     Optional<DoubleVal> getDoubleVal(String param );
-
+    DoubleVal getOrAddDoubleVal( String id );
     boolean hasDouble( String id);
     double getDouble(String id, double defVal, boolean createIfNew);
     double getDouble(String id, double bad);
@@ -26,6 +26,7 @@ public interface DataProviding {
 
     /* Flags */
     Optional<FlagVal> getFlagVal( String flag);
+    FlagVal getOrAddFlagVal( String id );
     boolean hasFlag( String flag);
     boolean isFlagUp( String flag );
     boolean isFlagDown( String flag );
