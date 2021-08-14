@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -23,10 +24,10 @@ import java.util.stream.Collectors;
 
 public class IssuePool implements Commandable{
 
-    private HashMap<String,Issue> issues = new HashMap<>();
-    private BlockingQueue<Datagram> dQueue;
-    private Path settingsPath;
-    private DataProviding dp;
+    private final HashMap<String,Issue> issues = new HashMap<>();
+    private final BlockingQueue<Datagram> dQueue;
+    private final Path settingsPath;
+    private final DataProviding dp;
 
     public IssuePool( BlockingQueue<Datagram> dQueue, Path settingsPath, DataProviding dp){
         this.dQueue=dQueue;
@@ -58,7 +59,6 @@ public class IssuePool implements Commandable{
                             case "stop": issue.atStop(cmd); break;
                             default:
                                 Logger.error("Unknown when used: "+cmdEle.getAttribute("when"));
-                                continue;
                         }
                     }
                     issues.put(id,issue);
@@ -136,7 +136,7 @@ public class IssuePool implements Commandable{
                 }
                 return "Invalid issue or no test";
             case "resetall":
-                issues.values().forEach( is -> is.clear());
+                issues.values().forEach(Issue::clear);
                 return "Issues reset";
             case "listactive":
                 join = new StringJoiner(nl,html?"<b>Active Issues</b><br>":"Active Issues\r\n","");
@@ -248,7 +248,7 @@ public class IssuePool implements Commandable{
         return false;
     }
     public ArrayList<String> getActives(){
-        return issues.entrySet().stream().filter(ent -> ent.getValue().isActive()).map( ent -> ent.getKey()).collect(Collectors.toCollection(ArrayList::new));
+        return issues.entrySet().stream().filter(ent -> ent.getValue().isActive()).map(Map.Entry::getKey).collect(Collectors.toCollection(ArrayList::new));
     }
     public class Issue{
 
@@ -263,8 +263,6 @@ public class IssuePool implements Commandable{
 
         RtvalCheck activate;
         RtvalCheck resolve;
-
-        boolean valid = false;
 
         /* Creation */
         public Issue( String message ){
@@ -294,7 +292,7 @@ public class IssuePool implements Commandable{
                     if( activate.test(dp,getActives()))
                         start();
                 }
-            }else{ //meaning only an activate test
+            }else{ //meaning only an activated test
                 if( activate.test(dp,getActives()) ){
                     start();
                 }else{

@@ -53,8 +53,6 @@ public class CommandPool {
 	private IssuePool issues=null;
 	private DatabaseManager dbManager;
 
-	private String title = "";
-
 	private DAS das;
 
 	Map<String, Method> methodMapping = new HashMap<>();
@@ -117,7 +115,7 @@ public class CommandPool {
 	/**
 	 * To be able to send emails, access to the emailQueue is needed
 	 * 
-	 * @param emailWorker An reference to the emailworker
+	 * @param emailWorker A reference to the emailworker
 	 */
 	public void setEmailWorker(EmailWorker emailWorker) {
 
@@ -286,7 +284,7 @@ public class CommandPool {
 							if( key.equals(split[0]))
 								return true;
 							return Arrays.stream(key.split(";")).anyMatch(k->k.equals(split[0]));
-						}).map(ent -> ent.getValue()).findFirst();
+						}).map(Map.Entry::getValue).findFirst();
 
 			if( cmdOpt.isPresent()) {
 				result = cmdOpt.get().replyToCommand(split, wr, html);
@@ -298,7 +296,7 @@ public class CommandPool {
 				for( var cd : bulkCommandable ){
 					result = cd.replyToCommand(split,wr,html);
 					if( !result.startsWith(UNKNOWN_CMD))
-						continue;
+						break;
 				}
 				if( result.startsWith(UNKNOWN_CMD)) {
 					if (split[1].equals("?") || split[1].equals("list")) {
@@ -492,8 +490,8 @@ public class CommandPool {
 	public String doUPGRADE(String[] request, Writable wr, boolean html) {
 		
 		Path p=null;
-		Path to=null;
-		Path refr=null;
+		Path to;
+		Path refr;
 
 		String[] spl = request[1].split(",");
 
@@ -851,14 +849,10 @@ public class CommandPool {
 				Path it = Path.of(workPath,"raw",TimeTools.formatUTCNow("yyyy-MM"));
 				try {
 					var last = Files.list(it).filter( f -> !Files.isDirectory(f)).max( Comparator.comparingLong( f -> f.toFile().lastModified()));
-					if( last.isPresent() ){
-						return sendEmail.map( e-> {
-							e.sendEmail( Email.toAdminAbout("Taskmanager.log").subject("File attached (probably)").attachment( last.get() ));
-							return "Tried sending "+last.get();
-						}).orElse("No email functionality active.");
-					}else{
-						return "File not found";
-					}
+					return last.map(path -> sendEmail.map(e -> {
+						e.sendEmail(Email.toAdminAbout("Taskmanager.log").subject("File attached (probably)").attachment(path));
+						return "Tried sending " + path;
+					}).orElse("No email functionality active.")).orElse("File not found");
 				} catch (IOException e) {
 					e.printStackTrace();
 					return "Something went wrong trying to get the file";
@@ -893,11 +887,10 @@ public class CommandPool {
 				try {
 					ProcessBuilder pb = new ProcessBuilder("bash","-c","shutdown -r +1");
 					pb.inheritIO();
-					Process process;
 
 					Logger.error("Started restart attempt at "+TimeTools.formatLongUTCNow());
-					process = pb.start();
-					//process.waitFor();
+					pb.start();
+
 					System.exit(0); // shutting down das
 				} catch (IOException e) {
 					Logger.error(e);

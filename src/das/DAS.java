@@ -53,7 +53,7 @@ public class DAS implements DeadThreadListener {
 
     private Document settingsDoc;
 
-    private LocalDateTime bootupTimestamp = LocalDateTime.now(); // Store timestamp at boot up to calculate uptime
+    private final LocalDateTime bootupTimestamp = LocalDateTime.now(); // Store timestamp at boot up to calculate uptime
 
     /* Workers */
     private EmailWorker emailWorker;
@@ -74,11 +74,10 @@ public class DAS implements DeadThreadListener {
     private DatabaseManager dbManager;
     private MqttPool mqttPool;
     private TaskManagerPool taskManagerPool;
-    private ForwardPool forwardPool;
     private IssuePool issuePool;
     private Waypoints waypoints;
 
-    private Map<String, FileCollector> fileCollectors = new HashMap<>();
+    private final Map<String, FileCollector> fileCollectors = new HashMap<>();
 
     private boolean debug = false;
     private boolean log = false;
@@ -95,7 +94,7 @@ public class DAS implements DeadThreadListener {
 
         try {
             Path p = Path.of(getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
-            System.out.println("Path found: "+p.toString());
+            System.out.println("Path found: "+ p);
             if (!p.toString().endsWith(".jar")) { //meaning from ide
                 p = p.getParent();
             }
@@ -204,8 +203,7 @@ public class DAS implements DeadThreadListener {
             addTaskManager();
 
             /* Forwards */
-            forwardPool = new ForwardPool( dQueue, settingsPath,rtvals,nettyGroup );
-
+            ForwardPool forwardPool = new ForwardPool(dQueue, settingsPath, rtvals, nettyGroup);
             addCommandable(forwardPool,"filter","ff");
             addCommandable(forwardPool,"math","mf");
             addCommandable(forwardPool,"editor","ef");
@@ -345,13 +343,6 @@ public class DAS implements DeadThreadListener {
         return taskManagerPool.getTaskList(id);
     }
 
-    /**
-     * Change a state for all taskmanagers
-     * @param state The new or altered state
-     */
-    public void setTaskManagerState( String state){
-        taskManagerPool.changeManagersState(state);
-    }
     /* ******************************************  S T R E A M P O O L ***********************************************/
     /**
      * Adds the streampool
@@ -572,7 +563,7 @@ public class DAS implements DeadThreadListener {
     public String getFileCollectorsList( String eol ){
         StringJoiner join = new StringJoiner(eol);
         join.setEmptyValue("None yet");
-        fileCollectors.entrySet().forEach(ent->join.add(ent.getKey()+" -> "+ent.getValue().toString()));
+        fileCollectors.forEach((key, value) -> join.add(key + " -> " + value.toString()));
         return join.toString();
     }
     public FileCollector addFileCollector( String id ){
