@@ -13,7 +13,7 @@ public interface TaskBlock {
     ArrayList<NumericVal> getSharedMem();
 
     Optional<TaskBlock> build(TaskBlock prev, String set);
-    void addNext(TaskBlock block);
+    boolean addNext(TaskBlock block);
 
 
 
