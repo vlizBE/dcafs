@@ -194,6 +194,58 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		}
 		return line;
 	}
+	public String buildNumericalMem( String exp, ArrayList<NumericVal> nums, int offset){
+		if( nums==null)
+			nums = new ArrayList<>();
+
+		// Find all the double/flag pairs
+		var pairs = Tools.parseKeyValue(exp,true);
+		for( var p : pairs ) {
+			boolean ok=false;
+			if (p.length == 2) {
+				for( int pos=0;pos<nums.size();pos++ ){ // go through the known doubleVals
+					var d = nums.get(pos);
+					if( d.getID().equalsIgnoreCase(p[1])) { // If a match is found
+						exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + (offset + pos));
+						ok=true;
+						break;
+					}
+				}
+				if( ok )
+					continue;
+				switch(p[0]){
+					case "d": case "double":
+						var d = getDoubleVal(p[1]);
+						if( d.isPresent() ){
+							nums.add( d.get() );
+							exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + (offset + nums.size()-1 ));
+						}else{
+							Logger.error("Couldn't find a doubleval with id "+p[1]);
+							return "";
+						}
+						break;
+					case "f": case "flag":
+						var f = getFlagVal(p[1]);
+						if( f.isPresent() ){
+							nums.add( f.get() );
+							exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + (offset + nums.size()-1 ));
+						}else{
+							Logger.error("Couldn't find a FlagVal with id "+p[1]);
+							return "";
+						}
+						break;
+					default:
+						Logger.error("Operation containing unknown pair: "+p[0]+":"+p[1]);
+						return "";
+				}
+			}else{
+				Logger.error( "Pair containing odd amount of elements: "+String.join(":",p));
+			}
+		}
+		if(nums!=null)
+			nums.trimToSize();
+		return exp;
+	}
 	public Optional<NumericVal> getNumericVal( String id){
 		if( id.startsWith("{")){
 			id = id.substring(1,id.length()-2);
