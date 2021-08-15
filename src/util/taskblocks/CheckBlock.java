@@ -90,7 +90,8 @@ public class CheckBlock extends AbstractBlock{
                 String piece = set.substring(open,close+1);
                 set = set.replace(piece,"$$");
                 // Split part on && and ||
-                var and_ors = part.replaceAll("[&|!]{2}",",").split(",");
+
+                var and_ors = part.split("[&|!]{2}",0);
                 for( var and_or : and_ors) {
                     boolean reverse = and_or.startsWith("!");
                     var comps = MathUtils.extractCompare(and_or);
@@ -116,7 +117,8 @@ public class CheckBlock extends AbstractBlock{
                 }
                 part=part.replace("&&","*");
                 part=part.replace("||","+");
-                part=part.replace("!|","-");
+                if(part.contains("!|"))
+                    part="("+part.replace("!|","+")+")%2";
 
                 set=set.replace("$$",part);
 
@@ -125,7 +127,7 @@ public class CheckBlock extends AbstractBlock{
                 if( true )
                     Logger.info("=>Formula: "+set);
             }else{
-                Logger.error("Didn't find opening bracket");
+                Logger.error("CheckBlock -> Didn't find opening bracket");
             }
         }
         if( set.length()!=2)
@@ -135,15 +137,12 @@ public class CheckBlock extends AbstractBlock{
         // Convert the subformulas to functions
         subFormulas.forEach( x -> {
             var parts = MathUtils.extractParts(x);
-            steps.add(MathUtils.decodeDoublesOp(parts.get(0),parts.size()==3?parts.get(2):"",parts.get(1),subFormulas.size()));
+            steps.add( MathUtils.decodeDoublesOp(parts.get(0),parts.size()==3?parts.get(2):"",parts.get(1),subFormulas.size()) );
         });
 
-        if( prev!=null) {
-            prev.addNext(this);
-            parentBlock=prev;
-        }else{
-            srcBlock=true;
-        }
+        parentBlock = Optional.ofNullable(prev);
+        parentBlock.ifPresentOrElse( tb->tb.addNext(this), ()->srcBlock=true);
+
         return Optional.of(this);
     }
     public void addNext(TaskBlock block) {
