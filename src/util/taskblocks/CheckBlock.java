@@ -15,12 +15,16 @@ public class CheckBlock extends AbstractBlock{
     DataProviding dp;
     ArrayList<Function<Double[],Double>> steps = new ArrayList<>();
     int resultIndex;
+    boolean negate = false;
 
     public CheckBlock(DataProviding dp){
         this.dp=dp;
     }
     public static CheckBlock prepBlock(DataProviding dp){
         return new CheckBlock(dp);
+    }
+    public void setNegate(boolean neg){
+        negate=neg;
     }
     public void doNext() {
         next.forEach( n->n.start() );
@@ -43,6 +47,7 @@ public class CheckBlock extends AbstractBlock{
         for( int a=0;a<steps.size();a++)
             work[a]=steps.get(a).apply(work);
         var pass = Double.compare(work[resultIndex],0.0)>0;
+        pass = negate?!pass:pass;
         if( pass ) {
             doNext();
             parentBlock.ifPresent( TaskBlock::nextOk );
@@ -149,7 +154,8 @@ public class CheckBlock extends AbstractBlock{
 
         return Optional.of(this);
     }
-    public void addNext(TaskBlock block) {
+    public boolean addNext(TaskBlock block) {
         next.add(block);
+        return true;
     }
 }

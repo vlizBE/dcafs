@@ -18,6 +18,9 @@ public class TriggerBlock extends AbstractBlock{
     long interval_ms =1000;
     int tries=-1;
 
+    enum TYPE {CLOCK, WHILE, WAITFOR, OTHER, RETRY};
+    TYPE trigType =TYPE.OTHER;
+
     ScheduledExecutorService scheduler;
     ScheduledFuture future;
 
@@ -60,19 +63,42 @@ public class TriggerBlock extends AbstractBlock{
 
     @Override
     public void nextOk() {
-        if( tries > 1){
 
+        switch( trigType){
+            case WAITFOR: // Was ok so can stop waiting
+                Logger.info("Go what was waiting for, cancelling");
+                break;
+            case WHILE:   // negated so this is actually failed
+                Logger.info("OK = Negated negative so cancelling");
+                break;
+            case RETRY: // Got an ok within the amount of retries
+                Logger.info("Retry successful");
+                break;
         }
+        future.cancel(true);
     }
 
     @Override
     public void nextFailed() {
-        if(future==null)
+        if(future==null) // can't do anything without a future
             return;
 
+        switch(trigType){
+            case WAITFOR:
+                if( tries == -1) // if infinite tries, keep going
+                    return;
+                break;
+        }
         if( tries >= 1){
             tries--;
             Logger.warn("Check failed, "+tries+" retries left");
+        }
+        if( tries==1 && trigType==TYPE.WHILE){ // If there's one try left
+             var tb = next.get(0);
+             if( tb instanceof CheckBlock && trigType==TYPE.WHILE ){ // negate the results of a CheckBlock
+                ((CheckBlock)tb).setNegate(false);
+                Logger.info("One check left, undoing the negate");
+             }
         }
         if( tries <= 0 ) {
             future.cancel(false);
@@ -86,8 +112,17 @@ public class TriggerBlock extends AbstractBlock{
         if( time!=null )
             start();
     }
-    public void addNext(TaskBlock block) {
+    public boolean addNext(TaskBlock block) {
+        if( next.size()==1 && (trigType==TYPE.WAITFOR || trigType==TYPE.WHILE) ){
+            Logger.error("Tried to add more than one block to a waitfor/while");
+            return false;
+        }
         next.add(block);
+
+        if( block instanceof CheckBlock && trigType==TYPE.WHILE ){ // negate the results of a CheckBlock
+            ((CheckBlock)block).setNegate(true);
+        }
+        return true;
     }
     @Override
     public Optional<TaskBlock> build(TaskBlock prev, String set) {
@@ -107,6 +142,7 @@ public class TriggerBlock extends AbstractBlock{
                 time = LocalTime.parse( values[0], DateTimeFormatter.ISO_LOCAL_TIME );
                 triggerDays = TimeTools.convertDAY(values.length==2?values[1]:"");
                 tries=1;
+                this.trigType =TYPE.CLOCK;
                 break;
             case "delay": // Has a delay
                 interval_ms = TimeTools.parsePeriodStringToMillis(value);
@@ -124,6 +160,17 @@ public class TriggerBlock extends AbstractBlock{
             case "retry": // Has an interval and an amount of attempts
                 interval_ms = TimeTools.parsePeriodStringToMillis(values[0]);
                 tries= values.length==2?NumberUtils.toInt(values[1],-1):-1;
+                trigType =TYPE.RETRY;
+                break;
+            case "waitfor":
+                interval_ms = TimeTools.parsePeriodStringToMillis(values[0]);
+                tries= values.length==2?NumberUtils.toInt(values[1],-1):-1;
+                trigType=TYPE.WAITFOR;
+                break;
+            case "while":
+                interval_ms = TimeTools.parsePeriodStringToMillis(values[0]);
+                tries= values.length==2?NumberUtils.toInt(values[1],-1):-1;
+                trigType=TYPE.WHILE;
                 break;
             default:
                 Logger.error("No such type: "+type);
