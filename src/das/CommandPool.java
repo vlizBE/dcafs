@@ -1206,6 +1206,7 @@ public class CommandPool {
 						.add("  dbm:addinfluxdb,id,db name,ip:port,user:pass -> Adds a Influxdb server on given ip:port with user:pass")
 					.add("").add(TelnetCodes.TEXT_GREEN+"Working with tables"+TelnetCodes.TEXT_YELLOW)
 						.add("  dbm:addtable,id,tablename,format (format eg. tirc timestamp(auto filled system time),int,real,char/text)")
+						.add("  dbm:addcol,<dbid:>tablename,columntype:columnname<,alias (columntypes r(eal),t(ime)s(tamp),i(nteger),t(ext)")
 						.add("  dbm:tablexml,id,tablename -> Write the table in memory to the xml file, use * as tablename for all")
 						.add("  dbm:tables,id -> Get info about the given id (tables etc)")
 						.add("  dbm:fetch,id -> Read the tables from the database directly, not overwriting stored ones.")
@@ -1332,11 +1333,49 @@ public class CommandPool {
 					return "Failed to connect to InfluxDB";
 				}
 			case "addtable":
-				if( cmds.length < 4 )
-					return "Not enough arguments, needs to be dbm:addtable,dbId,tableName,format";
-				if( DatabaseManager.addBlankTableToXML( XMLfab.withRoot(settingsPath,"dcafs","settings","databases"), cmds[1], cmds[2], cmds[3] ) )
-					return "Added a partially setup table to "+cmds[1]+" in the settings.xml, edit it to set column names etc";
-				return "No such database found or influxDB.";
+				if( cmds.length < 3 )
+					return "Not enough arguments, needs to be dbm:addtable,dbId,tableName<,format>";
+				if( DatabaseManager.addBlankTableToXML( XMLfab.withRoot(settingsPath,"dcafs","settings","databases"), cmds[1], cmds[2], cmds.length==4?cmds[3]:"" ) ) {
+					if( cmds.length==4)
+						return "Added a partially setup table to " + cmds[1] + " in the settings.xml, edit it to set column names etc";
+					return "Created tablenode for "+cmds[1]+" inside the db node";
+				}
+				return "No such database found nor influxDB.";
+			case "addcolumn": case "addcol":
+				if( cmds.length < 3 )
+					return "Not enough arguments, needs to be dbm:addcolumn,dbId:<tablid,>tableName,columntype:columnname<,alias>";
+				if(!cmds[2].contains(":"))
+					return "Needs to be columtype:columnname";
+				String dbid =  cmds[1].contains(":")?cmds[1].split(":")[0]:"";
+				String table = cmds[1].contains(":")?cmds[1].split(":")[1]:cmds[1];
+				String[] col = cmds[2].split(":");
+				String alias = cmds.length==4?cmds[3]:"";
+
+				switch(col[0]){
+					case "ts":col[0]="timestamp";break;
+					case "i":col[0]="integer";break;
+					case "r":col[0]="real";break;
+					case "text":col[0]="text";break;
+				}
+
+				fab = XMLfab.withRoot(settingsPath,"settings","databases");
+				for( var dbtype : new String[]{"database","sqlite"}) {
+					for (var ele : fab.getChildren(dbtype)) {
+						if (!dbid.isEmpty() && !dbid.equalsIgnoreCase(ele.getAttribute("id")))
+							continue;
+						for (var tbl : XMLtools.getChildElements(ele, "table")) {
+							if (tbl.getAttribute("name").equalsIgnoreCase(table)) {
+								fab.selectOrCreateParent(dbtype, "id", ele.getAttribute("id"))
+										.selectOrCreateParent("table", "name", table)
+										.addChild(col[0], col[1]);
+								if( !alias.isEmpty())
+									fab.attr("alias", alias).build();
+								return "Column added: " + col[0] + "->" + col[1] + (alias.isEmpty() ? "" : " with alias " + alias);
+							}
+						}
+					}
+				}
+				return "Nothing added";
 			case "fetch": 
 				if( cmds.length < 2 )
 					return "Not enough arguments, needs to be dbm:fetch,dbId";
