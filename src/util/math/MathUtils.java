@@ -26,7 +26,7 @@ public class MathUtils {
     final static int DIV_SCALE = 8;
     static final String[] ORDERED_OPS={"^","^","*","/","%","%","+","-"};
     static final String[] COMPARES={"<","<=","==","!=",">=",">"};
-    static final String OPS_REGEX="\\+|/|\\*|-|\\^|%";
+    static final String OPS_REGEX="[+\\-\\/*<>^=%]+[=]?";
     static final Pattern es = Pattern.compile("\\de[+-]?\\d");
     /**
      * Splits a simple expression of the type i1+125 etc into distinct parts i1,+,125
@@ -225,6 +225,8 @@ public class MathUtils {
         op = op.replace("above ",">");   // retain support for above
         op = op.replace("equals ","=="); // retain support for equals
         op = op.replace("not ","!="); // retain support for not equals
+        op = op.replace("++","+=1");
+        op = op.replace("--","-=1");
 
         op = op.replace(" ",""); // remove all spaces
 
