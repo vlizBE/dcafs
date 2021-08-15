@@ -86,8 +86,11 @@ public class ForwardPath{
 
         var steps = XMLtools.getChildElements(pathEle);
 
-        if( steps.size() > 0)
+        if( steps.size() > 0) {
             stepsForward = new ArrayList<>();
+        }else{
+            return;
+        }
 
         FilterForward lastff=null;
 

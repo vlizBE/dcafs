@@ -754,6 +754,8 @@ public class ForwardPool implements Commandable {
         var cmds =cmd.split(",");
 
         switch(cmds[0]){
+            case "?":
+                return "?";
             case "reload":
                 var ele = XMLfab.withRoot(settingsPath,"dcafs","datapaths")
                         .getChild("path","id",cmds[1]);
@@ -763,9 +765,28 @@ public class ForwardPool implements Commandable {
                 return "Path reloaded";
             case "addblank":
                 XMLfab.withRoot(settingsPath,"dcafs","datapaths")
-                        .addChild("path").attr("id",cmds[1]).attr("src","")
+                        .addChild("path").attr("id",cmds[1]).attr("src",cmds.length>2?cmds[2]:"")
                         .build();
                 return "Blank added";
+            case "addnodes":
+                if( paths.get(cmds[1])==null)
+                    return "No such path "+cmds[1];
+                var fab = XMLfab.withRoot(settingsPath,"dcafs","datapaths")
+                        .selectOrCreateParent("path","id",cmds[1]);
+
+                for( var c : cmds[2].toCharArray()){
+                    switch(c) {
+                        case 'F': fab.addChild("filter",".").attr("type","start");
+                            break;
+                        case 'E': fab.addChild("editor",".").attr("type","resplit");
+                            break;
+                        case 'M': fab.addChild("math","i0=i0+1");
+                            break;
+                    }
+                }
+                if( fab.build()!=null)
+                    return "XML altered";
+                return "Failed to alter XML";
             case "list":
                 StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
                 join.setEmptyValue("No paths yet");
