@@ -334,7 +334,7 @@ public class TaskManager implements CollectorFuture {
 		TaskSet ts = tasksets.get(id);
 		if (ts != null) {
 			if (ts.getTaskCount() != 0) {
-				Logger.tag(TINY_TAG).info("[" + this.id + "] Taskset started " + id);
+				Logger.tag(TINY_TAG).debug("[" + this.id + "] Taskset started " + id);
 				if (ts.getRunType() == RUNTYPE.ONESHOT) {
 					startTasks(ts.getTasks());
 					return "Taskset should be started: " + id;
@@ -349,7 +349,7 @@ public class TaskManager implements CollectorFuture {
 				return "TaskSet is empty:" + id;
 			}
 		} else {
-			Logger.tag(TINY_TAG).info("[" + this.id + "] Taskset with " + id+" not found");
+			Logger.tag(TINY_TAG).warn("[" + this.id + "] Taskset with " + id+" not found");
 			return "No such taskset:" + id;
 		}
 	}
@@ -452,7 +452,7 @@ public class TaskManager implements CollectorFuture {
 				if (task.future != null) {
 					task.future.cancel(true);
 				}
-				Logger.tag(TINY_TAG).info("[" + id + "] Scheduled sending '" + task.value + "' in "
+				Logger.tag(TINY_TAG).debug("[" + id + "] Scheduled sending '" + task.value + "' in "
 						+ TimeTools.convertPeriodtoString(task.startDelay, task.unit) + " and need "+(task.reply.isEmpty()?"no reply":("'"+task.reply+"' as reply")));
 				task.future = scheduler.schedule(new DelayedControl(task), task.startDelay, task.unit);
 				break;
@@ -839,7 +839,7 @@ public class TaskManager implements CollectorFuture {
 						if( task.triggerType != TRIGGERTYPE.INTERVAL){
 							if( response.endsWith("\r\n") )
 								response = response.substring(0,response.length()-2);
-							Logger.tag(TINY_TAG).info("["+ id +"] " + response );
+							Logger.tag(TINY_TAG).debug("["+ id +"] " + response );
 						}
 						break;	
 				}
@@ -879,7 +879,7 @@ public class TaskManager implements CollectorFuture {
 		}
 		if( task.value.startsWith("taskset:") || task.value.startsWith("task:")) {
 			String shortName = task.value.split(":")[1];
-			Logger.tag(TINY_TAG).info( "["+ id +"] "+shortName+" -> "+executed+"\r\n");
+			Logger.tag(TINY_TAG).debug( "["+ id +"] "+shortName+" -> "+executed+"\r\n");
 		}
 		
 		if( task.skipExecutions > 0)
