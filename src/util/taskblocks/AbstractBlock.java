@@ -9,7 +9,7 @@ public abstract class AbstractBlock implements TaskBlock{
     ArrayList<NumericVal> sharedMem;
     ArrayList<TaskBlock> next = new ArrayList<>();
     String ori;
-    TaskBlock parentBlock;
+    Optional<TaskBlock> parentBlock=Optional.empty();
 
     boolean srcBlock=false;
 
@@ -27,7 +27,7 @@ public abstract class AbstractBlock implements TaskBlock{
     public Optional<TaskBlock> getSourceBlock(){
         if( srcBlock )
             return Optional.of(this);
-        return parentBlock.getSourceBlock();
+        return parentBlock.map(pb->pb.getSourceBlock()).orElse(Optional.empty());
     }
 
 }
