@@ -179,7 +179,21 @@ public class MathUtils {
         full[2]=split[1];
         return full;
     }
+    public static String[] extractCompare( String comparison ){
+        var results = Pattern.compile("[><=!][=]?");
+        var full = new String[3];
+        var l = results.matcher(comparison)
+                .results()
+                .map(MatchResult::group)
+                .distinct()
+                .collect(Collectors.toList());
+        for( var c : l){
+            comparison=comparison.replace(c,",");
+        }
+        comparison=comparison.replace(",,",",");
 
+        return comparison.split(",");
+    }
 
     /**
      * Parse a comparator operation with a single variable to a function, allowed formats:
@@ -745,6 +759,102 @@ public class MathUtils {
                         proc = x -> Math.log(x[i2]);
                     }else{ // meaning both indexes
                         proc = x -> Math.log(x[i2]);
+                    }
+                }catch (IndexOutOfBoundsException | NullPointerException e){
+                    Logger.error("Bad things when "+first+" "+op+" "+second+ " was processed");
+                    Logger.error(e);
+                }
+                break;
+            case "<":
+                try{
+                    if( db1!=null && db2!=null ){ // meaning both numbers
+                        proc = x -> Double.compare(db1,db2)<0?1.0:0.0;
+                    }else if( db1==null && db2!=null){ // meaning first is an index and second a number
+                        proc = x -> Double.compare(x[i1],db2)<0?1.0:0.0;
+                    }else if(db1 != null){ //  meaning first is a number and second an index
+                        proc = x -> Double.compare(db1,x[i2])<0?1.0:0.0;
+                    }else{ // meaning both indexes
+                        proc = x -> Double.compare(x[i1],x[i2])<0?1.0:0.0;
+                    }
+                }catch (IndexOutOfBoundsException | NullPointerException e){
+                    Logger.error("Bad things when "+first+" "+op+" "+second+ " was processed");
+                    Logger.error(e);
+                }
+                break;
+            case ">":
+                try{
+                    if( db1!=null && db2!=null ){ // meaning both numbers
+                        proc = x -> Double.compare(db1,db2)>0?1.0:0.0;
+                    }else if( db1==null && db2!=null){ // meaning first is an index and second a number
+                        proc = x -> Double.compare(x[i1],db2)>0?1.0:0.0;
+                    }else if(db1 != null){ //  meaning first is a number and second an index
+                        proc = x -> Double.compare(db1,x[i2])>0?1.0:0.0;
+                    }else{ // meaning both indexes
+                        proc = x -> Double.compare(x[i1],x[i2])>0?1.0:0.0;
+                    }
+                }catch (IndexOutOfBoundsException | NullPointerException e){
+                    Logger.error("Bad things when "+first+" "+op+" "+second+ " was processed");
+                    Logger.error(e);
+                }
+                break;
+            case "<=":
+                try{
+                    if( db1!=null && db2!=null ){ // meaning both numbers
+                        proc = x -> Double.compare(db1,db2)<=0?1.0:0.0;
+                    }else if( db1==null && db2!=null){ // meaning first is an index and second a number
+                        proc = x -> Double.compare(x[i1],db2)<=0?1.0:0.0;
+                    }else if(db1 != null){ //  meaning first is a number and second an index
+                        proc = x -> Double.compare(db1,x[i2])<=0?1.0:0.0;
+                    }else{ // meaning both indexes
+                        proc = x -> Double.compare(x[i1],x[i2])<=0?1.0:0.0;
+                    }
+                }catch (IndexOutOfBoundsException | NullPointerException e){
+                    Logger.error("Bad things when "+first+" "+op+" "+second+ " was processed");
+                    Logger.error(e);
+                }
+                break;
+            case ">=":
+                try{
+                    if( db1!=null && db2!=null ){ // meaning both numbers
+                        proc = x -> Double.compare(db1,db2)>=0?1.0:0.0;
+                    }else if( db1==null && db2!=null){ // meaning first is an index and second a number
+                        proc = x -> Double.compare(x[i1],db2)>=0?1.0:0.0;
+                    }else if(db1 != null){ //  meaning first is a number and second an index
+                        proc = x -> Double.compare(db1,x[i2])>=0?1.0:0.0;
+                    }else{ // meaning both indexes
+                        proc = x -> Double.compare(x[i1],x[i2])>=0?1.0:0.0;
+                    }
+                }catch (IndexOutOfBoundsException | NullPointerException e){
+                    Logger.error("Bad things when "+first+" "+op+" "+second+ " was processed");
+                    Logger.error(e);
+                }
+                break;
+            case "==":
+                try{
+                    if( db1!=null && db2!=null ){ // meaning both numbers
+                        proc = x -> Double.compare(db1,db2)==0?1.0:0.0;
+                    }else if( db1==null && db2!=null){ // meaning first is an index and second a number
+                        proc = x -> Double.compare(x[i1],db2)==0?1.0:0.0;
+                    }else if(db1 != null){ //  meaning first is a number and second an index
+                        proc = x -> Double.compare(db1,x[i2])==0?1.0:0.0;
+                    }else{ // meaning both indexes
+                        proc = x -> Double.compare(x[i1],x[i2])==0?1.0:0.0;
+                    }
+                }catch (IndexOutOfBoundsException | NullPointerException e){
+                    Logger.error("Bad things when "+first+" "+op+" "+second+ " was processed");
+                    Logger.error(e);
+                }
+                break;
+            case "!=":
+                try{
+                    if( db1!=null && db2!=null ){ // meaning both numbers
+                        proc = x -> Double.compare(db1,db2)!=0?1.0:0.0;
+                    }else if( db1==null && db2!=null){ // meaning first is an index and second a number
+                        proc = x -> Double.compare(x[i1],db2)!=0?1.0:0.0;
+                    }else if(db1 != null){ //  meaning first is a number and second an index
+                        proc = x -> Double.compare(db1,x[i2])!=0?1.0:0.0;
+                    }else{ // meaning both indexes
+                        proc = x -> Double.compare(x[i1],x[i2])!=0?1.0:0.0;
                     }
                 }catch (IndexOutOfBoundsException | NullPointerException e){
                     Logger.error("Bad things when "+first+" "+op+" "+second+ " was processed");
