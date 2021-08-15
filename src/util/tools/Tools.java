@@ -610,6 +610,37 @@ public class Tools {
         }
         return splits;
     }
+    public static String parseExpression( String op ){
+        op=op.replace("->"," through");
+
+        op = op.replace(" and "," && ");
+        op = op.replace(" or "," || ");
+        if( op.startsWith("between") ){
+            op=op.replace("between ",">");
+            op=op.replace(" and ", ";<");
+        }
+        if( op.startsWith("not between") ){
+            op=op.replace("not between ","<=");
+            op=op.replace(" and ", ";>=");
+        }
+        if( op.startsWith("from ") ){
+            op=op.replace("from ",">");
+            op=op.replace(" to ", ";<");
+            op=op.replace(" till ", ";<");
+        }
+        if( op.contains(" through ")){
+            op=op.replace(" through ", "<=var<=");
+        }
+        // 15 < x <= 25   or x <= 25
+        op = op.replace(" not below ",">=");   // retain support for below
+        op = op.replace(" not above ","<=");   // retain support for above
+        op = op.replace(" below ","<");   // retain support for below
+        op = op.replace(" above ",">");   // retain support for above
+        op = op.replace(" not equals ","!="); // retain support for equals
+        op = op.replace(" equals ","=="); // retain support for not equals
+
+        return op.replace(" ","");
+    }
     public static String getLocalIP() {
         try (final DatagramSocket socket = new DatagramSocket()) {
             var sock = InetAddress.getByName("8.8.8.8");
