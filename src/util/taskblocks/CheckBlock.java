@@ -90,7 +90,7 @@ public class CheckBlock extends AbstractBlock{
                 String piece = set.substring(open,close+1);
                 set = set.replace(piece,"$$");
                 // Split part on && and ||
-                var and_ors = part.replaceAll("[&|]{2}",",").split(",");
+                var and_ors = part.replaceAll("[&|!]{2}",",").split(",");
                 for( var and_or : and_ors) {
                     var comps = MathUtils.extractCompare(and_or);
                     for (var c : comps) {
@@ -113,6 +113,7 @@ public class CheckBlock extends AbstractBlock{
                 }
                 part=part.replace("&&","*");
                 part=part.replace("||","+");
+                part=part.replace("!|","-");
                 set=set.replace("$$",part);
 
                 // replace the sub part in the original set with a reference to the last sub-formula

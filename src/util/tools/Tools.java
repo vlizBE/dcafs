@@ -614,7 +614,9 @@ public class Tools {
         op=op.replace("->"," through");
 
         op = op.replace(" and "," && ");
+        op = op.replace(" xor "," !| ");
         op = op.replace(" or "," || ");
+
         if( op.startsWith("between") ){
             op=op.replace("between ",">");
             op=op.replace(" and ", ";<");
