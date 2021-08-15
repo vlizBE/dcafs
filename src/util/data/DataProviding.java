@@ -8,6 +8,7 @@ public interface DataProviding {
     /* Parsing */
     String simpleParseRT( String line, String error );
     String parseRTline( String line, String error );
+    Optional<NumericVal> getNumericVal( String id);
 
     /* Double */
     Optional<DoubleVal> getDoubleVal(String param );

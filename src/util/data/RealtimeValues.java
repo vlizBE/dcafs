@@ -194,6 +194,20 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		}
 		return line;
 	}
+	public Optional<NumericVal> getNumericVal( String id){
+		if( id.startsWith("{")){
+			id = id.substring(1,id.length()-2);
+			var pair = id.split(":");
+			switch(pair[0]) {
+				case "d":case "double":
+					return Optional.ofNullable(doubleVals.get(id));
+				case "f": case "flag":
+					return Optional.ofNullable(flagVals.get(id));
+			}
+			return Optional.empty();
+		}
+		return getDoubleVal(id).map( d -> Optional.of((NumericVal)d)).orElse(Optional.ofNullable((flagVals.get(id))));
+	}
 	/* ************************************ D O U B L E V A L ***************************************************** */
 
 	/**
