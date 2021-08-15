@@ -53,9 +53,11 @@ public class TriggerBlock extends AbstractBlock{
     public void doNext(){
         if( tries > 0){
             tries--;
+        }else if( tries == 0 ){
+            if( future != null )
+                future.cancel(false);
         }
         next.forEach( n -> scheduler.submit(()->n.start()));
-        future.cancel(false);
     }
     public void addNext(TaskBlock block) {
         next.add(block);
