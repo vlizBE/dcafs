@@ -1,12 +1,12 @@
 package util.data;
 
-import util.tools.Tools;
 import worker.Datagram;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.concurrent.BlockingQueue;
 
-public class FlagVal {
+public class FlagVal implements NumericVal{
 
     String group="";
     String name="";
@@ -21,14 +21,10 @@ public class FlagVal {
     BlockingQueue<Datagram> dQueue;
 
     public FlagVal(){}
-
-    public FlagVal(boolean val){
-        setState(val);
+    public FlagVal(boolean state){
+        setState(state);
     }
 
-    public static FlagVal newVal(String group, String name){
-        return new FlagVal().group(group).name(name);
-    }
     public static FlagVal newVal(String combined){
         String[] spl = combined.split("_");
         if( spl.length==2) {
@@ -41,11 +37,35 @@ public class FlagVal {
         }
         return new FlagVal().name(spl[0]);
     }
-
+    /* **************************** C O N S T R U C T I N G ******************************************************* */
+    public FlagVal name(String name){
+        this.name=name;
+        return this;
+    }
+    public FlagVal group(String group){
+        this.group=group;
+        return this;
+    }
+    public FlagVal setState( boolean val){
+        /* Keep time of last value */
+        if( keepTime )
+            timestamp= Instant.now().toEpochMilli();
+        state=val;
+        return this;
+    }
+    public FlagVal enableTimekeeping(){
+        keepTime=true;
+        return this;
+    }
     public FlagVal defState( boolean defState){
         this.defState = defState;
         state=defState;
         return this;
+    }
+
+    /* *************************************** U S I N G *********************************************************** */
+    public String getID(){
+        return group.isEmpty()?name:(group+"_"+name);
     }
     public String getGroup(){
         return group;
@@ -53,16 +73,15 @@ public class FlagVal {
     public String getName(){
         return name;
     }
-    public String getID(){
-        return group.isEmpty()?name:(group+"_"+name);
+    @Override
+    public void setValue(double val) {
+        state = Double.compare(val,0.0)!=0;
     }
-    public FlagVal setState( boolean val){
-
-        /* Keep time of last value */
-        if( keepTime )
-            timestamp= Instant.now().toEpochMilli();
-        state=val;
-        return this;
+    public BigDecimal toBigDecimal(){
+        return state?BigDecimal.ONE:BigDecimal.ZERO;
+    }
+    public boolean equals(FlagVal fv){
+        return state == fv.isUp();
     }
     public void raise(){
         state=true;
@@ -76,25 +95,11 @@ public class FlagVal {
     public boolean isDown(){
         return !state;
     }
-    public int getValue(){
+    public double getValue(){
         return state?1:0;
     }
     public String toString(){
         return ""+state;
-    }
-
-    /* Fluid api */
-    public FlagVal name(String name){
-        this.name=name;
-        return this;
-    }
-    public FlagVal group(String group){
-        this.group=group;
-        return this;
-    }
-    public FlagVal enableTimekeeping(){
-        keepTime=true;
-        return this;
     }
 
 }

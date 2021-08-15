@@ -7,6 +7,7 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.data.FlagVal;
+import util.data.NumericVal;
 import util.math.Calculations;
 import util.math.MathFab;
 import util.math.MathUtils;
@@ -34,8 +35,7 @@ public class MathForward extends AbstractForward {
     HashMap<String,String> defines = new HashMap<>();
 
     public enum OP_TYPE{COMPLEX, SCALE, LN, SALINITY, SVC,TRUEWINDSPEED,TRUEWINDDIR}
-    private final ArrayList<DoubleVal> referencedDoubles = new ArrayList<>();
-    private ArrayList<FlagVal> referencedFlags;
+    private ArrayList<NumericVal> referencedNums = new ArrayList<>();
     private int highestI=-1;
 
     public MathForward(String id, String source, BlockingQueue<Datagram> dQueue, DataProviding dp){
@@ -96,9 +96,8 @@ public class MathForward extends AbstractForward {
             return false;
 
         // Reset the references
-        referencedDoubles.clear();
-        if( referencedFlags!=null)
-            referencedFlags.clear();
+        if( referencedNums!=null)
+            referencedNums.clear();
 
         highestI=-1;
 
@@ -488,15 +487,11 @@ public class MathForward extends AbstractForward {
      */
     private BigDecimal[] makeBDArray( String data ){
 
-        if( !referencedDoubles.isEmpty() || referencedFlags!=null) {
-            var refBds = new BigDecimal[referencedDoubles.size()+(referencedFlags==null?0:referencedFlags.size())];
-            for (int a = 0; a < referencedDoubles.size();a++ ){
-                refBds[a]=BigDecimal.valueOf(referencedDoubles.get(a).getValue());
-            }
-            if( referencedFlags!=null ){
-                for (int a = 0; a < referencedFlags.size();a++ ){
-                    refBds[a+referencedDoubles.size()]=BigDecimal.valueOf(referencedFlags.get(a).getValue());
-                }
+        if( referencedNums!=null && !referencedNums.isEmpty()){
+            var refBds = new BigDecimal[referencedNums.size()];
+
+            for (int a = 0; a < referencedNums.size();a++ ){
+                refBds[a]=referencedNums.get(a).toBigDecimal();
             }
             return ArrayUtils.addAll(MathUtils.toBigDecimals(data,delimiter,highestI==-1?0:highestI),refBds);
         }else{
@@ -521,13 +516,15 @@ public class MathForward extends AbstractForward {
                 switch(p[0]){
                     case "d": case "double":
                         var d = dataProviding.getDoubleVal(p[1]);
-                        d.ifPresent(  referencedDoubles::add );
+                        if( referencedNums==null)
+                            referencedNums = new ArrayList<>();
+                        d.ifPresent( referencedNums::add );
                         break;
                     case "f": case "flag":
                         var f = dataProviding.getFlagVal(p[1]);
-                        if( referencedFlags == null)
-                            referencedFlags = new ArrayList<>();
-                        f.ifPresent( referencedFlags::add );
+                        if( referencedNums == null)
+                            referencedNums = new ArrayList<>();
+                        f.ifPresent( referencedNums::add );
                         break;
                     default:
                         Logger.error(id+" (mf)-> Operation containing unknown pair: "+p[0]+":"+p[1]);
@@ -537,6 +534,9 @@ public class MathForward extends AbstractForward {
                 Logger.error(id+" (mf)-> Pair containing odd amount of elements: "+String.join(":",p));
             }
         }
+        if(referencedNums!=null)
+            referencedNums.trimToSize();
+
         // Find the highest used 'i' index
         var is = Pattern.compile("[i][0-9]{1,2}")
                 .matcher(exp)
@@ -569,21 +569,11 @@ public class MathForward extends AbstractForward {
         for( var p : Tools.parseKeyValue(exp,true) ) {
             if (p.length == 2) { // The pair should be an actual pair
                 boolean ok=false; // will be used at the end to check if ok
-                if ( p[0].equals("d")||p[0].equals("double") ) { // if the left of the pair is a double
-                    for( int pos=0;pos<referencedDoubles.size();pos++ ){ // go through the known doubleVals
-                        var d = referencedDoubles.get(pos);
+                if ( p[0].equals("d")||p[0].equals("double")||p[0].equals("f")||p[0].equals("flag") ) { // if the left of the pair is a double
+                    for( int pos=0;pos<referencedNums.size();pos++ ){ // go through the known doubleVals
+                        var d = referencedNums.get(pos);
                         if( d.getID().equalsIgnoreCase(p[1])) { // If a match is found
                             exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + (highestI + pos + 1));
-                            ok=true;
-                            break;
-                        }
-                    }
-                }else if ( p[0].equals("f")||p[0].equals("flag") ) { // if the left of the pair is a flag
-                    for( int pos=0;pos<referencedFlags.size();pos++ ){// go through the known flags
-                        var d = referencedFlags.get(pos);
-                        if( d.getID().equalsIgnoreCase(p[1])) {// if a match is found
-                            int i = highestI + referencedDoubles.size()+ pos + 1;
-                            exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + i);
                             ok=true;
                             break;
                         }

@@ -243,9 +243,9 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			if( createIfNew ) {
 				var par = id.split("_");
 				if (par.length == 2) {
-					doubleVals.put(id, DoubleVal.newVal(par[0], par[1]).setValue(value) );
+					doubleVals.put(id, DoubleVal.newVal(par[0], par[1]).value(value) );
 				} else {
-					doubleVals.put(id, DoubleVal.newVal("", par[0]).setValue(value));
+					doubleVals.put(id, DoubleVal.newVal("", par[0]).value(value));
 				}
 				ok=true;
 			}else{

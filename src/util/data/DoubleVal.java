@@ -5,12 +5,13 @@ import util.math.MathUtils;
 import util.tools.Tools;
 import worker.Datagram;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.concurrent.BlockingQueue;
 import java.util.function.Function;
 
-public class DoubleVal {
+public class DoubleVal implements NumericVal{
 
     String group="";
     String name="";
@@ -54,16 +55,21 @@ public class DoubleVal {
         }
         return new DoubleVal().name(spl[0]);
     }
-
-    public DoubleVal defValue( double defVal){
-        if( !Double.isNaN(defVal) ) {
-            this.defVal = defVal;
-            value=defVal;
-        }
+    /* ********************************* Constructing ************************************************************ */
+    public DoubleVal name(String name){
+        this.name=name;
+        return this;
+    }
+    public DoubleVal group(String group){
+        this.group=group;
         return this;
     }
 
-    public DoubleVal setValue( double val){
+    public DoubleVal unit(String unit){
+        this.unit=unit;
+        return this;
+    }
+    public DoubleVal value( double val){
 
         /* Keep history of passed values */
         if( keepHistory!=0 ) {
@@ -87,43 +93,14 @@ public class DoubleVal {
         }
         return this;
     }
-
-    public double getValue(){
-        return value;
-    }
-    public double getAvg(){
-        double total=0;
-        if(history!=null){
-            for( var h : history){
-                total+=h;
-            }
-        }else{
-            Logger.warn("Asked for the average of "+name+" but no history kept");
-            return value;
+    public DoubleVal defValue( double defVal){
+        if( !Double.isNaN(defVal) ) {
+            this.defVal = defVal;
+            value=defVal;
         }
-        return Tools.roundDouble(total/history.size(),digits==-1?3:digits);
-    }
-    public DoubleVal name(String name){
-        this.name=name;
         return this;
     }
-    public String getName(){
-        return name;
-    }
-    public DoubleVal group(String group){
-        this.group=group;
-        return this;
-    }
-    public String getGroup(){
-        return group;
-    }
-    public String getID(){
-        return group.isEmpty()?name:(group+"_"+name);
-    }
-    public DoubleVal unit(String unit){
-        this.unit=unit;
-        return this;
-    }
+
     public DoubleVal fractionDigits(int fd){
         this.digits=fd;
         return this;
@@ -151,6 +128,44 @@ public class DoubleVal {
 
         triggered.add( new TriggeredCmd(cmd,trigger) );
         return this;
+    }
+
+    /* ***************************************** U S I N G ********************************************************** */
+    public String getGroup(){
+        return group;
+    }
+    public String getName(){
+        return name;
+    }
+    public String getID(){
+        return group.isEmpty()?name:(group+"_"+name);
+    }
+    public void setValue( double val){
+        value(val);
+    }
+    public double getValue(){
+        return value;
+    }
+    public BigDecimal toBigDecimal(){
+        return BigDecimal.valueOf(value);
+    }
+    public double getAvg(){
+        double total=0;
+        if(history!=null){
+            for( var h : history){
+                total+=h;
+            }
+        }else{
+            Logger.warn("Asked for the average of "+name+" but no history kept");
+            return value;
+        }
+        return Tools.roundDouble(total/history.size(),digits==-1?3:digits);
+    }
+    public boolean equals( DoubleVal dv){
+        return Double.compare(value,dv.getValue())==0;
+    }
+    public boolean equals( double d){
+        return Double.compare(value,d)==0;
     }
     public String toString(){
         return value+unit;
