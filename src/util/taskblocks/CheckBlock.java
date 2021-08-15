@@ -43,8 +43,12 @@ public class CheckBlock extends AbstractBlock{
         for( int a=0;a<steps.size();a++)
             work[a]=steps.get(a).apply(work);
         var pass = Double.compare(work[resultIndex],0.0)>0;
-        if( pass )
+        if( pass ) {
             doNext();
+            parentBlock.ifPresent( TaskBlock::nextOk );
+        }else{
+            parentBlock.ifPresent( TaskBlock::nextFailed );
+        }
         Logger.info( "Result of ori: "+pass);
         return pass;
     }

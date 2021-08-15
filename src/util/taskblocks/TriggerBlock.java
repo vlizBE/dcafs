@@ -4,6 +4,9 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import util.tools.TimeTools;
 
+import java.time.*;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -18,6 +21,11 @@ public class TriggerBlock extends AbstractBlock{
     ScheduledExecutorService scheduler;
     ScheduledFuture future;
 
+    /* Time */
+    LocalTime time;
+    ArrayList<DayOfWeek> triggerDays;
+    boolean utc=false;
+
     public TriggerBlock( ScheduledExecutorService scheduler ){
         this.scheduler=scheduler;
     }
@@ -26,6 +34,16 @@ public class TriggerBlock extends AbstractBlock{
     }
     @Override
     public boolean start(){
+        Logger.info("Trigger started!");
+
+        if( time!=null ) {
+            interval_ms = calcTimeDelaySeconds();
+            Logger.info("Next time event: "+TimeTools.convertPeriodtoString(interval_ms,TimeUnit.SECONDS));
+        }
+        if(interval_ms==-1){
+            Logger.error("Invalid interval time, not starting");
+            return false;
+        }
         if(tries==-1||tries>1){ // repeating infinite or finite
             future = scheduler.scheduleAtFixedRate(()->doNext(),delay_ms,interval_ms, TimeUnit.MILLISECONDS);
             return true;
@@ -33,7 +51,7 @@ public class TriggerBlock extends AbstractBlock{
             if( interval_ms==0) {
                 next.forEach( n -> scheduler.submit(()->n.start()));
             }else {
-                scheduler.schedule(() -> doNext(), interval_ms, TimeUnit.MILLISECONDS);
+                scheduler.schedule(() -> doNext(), interval_ms, time==null?TimeUnit.MILLISECONDS:TimeUnit.SECONDS);
             }
             return true;
         }
@@ -42,22 +60,31 @@ public class TriggerBlock extends AbstractBlock{
 
     @Override
     public void nextOk() {
+        if( tries > 1){
 
+        }
     }
 
     @Override
     public void nextFailed() {
+        if(future==null)
+            return;
 
+        if( tries >= 1){
+            tries--;
+            Logger.warn("Check failed, "+tries+" retries left");
+        }
+        if( tries <= 0 ) {
+            future.cancel(false);
+            Logger.error("Successive check failed, cancelling.");
+        }
     }
 
     public void doNext(){
-        if( tries > 0){
-            tries--;
-        }else if( tries == 0 ){
-            if( future != null )
-                future.cancel(false);
-        }
         next.forEach( n -> scheduler.submit(()->n.start()));
+
+        if( time!=null )
+            start();
     }
     public void addNext(TaskBlock block) {
         next.add(block);
@@ -73,7 +100,13 @@ public class TriggerBlock extends AbstractBlock{
         var values = value.split(",");
 
         switch(type){ //actually all are the same, just different kind of repeat
-            case "time": // Has a timestamp and a days of week option
+            case "time":  // Has a timestamp and a days of week option
+            case "utctime":
+                utc=true;
+            case "localtime":
+                time = LocalTime.parse( values[0], DateTimeFormatter.ISO_LOCAL_TIME );
+                triggerDays = TimeTools.convertDAY(values.length==2?values[1]:"");
+                tries=1;
                 break;
             case "delay": // Has a delay
                 interval_ms = TimeTools.parsePeriodStringToMillis(value);
@@ -96,12 +129,31 @@ public class TriggerBlock extends AbstractBlock{
                 Logger.error("No such type: "+type);
                 return Optional.empty();
         }
-        if( prev!=null) {
-            prev.addNext(this);
-            parentBlock=prev;
-        }else{
-            srcBlock=true;
-        }
+        parentBlock = Optional.ofNullable(prev);
+        parentBlock.ifPresentOrElse( tb->tb.addNext(this), ()->srcBlock=true);
+
         return Optional.of(this);
+    }
+    private long calcTimeDelaySeconds(){
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+        if( !utc )
+            now = LocalDateTime.now();
+
+        LocalDateTime triggerTime = now.with(time).plusNanos(now.getNano()); // Use the time of the task
+
+        if( triggerTime.isBefore(now.plusNanos(100000)) ) // If already happened today
+            triggerTime=triggerTime.plusDays(1);
+
+        if( triggerDays.isEmpty()){ // If the list of days is empty
+            return -1;
+        }
+        int x=0;
+        while( !triggerDays.contains(triggerTime.getDayOfWeek()) ){
+            triggerTime=triggerTime.plusDays(1);
+            x++;
+            if( x > 8 ) //shouldn't be possible, just to be sure
+                return -1;
+        }
+        return Duration.between( now, triggerTime ).getSeconds();
     }
 }
