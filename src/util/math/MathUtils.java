@@ -582,7 +582,12 @@ public class MathUtils {
         final Double db2 ;
         final int i2;
         Function<Double[],Double> proc=null;
-
+        boolean reverse = first.startsWith("!");
+        if( reverse ) {
+            op = "!";
+            first=first.substring(1);
+            second="";
+        }
         try{
             if(NumberUtils.isCreatable(first) ) {
                 db1 = NumberUtils.createDouble(first);
@@ -592,9 +597,14 @@ public class MathUtils {
                 int index = NumberUtils.createInteger( first.substring(1));
                 i1 = first.startsWith("o")?index:index+offset;
             }
-            if(second.isEmpty())
-                return i1==-1?x->db1:x->x[i1];
+            if(second.isEmpty()) {
+                if( op.equals("!")){
+                    return x -> Double.compare(x[i1],1)>=0?0.0:1.0;
+                }else{
+                    return i1 == -1 ? x -> db1 : x -> x[i1];
+                }
 
+            }
             if(NumberUtils.isCreatable(second) ) {
                 db2 = NumberUtils.createDouble(second);
                 i2=-1;
@@ -613,6 +623,9 @@ public class MathUtils {
 
 
         switch( op ){
+            case "!":
+                proc = x -> Double.compare(x[i1],1)>=0?0.0:1.0;
+                break;
             case "+":
                 try {
                     if (db1 != null && db2 != null) { // meaning both numbers

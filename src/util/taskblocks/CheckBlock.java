@@ -92,10 +92,13 @@ public class CheckBlock extends AbstractBlock{
                 // Split part on && and ||
                 var and_ors = part.replaceAll("[&|!]{2}",",").split(",");
                 for( var and_or : and_ors) {
+                    boolean reverse = and_or.startsWith("!");
                     var comps = MathUtils.extractCompare(and_or);
                     for (var c : comps) {
-                        if(c.matches("[io]+\\d+")||c.matches("\\d*")){
-                            // just copy these?
+                        if( c.isEmpty()) {
+                            Logger.info("Found !?");
+                        }else if(c.matches("[io]+\\d+")||c.matches("\\d*")){
+                                // just copy these?
                         }else {
                             int index = subFormulas.indexOf(c);
                             if (index == -1) {
@@ -114,6 +117,7 @@ public class CheckBlock extends AbstractBlock{
                 part=part.replace("&&","*");
                 part=part.replace("||","+");
                 part=part.replace("!|","-");
+
                 set=set.replace("$$",part);
 
                 // replace the sub part in the original set with a reference to the last sub-formula
@@ -124,13 +128,14 @@ public class CheckBlock extends AbstractBlock{
                 Logger.error("Didn't find opening bracket");
             }
         }
-        subFormulas.add(set);
+        if( set.length()!=2)
+            subFormulas.add(set);
         resultIndex=subFormulas.size()-1;
 
         // Convert the subformulas to functions
         subFormulas.forEach( x -> {
             var parts = MathUtils.extractParts(x);
-            steps.add(MathUtils.decodeDoublesOp(parts.get(0),parts.get(2),parts.get(1),subFormulas.size()));
+            steps.add(MathUtils.decodeDoublesOp(parts.get(0),parts.size()==3?parts.get(2):"",parts.get(1),subFormulas.size()));
         });
 
         if( prev!=null) {
