@@ -12,11 +12,11 @@ public interface TaskBlock {
     boolean hasSharedMem();
     ArrayList<NumericVal> getSharedMem();
 
-    Optional<TaskBlock> build(TaskBlock prev, String set);
     boolean addNext(TaskBlock block);
-
-
-
+    Optional<TaskBlock> getParent();
+    TaskBlock link( TaskBlock parent);
+    boolean addData(String data);
+    boolean build();
     boolean start();
 
     void nextOk();

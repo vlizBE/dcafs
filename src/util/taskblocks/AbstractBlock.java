@@ -22,12 +22,35 @@ public abstract class AbstractBlock implements TaskBlock{
     public ArrayList<NumericVal> getSharedMem(){
         return sharedMem;
     }
-    abstract void doNext();
 
+    /* Hierarchy */
+    public TaskBlock link( TaskBlock parent ){
+        parentBlock = Optional.ofNullable(parent);
+        parentBlock.ifPresentOrElse( tb->tb.addNext(this), ()->srcBlock=true);
+
+        if( srcBlock ){
+            sharedMem = new ArrayList<>();
+        }else{
+            sharedMem = parent.getSharedMem();
+        }
+        return this;
+    }
+    public Optional<TaskBlock> getParent(){
+        return parentBlock;
+    }
     public Optional<TaskBlock> getSourceBlock(){
         if( srcBlock )
             return Optional.of(this);
         return parentBlock.map(pb->pb.getSourceBlock()).orElse(Optional.empty());
     }
-
+    public boolean addNext(TaskBlock block) {
+        next.add(block);
+        return true;
+    }
+    public void doNext() {
+        next.forEach( TaskBlock::start);
+    }
+    public boolean addData(String data){
+        return true;
+    }
 }
