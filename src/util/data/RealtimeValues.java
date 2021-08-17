@@ -89,11 +89,14 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	private void processRtvalElement(Element rtval, String id, double defDouble, String defText, boolean defFlag ){
 		switch( rtval.getTagName() ){
 			case "double":
+				int scale = XMLtools.getIntAttribute(rtval,"fractiondigits",-1);
+				if( scale == -1)
+					scale = XMLtools.getIntAttribute(rtval,"scale",-1);
 				var dv = getOrAddDoubleVal(id);
 				dv.name(XMLtools.getChildValueByTag(rtval,"name",dv.getName()))
 						.group(XMLtools.getChildValueByTag(rtval,"group",dv.getGroup()))
 						.unit(XMLtools.getStringAttribute(rtval,"unit",""))
-						.fractionDigits(XMLtools.getIntAttribute(rtval,"fractiondigits",-1))
+						.fractionDigits(scale)
 						.defValue(XMLtools.getDoubleAttribute(rtval,"default",defDouble))
 						.enableHistory(XMLtools.getChildIntValueByTag(rtval,"history",-1));
 					if( XMLtools.getBooleanAttribute(rtval,"keeptime",false) )
