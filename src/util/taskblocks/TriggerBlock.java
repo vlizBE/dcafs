@@ -7,7 +7,6 @@ import util.tools.TimeTools;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -29,11 +28,66 @@ public class TriggerBlock extends AbstractBlock{
     ArrayList<DayOfWeek> triggerDays;
     boolean utc=false;
 
-    public TriggerBlock( ScheduledExecutorService scheduler ){
+    public TriggerBlock( ScheduledExecutorService scheduler, String set ){
         this.scheduler=scheduler;
+        ori=set;
     }
-    public static TriggerBlock prepBlock( ScheduledExecutorService scheduler ){
-        return new TriggerBlock(scheduler);
+    public static TriggerBlock prepBlock( ScheduledExecutorService scheduler, String set ){
+        return new TriggerBlock(scheduler,set);
+    }
+    @Override
+    public boolean build( ) {
+
+        if( !ori.contains(":"))
+            return false;
+
+        String type = ori.substring(0,ori.indexOf(":"));
+        String value = ori.substring(ori.indexOf(":")+1);
+        var values = value.split(",");
+
+        switch(type){ //actually all are the same, just different kind of repeat
+            case "time":  // Has a timestamp and a days of week option
+            case "utctime":
+                utc=true;
+            case "localtime":
+                time = LocalTime.parse( values[0], DateTimeFormatter.ISO_LOCAL_TIME );
+                triggerDays = TimeTools.convertDAY(values.length==2?values[1]:"");
+                tries=1;
+                this.trigType =TYPE.CLOCK;
+                break;
+            case "delay": // Has a delay
+                interval_ms = TimeTools.parsePeriodStringToMillis(value);
+                tries=1;
+                break;
+            case "interval": // Has an optional initial delay and an interval
+                delay_ms = TimeTools.parsePeriodStringToMillis(values[0]);
+                if( values.length==2){
+                    interval_ms = TimeTools.parsePeriodStringToMillis(values[1]);
+                }else{
+                    interval_ms = delay_ms;
+                }
+                tries=-1;
+                break;
+            case "retry": // Has an interval and an amount of attempts
+                interval_ms = TimeTools.parsePeriodStringToMillis(values[0]);
+                tries= values.length==2?NumberUtils.toInt(values[1],-1):-1;
+                trigType =TYPE.RETRY;
+                break;
+            case "waitfor":
+                interval_ms = TimeTools.parsePeriodStringToMillis(values[0]);
+                tries= values.length==2?NumberUtils.toInt(values[1],-1):-1;
+                trigType=TYPE.WAITFOR;
+                break;
+            case "while":
+                interval_ms = TimeTools.parsePeriodStringToMillis(values[0]);
+                tries= values.length==2?NumberUtils.toInt(values[1],-1):-1;
+                trigType=TYPE.WHILE;
+                break;
+            default:
+                Logger.error("No such type: "+type);
+                return false;
+        }
+        return true;
     }
     @Override
     public boolean start(){
@@ -106,12 +160,14 @@ public class TriggerBlock extends AbstractBlock{
         }
     }
 
+    @Override
     public void doNext(){
         next.forEach( n -> scheduler.submit(()->n.start()));
 
         if( time!=null )
             start();
     }
+    @Override
     public boolean addNext(TaskBlock block) {
         if( next.size()==1 && (trigType==TYPE.WAITFOR || trigType==TYPE.WHILE) ){
             Logger.error("Tried to add more than one block to a waitfor/while");
@@ -124,63 +180,7 @@ public class TriggerBlock extends AbstractBlock{
         }
         return true;
     }
-    @Override
-    public Optional<TaskBlock> build(TaskBlock prev, String set) {
-        ori=set;
-        if( !set.contains(":"))
-            return Optional.empty();
 
-        String type = set.substring(0,set.indexOf(":"));
-        String value = set.substring(set.indexOf(":")+1);
-        var values = value.split(",");
-
-        switch(type){ //actually all are the same, just different kind of repeat
-            case "time":  // Has a timestamp and a days of week option
-            case "utctime":
-                utc=true;
-            case "localtime":
-                time = LocalTime.parse( values[0], DateTimeFormatter.ISO_LOCAL_TIME );
-                triggerDays = TimeTools.convertDAY(values.length==2?values[1]:"");
-                tries=1;
-                this.trigType =TYPE.CLOCK;
-                break;
-            case "delay": // Has a delay
-                interval_ms = TimeTools.parsePeriodStringToMillis(value);
-                tries=1;
-                break;
-            case "interval": // Has an optional initial delay and an interval
-                delay_ms = TimeTools.parsePeriodStringToMillis(values[0]);
-                if( values.length==2){
-                    interval_ms = TimeTools.parsePeriodStringToMillis(values[1]);
-                }else{
-                    interval_ms = delay_ms;
-                }
-                tries=-1;
-                break;
-            case "retry": // Has an interval and an amount of attempts
-                interval_ms = TimeTools.parsePeriodStringToMillis(values[0]);
-                tries= values.length==2?NumberUtils.toInt(values[1],-1):-1;
-                trigType =TYPE.RETRY;
-                break;
-            case "waitfor":
-                interval_ms = TimeTools.parsePeriodStringToMillis(values[0]);
-                tries= values.length==2?NumberUtils.toInt(values[1],-1):-1;
-                trigType=TYPE.WAITFOR;
-                break;
-            case "while":
-                interval_ms = TimeTools.parsePeriodStringToMillis(values[0]);
-                tries= values.length==2?NumberUtils.toInt(values[1],-1):-1;
-                trigType=TYPE.WHILE;
-                break;
-            default:
-                Logger.error("No such type: "+type);
-                return Optional.empty();
-        }
-        parentBlock = Optional.ofNullable(prev);
-        parentBlock.ifPresentOrElse( tb->tb.addNext(this), ()->srcBlock=true);
-
-        return Optional.of(this);
-    }
     private long calcTimeDelaySeconds(){
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         if( !utc )
