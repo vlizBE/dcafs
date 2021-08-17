@@ -7,7 +7,6 @@ import util.math.MathUtils;
 import util.tools.Tools;
 
 import java.util.ArrayList;
-import java.util.Optional;
 import java.util.function.Function;
 
 public class CheckBlock extends AbstractBlock{
@@ -17,18 +16,17 @@ public class CheckBlock extends AbstractBlock{
     int resultIndex;
     boolean negate = false;
 
-    public CheckBlock(DataProviding dp){
+    public CheckBlock(DataProviding dp,String set){
         this.dp=dp;
+        this.ori=set;
     }
-    public static CheckBlock prepBlock(DataProviding dp){
-        return new CheckBlock(dp);
+    public static CheckBlock prepBlock(DataProviding dp, String set){
+        return new CheckBlock(dp,set);
     }
     public void setNegate(boolean neg){
         negate=neg;
     }
-    public void doNext() {
-        next.forEach( n->n.start() );
-    }
+
     public void nextOk(){
 
     }
@@ -58,46 +56,41 @@ public class CheckBlock extends AbstractBlock{
         return pass;
     }
 
-    public Optional<TaskBlock> build(TaskBlock prev, String set){
-        ori=set;
-        if( prev!=null && prev.hasSharedMem()) {
-            sharedMem = prev.getSharedMem();
-        }else {
-            sharedMem=new ArrayList<>();
-        }
+    public boolean build(){
+
         //Figure out brackets?
-        set=Tools.parseExpression(set); // rewrite to math symbols
+        ori=Tools.parseExpression(ori); // rewrite to math symbols
         // Figure out the realtime stuff
-        set = dp.buildNumericalMem(set,sharedMem,0);
+        ori = dp.buildNumericalMem(ori,sharedMem,0);
 
         // Figure out the brackets?
         // First check if the amount of brackets is correct
-        int opens = StringUtils.countMatches(set,"(");
-        int closes = StringUtils.countMatches(set,")");
+        int opens = StringUtils.countMatches(ori,"(");
+        int closes = StringUtils.countMatches(ori,")");
         if( opens!=closes)
-            return Optional.empty();
+            return false;
 
-        set = MathUtils.checkBrackets(set); // Then make sure it has surrounding brackets
+        ori = MathUtils.checkBrackets(ori); // Then make sure it has surrounding brackets
 
         // Next go through the brackets from left to right (inner)
         var subFormulas = new ArrayList<String>(); // List to contain all the sub-formulas
 
-        while( set.contains("(") ){ // Look for an opening bracket
-            int close = set.indexOf(")"); // Find the first closing bracket
+        while( ori.contains("(") ){ // Look for an opening bracket
+            int close = ori.indexOf(")"); // Find the first closing bracket
             int look = close-1; // start looking from one position left of the closing bracket
             int open = -1; // reset the open position to the not found value
 
             while( look>=0 ){ // while we didn't traverse the full string
-                if( set.charAt(look)=='(' ){ // is the current char an opening bracket?
+                if( ori.charAt(look)=='(' ){ // is the current char an opening bracket?
                     open = look; // if so, store this position
                     break;// and quite the loop
                 }
                 look --;//if not, decrement the pointer
             }
             if( open !=-1 ){ // if the opening bracket was found
-                String part = set.substring(open+1,close); // get the part between the brackets
-                String piece = set.substring(open,close+1);
-                set = set.replace(piece,"$$");
+                String part = ori.substring(open+1,close); // get the part between the brackets
+                String piece = ori.substring(open,close+1);
+                ori = ori.replace(piece,"$$");
                 // Split part on && and ||
 
                 var and_ors = part.split("[&|!]{2}",0);
@@ -129,18 +122,18 @@ public class CheckBlock extends AbstractBlock{
                 if(part.contains("!|"))
                     part="("+part.replace("!|","+")+")%2";
 
-                set=set.replace("$$",part);
+                ori=ori.replace("$$",part);
 
                 // replace the sub part in the original set with a reference to the last sub-formula
 
                 if( true )
-                    Logger.info("=>Formula: "+set);
+                    Logger.info("=>Formula: "+ori);
             }else{
                 Logger.error("CheckBlock -> Didn't find opening bracket");
             }
         }
-        if( set.length()!=2)
-            subFormulas.add(set);
+        if( ori.length()!=2)
+            subFormulas.add(ori);
         resultIndex=subFormulas.size()-1;
 
         // Convert the subformulas to functions
@@ -149,13 +142,6 @@ public class CheckBlock extends AbstractBlock{
             steps.add( MathUtils.decodeDoublesOp(parts.get(0),parts.size()==3?parts.get(2):"",parts.get(1),subFormulas.size()) );
         });
 
-        parentBlock = Optional.ofNullable(prev);
-        parentBlock.ifPresentOrElse( tb->tb.addNext(this), ()->srcBlock=true);
-
-        return Optional.of(this);
-    }
-    public boolean addNext(TaskBlock block) {
-        next.add(block);
         return true;
     }
 }
