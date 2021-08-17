@@ -206,7 +206,8 @@ public class ForwardPath{
         }
     }
     public void removeTarget( Writable wr){
-
+        if(stepsForward==null)
+            return;
         if( stepsForward.isEmpty() ) {
             targets.remove(wr);// Stop giving data
         }else{
