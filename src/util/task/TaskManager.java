@@ -334,15 +334,29 @@ public class TaskManager implements CollectorFuture {
 		TaskSet ts = tasksets.get(id);
 		if (ts != null) {
 			if (ts.getTaskCount() != 0) {
-				Logger.tag(TINY_TAG).debug("[" + this.id + "] Taskset started " + id);
-				if (ts.getRunType() == RUNTYPE.ONESHOT) {
-					startTasks(ts.getTasks());
-					return "Taskset should be started: " + id;
-				} else if (ts.getRunType() == RUNTYPE.STEP) {
-					startTask(ts.getTasks().get(0));
-					return "Started first task of taskset: " + id;
-				} else {
-					return "Didn't start anything...! Runtype=" + ts.getRunType();
+				if( ts.doReq(dp,commandPool.getActiveIssues()) ) {
+					Logger.tag(TINY_TAG).debug("[" + this.id + "] Taskset started " + id);
+					if (ts.getRunType() == RUNTYPE.ONESHOT) {
+						if( ts.doReq(dp,commandPool.getActiveIssues())) {
+							startTasks(ts.getTasks());
+							return "Taskset should be started: " + id;
+						}else{
+							return "Taskset NOT started: " + id+" if failed "+ts.getReqInfo();
+						}
+
+					} else if (ts.getRunType() == RUNTYPE.STEP) {
+						if( ts.doReq(dp,commandPool.getActiveIssues())) {
+							startTask(ts.getTasks().get(0));
+							return "Started first task of taskset: " + id;
+						}else{
+							return "Taskset NOT started: " + id+" if failed "+ts.getReqInfo();
+						}
+					} else {
+						return "Didn't start anything...! Runtype=" + ts.getRunType();
+					}
+				}else{
+					Logger.warn("Check failed for "+ts.getID()+" : "+ts.getReqInfo() );
+					return "Check failed for "+ts.getID()+" : "+ts.getReqInfo();
 				}
 			} else {
 				Logger.tag(TINY_TAG).info("[" + this.id + "] TaskSet " + ts.getDescription() + " is empty!");
@@ -1189,6 +1203,7 @@ public class TaskManager implements CollectorFuture {
 					description = XMLtools.getStringAttribute(el,"info","");
 
 				String tasksetID = el.getAttribute("id");
+				String req = XMLtools.getStringAttribute(el,"req","");
 				String failure = el.getAttribute("failure");						
 				int repeats = XMLtools.getIntAttribute(el, "repeat", 0);
 
@@ -1208,6 +1223,7 @@ public class TaskManager implements CollectorFuture {
 						break;
 				}
 				TaskSet set = addTaskSet(tasksetID, description,  run, repeats, failure);
+				set.setReq( req );
 				set.interruptable = XMLtools.getBooleanAttribute(el, "interruptable", true);
 
 				sets++;

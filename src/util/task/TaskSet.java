@@ -1,6 +1,7 @@
 package util.task;
 
 import org.tinylog.Logger;
+import util.data.DataProviding;
 import util.task.TaskManager.RUNTYPE;
 
 import java.util.ArrayList;
@@ -20,6 +21,8 @@ public class TaskSet {
     boolean interruptable = true;
     String managerID = "???";
 
+    RtvalCheck req;
+
     public TaskSet( String id, String description ) {
         this.description=description;
         this.id=id.toLowerCase();
@@ -34,6 +37,21 @@ public class TaskSet {
         this.repeat = repeats;
 
         Logger.tag("TASK").info("["+managerID+"] Created taskset: "+description+" "+id+" "+run+" reps:"+repeats);
+    }
+    public void setReq( String check ){
+        if( !check.isEmpty()){
+            req = new RtvalCheck(check);
+        }
+    }
+    public String getReqInfo(){
+        if( req==null)
+            return "";
+        return req.toString();
+    }
+    public boolean doReq(DataProviding dp, ArrayList<String> issues ){
+        if( req==null)
+            return true;
+        return req.test(dp,issues);
     }
     public void setManagerID( String manID ){
         managerID=manID;
