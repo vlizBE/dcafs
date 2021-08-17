@@ -198,7 +198,7 @@ public class ForwardPool implements Commandable {
 
                 XMLfab fab = XMLfab.withRoot(settingsPath,"dcafs","maths"); // get a fab pointing to the maths node
 
-                if( fab.selectParent("math","id",cmds[1]).isEmpty() )
+                if( fab.selectChildAsParent("math","id",cmds[1]).isEmpty() )
                     return "No such math node '"+cmds[1]+"'";
 
                 switch( param ){
@@ -402,7 +402,7 @@ public class ForwardPool implements Commandable {
 
                 var p = value.split(",");
                 var fab = XMLfab.withRoot(settingsPath,"dcafs","editors");
-                fab.selectOrCreateParent("editor","id",cmds[1]);
+                fab.selectOrAddChildAsParent("editor","id",cmds[1]);
 
                 switch(type){
                     /* Splitting */
@@ -668,7 +668,7 @@ public class ForwardPool implements Commandable {
 
                 XMLfab fab = XMLfab.withRoot(settingsPath,"dcafs","filters"); // get a fab pointing to the maths node
 
-                if( fab.selectParent("filter","id",cmds[1]).isEmpty() )
+                if( fab.selectChildAsParent("filter","id",cmds[1]).isEmpty() )
                     return "No such filter node '"+cmds[1]+"'";
 
                 if (param.equals("label")) {
@@ -752,7 +752,7 @@ public class ForwardPool implements Commandable {
     /* ******************************************** P A T H ******************************************************** */
     public String replyToPathCmd(String cmd, Writable wr, boolean html ){
         var cmds =cmd.split(",");
-
+        boolean blank=false;
         switch(cmds[0]){
             case "?":
                 return "?";
@@ -764,25 +764,66 @@ public class ForwardPool implements Commandable {
                 paths.get(cmds[1]).readFromXML(ele.get());
                 return "Path reloaded";
             case "addblank":
+                blank=true;
                 XMLfab.withRoot(settingsPath,"dcafs","datapaths")
-                        .addChild("path").attr("id",cmds[1]).attr("src",cmds.length>2?cmds[2]:"")
+                        .selectOrAddChildAsParent("path","id",cmds[1])
+                            .attr("src",cmds.length>2?cmds[2]:"")
+                            .attr("delimiter",",")
                         .build();
-                return "Blank added";
-            case "addnodes":
-                if( paths.get(cmds[1])==null)
-                    return "No such path "+cmds[1];
+                if( cmds.length==3)
+                    return "Blank added";
+            case "addnodes": case "addnode":
+                if( !blank ) {
+                    if (paths.get(cmds[1]) == null)
+                        return "No such path " + cmds[1];
+                }
                 var fab = XMLfab.withRoot(settingsPath,"dcafs","datapaths")
-                        .selectOrCreateParent("path","id",cmds[1]);
+                        .selectOrAddChildAsParent("path","id",cmds[1]);
 
-                for( var c : cmds[2].toCharArray()){
+                int index=0;
+                char prev='A';
+                for( var c : cmds[2+(blank?1:0)].toCharArray()){
+                    int i = fab.getChildren("generic").size()+1; // get the amount of generic parentnodes
                     switch(c) {
-                        case 'F': fab.addChild("filter",".").attr("type","start");
+                        case 'F': fab.addChild("filter",".").attr("type",""); break;
+                        case 'f':
+                            if( prev=='f'){
+                                fab.selectOrAddLastChildAsParent("filter").addChild("rule",".").attr("type","").up();
+                            }else{
+                                fab.addChild("filter").down().addChild("rule",".").attr("type","").up();
+                            }
                             break;
-                        case 'E': fab.addChild("editor",".").attr("type","resplit");
+                        case 'E': fab.addChild("editor",".").attr("type",""); break;
+                        case 'e':
+                            if( prev=='e'){
+                                fab.selectOrAddLastChildAsParent("editor").addChild("edit",".").attr("type","").up();
+                            }else{
+                                fab.addChild("editor").down().addChild("edit",".").attr("type","").up();
+                            }
                             break;
-                        case 'M': fab.addChild("math","i0=i0+1");
+                        case 'M': fab.addChild("math","i0=i0+1"); break;
+                        case 'm':
+                            if( prev=='m'){
+                                fab.selectOrAddLastChildAsParent("math").addChild("op",".").attr("type","").up();
+                            }else{
+                                fab.addChild("math").down().addChild("op",".").attr("type","").up();
+                            }
+                            break;
+                        case 'G':
+                            fab.addChild( "generic").attr("id",cmds[1]+"_"+i);
+                            break;
+                        case 'i':
+                            fab.selectOrAddLastChildAsParent("generic","id",cmds[1]+"_"+i);
+                            index = fab.getChildren("*").size()+1;
+                            fab.addChild("integer",cmds[1]+"_").attr("index",index).up();
+                            break;
+                        case 'r':
+                            fab.selectOrAddLastChildAsParent("generic","id",cmds[1]+"_"+i);
+                            index = fab.getChildren("*").size()+1;
+                            fab.addChild("real",cmds[1]+"_").attr("index",index).up();
                             break;
                     }
+                    prev = c;
                 }
                 if( fab.build()!=null)
                     return "XML altered";
