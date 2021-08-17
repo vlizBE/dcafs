@@ -118,7 +118,7 @@ public class EditorForward extends AbstractForward{
     @Override
     public boolean writeToXML(XMLfab fab) {
         fab.digRoot("editors");
-        fab.selectOrCreateParent("editor","id",id);
+        fab.selectOrAddChildAsParent("editor","id",id);
 
         /* Attributes and nodes that are the same for all forwards fe.label and src */
         writeBasicsToXML(fab);
@@ -371,6 +371,10 @@ public class EditorForward extends AbstractForward{
                 .map(MatchResult::group)
                 .toArray(String[]::new);
 
+        if(is.length==0) {
+            Logger.warn(id+"(ef)-> No original data referenced in the resplit");
+            return;
+        }
 
         int[] indexes = new int[is.length];
         ArrayList<String> fillers = new ArrayList<>();

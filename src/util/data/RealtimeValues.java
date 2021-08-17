@@ -540,17 +540,17 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		var keys = doubleVals.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(e->e.getKey()).collect(Collectors.toList());
 		for( var dv : keys ){
 			var dd = doubleVals.get(dv);
-			fab.selectOrCreateParent("double","id",dv)
+			fab.selectOrAddChildAsParent("double","id",dv)
 					.attr("unit",dd.unit)
 					.up();
 		}
 		keys = rttext.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(e->e.getKey()).collect(Collectors.toList());
 		for( var dt : keys ){
-			fab.selectOrCreateParent("text","id",dt).up();
+			fab.selectOrAddChildAsParent("text","id",dt).up();
 		}
 		keys = flagVals.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(e->e.getKey()).collect(Collectors.toList());
 		for( var dt : keys ){
-			fab.selectOrCreateParent("flag","id",dt).up();
+			fab.selectOrAddChildAsParent("flag","id",dt).up();
 		}
 		fab.build();
 		return "New rtvals/rttexts/flags added";

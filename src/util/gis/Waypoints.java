@@ -145,7 +145,7 @@ public class Waypoints implements Commandable {
         for( Waypoint wp : wps.values() ){
             if( !wp.isTemp() || includeTemp){
                 cnt++;
-                fab.addParent(XML_CHILD_TAG)
+                fab.addParentToRoot(XML_CHILD_TAG)
                         .attr("lat",wp.getLat())
                         .attr("lat",wp.getLon())
                         .attr("range",wp.getRange());
@@ -342,7 +342,7 @@ public class Waypoints implements Commandable {
                 }
             case "addblank":
                 XMLfab.withRoot(settingsPath,"dcafs","settings")
-                        .addParent(XML_TAG,"Waypoints are listed here")
+                        .addParentToRoot(XML_TAG,"Waypoints are listed here")
                             .attr("lat","lat_rtval")
                             .attr("lon","lon_rtval")
                             .attr("sog","sog_rtval")

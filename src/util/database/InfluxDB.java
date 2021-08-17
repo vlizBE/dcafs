@@ -75,7 +75,7 @@ public class InfluxDB extends Database{
         if( idleTime!=-1)
             idle = TimeTools.convertPeriodtoString(maxAge, TimeUnit.SECONDS);
 
-        fab.selectOrCreateParent("server","id", id.isEmpty()?"remote":id).attr("type","influx")
+        fab.selectOrAddChildAsParent("server","id", id.isEmpty()?"remote":id).attr("type","influx")
                 .alterChild("db","name").attr("user",user).attr("pass",pass)
                 .alterChild("setup").attr("idletime",idle).attr("flushtime",flush).attr("batchsize",maxQueries)
                 .alterChild("address",address)

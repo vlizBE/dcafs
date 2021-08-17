@@ -6,7 +6,6 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
-import util.data.FlagVal;
 import util.data.NumericVal;
 import util.math.Calculations;
 import util.math.MathFab;
@@ -174,9 +173,9 @@ public class MathForward extends AbstractForward {
         xmlOk=true;
 
         fab.digRoot(getXmlChildTag()+"s"); // go down to <maths>
-        if( fab.selectParent(getXmlChildTag(),"id",id).isEmpty() ){
+        if( fab.selectChildAsParent(getXmlChildTag(),"id",id).isEmpty() ){
             fab.comment("Some info on what the "+id+" "+getXmlChildTag()+" does");
-            fab.addParent(getXmlChildTag()).attr("id",id);
+            fab.addParentToRoot(getXmlChildTag()).attr("id",id);
         }
 
         fab.attr("delimiter",delimiter);

@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
 import java.util.function.Predicate;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 public class FilterForward extends AbstractForward {
@@ -106,9 +105,9 @@ public class FilterForward extends AbstractForward {
         xmlOk=true;
 
         fab.digRoot(getXmlChildTag()+"s"); // go down to <filters>
-        if( fab.selectParent(getXmlChildTag(),"id",id).isEmpty() ){
+        if( fab.selectChildAsParent(getXmlChildTag(),"id",id).isEmpty() ){
             fab.comment("Some info on what the "+id+" "+getXmlChildTag()+" does");
-            fab.addParent(getXmlChildTag()).attr("id",id); // adds a parent to the root
+            fab.addParentToRoot(getXmlChildTag()).attr("id",id); // adds a parent to the root
         }
 
         writeBasicsToXML(fab);

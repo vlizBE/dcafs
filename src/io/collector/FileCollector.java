@@ -197,7 +197,7 @@ public class FileCollector extends AbstractCollector{
      * @param path The path of the file
      */
     public static void addBlankToXML(XMLfab fab, String id, String source, String path ){
-        fab.selectOrCreateParent("collectors")
+        fab.selectOrAddChildAsParent("collectors")
                 .addChild("file").attr("id",id).attr("src",source)
                     .down()
                     .addChild("path",path)

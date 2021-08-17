@@ -1237,7 +1237,7 @@ public class TaskManager implements CollectorFuture {
 	 */
 	public boolean addBlankTaskset( String id ){
 		var fab = XMLfab.withRoot(xmlPath,"tasklist","tasksets");
-		fab.addParent("taskset").attr("id",id).attr("run","oneshot").attr("name","More descriptive info");
+		fab.addParentToRoot("taskset").attr("id",id).attr("run","oneshot").attr("name","More descriptive info");
 		fab.addChild("task","Hello").attr("output","log:info").attr("trigger","delay:0s");
 		return fab.build()!=null;
 	}

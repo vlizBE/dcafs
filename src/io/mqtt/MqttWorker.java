@@ -182,7 +182,7 @@ public class MqttWorker implements MqttCallbackExtended {
 		if (!settingsChanged)
 			return false;
 
-		fab.selectOrCreateParent("broker").attr("id",id);
+		fab.selectOrAddChildAsParent("broker").attr("id",id);
 
 		fab.alterChild("address", brokerAddress)
 			.alterChild("clientid",clientId)

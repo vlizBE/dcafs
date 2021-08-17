@@ -1301,9 +1301,9 @@ public class CommandPool {
 					return "No such database "+cmds[1];
 				// Select the correct server node
 				var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","databases");
-				if( fab.selectParent("server","id",cmds[1]).isEmpty())
-					fab.selectParent("sqlite","id",cmds[1]);
-				if( fab.hasChild("table","name",cmds[2]))
+				if( fab.selectChildAsParent("server","id",cmds[1]).isEmpty())
+					fab.selectChildAsParent("sqlite","id",cmds[1]);
+				if( fab.hasChild("table","name",cmds[2]).isPresent())
 					return "Already present in xml, not adding";
 
 				if( dbOpt instanceof SQLDB){
@@ -1365,8 +1365,8 @@ public class CommandPool {
 							continue;
 						for (var tbl : XMLtools.getChildElements(ele, "table")) {
 							if (tbl.getAttribute("name").equalsIgnoreCase(table)) {
-								fab.selectOrCreateParent(dbtype, "id", ele.getAttribute("id"))
-										.selectOrCreateParent("table", "name", table)
+								fab.selectOrAddChildAsParent(dbtype, "id", ele.getAttribute("id"))
+										.selectOrAddChildAsParent("table", "name", table)
 										.addChild(col[0], col[1]);
 								if( !alias.isEmpty())
 									fab.attr("alias", alias).build();
@@ -1447,7 +1447,7 @@ public class CommandPool {
 
 				if( fco.get().setRollOver(cmds[4],NumberUtils.toInt(cmds[2]),TimeTools.convertToRolloverUnit(cmds[3]),Tools.parseBool(cmds[5],false)) ) {
 					XMLfab.withRoot(settingsPath, "dcafs", "collectors")
-							.selectOrCreateParent("file", "id", cmds[1])
+							.selectOrAddChildAsParent("file", "id", cmds[1])
 							.alterChild("rollover",cmds[4]).attr("count",cmds[2]).attr("unit",cmds[3]).attr("zip",cmds[5]).build();
 					return "Rollover added";
 				}
@@ -1462,7 +1462,7 @@ public class CommandPool {
 				fco.get().flushNow();
 				fco.get().addHeaderLine(cmds[2]);
 				XMLfab.withRoot(settingsPath, "dcafs", "collectors")
-						.selectOrCreateParent("file", "id", cmds[1])
+						.selectOrAddChildAsParent("file", "id", cmds[1])
 						.addChild("header", cmds[2]).build();
 				return "Header line added to "+cmds[1];
 			case "addcmd":
@@ -1475,7 +1475,7 @@ public class CommandPool {
 				String[] cmd = cmds[2].split(":");
 				if( fco.get().addTriggerCommand(cmd[0],cmd[1]) ) {
 					XMLfab.withRoot(settingsPath, "dcafs", "collectors")
-							.selectOrCreateParent("file", "id", cmds[1])
+							.selectOrAddChildAsParent("file", "id", cmds[1])
 							.addChild("cmd", cmd[1]).attr("trigger", cmd[0]).build();
 					return "Triggered command added to "+cmds[1];
 				}
@@ -1490,7 +1490,7 @@ public class CommandPool {
 
 				fco.get().setMaxFileSize(cmds[2],Tools.parseBool(cmds[3],false));
 				XMLfab.withRoot(settingsPath, "dcafs", "collectors")
-						.selectOrCreateParent("file", "id", cmds[1])
+						.selectOrAddChildAsParent("file", "id", cmds[1])
 						.addChild("sizelimit", cmds[2]).attr("zip", cmds[3]).build();
 				return "Size limit added to "+cmds[1];
 			case "alter":
@@ -1507,7 +1507,7 @@ public class CommandPool {
 					return "No such fc: "+cmds[1];
 
 				var fab = XMLfab.withRoot(settingsPath, "dcafs", "collectors")
-										.selectOrCreateParent("file", "id", cmds[1]);
+										.selectOrAddChildAsParent("file", "id", cmds[1]);
 
 				switch(alter[0]){
 					case "path":

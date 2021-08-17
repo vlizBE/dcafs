@@ -281,9 +281,9 @@ public class DAS implements DeadThreadListener {
     public void createXML() {
        
        XMLfab.withRoot(settingsPath, "dcafs")
-                .addParent("settings")
+                .addParentToRoot("settings")
                     .addChild("mode","normal")
-                .addParent("streams")
+                .addParentToRoot("streams")
                     .comment("Defining the various streams that need to be read")
                 .build();
     }

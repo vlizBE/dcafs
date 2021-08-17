@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class XMLfab {
@@ -168,7 +169,7 @@ public class XMLfab {
 
         XMLfab fab = new XMLfab(xmlPath);
         fab.root = XMLtools.getFirstElementByTag(fab.xmlDoc, roots[0]);
-        String end = roots[roots.length-1];
+
         if( fab.hasRoots(roots) ){
             if( fab.root.getParentNode()!=null && fab.root.getParentNode() instanceof Element) {
                 fab.last = (Element) fab.root.getParentNode();
@@ -218,29 +219,50 @@ public class XMLfab {
     }
 
     /**
-     * Add a parent node to the current root
-     * @param tag The tag of the parent node
-     * @return The fab after adding the parent node
+     * Add a child node to the current root and make it the current parent node
+     *
+     * @param tag The tag of the future parent node
+     * @return The fab after adding the node
      */
-    public XMLfab addParent( String tag ){
+    public XMLfab addParentToRoot(String tag ){
         last = XMLtools.createChildElement(xmlDoc, root, tag);   
         parent = last;     
         return this;
     }
 
     /**
-     * Add a parent node to the current root
-     * @param tag The tag of the parent node
+     * Add a child node to the current root and make it the current parent node and add a comment
+     * @param tag The tag of the future parent node
      * @param comment The comment for this parent node
      * @return The fab after adding the parent node
      */
-    public XMLfab addParent( String tag, String comment ){
+    public XMLfab addParentToRoot(String tag, String comment ){
         root.appendChild(xmlDoc.createComment(" "+comment+" "));
         last = XMLtools.createChildElement(xmlDoc, root, tag);           
         this.parent = last;     
         return this;
     }
 
+    /**
+     * Add a node after the the current parent
+     * @param tag
+     * @param content
+     * @return
+     */
+    public XMLfab addParentHere( String tag, String content){
+        var newNode = xmlDoc.createElement(tag);
+        newNode.setTextContent(content);
+
+        parent = (Element) parent.insertBefore(newNode,parent.getNextSibling());
+        return this;
+    }
+    public XMLfab addParentAtEnd( String tag, String content){
+        var newNode = xmlDoc.createElement(tag);
+        newNode.setTextContent(content);
+
+        parent = (Element) parent.insertBefore(xmlDoc.createElement(tag),null);
+        return this;
+    }
     /**
      * Add a child node to the current parent
      * @param tag The tag of the childnode to add
@@ -265,13 +287,19 @@ public class XMLfab {
     }
 
     /**
-     * Remove all the children of this parent node
+     * Remove all the children of the parent node
      * @return The fab after removing the child nodes of the current parent node
      */
     public XMLfab clearChildren(){
         XMLtools.removeAllChildren(parent);
         return this;
     }
+
+    /**
+     * Remove a single child node from the current parent node
+     * @param tag The tag of the childnode to remove
+     * @return This fab
+     */
     public XMLfab removeChild( String tag ){
         var child = getChild(tag);
         if( child.isPresent() ) {
@@ -282,7 +310,7 @@ public class XMLfab {
         return this;
     }
     /**
-     * Get the child node with the given tag and attribute
+     * Get the first child node with the given tag and attribute
      * @param tag The tag of the childnode
      * @param attr The attribute of the childnode
      * @param value The value of the attribute
@@ -308,10 +336,10 @@ public class XMLfab {
      * @param value The value of the attribute
      * @return True if found
      */
-    public boolean hasChild( String tag, String attr, String value){
-        return getChildren(tag).stream().anyMatch(
-            x -> x.getAttribute(attr).equalsIgnoreCase(value)
-        );
+    public Optional<XMLfab> hasChild( String tag, String attr, String value){
+        return getChildren(tag).stream().anyMatch(x ->
+                        x.getAttribute(attr).equalsIgnoreCase(value))?Optional.of(this):Optional.empty();
+
     }
 
     /**
@@ -321,14 +349,15 @@ public class XMLfab {
      * @param value The value the attribute should be
      * @return The optional parent node or empty if none found
      */
-    public Optional<Element> selectParent( String tag, String attribute, String value){
+    public Optional<XMLfab> selectChildAsParent(String tag, String attribute, String value){
         Optional<Element> found = getChildren(tag).stream()
-                .filter( x -> x.getAttribute(attribute).equalsIgnoreCase(value)).findFirst();
+                .filter( x -> x.getAttribute(attribute).equalsIgnoreCase(value)||attribute.isEmpty()).findFirst();
         if( found.isPresent() ){
             last = found.get();
             parent = last;
+            return Optional.of(this);
         }
-        return found;
+        return Optional.empty();
     }
 
     /**
@@ -336,23 +365,45 @@ public class XMLfab {
      * @param tag The tag of the parent
      * @return The optional parent node or empty if none found
      */
-    public Optional<Element> selectFirstParent( String tag ){
-        Optional<Element> found = getChildren(tag).stream().findFirst();
-        if( found.isPresent() ){
-            last = found.get();
-            parent = last;
-        }
-        return found;
+    public Optional<XMLfab> selectChildAsParent(String tag ){
+        return selectChildAsParent(tag,"","");
     }
     /**
-     * Checks the children of the active node for a specific tag,attribute,value match and make that active and parent
+     * Checks the children of the active node for a specific tag,attribute,value matches and makes the last active and parent
      * If not found create it.
      * @param tag The tag of the parent
      * @param attribute The attribute to check
      * @param value The value the attribute should be
      * @return This fab
      */
-    public XMLfab selectOrCreateParent( String tag, String attribute, String value){
+    public XMLfab selectOrAddLastChildAsParent(String tag, String attribute, String value){
+        var found = getChildren(tag).stream()
+                .filter( x -> x.getAttribute(attribute).equalsIgnoreCase(value)||attribute.isEmpty())
+                .collect(Collectors.toCollection(ArrayList::new));
+        if( !found.isEmpty() ){
+            last = found.get(found.size()-1);
+            parent = last;
+        }else{
+            addChild(tag);// Create the child
+            if( !attribute.isEmpty())
+                attr(attribute,value);
+            down(); // make it the last/parent
+        }
+        return this;
+    }
+    public XMLfab selectOrAddLastChildAsParent(String tag){
+        return selectOrAddChildAsParent(tag,"","");
+    }
+    /**
+     * Checks the children of the active node for a specific tag,attribute,value match and make that active and parent
+     * If not found create it.
+     * @param tag The tag of the parent
+     * @return This fab
+     */
+    public XMLfab selectOrAddChildAsParent(String tag ){
+        return selectOrAddChildAsParent(tag,"","");
+    }
+    public XMLfab selectOrAddChildAsParent(String tag, String attribute, String value){
         Optional<Element> found = getChildren(tag).stream()
                 .filter( x -> x.getAttribute(attribute).equalsIgnoreCase(value)||attribute.isEmpty()).findFirst();
         if( found.isPresent() ){
@@ -367,15 +418,6 @@ public class XMLfab {
         return this;
     }
     /**
-     * Checks the children of the active node for a specific tag,attribute,value match and make that active and parent
-     * If not found create it.
-     * @param tag The tag of the parent
-     * @return This fab
-     */
-    public XMLfab selectOrCreateParent( String tag ){
-        return selectOrCreateParent(tag,"","");
-    }
-    /**
      * Select a child node for later alterations (eg. attributes etc) or create it if it doesn't exist
      * @param tag The tag of the child node to look for
      * @return The fab with the new/selected child node
@@ -383,9 +425,7 @@ public class XMLfab {
     public XMLfab alterChild( String tag ){
         alter=true;
         last = XMLtools.getFirstChildByTag(parent, tag);
-        if( last!=null){           
-            return this;
-        }else{
+        if( last==null){
             last = XMLtools.createChildElement(xmlDoc, parent, tag );           
         }
         return this;
@@ -425,7 +465,12 @@ public class XMLfab {
      */
     public XMLfab commentBack(String comment){
         last.getParentNode().insertBefore( xmlDoc.createComment(" "+comment+" "),last );
-
+        return this;
+    }
+    public XMLfab clearParentTextContent(){
+        if(parent.getFirstChild()==null ){
+            parent.setTextContent("");
+        }
         return this;
     }
     /* Attributes */

@@ -203,8 +203,8 @@ public class I2CWorker implements Runnable, Commandable {
         return reloadCommands();
     }
     public static boolean addDeviceToXML(XMLfab fab, String id, int bus, String address,String script){
-        return fab.digRoot("i2c").selectOrCreateParent("bus","controller","0")
-                .selectOrCreateParent("device","id",id).attr("address",address).attr("script",script)
+        return fab.digRoot("i2c").selectOrAddChildAsParent("bus","controller","0")
+                .selectOrAddChildAsParent("device","id",id).attr("address",address).attr("script",script)
                 .build() != null;
     }
     public String reloadCommands( ){
@@ -586,7 +586,7 @@ public class I2CWorker implements Runnable, Commandable {
                         var p = scriptsPath.resolve(cmd[4]+".xml");
                         if( !Files.exists(p)){
                             XMLfab.withRoot(p,"commandset").attr("script",cmd[4])
-                                    .addParent("command","An empty command to start with")
+                                    .addParentToRoot("command","An empty command to start with")
                                     .attr("id","cmdname").attr("info","what this does")
                                     .build();
                             readSettingsFromXML(XMLtools.readXML(scriptsPath.getParent().resolve("settings.xml")));

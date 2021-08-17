@@ -90,13 +90,13 @@ public class IssuePool implements Commandable{
                     return "Not enough parameters: issue:add,issueid,message";
                 addIssue(cmds[1],cmds[2]);
                 XMLfab.withRoot(settingsPath,"dcafs").digRoot("issues")
-                        .addParent("issue").attr("id",cmds[1]).content(cmds[2]).build();
+                        .addParentToRoot("issue").attr("id",cmds[1]).content(cmds[2]).build();
                 return "Issue added";
             case "addblank":
                 XMLfab.withRoot(settingsPath,"dcafs").digRoot("issues")
-                        .addParent("issue","Issue without commands").attr("id","issueid")
+                        .addParentToRoot("issue","Issue without commands").attr("id","issueid")
                         .content("Message/info on the issue")
-                        .addParent("issue","Issue with commands").attr("id","issue2")
+                        .addParentToRoot("issue","Issue with commands").attr("id","issue2")
                         .addChild("message","Message/info on the issue")
                         .addChild("cmd","cmd to run on start").attr("when","start")
                         .addChild("cmd","cmd to run on stop").attr("when","stop").build();

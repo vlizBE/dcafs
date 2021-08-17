@@ -269,7 +269,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 		fab.digRoot(XML_PARENT_TAG);
 
 		if( sendEmails ){
-			fab.addParent("outbox","Settings related to sending")
+			fab.addParentToRoot("outbox","Settings related to sending")
 					 .addChild("server", "host/ip").attr("user").attr("pass").attr("ssl","yes").attr("port","993")
 					  .addChild("from","das@email.com")
 					  .addChild("zip_from_size_mb","3")
@@ -277,11 +277,11 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 					  .addChild("max_size_mb","10");
 		}
 		if( receiveEmails ){	
-			fab.addParent("inbox","Settings for receiving emails")
+			fab.addParentToRoot("inbox","Settings for receiving emails")
 					   .addChild("server", "host/ip").attr("user").attr("pass").attr("ssl","yes").attr("port","465")
 					   .addChild("checkinterval","5m");
 		}
-		fab.addParent("book","Add entries to the emailbook below")
+		fab.addParentToRoot("book","Add entries to the emailbook below")
 				.addChild("entry","admin@email.com").attr("ref","admin");
 
 		fab.build();
@@ -297,7 +297,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 		XMLfab fab = XMLfab.withRoot(xml,"dcafs","settings");
 		fab.digRoot("email");
 		if( outbox != null ) {
-			fab.selectOrCreateParent("outbox")
+			fab.selectOrAddChildAsParent("outbox")
 					.alterChild("server", outbox.server)
 						.attr("user",outbox.user)
 						.attr("pass",outbox.pass)
@@ -309,7 +309,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 					.alterChild("max_size_mb", ""+maxSizeMB);
 		}
 		if( inbox != null ){
-			fab.selectOrCreateParent("inbox")
+			fab.selectOrAddChildAsParent("inbox")
 					.alterChild("server", inbox.server)
 						.attr("user",inbox.user)
 						.attr("pass",inbox.pass)
@@ -325,7 +325,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 	private boolean writePermits(){
 		if( xml != null ){
 			var fab = XMLfab.withRoot(xml,"dcafs","settings","email");
-			fab.selectOrCreateParent("permits");
+			fab.selectOrAddChildAsParent("permits");
 			fab.clearChildren();
 			for( var permit : permits ){
 				fab.addChild(permit.denies?"deny":"allow",permit.value).attr("ref",permit.ref);

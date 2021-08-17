@@ -296,7 +296,7 @@ public class DatabaseManager implements QueryWriting{
      * @param id
      */
     public static void addBlankServerToXML( XMLfab fab, String type, String id ){
-            fab.addParent("server").attr("id", id.isEmpty()?"remote":id).attr("type",type)
+            fab.addParentToRoot("server").attr("id", id.isEmpty()?"remote":id).attr("type",type)
                 .addChild("db","name").attr("user").attr("pass")
                 .addChild("setup").attr("idletime",-1).attr("flushtime","30s").attr("batchsize",30)
                 .addChild("address","localhost")
@@ -308,21 +308,21 @@ public class DatabaseManager implements QueryWriting{
      */
     public static void addBlankSQLiteToXML( Document xml, String id ){
         XMLfab.withRoot(xml, "settings",XML_PARENT_TAG)                
-                    .addParent("sqlite").attr("id", id.isEmpty()?"lite":id).attr("path","db/"+id+".sqlite")
+                    .addParentToRoot("sqlite").attr("id", id.isEmpty()?"lite":id).attr("path","db/"+id+".sqlite")
                         .addChild("rollover","yyMMdd").attr("count",1).attr("unit","day")                       
                         .addChild("setup").attr("idletime","2m").attr("flushtime","30s").attr("batchsize",30)                        
                .build();
     }
     public static boolean addBlankTableToXML( XMLfab fab, String id, String table, String format){
 
-        var serverOpt = fab.selectParent("server","id",id);
+        var serverOpt = fab.selectChildAsParent("server","id",id);
         if( serverOpt.isPresent() ){
-            fab.selectParent("server","id",id);
+            fab.selectChildAsParent("server","id",id);
         }else{
-            var sqliteOpt = fab.selectParent("sqlite","id",id);
+            var sqliteOpt = fab.selectChildAsParent("sqlite","id",id);
             if( sqliteOpt.isEmpty())
                 return false;
-            fab.selectParent("sqlite","id",id);
+            fab.selectChildAsParent("sqlite","id",id);
         }
         SqlTable.addBlankToXML( fab,table,format );
         return true;

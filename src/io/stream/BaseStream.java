@@ -120,7 +120,7 @@ public abstract class BaseStream {
         Optional<Element> stream = fab.getChild(XML_STREAM_TAG, "id", id); // look for a child node based on id
 
         // Look through the child nodes for one that matches tag,id,value
-        if( fab.selectParent(XML_STREAM_TAG, "id", id).isEmpty() ){
+        if( fab.selectChildAsParent(XML_STREAM_TAG, "id", id).isEmpty() ){
             // Not found so create it, taken in account we create a child to get a parent...
             fab.addChild(XML_STREAM_TAG).attr("id",id).attr("type",getType())
                     .down(); //make it the parent

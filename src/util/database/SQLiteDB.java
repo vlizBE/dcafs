@@ -300,7 +300,7 @@ public class SQLiteDB extends SQLDB{
         if( idleTime!=-1)
             idle = TimeTools.convertPeriodtoString(maxAge, TimeUnit.SECONDS);
 
-        fab.selectOrCreateParent("sqlite","id", id).attr("path",dbPath.toString());
+        fab.selectOrAddChildAsParent("sqlite","id", id).attr("path",dbPath.toString());
         if( hasRollOver() )
             fab.alterChild("rollover",oriFormat).attr("count",rollCount).attr("unit",rollUnit.toString().toLowerCase());
         fab.alterChild("flush").attr("age",flush).attr("batchsize",maxQueries)

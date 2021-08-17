@@ -262,7 +262,7 @@ public class TcpServer implements StreamListener, Commandable {
 	public void storeHandler( TransHandler handler, Writable wr ){
 		XMLfab fab = XMLfab.withRoot(xmlPath, "settings", XML_PARENT_TAG);
 
-		fab.selectOrCreateParent("default","id",handler.getID());
+		fab.selectOrAddChildAsParent("default","id",handler.getID());
 		fab.attr("address",handler.getIP());
 		if( handler.getLabel().equalsIgnoreCase("system")){
 			fab.removeAttr("label");

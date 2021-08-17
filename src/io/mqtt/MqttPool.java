@@ -115,7 +115,7 @@ public class MqttPool implements Commandable, MqttWriting {
      */
     public boolean updateMQTTsettings(String id) {
         XMLfab fab = XMLfab.withRoot(settingsFile,"settings")
-                            .selectOrCreateParent("mqtt")
+                            .selectOrAddChildAsParent("mqtt")
                             .down();
 
         MqttWorker worker = mqttWorkers.get(id);

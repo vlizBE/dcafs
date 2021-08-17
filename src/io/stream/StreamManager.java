@@ -509,7 +509,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 
 		// Check if it already exists (based on id and address?)
 		XMLfab fab = XMLfab.withRoot(settingsPath, "dcafs",XML_PARENT_TAG);
-		boolean exists = fab.hasChild(XML_CHILD_TAG, "id", stream.getID() );
+		boolean exists = fab.hasChild(XML_CHILD_TAG, "id", stream.getID() ).isPresent();
 
 		if( exists && !overwrite ){
 			Logger.warn("Already such stream ("+id+") in the settings.xml, not overwriting");
@@ -711,7 +711,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 
 				fab = XMLfab.withRoot(settingsPath,XML_PARENT_TAG); // get a fab pointing to the streams node
 
-				if( fab.selectParent("stream","id",cmds[1]).isEmpty() )
+				if( fab.selectChildAsParent("stream","id",cmds[1]).isEmpty() )
 					return "No such stream  "+cmds[1];
 
 				fab.addChild("cmd",cmd).attr("trigger",event);
@@ -734,7 +734,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 
 				fab = XMLfab.withRoot(settingsPath,XML_PARENT_TAG); // get a fab pointing to the streams node
 
-				if( fab.selectParent("stream","id",cmds[1]).isEmpty() )
+				if( fab.selectChildAsParent("stream","id",cmds[1]).isEmpty() )
 					return "No such stream '"+cmds[1]+"'";
 
 				Element f;

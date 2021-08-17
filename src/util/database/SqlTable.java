@@ -745,7 +745,7 @@ public class SqlTable {
      */
     public boolean buildGeneric(XMLfab fab, String db, String id, String delim){
 
-        fab.selectOrCreateParent("generic","id",id).clearChildren();
+        fab.selectOrAddChildAsParent("generic","id",id).clearChildren();
         fab.attr("id",id).attr("dbid",db).attr("table",this.name).attr("delimiter",delim);
 
         int index=0;

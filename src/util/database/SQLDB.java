@@ -551,7 +551,7 @@ public class SQLDB extends Database{
         if( idleTime!=-1)
             idle = TimeTools.convertPeriodtoString(maxAge, TimeUnit.SECONDS);
 
-        fab.selectOrCreateParent("server","id", id.isEmpty()?"remote":id).attr("type",type.toString().toLowerCase())
+        fab.selectOrAddChildAsParent("server","id", id.isEmpty()?"remote":id).attr("type",type.toString().toLowerCase())
                 .alterChild("db",dbName).attr("user",user).attr("pass",pass)
                 .alterChild("flush").attr("age",flush).attr("batchsize",maxQueries)
                 .alterChild("idleclose",idle)
@@ -563,7 +563,7 @@ public class SQLDB extends Database{
         int cnt=0;
         for( var table : tables.values() ){
             if( table.name.equalsIgnoreCase(tablename) || tablename.equals("*")) {
-                if( !fab.hasChild("table","name",table.name)){
+                if( fab.hasChild("table","name",table.name).isEmpty()){
                     table.writeToXml( fab, false);
                     cnt++;
                 }
