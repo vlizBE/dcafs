@@ -26,7 +26,7 @@ public class MathUtils {
     final static int DIV_SCALE = 8;
     static final String[] ORDERED_OPS={"^","^","*","/","%","%","+","-"};
     static final String[] COMPARES={"<","<=","==","!=",">=",">"};
-    static final String OPS_REGEX="[+\\-\\/*<>^=%]+[=]?";
+    static final String OPS_REGEX="[+\\-\\/*<>^=%~!]+[=]?";
     static final Pattern es = Pattern.compile("\\de[+-]?\\d");
     /**
      * Splits a simple expression of the type i1+125 etc into distinct parts i1,+,125
@@ -449,6 +449,22 @@ public class MathUtils {
                     Logger.error(e);
                 }
                 break;
+            case "~": // i0~25 -> ABS(i0-25)
+                try{
+                    if( bd1!=null && bd2!=null ){ // meaning both numbers
+                        proc = x -> bd1.min(bd2).abs();
+                    }else if( bd1==null && bd2!=null){ // meaning first is an index and second a number
+                        proc = x -> x[i1].min(bd2).abs();
+                    }else if(bd1 != null){ //  meaning first is a number and second an index
+                        proc = x -> bd1.min(x[i2]).abs();
+                    }else{ // meaning both indexes
+                        proc = x -> x[i1].min(x[i2]).abs();
+                    }
+                }catch (IndexOutOfBoundsException | NullPointerException e){
+                    Logger.error("Bad things when "+first+" "+op+" "+second+ " was processed");
+                    Logger.error(e);
+                }
+                break;
             case "scale": // i0/25
                 try{
                     if( bd1!=null && bd2!=null ){ // meaning both numbers
@@ -583,11 +599,13 @@ public class MathUtils {
         final int i2;
         Function<Double[],Double> proc=null;
         boolean reverse = first.startsWith("!");
+
         if( reverse ) {
             op = "!";
             first=first.substring(1);
             second="";
         }
+
         try{
             if(NumberUtils.isCreatable(first) ) {
                 db1 = NumberUtils.createDouble(first);
@@ -745,7 +763,7 @@ public class MathUtils {
                     Logger.error(e);
                 }
                 break;
-            case "diff":
+            case "diff": case "~":
                 try{
                     if( db1!=null && db2!=null ){ // meaning both numbers
                         proc = x -> Math.abs(db1-db2);
