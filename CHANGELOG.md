@@ -23,6 +23,39 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.10.10 (work in progress)
 
+### TaskBlocks (name subject to change)
+- Will replace TaskManager
+- Current blocks
+  - TriggerBlock - replaces the trigger attribute
+  - CmdBlock - replaces the output=system attribute
+  - MetaBlock - serves as the starting block of a link 
+  - ControlBlock - replaces output=manager
+  - CheckBlock - replaces req/check
+  - LabelBlock - allows for data received from other blocks to be labeled
+- Utility classes
+  - BlockTree - helps settings up a link
+  - BlockPool - manages the MetaBlocks
+- Progess
+  - TriggerBlock, CmdBlock, CheckBlock, MetaBlock functional
+  - TriggerBlock and CheckBlock will not be added if duplicates on the link level, will link to the 'original' instead
+  - CmdBlock aggregates commands if successive blocks are also CmdBlocks
+  - Can read the taskmanager script variant of the blocks
+- Improvements compared to TaskManager
+  - Checks and triggers are aggregated if possible
+  - Functionality split over multiple blocks instead of two classes, should make it clearer to work with
+  - Has a base interface and an abstract class on top of that, make it easier to expand (adding blocks)
+  - 
+### TaskManager
+- Tasksets now allow for the if attribute do to a check before starting the set
+
+### XMLfab
+- Refactored the 'parent' methods to make it clear when this is actually 'child becomes parent'
+- Select methods can now return an Optional fab (so can be continued with ifPresent)
+
+### Math
+- Added th ~ operand, which translates A~B to ABS(A-B)
+- 
+
 ## 0.10.9 (14/08/21)
 
 ### Other
