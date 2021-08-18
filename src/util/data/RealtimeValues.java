@@ -49,7 +49,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	private final HashMap<String, MathCollector> mathCollectors = new HashMap<>();
 
 	/* Patterns */
-	private Pattern words = Pattern.compile("[a-zA-Z]+[_0-9]*[a-zA-Z]+\\d*"); // find references to doublevals etc
+	private Pattern words = Pattern.compile("[a-zA-Z]+[_:0-9]*[a-zA-Z]+\\d*"); // find references to doublevals etc
 
 	private Path settingsPath;
 	private BlockingQueue<Datagram> dQueue;
@@ -216,12 +216,18 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				}
 				if( ok )
 					continue;
+				int index=0;
 				switch(p[0]){
 					case "d": case "double":
 						var d = getDoubleVal(p[1]);
 						if( d.isPresent() ){
-							nums.add( d.get() );
-							exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + (offset + nums.size()-1 ));
+							index = nums.indexOf(d.get());
+							if(index==-1){
+								nums.add( d.get() );
+								index = nums.size()-1;
+							}
+							index += offset;
+							exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + index);
 						}else{
 							Logger.error("Couldn't find a doubleval with id "+p[1]);
 							return "";
@@ -230,8 +236,13 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					case "f": case "flag":
 						var f = getFlagVal(p[1]);
 						if( f.isPresent() ){
-							nums.add( f.get() );
-							exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + (offset + nums.size()-1 ));
+							index = nums.indexOf(f.get());
+							if(index==-1){
+								nums.add( f.get() );
+								index = nums.size()-1;
+							}
+							index += offset;
+							exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + index);
 						}else{
 							Logger.error("Couldn't find a FlagVal with id "+p[1]);
 							return "";
@@ -243,6 +254,40 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				}
 			}else{
 				Logger.error( "Pair containing odd amount of elements: "+String.join(":",p));
+			}
+		}
+		// Figure out the rest?
+		var found = words.matcher(exp).results().map(MatchResult::group).collect(Collectors.toList());
+		for( String fl : found){
+			int index;
+			if( fl.startsWith("flag:")){
+				var f = getFlagVal(fl.substring(5));
+				if( f.isPresent() ){
+					index = nums.indexOf(f.get());
+					if(index==-1){
+						nums.add( f.get() );
+						index = nums.size()-1;
+					}
+					index += offset;
+					exp = exp.replace(fl, "i" + index);
+				}else{
+					Logger.error("Couldn't find a FlagVal with id "+fl);
+					return "";
+				}
+			}else{
+				var d = getDoubleVal(fl);
+				if( d.isPresent() ){
+					index = nums.indexOf(d.get());
+					if(index==-1){
+						nums.add( d.get() );
+						index = nums.size()-1;
+					}
+					index += offset;
+					exp = exp.replace(fl, "i" + index);
+				}else{
+					Logger.error("Couldn't find a doubleval with id "+fl);
+					return "";
+				}
 			}
 		}
 		if(nums!=null)
