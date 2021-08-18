@@ -4,6 +4,7 @@ import util.data.NumericVal;
 
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.StringJoiner;
 
 public interface TaskBlock {
 
@@ -18,9 +19,11 @@ public interface TaskBlock {
     boolean addData(String data);
     boolean build();
     boolean start();
+    boolean stop();
 
     void nextOk();
     void nextFailed();
+    void getBlockInfo(StringJoiner join,String offset);
 
     Optional<TaskBlock> getSourceBlock();
 }
