@@ -4,6 +4,7 @@ import das.CommandPool;
 import io.Writable;
 
 import java.util.ArrayList;
+import java.util.StringJoiner;
 
 public class CmdBlock extends AbstractBlock{
 
@@ -25,7 +26,9 @@ public class CmdBlock extends AbstractBlock{
         cmds.add(cmd);
         return this;
     }
-
+    public ArrayList<String> getCmds(){
+        return cmds;
+    }
     @Override
     public boolean build() {
         return true;
@@ -53,5 +56,13 @@ public class CmdBlock extends AbstractBlock{
     @Override
     public void nextFailed() {
 
+    }
+    public String toString(){
+        if( cmds.size()==1)
+            return "Execute cmd: "+cmds.get(0);
+        StringJoiner join = new StringJoiner("\r\n","Execute "+cmds.size()+" cmds:","");
+        join.add("");
+        cmds.forEach( c -> join.add("     > "+c));
+        return join.toString();
     }
 }

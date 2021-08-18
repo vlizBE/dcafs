@@ -4,6 +4,7 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import util.tools.TimeTools;
 
+import java.sql.Time;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -17,7 +18,8 @@ public class TriggerBlock extends AbstractBlock{
     long interval_ms =1000;
     int tries=-1;
 
-    enum TYPE {CLOCK, WHILE, WAITFOR, OTHER, RETRY};
+    enum TYPE {CLOCK, WHILE, WAITFOR, OTHER, RETRY,INTERVAL,DELAY};
+
     TYPE trigType =TYPE.OTHER;
 
     ScheduledExecutorService scheduler;
@@ -58,6 +60,7 @@ public class TriggerBlock extends AbstractBlock{
             case "delay": // Has a delay
                 interval_ms = TimeTools.parsePeriodStringToMillis(value);
                 tries=1;
+                trigType=TYPE.DELAY;
                 break;
             case "interval": // Has an optional initial delay and an interval
                 delay_ms = TimeTools.parsePeriodStringToMillis(values[0]);
@@ -67,6 +70,7 @@ public class TriggerBlock extends AbstractBlock{
                     interval_ms = delay_ms;
                 }
                 tries=-1;
+                trigType=TYPE.INTERVAL;
                 break;
             case "retry": // Has an interval and an amount of attempts
                 interval_ms = TimeTools.parsePeriodStringToMillis(values[0]);
@@ -114,7 +118,11 @@ public class TriggerBlock extends AbstractBlock{
         }
         return false;
     }
-
+    public boolean stop(){
+        future.cancel(true);
+        next.forEach(TaskBlock::stop);
+        return true;
+    }
     @Override
     public void nextOk() {
 
@@ -202,5 +210,26 @@ public class TriggerBlock extends AbstractBlock{
                 return -1;
         }
         return Duration.between( now, triggerTime ).getSeconds();
+    }
+    public String toString(){
+        String interval = TimeTools.convertPeriodtoString(interval_ms,TimeUnit.MILLISECONDS);
+        String delay = TimeTools.convertPeriodtoString(delay_ms,TimeUnit.MILLISECONDS);
+        delay = "which, after a delay of "+delay+", starts";
+        switch(trigType){
+            case CLOCK: return "Clock Trigger scheduled for "+ori.split(":")[1];
+            case WHILE: return "While trigger with an interval of "+interval+" and needs "+tries+" checks succeeded";
+            case WAITFOR: return "Waitfor trigger with an interval of "+interval+" and "+(tries==-1?"infinite":tries)+" retries";
+            case OTHER:
+                break;
+            case RETRY:
+                break;
+            case INTERVAL: return "Interval trigger "+(delay_ms==0?"with":delay)+" an interval of "+interval;
+            case DELAY: return "Delayed trigger of "+interval;
+
+        }
+        return "triggr todo";
+    }
+    public boolean equals( TriggerBlock tb){
+        return ori.equalsIgnoreCase(tb.ori);
     }
 }
