@@ -641,6 +641,9 @@ public class Tools {
         op = op.replace(" not equals ","!="); // retain support for equals
         op = op.replace(" equals ","=="); // retain support for not equals
 
+        // diff?
+        op =op.replace(" diff ","~");
+
         return op.replace(" ","");
     }
     public static String getLocalIP() {
