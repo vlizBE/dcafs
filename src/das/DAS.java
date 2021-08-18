@@ -156,7 +156,7 @@ public class DAS implements DeadThreadListener {
             commandPool.setDatabaseManager(dbManager);
             addCommandable("issue",issuePool);
             addCommandable("flags;fv;doubles;double;dv;texts;tv",rtvals);
-            addCommandable("rtvals",rtvals);
+            addCommandable(rtvals,"rtval","rtvals");
 
             /* Waypoints */
             waypoints = new Waypoints( settingsPath, nettyGroup, rtvals, dQueue );

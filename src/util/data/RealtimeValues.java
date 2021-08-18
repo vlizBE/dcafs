@@ -630,10 +630,10 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		}
 		return join.toString();
 	}
-	public boolean addRequest(Writable writable, String request) {
-		String[] req = request.split(":");
+	public boolean addRequest(Writable writable, String[] req) {
+
 		switch (req[0]) {
-			case "rtval":
+			case "rtval": case "double":
 				var r = doubleRequest.get(req[1]);
 				if( r == null) {
 					doubleRequest.put(req[1], new ArrayList<>());
@@ -646,7 +646,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					return true;
 				}
 				break;
-			case "rttext":
+			case "text":
 				var t = textRequest.get(req[1]);
 				if( t == null) {
 					textRequest.put(req[1], new ArrayList<>());
@@ -681,14 +681,16 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	@Override
 	public String replyToCommand(String[] request, Writable wr, boolean html) {
 
-		switch( request[0].replace("s","") ){
-			case "double": case "dv":
+		switch( request[0] ){
+			case "doubles": case "dv":
 				return replyToDoublesCmd(request,html);
-			case "text": case "tv":
+			case "texts": case "tv":
 				return replyToTextsCmd(request,html);
-			case "flag": case "fv":
+			case "flags": case "fv":
 				return replyToFlagsCmd(request,html);
-			case "rtval":
+			case "rtval": case "double":
+				return addRequest(wr,request)?"Request added":"Failed request";
+			case "rtvals":
 				return replyToRtvalsCmd(request,wr,html);
 			default:
 				return "unknown command "+request[0]+":"+request[1];
@@ -896,6 +898,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		if( cmds.length==1 ){
 			switch(cmds[0]){
 				case "store": return storeRTVals(settingsPath);
+				default:
+					addRequest(wr,request);
 			}
 		}else if(cmds.length==2){
 			switch(cmds[0]){
