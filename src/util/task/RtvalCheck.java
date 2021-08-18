@@ -35,6 +35,7 @@ public class RtvalCheck {
         equ=equ.replace(" below ","<");   // retain support for below
         equ=equ.replace(" above ",">");   // retain support for above
         equ=equ.replace(" equals ","=="); // retain support for equals
+        equ=equ.replace(" diff ","~");
 
         // Split on and/or etc?
         if( equ.contains(" and ") ){
@@ -93,17 +94,8 @@ public class RtvalCheck {
     }
     private Function<Double[],Double> getFunction( String equ ) throws IndexOutOfBoundsException{
         List<String> parts;
-        // First check if it's the special diff function (difference between two values)
-        if( equ.contains("diff") ){
-            parts = new ArrayList<>();
-            String[] ops = equ.split("diff");
-            parts.add(ops[0].trim());
-            parts.add("diff");
-            parts.add(ops[1].trim());
-        }else {
-            // If it's just a regular mathematical thing
-            parts = MathUtils.extractParts(equ);
-        }
+
+        parts = MathUtils.extractParts(equ);
 
         // Left side, first check if it's a valid number
         if( !NumberUtils.isCreatable(parts.get(0)) ){
