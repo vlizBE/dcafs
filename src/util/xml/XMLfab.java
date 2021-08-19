@@ -106,7 +106,9 @@ public class XMLfab {
     public static boolean hasRoot( Document xmlDoc, String... roots){
         return new XMLfab(xmlDoc,false).hasRoots(roots);
     }
-
+    public static boolean hasRoot( Path xmlPath, String... roots){
+        return new XMLfab(xmlPath).hasRoots(roots);
+    }
     /**
      * Start a Mathfab based on the xml found at the path and after traversing the given roots/branches
      * @param xmlDoc The xml document to look into
