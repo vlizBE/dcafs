@@ -32,6 +32,8 @@ From 0.5.0 onwards, this should be better documented...
   - ControlBlock - replaces output=manager
   - CheckBlock - replaces req/check
   - LabelBlock - allows for data received from other blocks to be labeled
+  - EmailBlock - send an email
+  - WritableBlock - send (received) data to a writable with reply option
 - Utility classes
   - BlockTree - helps settings up a link
   - BlockPool - manages the MetaBlocks
@@ -42,9 +44,14 @@ From 0.5.0 onwards, this should be better documented...
   - Can read the taskmanager script variant of the blocks
 - Improvements compared to TaskManager
   - Checks and triggers are aggregated if possible
+  - Checks can be a lot more complex, taskmanager had the limit of either an ands or ors while checkblock doesn't have
+  such a limit and allows brackets and the math part is equivalent to the mathforward
   - Functionality split over multiple blocks instead of two classes, should make it clearer to work with
   - Has a base interface and an abstract class on top of that, make it easier to expand (adding blocks)
-  - 
+
+### CommandPool
+- Removed used of reflection because the commandable interface replaces this
+
 ### TaskManager
 - Tasksets now allow for the if attribute do to a check before starting the set
 
@@ -55,6 +62,9 @@ From 0.5.0 onwards, this should be better documented...
 ### Math
 - Added th ~ operand, which translates A~B to ABS(A-B)
 - 
+
+### Fixes
+- rtval:id works again, wasn't moved to the new commandable format
 
 ## 0.10.9 (14/08/21)
 
