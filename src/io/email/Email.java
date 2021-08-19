@@ -29,10 +29,14 @@ public class Email {
 		if( !to.isEmpty())
 			valid = true;
 	}
+	public String to(){return toRaw;}
+	public String subject(){return subject;}
+	public String content(){return content;}
 	/* ********************************** F L U I D  A P I ********************************************************** */
 	public static Email to(String to){
 		return new Email(to);
 	}
+
 	public static Email toAdminAbout( String subject){
 		return new Email("admin").subject(subject);
 	}
