@@ -56,9 +56,8 @@ public class WritableBlock extends AbstractBlock implements CollectorFuture {
                 target.addTarget(cc);
             }else {
                 wr.writeLine(data);
-                //doNext();
+                doNext();
             }
-            parentBlock.get().nextFailed();
             return true;
         }
         return false;
