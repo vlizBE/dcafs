@@ -946,12 +946,19 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 
 		StringJoiner join = new StringJoiner(eol,title+eol,"");
 		join.setEmptyValue("No matches found");
-		doubleVals.values().stream().filter( dv -> dv.getName().matches(name.replace("*",".*")))
-				.forEach(dv -> join.add(space+dv.getGroup()+" -> "+dv.getName()+" : "+dv.toString()));
-		rttext.entrySet().stream().filter(ent -> ent.getKey().matches(name.replace("*",".*")))
+
+		String regex;
+		if( name.contains("*")&& name.contains(".*")) {
+			regex = name.replace("*", ".*");
+		}else{
+			regex=name;
+		}
+		doubleVals.values().stream().filter( dv -> dv.getName().matches(regex))
+				.forEach(dv -> join.add(space+(dv.getGroup().isEmpty()?"":dv.getGroup()+" -> ")+dv.getName()+" : "+dv.toString()));
+		rttext.entrySet().stream().filter(ent -> ent.getKey().matches(regex))
 				.forEach( ent -> join.add( space+ent.getKey().replace("_","->")+" : "+ent.getValue()) );
-		flagVals.entrySet().stream().filter(ent -> ent.getKey().endsWith(name.replace("*",".*")))
-				.forEach( ent -> join.add( space+ent.getKey().replace("_","->")+" : "+ent.getValue()) );
+		flagVals.values().stream().filter(fv -> fv.getName().matches(regex))
+				.forEach(fv -> join.add(space+(fv.getGroup().isEmpty()?"":fv.getGroup()+" -> ")+fv.getName()+" : "+fv.toString()));
 		return join.toString();
 	}
 	public String getFullList(boolean html){
