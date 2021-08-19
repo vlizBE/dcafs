@@ -1,19 +1,31 @@
 package util.database;
 
+import das.Commandable;
+import io.Writable;
+import io.telnet.TelnetCodes;
+import org.apache.commons.lang3.math.NumberUtils;
 import util.data.DataProviding;
 import org.influxdb.dto.Point;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
+import util.tools.FileTools;
+import util.tools.TimeTools;
 import util.xml.XMLfab;
+import util.xml.XMLtools;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public class DatabaseManager implements QueryWriting{
-    
+public class DatabaseManager implements QueryWriting, Commandable {
+
+    static final String UNKNOWN_CMD = "unknown command";
+
     private final Map<String, SQLiteDB> lites = new HashMap<>();
     private final Map<String, SQLDB> sqls = new HashMap<>();
     private final Map<String, InfluxDB> influxes = new HashMap<>();
@@ -23,11 +35,14 @@ public class DatabaseManager implements QueryWriting{
     private static final String XML_PARENT_TAG = "databases";
     private String workPath;
     private Path settingsPath;
+    private DataProviding dataProvider;
     /**
      * Create a manager that uses its own scheduler
      */
-    public DatabaseManager( String workPath) {
+    public DatabaseManager( String workPath, DataProviding dataProvider) {
         this.workPath=workPath;
+        this.dataProvider=dataProvider;
+
         settingsPath = Path.of(workPath,"settings.xml");
         scheduler = Executors.newScheduledThreadPool(1);
 
@@ -231,6 +246,8 @@ public class DatabaseManager implements QueryWriting{
         }
         return false;
     }
+
+
     /* **************************************  R U N N A B L E S ****************************************************/
     /**
      * Checks if the oldest query present in the buffer isn't older than the maximum
@@ -326,5 +343,306 @@ public class DatabaseManager implements QueryWriting{
         }
         SqlTable.addBlankToXML( fab,table,format );
         return true;
+    }
+    /* ********************************** C O M M A N D A B L E *********************************************** */
+
+    @Override
+    public boolean removeWritable(Writable wr) {
+        return false;
+    }
+    @Override
+    public String replyToCommand(String[] request, Writable wr, boolean html) {
+
+        if( request[0].equalsIgnoreCase("myd"))
+            return doMYsqlDump(request,wr,html);
+
+        String[] cmds = request[1].split(",");
+
+        StringJoiner join = new StringJoiner(html?"<br":"\r\n");
+        Database db=null;
+
+        String id = cmds.length>=2?cmds[1]:"";
+        String dbName = cmds.length>=3?cmds[2]:"";
+        String address = cmds.length>=4?cmds[3]:"";
+        String user = cmds.length>=5?cmds[4]:"";
+        String pass="";
+
+        if( user.contains(":")){
+            pass = user.substring(user.indexOf(":")+1);
+            user = user.substring(0,user.indexOf(":"));
+        }
+
+        switch( cmds[0] ){
+            case "?":
+                join.add(TelnetCodes.TEXT_MAGENTA+"The databasemanager connects to databases, handles queries and fetches table information");
+                join.add(TelnetCodes.TEXT_GREEN+"Glossary"+TelnetCodes.TEXT_YELLOW)
+                        .add("  alias -> the alias of a column is the reference to use instead of the column name to find the rtval, empty is not used")
+                        .add("  macro -> an at runtime determined value that can be used to define the rtval reference").add("");
+                join.add(TelnetCodes.TEXT_GREEN+"Connect to a database"+TelnetCodes.TEXT_YELLOW)
+                        .add("  dbm:addmssql,id,db name,ip:port,user:pass -> Adds a MSSQL server on given ip:port with user:pass")
+                        .add("  dbm:addmysql,id,db name,ip:port,user:pass -> Adds a MSSQL server on given ip:port with user:pass")
+                        .add("  dbm:addmariadb,id,db name,ip:port,user:pass -> Adds a MariaDB server on given ip:port with user:pass")
+                        .add("  dbm:addsqlite,id(,filename) -> Creates an empty sqlite database, filename and extension optional default db/id.sqlite")
+                        .add("  dbm:addinfluxdb,id,db name,ip:port,user:pass -> Adds a Influxdb server on given ip:port with user:pass")
+                        .add("").add(TelnetCodes.TEXT_GREEN+"Working with tables"+TelnetCodes.TEXT_YELLOW)
+                        .add("  dbm:addtable,id,tablename,format (format eg. tirc timestamp(auto filled system time),int,real,char/text)")
+                        .add("  dbm:addcol,<dbid:>tablename,columntype:columnname<,alias (columntypes r(eal),t(ime)s(tamp),i(nteger),t(ext)")
+                        .add("  dbm:tablexml,id,tablename -> Write the table in memory to the xml file, use * as tablename for all")
+                        .add("  dbm:tables,id -> Get info about the given id (tables etc)")
+                        .add("  dbm:fetch,id -> Read the tables from the database directly, not overwriting stored ones.")
+                        .add("  dbm:store,dbId,tableid -> Trigger a insert for the database and table given")
+                        .add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW)
+                        .add("  dbm:addserver,id -> Adds a blank database server node to xml")
+                        .add("  dbm:addrollover,id,count,unit,pattern -> Add rollover to a SQLite database")
+                        .add("  dbm:alter,id,param:value -> Alter things like idle, flush and batch (still todo)")
+                        .add("  dbm:reload,id -> (Re)loads the database with the given id fe. after changing the xml")
+                        .add("  dbm:status -> Show the status of all managed database connections")
+                        .add("  st -> Show the current status of the databases (among other things)");
+                return join.toString();
+            case "reload":
+                if( cmds.length<2)
+                    return "No id given";
+                var dbr = reloadDatabase(cmds[1]);
+                if( dbr!=null){
+                    String error = dbr.getLastError();
+                    return error.isEmpty()?"Database reloaded":error;
+                }
+                return "No such database found";
+            case "addserver":
+                DatabaseManager.addBlankServerToXML( XMLfab.withRoot(settingsPath, "settings","databases"), "mysql", cmds.length>=2?cmds[1]:"" );
+                return "Added blank database server node to the settings.xml";
+            case "addmysql":
+                var mysql = SQLDB.asMYSQL(address,dbName,user,pass);
+                mysql.setID(id);
+                if( mysql.connect(false) ){
+                    mysql.getCurrentTables(false);
+                    mysql.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","settings","databases"));
+                    addSQLDB(id,mysql);
+                    return "Connected to MYSQL database and stored in xml as id "+id;
+                }else{
+                    return "Failed to connect to database.";
+                }
+            case "addmssql":
+                var mssql = SQLDB.asMSSQL(address,dbName,user,pass);
+                mssql.setID(id);
+                if( mssql.connect(false) ){
+                    mssql.getCurrentTables(false);
+                    mssql.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","settings","databases"));
+                    addSQLDB(id,mssql);
+                    return "Connected to MYSQL database and stored in xml as id "+id;
+                }else{
+                    return "Failed to connect to database.";
+                }
+            case "addmariadb":
+                if( cmds.length<5)
+                    return "Not enough arguments: dbm:addmariadb,id,db name,ip:port,user:pass";
+                var mariadb = SQLDB.asMARIADB(address,dbName,user,pass);
+                mariadb.setID(id);
+                if( mariadb.connect(false) ){
+                    mariadb.getCurrentTables(false);
+                    mariadb.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","settings","databases"));
+                    addSQLDB(id,mariadb);
+                    return "Connected to MariaDB database and stored in xml with id "+id;
+                }else{
+                    return "Failed to connect to database.";
+                }
+            case "addpostgresql":
+                if( cmds.length<5)
+                    return "Not enough arguments: dbm:addpostgresql,id,db name,ip:port,user:pass";
+                var postgres = SQLDB.asPOSTGRESQL(address,dbName,user,pass);
+                postgres.setID(id);
+                if( postgres.connect(false) ){
+                    postgres.getCurrentTables(false);
+                    postgres.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","settings","databases"));
+                    addSQLDB(id,postgres);
+                    return "Connected to PostgreSQL database and stored in xml with id "+id;
+                }else{
+                    return "Failed to connect to database.";
+                }
+            case "addsqlite":
+                if( !dbName.contains(File.separator))
+                    dbName = "db"+File.separator+(dbName.isEmpty()?id:dbName);
+                if(!dbName.endsWith(".sqlite"))
+                    dbName+=".sqlite";
+
+                var sqlite = SQLiteDB.createDB(id,Path.of(dbName).isAbsolute()?"":workPath,Path.of(dbName));
+                if( sqlite.connect(false) ){
+                    addSQLiteDB(id,sqlite);
+                    sqlite.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","settings","databases") );
+                    return "Created SQLite at "+dbName+" and wrote to settings.xml";
+                }else{
+                    return "Failed to create SQLite";
+                }
+            case "tablexml":
+                if( cmds.length<3)
+                    return "Not enough arguments: dbm:tablexml,dbid,tablename";
+                var dbOpt = getDatabase(cmds[1]);
+                if( dbOpt == null)
+                    return "No such database "+cmds[1];
+                // Select the correct server node
+                var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","databases");
+                if( fab.selectChildAsParent("server","id",cmds[1]).isEmpty())
+                    fab.selectChildAsParent("sqlite","id",cmds[1]);
+                if( fab.hasChild("table","name",cmds[2]).isPresent())
+                    return "Already present in xml, not adding";
+
+                if( dbOpt instanceof SQLDB){
+                    int rs= ((SQLDB) dbOpt).writeTableToXml(fab,cmds[2]);
+                    return rs==0?"None added":"Added "+rs+" tables to xml";
+                }else{
+                    return "Not a valid database target (it's an influx?)";
+                }
+
+            case "addrollover":
+                if( cmds.length < 5 )
+                    return "Not enough arguments, needs to be dbm:addrollover,dbId,count,unit,pattern";
+                var s= getSQLiteDB(cmds[1]);
+                if( s == null)
+                    return cmds[1] +" is not an SQLite";
+                s.setRollOver(cmds[4], NumberUtils.createInteger(cmds[2]),cmds[3]);
+                s.writeToXml(XMLfab.withRoot(settingsPath,"dcafs","settings","databases"));
+                s.forceRollover();
+                return "Rollover added";
+            case "addinfluxdb": case "addinflux":
+                var influx = new InfluxDB(address,dbName,user,pass);
+                if( influx.connect(false)){
+                    addInfluxDB(id,influx);
+                    influx.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","settings","databases") );
+                    return "Connected to InfluxDB and stored it in xml with id "+id;
+                }else{
+                    return "Failed to connect to InfluxDB";
+                }
+            case "addtable":
+                if( cmds.length < 3 )
+                    return "Not enough arguments, needs to be dbm:addtable,dbId,tableName<,format>";
+                if( DatabaseManager.addBlankTableToXML( XMLfab.withRoot(settingsPath,"dcafs","settings","databases"), cmds[1], cmds[2], cmds.length==4?cmds[3]:"" ) ) {
+                    if( cmds.length==4)
+                        return "Added a partially setup table to " + cmds[1] + " in the settings.xml, edit it to set column names etc";
+                    return "Created tablenode for "+cmds[1]+" inside the db node";
+                }
+                return "No such database found nor influxDB.";
+            case "addcolumn": case "addcol":
+                if( cmds.length < 3 )
+                    return "Not enough arguments, needs to be dbm:addcolumn,dbId:<tablid,>tableName,columntype:columnname<,alias>";
+                if(!cmds[2].contains(":"))
+                    return "Needs to be columtype:columnname";
+                String dbid =  cmds[1].contains(":")?cmds[1].split(":")[0]:"";
+                String table = cmds[1].contains(":")?cmds[1].split(":")[1]:cmds[1];
+                String[] col = cmds[2].split(":");
+                String alias = cmds.length==4?cmds[3]:"";
+
+                switch(col[0]){
+                    case "ts":col[0]="timestamp";break;
+                    case "i":col[0]="integer";break;
+                    case "r":col[0]="real";break;
+                    case "text":col[0]="text";break;
+                }
+
+                fab = XMLfab.withRoot(settingsPath,"settings","databases");
+                for( var dbtype : new String[]{"database","sqlite"}) {
+                    for (var ele : fab.getChildren(dbtype)) {
+                        if (!dbid.isEmpty() && !dbid.equalsIgnoreCase(ele.getAttribute("id")))
+                            continue;
+                        for (var tbl : XMLtools.getChildElements(ele, "table")) {
+                            if (tbl.getAttribute("name").equalsIgnoreCase(table)) {
+                                fab.selectOrAddChildAsParent(dbtype, "id", ele.getAttribute("id"))
+                                        .selectOrAddChildAsParent("table", "name", table)
+                                        .addChild(col[0], col[1]);
+                                if( !alias.isEmpty())
+                                    fab.attr("alias", alias).build();
+                                return "Column added: " + col[0] + "->" + col[1] + (alias.isEmpty() ? "" : " with alias " + alias);
+                            }
+                        }
+                    }
+                }
+                return "Nothing added";
+            case "fetch":
+                if( cmds.length < 2 )
+                    return "Not enough arguments, needs to be dbm:fetch,dbId";
+                db = getDatabase(cmds[1]);
+                if( db==null)
+                    return "No such database";
+                if( db.getCurrentTables(false) )
+                    return "Tables fetched, run dbm:tables,"+cmds[1]+ " to see result.";
+                if( db.isValid(1) )
+                    return "Failed to get tables, but connection valid...";
+                return "Failed to get tables because connection not active.";
+            case "tables":
+                if( cmds.length < 2 )
+                    return "Not enough arguments, needs to be dbm:tables,dbId";
+                db = getDatabase(cmds[1]);
+                if( db==null)
+                    return "No such database";
+                return db.getTableInfo(html?"<br":"\r\n");
+            case "alter":
+                return "Not yet implemented";
+            case "status": case "list":
+                return getStatus();
+            case "store":
+                if( cmds.length < 3 )
+                    return "Not enough arguments, needs to be dbm:store,dbId,tableid";
+                if( buildInsert(cmds[1],cmds[2],dataProvider,"") )
+                    return "Wrote record";
+                return "Failed to write record";
+            default:
+                return UNKNOWN_CMD+": "+request[0]+":"+request[1];
+        }
+    }
+    public String doMYsqlDump(String[] request, Writable wr, boolean html ){
+        String[] cmds = request[1].split(",");
+        switch( cmds[0] ){
+            case "?": 	return " myd:run,dbid,path -> Run the mysqldump process for the given database";
+            case "run":
+                if( cmds.length != 3 )
+                    return "Not enough arguments, must be mysqldump:run,dbid,path";
+                Database db = getDatabase(cmds[1]);
+                if( db == null )
+                    return "No such database "+cmds[1];
+                if( db instanceof SQLiteDB )
+                    return "Database is an sqlite, not mysql/mariadb";
+                if( db instanceof SQLDB ){
+                    SQLDB sql =(SQLDB)db;
+                    if( sql.isMySQL() ){
+                        // do the dump
+                        String os = System.getProperty("os.name").toLowerCase();
+                        if( !os.startsWith("linux")){
+                            return "Only Linux supported for now.";
+                        }
+                        try {
+                            ProcessBuilder pb = new ProcessBuilder("bash","-c", "mysqldump "+sql.getTitle()+" > "+cmds[2]+";");
+                            pb.inheritIO();
+                            Process process;
+
+                            Logger.info("Started dump attempt at "+ TimeTools.formatLongUTCNow());
+                            process = pb.start();
+                            process.waitFor();
+                            // zip it?
+                            if( Files.exists(Path.of(workPath,cmds[2]))){
+                                if(FileTools.zipFile(Path.of(workPath,cmds[2]))==null) {
+                                    Logger.error("Dump of "+cmds[1]+" created, but zip failed");
+                                    return "Dump created, failed zipping.";
+                                }
+                                // Delete the original file
+                                Files.deleteIfExists(Path.of(workPath,cmds[2]));
+                            }else{
+                                Logger.error("Dump of "+cmds[1]+" failed.");
+                                return "No file created...";
+                            }
+                            Logger.info("Dump of "+cmds[1]+" created, zip made.");
+                            return "Dump finished and zipped at "+TimeTools.formatLongUTCNow();
+                        } catch (IOException | InterruptedException e) {
+                            Logger.error(e);
+                            Logger.error("Dump of "+cmds[1]+" failed.");
+                            return "Something went wrong";
+                        }
+                    }else{
+                        return "Database isn't mysql/mariadb";
+                    }
+                }else{
+                    return "Database isn't regular SQLDB";
+                }
+            default:
+                return UNKNOWN_CMD+": "+request[0]+":"+request[1];
+        }
     }
 }

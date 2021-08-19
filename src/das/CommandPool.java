@@ -11,78 +11,58 @@ import io.collector.FileCollector;
 import io.telnet.TelnetCodes;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
-import org.w3c.dom.Document;
-import util.data.DataProviding;
-import util.data.RealtimeValues;
-import util.database.*;
 import util.gis.GisTools;
 import util.math.MathUtils;
-import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
-import util.xml.XMLtools;
 import worker.Datagram;
 import worker.DebugWorker;
-import worker.Generic;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class CommandPool {
 
-	private static DateTimeFormatter secFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-	private ArrayList<Commandable> bulkCommandable = new ArrayList<>();
-	private HashMap<String,Commandable> commandables = new HashMap<>();
+	private final ArrayList<Commandable> bulkCommandable = new ArrayList<>();
+	private final HashMap<String,Commandable> commandables = new HashMap<>();
 
 	private ArrayList<ShutdownPreventing> sdps;
 
-	private DataProviding dataProvider; // To have access to the current values
 	private StreamManager streampool = null; // To be able to interact with attached devices
 	private EmailWorker emailWorker; // To be able to send emails and get status
 	private IssuePool issues=null;
-	private DatabaseManager dbManager;
 
 	private DAS das;
 
-	Map<String, Method> methodMapping = new HashMap<>();
-	Document xml;
-
-	private String workPath;
-	private Path settingsPath;
+	private final String workPath;
+	private final Path settingsPath;
 
 	static final String UNKNOWN_CMD = "unknown command";
 
-	private Optional<EmailSending> sendEmail = Optional.empty();
-	private Optional<SMSSending> sendSMS = Optional.empty();
+	private EmailSending sendEmail = null;
+	private SMSSending sendSMS = null;
 	/* ******************************  C O N S T R U C T O R *********************************************************/
 	/**
 	 * Constructor requiring a link to the @see RealtimeValues for runtime values
-	 * @param dataProvider The current dataprovider
 	 */
-	public CommandPool(DataProviding dataProvider, String workPath){
-		this.dataProvider = dataProvider;
+	public CommandPool( String workPath){
 		this.workPath=workPath;
 		settingsPath = Path.of(workPath,"settings.xml");
 		Logger.info("CommandPool started with workpath: "+workPath);
 	}
 	/**
-	 * Constructor requiring a link to the @see RealtimeValues for runtime values and @see IssueCollector to notify problems
-	 * @param dataProvider The current dataprovider
+	 * Constructor requiring a link to @see IssueCollector to notify problems
 	 * @param issues The collector for the issues created by the BaseReq
 	 */
-	public CommandPool(RealtimeValues dataProvider, IssuePool issues, String workPath) {
-		this(dataProvider,workPath);
+	public CommandPool( IssuePool issues, String workPath) {
+		this(workPath);
 		this.issues = issues;
 	}
 
@@ -104,9 +84,9 @@ public class CommandPool {
 	}
 	/* ****************************  S E T U P - C H E C K U P: Adding different parts from dcafs  *********************/
 	/**
-	 * Give the DAS object so it has access to everything it might need
+	 * Give the DAS object, so it has access to everything it might need
 	 * 
-	 * @param das The reference to verything including itself... should be removed in the future
+	 * @param das The reference to everything including itself... should be removed in the future
 	 */
 	public void setDAS(DAS das) {
 		this.das = das;
@@ -120,7 +100,7 @@ public class CommandPool {
 	public void setEmailWorker(EmailWorker emailWorker) {
 
 		this.emailWorker = emailWorker;
-		sendEmail = Optional.ofNullable(emailWorker.getSender());
+		sendEmail = emailWorker.getSender();
 	}
 
 	/**
@@ -128,7 +108,7 @@ public class CommandPool {
 	 * @param sms The object that allows sms sending
 	 */
 	public void setSMSSending(SMSSending sms){
-		sendSMS = Optional.ofNullable(sms);
+		sendSMS = sms;
 	}
 	/**
 	 * To interact with streams/channels, access to the streampool is needed
@@ -139,15 +119,6 @@ public class CommandPool {
 		this.streampool = streampool;
 	}
 	/**
-	 * To have access to the realtime values
-	 * 
-	 * @param dataProvider A reference to the RealtimeValues
-	 */
-	public void setDataProvider(DataProviding dataProvider) {
-		this.dataProvider = dataProvider;
-	}
-
-	/**
 	 * Set the IssueCollector to get answers from it
 	 * 
 	 * @param issues The currently used IssueCollector
@@ -155,26 +126,11 @@ public class CommandPool {
 	public void setIssues(IssuePool issues) {
 		this.issues = issues;
 	}
-	/**
-	 * Check if the given issue is currently active
-	 * 
-	 * @param issue The issue to check
-	 * @return True if it's active, false if it isn't (or doesn't exists)
-	 */
-	public boolean checkIssue(String issue) {
-		return issues.isActive(issue);
-	}
+
 	public ArrayList<String> getActiveIssues(){
 		return issues.getActives();
 	}
-	/**
-	 * Set the DatabaseManager to get answers from it
-	 * 
-	 * @param manager The sqlitesManager currently used
-	 */
-	public void setDatabaseManager(DatabaseManager manager) {
-		dbManager = manager;
-	}
+
 
 	/* ************************************ * R E S P O N S E *************************************************/
 
@@ -185,13 +141,13 @@ public class CommandPool {
 
 	public void emailResponse(Datagram d, String header) {
 		/* If there's no valid queue, can't do anything */
-		if ( sendEmail.isEmpty() ) {
+		if ( sendEmail!=null ) {
 			Logger.info("Asked to email to " + d.getOriginID() + " but no worker defined.");
 			return;
 		}
 		/* Notification to know if anyone uses the bot. */
 		if ( (!d.getOriginID().startsWith("admin") && !emailWorker.isAddressInRef("admin",d.getOriginID()) ) && header.equalsIgnoreCase("Bot Reply")  ) {
-			sendEmail.get().sendEmail( Email.toAdminAbout("DCAFSbot").content("Received '" + d.getData() + "' command from " + d.getOriginID()) );
+			sendEmail.sendEmail( Email.toAdminAbout("DCAFSbot").content("Received '" + d.getData() + "' command from " + d.getOriginID()) );
 		}
 		/* Processing of the question */
 		d.setData( d.getData().toLowerCase());
@@ -201,9 +157,9 @@ public class CommandPool {
 
 		if (!response.toLowerCase().contains(UNKNOWN_CMD)) {
 			response = response.replace("[33m ", "");
-			sendEmail.get().sendEmail( Email.to(d.getOriginID()).subject(header).content(response.replace("\r\n", "<br>")));
+			sendEmail.sendEmail( Email.to(d.getOriginID()).subject(header).content(response.replace("\r\n", "<br>")));
 		} else {
-			sendEmail.get().sendEmail(
+			sendEmail.sendEmail(
 					Email.to(d.getOriginID())
 							.subject(header)
 							.content("Euh " + d.getOriginID().substring(0, d.getOriginID().indexOf(".")) + ", no idea what to do with '" + d.getData() + "'..."));
@@ -216,7 +172,7 @@ public class CommandPool {
 	 * 
 	 * @param question The command/Question to process
 	 * @param wr The writable (if any) this question originates from
-	 * @param remember Whether or not the command should be recorded in the raw data
+	 * @param remember If the command should be recorded in the raw data
 	 * @return The response to the command/question
 	 */
 	public String createResponse(String question, Writable wr, boolean remember) {
@@ -230,7 +186,7 @@ public class CommandPool {
 	 * @param question The command/Question to process
 	 * @param wr  Writable in order to be able to respond to streaming
 	 *                 data questions
-	 * @param remember Whether or not the command should be recorded in the raw data
+	 * @param remember If the command should be recorded in the raw data
 	 * @param html     If the response should you html encoding or not
 	 * @return The response to the command/question
 	 */
@@ -243,7 +199,7 @@ public class CommandPool {
 
 		question = question.replace("html", "");
 
-		if (remember) // Whether or not to store commands in the raw log (to have a full simulation when debugging)
+		if (remember) // If to store commands in the raw log (to have a full simulation when debugging)
 			Logger.tag("RAW").info("1\tsystem\t" + question);
 
 		int dp = question.indexOf(":");
@@ -258,26 +214,42 @@ public class CommandPool {
 		split[0]=split[0].toLowerCase();
 		String find = split[0].replaceAll("[0-9]+", "_");
 		
-		if( find.equals("i_c") || find.length() > 3 ) // Otherwise adding integrated circuits with their name is impossible
+		if( find.equals("i_c") || find.length() > 3 ) // Otherwise, adding integrated circuits with their name is impossible
 			find = split[0];
 			
 		find = find.isBlank() ? "nothing" : find;
 		
-		Method m = methodMapping.get(find);		
+		switch( split[0] ){
+			case "admin": result=doADMIN(split, html); break;
+			case "cmds":     result=doCMDS( split, html); break;
+			case "checksum": result=doCHECKSUM(split[0]); break;
+			case "conv": result=doCONVert(split); break;
 
-		if (m != null) {
-			try {
-				result = m.invoke( this, split, wr, html).toString();
-			} catch (IllegalAccessException | IllegalArgumentException e) {
-				Logger.warn("Invoke Failed: " + question);
-				result = "Error during invoke.";
-			}catch (InvocationTargetException e) {
-				Throwable originalException = e.getTargetException();
-				Logger.error( "'"+originalException+"' at "+originalException.getStackTrace()[0].toString()+" when processing: "+question);
-				Logger.error(e);
-			 }
-		}
-		if( m == null || result.startsWith(UNKNOWN_CMD) ){
+			case "email": result=doEMAIL(split, wr,html); break;
+			case "fc": result=doFileCollector(split, html); break;
+			case "help": case "h": result=doHelp(split,html); break;
+			case "h_": result=doH_(split); break;
+
+			case "lt": result=doListThread(split); break;
+			case "nothing": result=doNOTHING(split,wr); break;
+			case "raw": result=doRAW(split, wr); break;
+			case "read": result=doREAD(split, wr ); break;
+			case "retrieve": result=doRETRIEVE(split, wr,html); break;
+			case "reqtasks": result=doREQTASKS(split); break;
+			case "rios": result=doRIOS(split, wr,html); break;
+			
+			case "trans": result=doTRANS(split, wr); break;
+			case "sd": result=doShutDown(split, wr,html); break;
+			case "st": result=doSTatus(split, html); break;
+			case "stop": result=doSTOP( wr ); break;
+			case "serialports": result=doSERIALPORTS(split, html); break;
+			case "sleep": result=doSLEEP(split, wr); break;
+			case "ss": result=doStreamS(split, wr,html); break;
+			case "s_": result=doS_(split); break;
+			case "upgrade": result=doUPGRADE(split, wr,html); break;
+		}	
+
+		if( result.startsWith(UNKNOWN_CMD) ){
 			var cmdOpt = commandables.entrySet().stream()
 						.filter( ent -> {
 							String key = ent.getKey();
@@ -325,42 +297,6 @@ public class CommandPool {
 			return "";
 		return result + (html ? "<br>" : "\r\n");
 	}
-
-	/* *******************************************************************************************/
-	/**
-	 * Search the class for relevant methods.
-	 */
-	public void getMethodMapping() {
-
-		Class<?> reqdata = this.getClass();
-
-		ArrayList<Method> methods = new ArrayList<>(Arrays.asList(reqdata.getDeclaredMethods()));
-
-		if (reqdata.getSuperclass() == CommandPool.class) { // To make sure that both the child and the parent class are
-														// searched
-			methods.addAll(Arrays.asList(reqdata.getSuperclass().getDeclaredMethods()));
-		}
-		for (Method method : methods) { // Filter the irrelevant methods out
-			String com = method.getName();
-			if (com.length() >= 3 && com.startsWith("do")) { // Needs to be atleast 3 characters long and start with
-																// 'do'
-				com = com.substring(2); // Remove the 'do'
-				StringBuilder high = new StringBuilder(); // 'high' will contain the capital letters from the command to form the
-									// alternative command
-				for (int a = 0; a < com.length(); a++) {
-					char x = com.charAt(a);
-					if (Character.isUpperCase(x) || x == '_') {
-						high.append(x);
-					}
-				}
-				methodMapping.put(com.toLowerCase(), method);				
-				if (high.length() != com.length()) { // if both commands aren't the same
-					methodMapping.put(high.toString().toLowerCase(), method);
-				}
-			}
-		}
-		Logger.info("Found " + methodMapping.size() + " usable methods/commands.");
-	}
 	/* ****************************************** C O M M A N D A B L E ********************************************* */
 	private String doCmd( String id, String command, Writable wr){
 		var c = commandables.get(id);
@@ -370,95 +306,33 @@ public class CommandPool {
 		}
 		return c.replyToCommand(new String[]{id,command},wr,false);
 	}
-	private String doCmd( String[] req, Writable wr){
-		var c = commandables.get(req[0]);
-		if( c==null) {
-			Logger.error("No "+req[0]+" available");
-			return UNKNOWN_CMD+": No "+req[0]+" available";
-		}
-		return c.replyToCommand(req,wr,false);
-	}
 	/* ******************************************  C O M M A N D S ****************************************************/
 	/**
 	 * Command that creates a list of all available commands. Then execute a request
 	 * with '?' from each which should return the info.
 	 * 
 	 * @param request The full request as received, [0]=method and [1]=command
-	 * @param wr The writable of the source of the command
-	 * @param html    True if the command needs to be hmtl formatted
+	 * @param html    True if the command needs to be html formatted
 	 * @return Response to the request
 	 */
-	public String doCMDS(String[] request, Writable wr, boolean html) {
+	public String doCMDS(String[] request, boolean html) {
 		String nl = html ? "<br>" : "\r\n";
 		
-		StringJoiner join = new StringJoiner( nl, "List of base commands:"+nl,"");
-
-		if( !request[1].contains("*"))
-			request[1]+=".*";
-
-		ArrayList<String> titles = new ArrayList<>();
-		methodMapping.keySet().stream().filter( x -> x.matches(request[1]))
-									   .forEach( titles::add );
-
-		Collections.sort(titles); // Sort it so that the list is alphabetical
-
-		ArrayList<String> results = new ArrayList<>();
-		for (String t : titles) {
-			String result;
-			try {
-				if (t.equals("cmds")) // ignore the cmds command otherwise endless loop
-					continue;
-					
-				result = methodMapping.get(t).invoke(this, new String[]{t,"?"}, null, false).toString(); // Execute command with '?'
-
-				if ( result.isBlank() || result.toLowerCase().startsWith(UNKNOWN_CMD) || result.toLowerCase().startsWith("No")) {
-					results.add(t);
-				} else {
-					result = result.replace("<title>", t);
-					if (!result.startsWith(t)) {
-						results.add(t+result+nl);
-					} else {
-						results.add(nl+result);
-					}
-				}
-			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-				Logger.error(e.getMessage()+" while trying "+t);
-				join.add(t);
-			}
-		}
-		if( request[1].startsWith("*")&&request[1].endsWith("*") ){
-			request[1]=request[1].replace("*", "");
-			boolean lastBlank=false; // So that there arent two empty lines in succession
-			for( String l : results){
-				for( String sub : l.split(nl) ){
-					if( sub.isBlank() && !lastBlank ){						
-						join.add(sub);
-						lastBlank=true;
-					 }else if( sub.contains(request[1]) ){
-						join.add(sub);
-						lastBlank=false;
-					 }
-				}
-			}						
-		}else{
-			results.stream().forEach(join::add);
-		}
-		return join.toString();
+		
+		return "Needs a rewrite";
 	}
 	/* ******************************************************************************/
 	/**
 	 * Calculate the checksum of the given item, for now only rawyesterday exists
 	 * @param request The full command checksum:something
-	 * @param wr The writable of the source of the command
-	 * @param html Whether or not to use html for newline etc
 	 * @return Calculated checksum
 	 */
-	public String doCHECKSUM( String[] request, Writable wr, boolean html ){
+	public String doCHECKSUM( String request ){
 		
 		// Check for files with wildcard? 2019-07-24_RAW_0.log.zip
 		StringBuilder b = new StringBuilder();
 
-		switch( request[1] ){
+		switch( request ){
 			case "rawyesterday":
 				String yesterday = "raw"+File.separator+"zipped"+File.separator+TimeTools.formatNow( "yyyy-MM", -1)+File.separator+TimeTools.formatNow( "yyyy-MM-dd", -1)+"_RAW_x.log.zip";
 				int cnt=0;
@@ -476,7 +350,7 @@ public class CommandPool {
 			case "?":
 				return "checksum:rawyesterday -> Calculate checksum of the stored raw data (WiP";	
 			default:
-				return UNKNOWN_CMD+": "+request[1];
+				return UNKNOWN_CMD;
 		}
 	}  
 	/* ********************************************************************************************/
@@ -485,13 +359,13 @@ public class CommandPool {
 	 * Current options: dcafs,script and settings (dcafs is wip)
 	 * 
 	 * @param request The full command update:something
-	 * @param wr The writable of the source of the command
-	 * @param html Whether or not to use html for newline etc
+	 * @param wr The 'writable' of the source of the command
+	 * @param html Whether to use html for newline etc
 	 * @return Descriptive result of the command, "Unknown command if not recognised
 	 */
 	public String doUPGRADE(String[] request, Writable wr, boolean html) {
 		
-		Path p=null;
+		Path p;
 		Path to;
 		Path refr;
 
@@ -506,13 +380,12 @@ public class CommandPool {
 				return join.toString();			
 			case "dcafs":
 				return "todo";
-			case "tmscript"://fe. update:script,tmid
-
-
+			case "tmscript"://fe. update:tmscript,tmid
 				var ori = doCmd("tm","getpath,"+spl[1],wr );
 				if( ori.isEmpty() )
 					return "No such script";
 
+				p = Path.of(ori);
 				to = Path.of(ori.replace(".xml", "")+"_" + TimeTools.formatUTCNow("yyMMdd_HHmm") + ".xml");
 				refr = Path.of(workPath,"attachments",spl[1]);
 				try {
@@ -549,22 +422,22 @@ public class CommandPool {
 					e.printStackTrace();
 				}
 				break;
-			default: return UNKNOWN_CMD+": "+spl[0];
+			default: return UNKNOWN_CMD;
 		}
-		return UNKNOWN_CMD+": "+spl[0];
+		return UNKNOWN_CMD;
 	}
 	/**
 	 * Command to retrieve a setup file, can be settings.xml or a script
-	 * eg. retrieve:script,scriptname.xml or retrieve:setup for the settings.xml
+	 * fe. retrieve:script,scriptname.xml or retrieve:setup for the settings.xml
 	 * 
 	 * @param request The full command update:something
-	 * @param wr The writable of the source of the command
-	 * @param html Whether or not to use html for newline etc
+	 * @param wr The 'writable' of the source of the command
+	 * @param html Whether to use html for newline etc
 	 * @return Descriptive result of the command, "Unknown command if not recognised
 	 */
 	public String doRETRIEVE(String[] request, Writable wr, boolean html) {
 		
-		if( sendEmail.isEmpty())
+		if( sendEmail==null)
 			return "Can't retrieve without EmailWorker";
 
 		String[] spl = request[1].split(",");
@@ -583,7 +456,7 @@ public class CommandPool {
 				if( p.isEmpty() )
 					return "No such script";
 
-				sendEmail.get().sendEmail( Email.to(spl[2]).subject("Requested tm script: "+spl[1]).content("Nothing to say").attachment(p) );
+				sendEmail.sendEmail( Email.to(spl[2]).subject("Requested tm script: "+spl[1]).content("Nothing to say").attachment(p) );
 				return "Tried sending "+spl[1]+" to "+spl[2];
 			case "setup":
 			case "settings":
@@ -593,22 +466,22 @@ public class CommandPool {
 				}
 				if( spl.length!=2)
 					return "Not enough arguments, expected retrieve:setup,email/ref";
-				sendEmail.get().sendEmail(Email.to(spl[1]).subject("Requested file: settings.xml").content("Nothing to say").attachment(workPath+File.separator+"settings.xml") );
+				sendEmail.sendEmail(Email.to(spl[1]).subject("Requested file: settings.xml").content("Nothing to say").attachment(workPath+File.separator+"settings.xml") );
 				return "Tried sending settings.xml to "+spl[1];
 			default: return UNKNOWN_CMD+":"+spl[0];
 		}
 	}
 	/* *******************************************************************************/
-	public String doTRANS(String[] request, Writable wr, boolean html ){
+	public String doTRANS(String[] request, Writable wr ){
 		return doCmd("ts","forward,"+request[1],wr);
 	}
-	public String doSTOP(String[] request, Writable wr, boolean html ) {
+	public String doSTOP( Writable wr ) {
 		if( streampool.removeWritable(wr) )
 			return "Removed forwarding to "+wr.getID();
 		commandables.values().forEach( c -> c.removeWritable(wr) );
 		return "No matches found for "+wr.getID();
 	}
-	public String doRAW( String[] request, Writable wr, boolean html ){
+	public String doRAW( String[] request, Writable wr ){
 		if( streampool.addForwarding(request[1], wr ) ){
 			return "Request for "+request[0]+":"+request[1]+" ok.";
 		}else{
@@ -620,8 +493,8 @@ public class CommandPool {
 	 * Execute commands associated with the @see StreamManager
 	 * 
 	 * @param request The full command split on the first :
-	 * @param wr The writable of the source of the command
-	 * @param html Whether or not to use html for newline etc
+	 * @param wr The 'writable' of the source of the command
+	 * @param html Whether to use html for newline etc
 	 * @return Descriptive result of the command, "Unknown command if not recognised
 	 */
 	public String doStreamS(String[] request, Writable wr, boolean html ){
@@ -635,7 +508,7 @@ public class CommandPool {
 			return "rios -> Get a list of the currently active streams.";
 		return doStreamS( new String[]{"streams","rios"}, wr, html);
 	}
-	public String doH_( String[] request, Writable wr, boolean html ){
+	public String doH_( String[] request){
 		if( streampool == null )
 			return "No StreamManager defined.";
 
@@ -662,7 +535,7 @@ public class CommandPool {
 			}
 		}
 	}
-	public String doS_( String[] request, Writable wr, boolean html ){	
+	public String doS_( String[] request ){	
 		
 		if( streampool == null )
 			return "No StreamManager defined.";
@@ -696,11 +569,10 @@ public class CommandPool {
 	 * Execute commands associated with serialports on the system
 	 * 
 	 * @param request The full command split on the first :
-	 * @param wr The writable of the source of the command
-	 * @param html Whether or not to use html for newline etc
+	 * @param html Whether to use html for newline etc
 	 * @return Descriptive result of the command, "Unknown command if not recognised
 	 */
-	public String doSERIALPORTS( String[] request, Writable wr, boolean html ){
+	public String doSERIALPORTS( String[] request, boolean html ){
 		StringBuilder response = new StringBuilder();
 		
 		if( request[1].equals("?") )
@@ -713,11 +585,11 @@ public class CommandPool {
 		return response.toString();
 	}
 	/**
-	 * Execute command to shutdown dcafs, can be either sd or shutdown or sd:reason
+	 * Execute command to shut down dcafs, can be either sd or shutdown or sd:reason
 	 * 
 	 * @param request The full command split on the first :
-	 * @param wr The writable of the source of the command
-	 * @param html Whether or not to use html for newline etc
+	 * @param wr The 'writable' of the source of the command
+	 * @param html Whether to use html for newline etc
 	 * @return Descriptive result of the command, "Unknown command if not recognised
 	 */
 	public String doShutDown( String[] request, Writable wr, boolean html ){
@@ -741,11 +613,10 @@ public class CommandPool {
 	 * Get the content of the help.txt
 	 * 
 	 * @param request The full command split on the first :
-	 * @param wr The writable of the source of the command
-	 * @param html Whether or not to use html for newline etc
+	 * @param html Whether to use html for newline etc
 	 * @return Content of the help.txt or 'No telnetHelp.txt found' if not found
 	 */
-	public String doHelp( String[] request, Writable wr, boolean html ){		
+	public String doHelp( String[] request, boolean html ){		
 		String nl = html?"<br":"\r\n";
 		StringJoiner join = new StringJoiner(nl,"",nl);
 		join.setEmptyValue(UNKNOWN_CMD+": "+request[0]+":"+request[1]);
@@ -797,7 +668,7 @@ public class CommandPool {
 		return join.toString();
 	}
 
-	public String doListThread( String[] request, Writable wr, boolean html ){	
+	public String doListThread( String[] request ){	
 		if( request[1].equals("?") )
 			return " -> Get a list of the currently active threads";
 
@@ -810,11 +681,11 @@ public class CommandPool {
 			response.append("Thread ID:").append(lstThread.getId()).append(" = ").append(lstThread.getName()).append("\r\n");
 		return response.toString();   
 	}
-	public String doREAD( String[] request, Writable wr, boolean html ){
+	public String doREAD( String[] request, Writable wr ){
 		das.getDataQueue().add( Datagram.build("").writable(wr).label("read:"+request[1]) ); //new Datagram(wr,"",1,"read:"+request[1]));
 		return "Request for readable "+request[1]+" from "+wr.getID()+" issued";
 	}
-	public String doADMIN( String[] request, Writable wr, boolean html ){
+	public String doADMIN( String[] request, boolean html ){
 		String nl = html?"<br":"\r\n";
 		String[] cmd = request[1].split(",");
 		switch( cmd[0] ){
@@ -833,28 +704,34 @@ public class CommandPool {
 					.add("admin:reboot -> Reboot the computer (linux only)");
 				return join.toString();
 			case "getlogs":
-				return sendEmail.map( e -> {
-					e.sendEmail( Email.toAdminAbout("Statuslog").subject("File attached (probably)")
+				if( sendEmail != null ){
+					sendEmail.sendEmail( Email.toAdminAbout("Statuslog").subject("File attached (probably)")
 							.attachment( Path.of(workPath,"logs","info.log") ));
-					e.sendEmail( Email.toAdminAbout("Errorlog").subject("File attached (probably)")
-									.attachment(Path.of(workPath,"logs","errors_"+TimeTools.formatUTCNow("yyMMdd")+".log" )) );
+					sendEmail.sendEmail( Email.toAdminAbout("Errorlog").subject("File attached (probably)")
+							.attachment(Path.of(workPath,"logs","errors_"+TimeTools.formatUTCNow("yyMMdd")+".log" )) );
 					return "Sending logs (info,errors) to admin...";
-				}).orElse("No email functionality active.");
+				}
+				return "No email functionality active.";
 			case "gettasklog":
-				return sendEmail.map( e -> {
-					e.sendEmail(Email.toAdminAbout("Taskmanager.log").subject("File attached (probably)")
+				if(sendEmail!=null){
+					sendEmail.sendEmail(Email.toAdminAbout("Taskmanager.log").subject("File attached (probably)")
 							.attachment(Path.of(workPath, "logs", "taskmanager.log")));
 					return "Trying to send taskmanager log";
-				}).orElse("No email functionality active.");
+				}
+				return "No email functionality active.";
 
 			case "getlastraw":
 				Path it = Path.of(workPath,"raw",TimeTools.formatUTCNow("yyyy-MM"));
+				if( sendEmail==null)
+					return "No email functionality active.";
 				try {
 					var last = Files.list(it).filter( f -> !Files.isDirectory(f)).max( Comparator.comparingLong( f -> f.toFile().lastModified()));
-					return last.map(path -> sendEmail.map(e -> {
-						e.sendEmail(Email.toAdminAbout("Taskmanager.log").subject("File attached (probably)").attachment(path));
+					if( last.isPresent() ){
+						var path = last.get();
+						sendEmail.sendEmail(Email.toAdminAbout("Taskmanager.log").subject("File attached (probably)").attachment(path));
 						return "Tried sending " + path;
-					}).orElse("No email functionality active.")).orElse("File not found");
+					}
+					return "File not found";
 				} catch (IOException e) {
 					e.printStackTrace();
 					return "Something went wrong trying to get the file";
@@ -863,11 +740,11 @@ public class CommandPool {
 				DebugWorker.addBlank(XMLfab.withRoot(settingsPath,"dcafs","settings"));
 				return "Tried to add node";
 			case "sms":
-				return sendSMS.map( s ->{
-					s.sendSMS("admin","test");
+				if(sendSMS!=null ) {
+					sendSMS.sendSMS("admin", "test");
 					return "Trying to send SMS";
-				}).orElse("No SMS functionality present");
-
+				}
+				return "No SMS functionality present";
 			case "haw":
 				das.haltWorkers();
 				return nl+"Stopping all worker threads.";
@@ -911,7 +788,8 @@ public class CommandPool {
 		}
 
 		if( emailWorker == null ){
-			if(request[1].equals("reload") && XMLtools.hasElementByTag(xml, "email") ){
+			if(request[1].equals("reload") 
+					&& XMLfab.withRoot(settingsPath, "settings").getChild("email").isPresent() ){
 				das.addEmailWorker();
 			}else{
 				return "No EmailWorker defined (yet), use email:addblank to add blank to xml.";
@@ -933,22 +811,22 @@ public class CommandPool {
 		return emailWorker.replyToSingleRequest(request[1], html);
 	}
 
-	public String doREQTASKS( String[] request, Writable wr, boolean html ){
+	public String doREQTASKS( String[] request ){
 		if( request[1].equals("?") )
 			return ":x -> Send a list of all the taskset executions to x";
 
 		if(  request[1].equals("") )
 			return "No recipient given.";
 		
-		if( sendEmail.isEmpty() ){
-			sendEmail.get().sendEmail( Email.to(request[1]).subject("Executed tasksets").content("Nothing to add")
-					.attachment( Path.of(workPath,"logs","tasks.csv").toString() ) );
-			return "Sending log of taskset execution to "+request[1]; 
-		}
-		return "Failed to send Taskset Execution list.";
+		if( sendEmail==null )
+			return "No email functionality active";
+
+		sendEmail.sendEmail( Email.to(request[1]).subject("Executed tasksets").content("Nothing to add")
+				.attachment( Path.of(workPath,"logs","tasks.csv").toString() ) );
+		return "Sending log of taskset execution to "+request[1];
 	}
 
-	public String doNOTHING( String[] request, Writable wr, boolean html ){
+	public String doNOTHING( String[] request, Writable wr ){
 		if( request[1].equals("?") )
 			return " -> Clear the datarequests";
 		if( wr != null ){
@@ -959,7 +837,7 @@ public class CommandPool {
 	}	
 
 	
-	public String doSTatus( String[] request, Writable wr, boolean html ){
+	public String doSTatus( String[] request, boolean html ){
 		if( request[1].equals("?") )
 			return " -> Get a status update";
 
@@ -972,7 +850,7 @@ public class CommandPool {
 		return response;       	
 	}
 
-	public String doCONVert( String[] request, Writable wr, boolean html ){
+	public String doCONVert( String[] request){
 		if( request[1].equals("?") )
 			return " -> Convert a coordinate in the standard degrees minutes format";		
 		
@@ -1012,7 +890,7 @@ public class CommandPool {
 		}    				
 		return b.toString();
 	}
-	public String doSLEEP( String[] request, Writable wr, boolean html ){
+	public String doSLEEP( String[] request, Writable wr ){
 		if( request[1].equals("?") || request[1].split(",").length!=2 ){
 			return "sleep:rtc,<time> -> Let the processor sleep for some time using an rtc fe. sleep:1,5m sleep 5min based on rtc1";
 		}
@@ -1021,7 +899,7 @@ public class CommandPool {
 			return "Only Linux supported for now.";
 		}
 		
-		int seconds = 90;
+		int seconds;
 		String[] cmd = request[1].split(",");
 		seconds = TimeTools.parsePeriodStringToSeconds(cmd[1]);
 
@@ -1051,364 +929,9 @@ public class CommandPool {
 		}
 		return "Waking up at "+TimeTools.formatLongUTCNow();
 	}
-	public String doGENericS( String[] request, Writable wr, boolean html ){
 
-		StringJoiner join = new StringJoiner(html?"<br":"\r\n");
-		String[] cmd = request[1].split(",");
 
-		switch(cmd[0]){
-			case "?":
-				join.add("")
-					.add(TelnetCodes.TEXT_RED+"Purpose"+TelnetCodes.TEXT_YELLOW)
-					.add("  Generics (gens) are used to take delimited data and store it as rtvals or in a database.");
-				join.add(TelnetCodes.TEXT_BLUE+"Notes"+TelnetCodes.TEXT_YELLOW)
-					.add("  - ...");
-				join.add("").add(TelnetCodes.TEXT_GREEN+"Create a Generic"+TelnetCodes.TEXT_YELLOW)
-					.add("  gens:fromtable,dbid,dbtable,gen id[,delimiter] -> Create a generic according to a table, delim is optional, def is ','")
-					.add("  gens:fromdb,dbid,delimiter -> Create a generic with chosen delimiter for each table if there's no such generic yet")
-					.add("  gens:addblank,id,format -> Create a blank generic with the given id and format")
-					.add("      Options that are concatenated to form the format:")
-					.add("       r = a real number" )
-					.add("       i = an integer number")
-					.add("       t = a piece of text")
-					.add("       m = macro, this value can be used as part as the rtval")
-					.add("       s = skip, this won't show up in the xml but will increase the index counter")
-					.add("       eg. 1234,temp,19.2,hum,55 ( with 1234 = serial number")
-					.add("           -> serial number,title,temperature reading,title,humidity reading")
-					.add("           -> msrsi -> macro,skip,real,skip,integer");
-				join.add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW);
-				join.add("  gens:? -> Show this info")
-					.add("  gens:reload -> Reloads all generics")
-					.add("  gens:list -> Lists all generics");
-
-				return join.toString();
-			case "reload": 
-				das.loadGenerics(true);
-				return das.getLabelWorker().getGenericInfo();
-			case "fromtable": 
-				if(cmd.length < 4 )
-					return "To few parameters, gens:fromtable,dbid,table,gen id,delimiter";
-				var db = dbManager.getDatabase(cmd[1]);
-				if( db ==null)
-					return "No such database found "+cmd[1];
-				if( db.buildGenericFromTable(XMLfab.withRoot(settingsPath, "dcafs","generics"),cmd[2],cmd[3],cmd.length>4?cmd[4]:",") ){
-					return "Generic written";
-				}else{
-					return "Failed to write to xml";
-				}
-			case "fromdb":
-				if(cmd.length < 3 )
-					return "To few parameters, gens:fromdb,dbid,delimiter";
-				var dbs = dbManager.getDatabase(cmd[1]);
-				if( dbs ==null)
-					return "No such database found "+cmd[1];
-
-				if( dbs.buildGenericFromTables(XMLfab.withRoot(settingsPath, "dcafs","generics"),false,cmd.length>2?cmd[2]:",") >0 ){
-					return "Generic(s) written";
-				}else{
-					return "No generics written";
-				}
-			case "addblank":
-				if( cmd.length < 3 )
-					return "Not enough arguments, must be generics:addblank,id,format[,delimiter]";
-				return Generic.addBlankToXML(XMLfab.withRoot(settingsPath, "dcafs","generics"), cmd[1], cmd[2],cmd.length==4?cmd[3]:",");
-			case "list": 
-				return das.getLabelWorker().getGenericInfo();
-			default:
-				return UNKNOWN_CMD+": "+cmd[0];
-		}
-	}
-	public String doMYsqlDump(String[] request, Writable wr, boolean html ){
-		String[] cmds = request[1].split(",");
-		switch( cmds[0] ){
-			case "?": 	return " myd:run,dbid,path -> Run the mysqldump process for the given database";
-			case "run":
-				if( cmds.length != 3 )
-					return "Not enough arguments, must be mysqldump:run,dbid,path";
-				Database db = dbManager.getDatabase(cmds[1]);
-				if( db == null )
-					return "No such database "+cmds[1];
-				if( db instanceof SQLiteDB )
-					return "Database is an sqlite, not mysql/mariadb";
-				if( db instanceof SQLDB ){
-					SQLDB sql =(SQLDB)db;
-					if( sql.isMySQL() ){
-						// do the dump
-						String os = System.getProperty("os.name").toLowerCase();
-						if( !os.startsWith("linux")){
-							return "Only Linux supported for now.";
-						}
-						try {
-							ProcessBuilder pb = new ProcessBuilder("bash","-c", "mysqldump "+sql.getTitle()+" > "+cmds[2]+";");
-							pb.inheritIO();
-							Process process;
-				
-							Logger.info("Started dump attempt at "+TimeTools.formatLongUTCNow());
-							process = pb.start();
-							process.waitFor();
-							// zip it?
-							if( Files.exists(Path.of(workPath,cmds[2]))){
-								if(FileTools.zipFile(Path.of(workPath,cmds[2]))==null) {
-									Logger.error("Dump of "+cmds[1]+" created, but zip failed");
-									return "Dump created, failed zipping.";
-								}
-								// Delete the original file
-								Files.deleteIfExists(Path.of(workPath,cmds[2]));
-							}else{
-								Logger.error("Dump of "+cmds[1]+" failed.");
-								return "No file created...";
-							}
-							Logger.info("Dump of "+cmds[1]+" created, zip made.");
-							return "Dump finished and zipped at "+TimeTools.formatLongUTCNow();
-						} catch (IOException | InterruptedException e) {
-							Logger.error(e);
-							Logger.error("Dump of "+cmds[1]+" failed.");
-							return "Something went wrong";
-						}
-					}else{
-						return "Database isn't mysql/mariadb";
-					}
-				}else{
-					return "Database isn't regular SQLDB";
-				}
-			default:
-				return UNKNOWN_CMD+": "+request[0]+":"+request[1];
-		}
-	}
-	public String doDataBaseManager( String[] request, Writable wr, boolean html ){
-		String[] cmds = request[1].split(",");
-		
-		StringJoiner join = new StringJoiner(html?"<br":"\r\n");
-		Database db=null;
-
-		String id = cmds.length>=2?cmds[1]:"";
-		String dbName = cmds.length>=3?cmds[2]:"";
-		String address = cmds.length>=4?cmds[3]:"";
-		String user = cmds.length>=5?cmds[4]:"";
-		String pass="";
-
-		if( user.contains(":")){
-			pass = user.substring(user.indexOf(":")+1);
-			user = user.substring(0,user.indexOf(":"));
-		}
-
-		switch( cmds[0] ){
-			case "?":
-				join.add(TelnetCodes.TEXT_MAGENTA+"The databasemanager connects to databases, handles queries and fetches table information");
-				join.add(TelnetCodes.TEXT_GREEN+"Glossary"+TelnetCodes.TEXT_YELLOW)
-						.add("  alias -> the alias of a column is the reference to use instead of the column name to find the rtval, empty is not used")
-						.add("  macro -> an at runtime determined value that can be used to define the rtval reference").add("");
-				join.add(TelnetCodes.TEXT_GREEN+"Connect to a database"+TelnetCodes.TEXT_YELLOW)
-						.add("  dbm:addmssql,id,db name,ip:port,user:pass -> Adds a MSSQL server on given ip:port with user:pass")
-						.add("  dbm:addmysql,id,db name,ip:port,user:pass -> Adds a MSSQL server on given ip:port with user:pass")
-						.add("  dbm:addmariadb,id,db name,ip:port,user:pass -> Adds a MariaDB server on given ip:port with user:pass")
-						.add("  dbm:addsqlite,id(,filename) -> Creates an empty sqlite database, filename and extension optional default db/id.sqlite")
-						.add("  dbm:addinfluxdb,id,db name,ip:port,user:pass -> Adds a Influxdb server on given ip:port with user:pass")
-					.add("").add(TelnetCodes.TEXT_GREEN+"Working with tables"+TelnetCodes.TEXT_YELLOW)
-						.add("  dbm:addtable,id,tablename,format (format eg. tirc timestamp(auto filled system time),int,real,char/text)")
-						.add("  dbm:addcol,<dbid:>tablename,columntype:columnname<,alias (columntypes r(eal),t(ime)s(tamp),i(nteger),t(ext)")
-						.add("  dbm:tablexml,id,tablename -> Write the table in memory to the xml file, use * as tablename for all")
-						.add("  dbm:tables,id -> Get info about the given id (tables etc)")
-						.add("  dbm:fetch,id -> Read the tables from the database directly, not overwriting stored ones.")
-						.add("  dbm:store,dbId,tableid -> Trigger a insert for the database and table given")
-					.add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW)
-						.add("  dbm:addserver,id -> Adds a blank database server node to xml")
-						.add("  dbm:addrollover,id,count,unit,pattern -> Add rollover to a SQLite database")
-						.add("  dbm:alter,id,param:value -> Alter things like idle, flush and batch (still todo)")
-						.add("  dbm:reload,id -> (Re)loads the database with the given id fe. after changing the xml")
-						.add("  dbm:status -> Show the status of all managed database connections")
-						.add("  st -> Show the current status of the databases (among other things)");
-				return join.toString();	
-			case "reload": 
-				if( cmds.length<2)
-					return "No id given";
-				var dbr = dbManager.reloadDatabase(cmds[1]);
-				if( dbr!=null){
-					String error = dbr.getLastError();
-					return error.isEmpty()?"Database reloaded":error;
-				}
-				return "No such database found";
-			case "addserver":
-					DatabaseManager.addBlankServerToXML( XMLfab.withRoot(settingsPath, "settings","databases"), "mysql", cmds.length>=2?cmds[1]:"" );
-					return "Added blank database server node to the settings.xml";
-			case "addmysql":
-				var mysql = SQLDB.asMYSQL(address,dbName,user,pass);
-				mysql.setID(id);
-				if( mysql.connect(false) ){
-					mysql.getCurrentTables(false);
-					mysql.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","settings","databases"));
-					dbManager.addSQLDB(id,mysql);
-					return "Connected to MYSQL database and stored in xml as id "+id;
-				}else{
-					return "Failed to connect to database.";
-				}
-			case "addmssql":
-				var mssql = SQLDB.asMSSQL(address,dbName,user,pass);
-				mssql.setID(id);
-				if( mssql.connect(false) ){
-					mssql.getCurrentTables(false);
-					mssql.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","settings","databases"));
-					dbManager.addSQLDB(id,mssql);
-					return "Connected to MYSQL database and stored in xml as id "+id;
-				}else{
-					return "Failed to connect to database.";
-				}
-			case "addmariadb":
-				if( cmds.length<5)
-					return "Not enough arguments: dbm:addmariadb,id,db name,ip:port,user:pass";
-				var mariadb = SQLDB.asMARIADB(address,dbName,user,pass);
-				mariadb.setID(id);
-				if( mariadb.connect(false) ){
-					mariadb.getCurrentTables(false);
-					mariadb.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","settings","databases"));
-					dbManager.addSQLDB(id,mariadb);
-					return "Connected to MariaDB database and stored in xml with id "+id;
-				}else{
-					return "Failed to connect to database.";
-				}
-			case "addpostgresql":
-				if( cmds.length<5)
-					return "Not enough arguments: dbm:addpostgresql,id,db name,ip:port,user:pass";
-				var postgres = SQLDB.asPOSTGRESQL(address,dbName,user,pass);
-				postgres.setID(id);
-				if( postgres.connect(false) ){
-					postgres.getCurrentTables(false);
-					postgres.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","settings","databases"));
-					dbManager.addSQLDB(id,postgres);
-					return "Connected to PostgreSQL database and stored in xml with id "+id;
-				}else{
-					return "Failed to connect to database.";
-				}
-			case "addsqlite":
-				if( !dbName.contains(File.separator))
-					dbName = "db"+File.separator+(dbName.isEmpty()?id:dbName);
-					if(!dbName.endsWith(".sqlite"))
-						dbName+=".sqlite";
-
-				var sqlite = SQLiteDB.createDB(id,Path.of(dbName).isAbsolute()?"":workPath,Path.of(dbName));
-				if( sqlite.connect(false) ){
-					dbManager.addSQLiteDB(id,sqlite);
-					sqlite.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","settings","databases") );
-					return "Created SQLite at "+dbName+" and wrote to settings.xml";
-				}else{
-					return "Failed to create SQLite";
-				}
-			case "tablexml":
-				if( cmds.length<3)
-					return "Not enough arguments: dbm:tablexml,dbid,tablename";
-				var dbOpt = dbManager.getDatabase(cmds[1]);
-				if( dbOpt == null)
-					return "No such database "+cmds[1];
-				// Select the correct server node
-				var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","databases");
-				if( fab.selectChildAsParent("server","id",cmds[1]).isEmpty())
-					fab.selectChildAsParent("sqlite","id",cmds[1]);
-				if( fab.hasChild("table","name",cmds[2]).isPresent())
-					return "Already present in xml, not adding";
-
-				if( dbOpt instanceof SQLDB){
-					int rs= ((SQLDB) dbOpt).writeTableToXml(fab,cmds[2]);
-					return rs==0?"None added":"Added "+rs+" tables to xml";
-				}else{
-					return "Not a valid database target (it's an influx?)";
-				}
-
-			case "addrollover":
-				if( cmds.length < 5 )
-					return "Not enough arguments, needs to be dbm:addrollover,dbId,count,unit,pattern";
-				var s= dbManager.getSQLiteDB(cmds[1]);
-				if( s == null)
-					return cmds[1] +" is not an SQLite";
-				s.setRollOver(cmds[4],NumberUtils.createInteger(cmds[2]),cmds[3]);
-				s.writeToXml(XMLfab.withRoot(settingsPath,"dcafs","settings","databases"));
-				s.forceRollover();
-				return "Rollover added";
-			case "addinfluxdb": case "addinflux":
-				var influx = new InfluxDB(address,dbName,user,pass);
-				if( influx.connect(false)){
-					dbManager.addInfluxDB(id,influx);
-					influx.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","settings","databases") );
-					return "Connected to InfluxDB and stored it in xml with id "+id;
-				}else{
-					return "Failed to connect to InfluxDB";
-				}
-			case "addtable":
-				if( cmds.length < 3 )
-					return "Not enough arguments, needs to be dbm:addtable,dbId,tableName<,format>";
-				if( DatabaseManager.addBlankTableToXML( XMLfab.withRoot(settingsPath,"dcafs","settings","databases"), cmds[1], cmds[2], cmds.length==4?cmds[3]:"" ) ) {
-					if( cmds.length==4)
-						return "Added a partially setup table to " + cmds[1] + " in the settings.xml, edit it to set column names etc";
-					return "Created tablenode for "+cmds[1]+" inside the db node";
-				}
-				return "No such database found nor influxDB.";
-			case "addcolumn": case "addcol":
-				if( cmds.length < 3 )
-					return "Not enough arguments, needs to be dbm:addcolumn,dbId:<tablid,>tableName,columntype:columnname<,alias>";
-				if(!cmds[2].contains(":"))
-					return "Needs to be columtype:columnname";
-				String dbid =  cmds[1].contains(":")?cmds[1].split(":")[0]:"";
-				String table = cmds[1].contains(":")?cmds[1].split(":")[1]:cmds[1];
-				String[] col = cmds[2].split(":");
-				String alias = cmds.length==4?cmds[3]:"";
-
-				switch(col[0]){
-					case "ts":col[0]="timestamp";break;
-					case "i":col[0]="integer";break;
-					case "r":col[0]="real";break;
-					case "text":col[0]="text";break;
-				}
-
-				fab = XMLfab.withRoot(settingsPath,"settings","databases");
-				for( var dbtype : new String[]{"database","sqlite"}) {
-					for (var ele : fab.getChildren(dbtype)) {
-						if (!dbid.isEmpty() && !dbid.equalsIgnoreCase(ele.getAttribute("id")))
-							continue;
-						for (var tbl : XMLtools.getChildElements(ele, "table")) {
-							if (tbl.getAttribute("name").equalsIgnoreCase(table)) {
-								fab.selectOrAddChildAsParent(dbtype, "id", ele.getAttribute("id"))
-										.selectOrAddChildAsParent("table", "name", table)
-										.addChild(col[0], col[1]);
-								if( !alias.isEmpty())
-									fab.attr("alias", alias).build();
-								return "Column added: " + col[0] + "->" + col[1] + (alias.isEmpty() ? "" : " with alias " + alias);
-							}
-						}
-					}
-				}
-				return "Nothing added";
-			case "fetch": 
-				if( cmds.length < 2 )
-					return "Not enough arguments, needs to be dbm:fetch,dbId";
-				db = dbManager.getDatabase(cmds[1]);
-				if( db==null)
-					return "No such database";
-				if( db.getCurrentTables(false) )
-					return "Tables fetched, run dbm:tables,"+cmds[1]+ " to see result.";
-				if( db.isValid(1) )
-					return "Failed to get tables, but connection valid...";
-				return "Failed to get tables because connection not active.";
-			case "tables":
-				if( cmds.length < 2 )
-					return "Not enough arguments, needs to be dbm:tables,dbId";
-				db = dbManager.getDatabase(cmds[1]);
-				if( db==null)
-					return "No such database";
-				return db.getTableInfo(html?"<br":"\r\n");
-			case "alter":
-				return "Not yet implemented";
-			case "status": case "list":
-				return dbManager.getStatus();
-			case "store":
-				if( cmds.length < 3 )
-					return "Not enough arguments, needs to be dbm:store,dbId,tableid";
-				if( dbManager.buildInsert(cmds[1],cmds[2],dataProvider,"") )
-					return "Wrote record";
-				return "Failed to write record";
-			default:
-				return UNKNOWN_CMD+": "+request[0]+":"+request[1];
-		}
-	}
-	public String doFileCollector( String[] request, Writable wr, boolean html ) {
+	public String doFileCollector( String[] request, boolean html ) {
 		String[] cmds = request[1].split(",");
 		StringJoiner join = new StringJoiner(html?"<br":"\r\n");
 

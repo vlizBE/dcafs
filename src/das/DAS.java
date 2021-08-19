@@ -143,7 +143,9 @@ public class DAS implements DeadThreadListener {
                 }
             }
 
-            dbManager = new DatabaseManager(workPath);
+            /* Database manager */
+            dbManager = new DatabaseManager(workPath,rtvals);
+            addCommandable(dbManager,"dbm","myd");
 
             /* RealtimeValues */
             rtvals = new RealtimeValues( settingsPath, dQueue );
@@ -152,8 +154,7 @@ public class DAS implements DeadThreadListener {
             issuePool = new IssuePool(dQueue, settingsPath,rtvals);
 
             /* CommandPool */
-            commandPool = new CommandPool(rtvals, issuePool, workPath);
-            commandPool.setDatabaseManager(dbManager);
+            commandPool = new CommandPool(issuePool, workPath);
             addCommandable("issue",issuePool);
             addCommandable("flags;fv;doubles;double;dv;texts;tv",rtvals);
             addCommandable(rtvals,"rtval","rtvals");
@@ -170,9 +171,6 @@ public class DAS implements DeadThreadListener {
 
             /* Base Worker */
             addLabelWorker();
-
-            /* Generics */
-            loadGenerics(true);
 
             /* ValMaps */
             loadValMaps(true);
@@ -376,11 +374,13 @@ public class DAS implements DeadThreadListener {
      */
     public void addLabelWorker() {
         if (this.labelWorker == null)
-            labelWorker = new LabelWorker(dQueue,rtvals,dbManager);
+            labelWorker = new LabelWorker(settingsPath,dQueue,rtvals,dbManager);
         labelWorker.setCommandReq(commandPool);
         labelWorker.setDebugging(debug);
         labelWorker.setMqttWriter(mqttPool);
         labelWorker.setEventListener(this);
+
+        addCommandable(labelWorker,"gens");
     }
     public LabelWorker getLabelWorker() {
         return labelWorker;
@@ -390,46 +390,7 @@ public class DAS implements DeadThreadListener {
         addLabelWorker();
         return dQueue;
     }
-    public void loadGenerics(boolean clear) {
-        if (clear) {
-            labelWorker.clearGenerics();
-        }        
-        XMLfab.getRootChildren(settingsPath, "dcafs","generics","generic")
-                .forEach( ele ->  labelWorker.addGeneric( Generic.readFromXML(ele) ) );
-        // Find the path ones?
-        XMLfab.getRootChildren(settingsPath, "dcafs","datapaths","path")
-                .forEach( ele -> {
-                    String imp = ele.getAttribute("import");
 
-                    int a=1;
-                    if( !imp.isEmpty() ){ //meaning imported
-                        String file = Path.of(imp).getFileName().toString();
-                        file = file.substring(0,file.length()-4);//remove the .xml
-
-                        for( Element gen : XMLfab.getRootChildren(Path.of(imp), "dcafs","path","generic").collect(Collectors.toList())){
-                            if( !gen.hasAttribute("id")){ //if it hasn't got an id, give it one
-                                gen.setAttribute("id",file+"_gen"+a);
-                                a++;
-                            }
-                            String delim = ((Element)gen.getParentNode()).getAttribute("delimiter");
-                            if( !gen.hasAttribute("delimiter") ) //if it hasn't got an id, give it one
-                                gen.setAttribute("delimiter",delim);
-                            labelWorker.addGeneric( Generic.readFromXML(gen) );
-                        }
-                    }
-                    String delimiter = XMLtools.getStringAttribute(ele,"delimiter","");
-                    for( Element gen : XMLtools.getChildElements(ele,"generic")){
-                        if( !gen.hasAttribute("id")){ //if it hasn't got an id, give it one
-                            gen.setAttribute("id",ele.getAttribute("id")+"_gen"+a);
-                            a++;
-                        }
-                        if( !gen.hasAttribute("delimiter") && !delimiter.isEmpty()) //if it hasn't got an id, give it one
-                            gen.setAttribute("delimiter",delimiter);
-                        labelWorker.addGeneric( Generic.readFromXML(gen) );
-                    }
-                }
-                );
-    }
     public void loadValMaps(boolean clear){
         if( clear ){
             settingsDoc = XMLtools.readXML(settingsPath);
@@ -656,8 +617,6 @@ public class DAS implements DeadThreadListener {
      * Start all the threads
      */
     public void startAll() {
-
-        commandPool.getMethodMapping();
 
         if (labelWorker != null) {
             Logger.info("Starting BaseWorker...");

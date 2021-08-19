@@ -15,5 +15,5 @@ public interface QueryWriting {
     boolean writeInfluxPoint( String id, Point p);
     boolean hasDB( String id);
     boolean isValid(String id,int timeout);
-
+    Database getDatabase( String id);
 }

@@ -1,5 +1,8 @@
 package worker;
 
+import das.Commandable;
+import io.telnet.TelnetCodes;
+import org.w3c.dom.Element;
 import util.data.DataProviding;
 import io.Readable;
 import io.Writable;
@@ -10,6 +13,10 @@ import org.tinylog.Logger;
 import util.DeadThreadListener;
 import util.database.QueryWriting;
 import util.tools.TimeTools;
+import util.xml.XMLfab;
+import util.xml.XMLtools;
+
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
 import java.util.Map.Entry;
@@ -23,7 +30,9 @@ import java.util.stream.Collectors;
  *
  * @author Michiel TJampens @vliz
  */
-public class LabelWorker implements Runnable, Labeller {
+public class LabelWorker implements Runnable, Labeller, Commandable {
+
+	static final String UNKNOWN_CMD = "unknown command";
 
 	Map<String, Generic> generics = new HashMap<>();
 	Map<String, ValMap> mappers = new HashMap<>();
@@ -33,6 +42,7 @@ public class LabelWorker implements Runnable, Labeller {
 	private DataProviding dp;
 	private final QueryWriting queryWriting;
 	private MqttWriting mqtt;
+	private Path settingsPath;
 
 	private boolean goOn = true; // General process boolean, clean way of stopping thread
 
@@ -64,13 +74,16 @@ public class LabelWorker implements Runnable, Labeller {
 	 *
 	 * @param dQueue The queue to use
 	 */
-	public LabelWorker(BlockingQueue<Datagram> dQueue, DataProviding dp, QueryWriting queryWriting) {
+	public LabelWorker(Path settingsPath, BlockingQueue<Datagram> dQueue, DataProviding dp, QueryWriting queryWriting) {
+		this.settingsPath=settingsPath;
 		this.dQueue = dQueue;
 		this.dp=dp;
 		this.queryWriting=queryWriting;
 
 		Logger.info("Using " + Math.min(3, Runtime.getRuntime().availableProcessors()) + " threads");
 		debug.scheduleAtFixedRate(new SelfCheck(),5,30,TimeUnit.MINUTES);
+
+		loadGenerics();
 	}
 	@Override
 	public void addDatagram(Datagram d){
@@ -341,6 +354,7 @@ public class LabelWorker implements Runnable, Labeller {
 		}
 		procCount.incrementAndGet();
 	}
+
 	/* ************************************** RUNNABLES ******************************************************/
 	public class SelfCheck implements Runnable {
 		public void run() {
@@ -442,5 +456,130 @@ public class LabelWorker implements Runnable, Labeller {
 			}
 			procCount.incrementAndGet();
 		}
+	}
+
+	/* *************************************** C O M M A N D A B L E ********************************************** */
+	@Override
+	public String replyToCommand(String[] request, Writable wr, boolean html) {
+		switch(request[0]) {
+			case "gens": return doGENericS(request,wr,html);
+
+		}
+		return "unknown command: "+request[0]+":"+request[1];
+	}
+	public String doGENericS( String[] request, Writable wr, boolean html ){
+
+		StringJoiner join = new StringJoiner(html?"<br":"\r\n");
+		String[] cmd = request[1].split(",");
+
+		switch(cmd[0]){
+			case "?":
+				join.add("")
+						.add(TelnetCodes.TEXT_RED+"Purpose"+TelnetCodes.TEXT_YELLOW)
+						.add("  Generics (gens) are used to take delimited data and store it as rtvals or in a database.");
+				join.add(TelnetCodes.TEXT_BLUE+"Notes"+TelnetCodes.TEXT_YELLOW)
+						.add("  - ...");
+				join.add("").add(TelnetCodes.TEXT_GREEN+"Create a Generic"+TelnetCodes.TEXT_YELLOW)
+						.add("  gens:fromtable,dbid,dbtable,gen id[,delimiter] -> Create a generic according to a table, delim is optional, def is ','")
+						.add("  gens:fromdb,dbid,delimiter -> Create a generic with chosen delimiter for each table if there's no such generic yet")
+						.add("  gens:addblank,id,format -> Create a blank generic with the given id and format")
+						.add("      Options that are concatenated to form the format:")
+						.add("       r = a real number" )
+						.add("       i = an integer number")
+						.add("       t = a piece of text")
+						.add("       m = macro, this value can be used as part as the rtval")
+						.add("       s = skip, this won't show up in the xml but will increase the index counter")
+						.add("       eg. 1234,temp,19.2,hum,55 ( with 1234 = serial number")
+						.add("           -> serial number,title,temperature reading,title,humidity reading")
+						.add("           -> msrsi -> macro,skip,real,skip,integer");
+				join.add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW);
+				join.add("  gens:? -> Show this info")
+						.add("  gens:reload -> Reloads all generics")
+						.add("  gens:list -> Lists all generics");
+
+				return join.toString();
+			case "reload":
+				loadGenerics();
+				return getGenericInfo();
+			case "fromtable":
+				if(cmd.length < 4 )
+					return "To few parameters, gens:fromtable,dbid,table,gen id,delimiter";
+				var db = queryWriting.getDatabase(cmd[1]);
+				if( db ==null)
+					return "No such database found "+cmd[1];
+				if( db.buildGenericFromTable(XMLfab.withRoot(settingsPath, "dcafs","generics"),cmd[2],cmd[3],cmd.length>4?cmd[4]:",") ){
+					return "Generic written";
+				}else{
+					return "Failed to write to xml";
+				}
+			case "fromdb":
+				if(cmd.length < 3 )
+					return "To few parameters, gens:fromdb,dbid,delimiter";
+				var dbs = queryWriting.getDatabase(cmd[1]);
+				if( dbs ==null)
+					return "No such database found "+cmd[1];
+
+				if( dbs.buildGenericFromTables(XMLfab.withRoot(settingsPath, "dcafs","generics"),false,cmd.length>2?cmd[2]:",") >0 ){
+					return "Generic(s) written";
+				}else{
+					return "No generics written";
+				}
+			case "addblank":
+				if( cmd.length < 3 )
+					return "Not enough arguments, must be generics:addblank,id,format[,delimiter]";
+				return Generic.addBlankToXML(XMLfab.withRoot(settingsPath, "dcafs","generics"), cmd[1], cmd[2],cmd.length==4?cmd[3]:",");
+			case "list":
+				return getGenericInfo();
+			default:
+				return UNKNOWN_CMD+": "+cmd[0];
+		}
+	}
+
+	/**
+	 * Load the generics
+	 */
+	public void loadGenerics() {
+
+		generics.clear();
+
+		XMLfab.getRootChildren(settingsPath, "dcafs","generics","generic")
+				.forEach( ele ->  addGeneric( Generic.readFromXML(ele) ) );
+		// Find the path ones?
+		XMLfab.getRootChildren(settingsPath, "dcafs","datapaths","path")
+				.forEach( ele -> {
+							String imp = ele.getAttribute("import");
+
+							int a=1;
+							if( !imp.isEmpty() ){ //meaning imported
+								String file = Path.of(imp).getFileName().toString();
+								file = file.substring(0,file.length()-4);//remove the .xml
+
+								for( Element gen : XMLfab.getRootChildren(Path.of(imp), "dcafs","path","generic").collect(Collectors.toList())){
+									if( !gen.hasAttribute("id")){ //if it hasn't got an id, give it one
+										gen.setAttribute("id",file+"_gen"+a);
+										a++;
+									}
+									String delim = ((Element)gen.getParentNode()).getAttribute("delimiter");
+									if( !gen.hasAttribute("delimiter") ) //if it hasn't got an id, give it one
+										gen.setAttribute("delimiter",delim);
+									addGeneric( Generic.readFromXML(gen) );
+								}
+							}
+							String delimiter = XMLtools.getStringAttribute(ele,"delimiter","");
+							for( Element gen : XMLtools.getChildElements(ele,"generic")){
+								if( !gen.hasAttribute("id")){ //if it hasn't got an id, give it one
+									gen.setAttribute("id",ele.getAttribute("id")+"_gen"+a);
+									a++;
+								}
+								if( !gen.hasAttribute("delimiter") && !delimiter.isEmpty()) //if it hasn't got an id, give it one
+									gen.setAttribute("delimiter",delimiter);
+								addGeneric( Generic.readFromXML(gen) );
+							}
+						}
+				);
+	}
+	@Override
+	public boolean removeWritable(Writable wr) {
+		return false;
 	}
 }
