@@ -48,12 +48,12 @@ public abstract class AbstractBlock implements TaskBlock{
             return Optional.of(this);
         return parentBlock.map(pb->pb.getSourceBlock()).orElse(Optional.empty());
     }
+    public TaskBlock getLastNext(){
+        if(next.isEmpty())
+            return null;
+        return next.get(next.size()-1);
+    }
     public boolean addNext(TaskBlock block) {
-        if( !next.isEmpty() ){
-            if( mergeCmdBlock(block) ) {
-                return true;
-            }
-        }
         next.add(block);
         return true;
     }
@@ -64,18 +64,6 @@ public abstract class AbstractBlock implements TaskBlock{
         }
         next.forEach( TaskBlock::start);
     }
-    private boolean mergeCmdBlock( TaskBlock add){
-        if( add instanceof CmdBlock ){
-            var oriOpt = next.stream().filter( t -> t instanceof CmdBlock).findFirst()
-                    .map(t -> Optional.of((CmdBlock)t) ).orElse(Optional.empty());
-            return oriOpt.map( ori ->{
-                ((CmdBlock) add).getCmds().forEach( ori::addCmd);
-                return true;
-            }).orElse(false);
-        }
-        return false;
-    }
-
     public boolean addData(String data){
         return true;
     }
@@ -89,10 +77,18 @@ public abstract class AbstractBlock implements TaskBlock{
             b.getBlockInfo(join,offset+"  ");
         }
     }
-
+    public boolean start(){
+        doNext();
+        return true;
+    }
     public boolean stop(){
         next.forEach(TaskBlock::stop);
         return true;
+    }
+    public void nextOk(){}
+    public void nextFailed(){
+        if( parentBlock!=null )
+            parentBlock.get().nextFailed();
     }
 }
 
