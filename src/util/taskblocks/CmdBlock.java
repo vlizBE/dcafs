@@ -4,6 +4,7 @@ import das.CommandPool;
 import io.Writable;
 
 import java.util.ArrayList;
+import java.util.Optional;
 import java.util.StringJoiner;
 
 public class CmdBlock extends AbstractBlock{
@@ -26,6 +27,7 @@ public class CmdBlock extends AbstractBlock{
         cmds.add(cmd);
         return this;
     }
+
     public ArrayList<String> getCmds(){
         return cmds;
     }
@@ -47,7 +49,27 @@ public class CmdBlock extends AbstractBlock{
         doNext();
         return true;
     }
-
+    @Override
+    public boolean addNext(TaskBlock block) {
+        if( !next.isEmpty() ){
+            if( mergeCmdBlock(block) ) {
+                return true;
+            }
+        }
+        next.add(block);
+        return true;
+    }
+    private boolean mergeCmdBlock( TaskBlock add){
+        if( add instanceof CmdBlock ){
+            var oriOpt = next.stream().filter( t -> t instanceof CmdBlock).findFirst()
+                    .map(t -> Optional.of((CmdBlock)t) ).orElse(Optional.empty());
+            return oriOpt.map( ori ->{
+                ((CmdBlock) add).getCmds().forEach( ori::addCmd);
+                return true;
+            }).orElse(false);
+        }
+        return false;
+    }
     @Override
     public void nextOk() {
 
