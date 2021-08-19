@@ -523,7 +523,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
                 return "No such database found nor influxDB.";
             case "addcolumn": case "addcol":
                 if( cmds.length < 3 )
-                    return "Not enough arguments, needs to be dbm:addcolumn,dbId:<tablid,>tableName,columntype:columnname<,alias>";
+                    return "Not enough arguments, needs to be dbm:addcolumn,<dbId:>tablename,columntype:columnname<,alias>";
                 if(!cmds[2].contains(":"))
                     return "Needs to be columtype:columnname";
                 String dbid =  cmds[1].contains(":")?cmds[1].split(":")[0]:"";
@@ -548,8 +548,11 @@ public class DatabaseManager implements QueryWriting, Commandable {
                                 fab.selectOrAddChildAsParent(dbtype, "id", ele.getAttribute("id"))
                                         .selectOrAddChildAsParent("table", "name", table)
                                         .addChild(col[0], col[1]);
-                                if( !alias.isEmpty())
+                                if( !alias.isEmpty()) {
                                     fab.attr("alias", alias).build();
+                                }else{
+                                    fab.build();
+                                }
                                 return "Column added: " + col[0] + "->" + col[1] + (alias.isEmpty() ? "" : " with alias " + alias);
                             }
                         }
