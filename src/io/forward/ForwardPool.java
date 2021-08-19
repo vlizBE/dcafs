@@ -212,7 +212,8 @@ public class ForwardPool implements Commandable {
                         return fab.build()!=null?"Label changed":"Label change failed";
                     default:return "No valid alter target: "+param;
                 }
-
+            case "reset":
+                XMLfab.withRoot(settingsPath, "dcafs", "maths").clearChildren().build();
             case "reload":
                 if( cmds.length==2) {
                     if(getMathForward(cmds[1]).isEmpty())
@@ -225,6 +226,10 @@ public class ForwardPool implements Commandable {
                                     );
                     return "Math reloaded: "+cmds[1];
                 }else{ //reload all
+                    if( !XMLfab.hasRoot(settingsPath, "dcafs", "maths")){
+                        maths.values().forEach( m -> m.valid=false);
+                        maths.clear();
+                    }
                     var mEle = XMLfab.withRoot(settingsPath, "dcafs", "maths").getChildren("math");
                     ArrayList<String> altered=new ArrayList<>();
                     mEle.forEach(
@@ -347,6 +352,8 @@ public class ForwardPool implements Commandable {
                     return "Something wrong with the command, filter not created";
                 ef.writeToXML( XMLfab.withRoot(settingsPath, "dcafs") );
                 return "Blank editor with id "+cmds[1]+ " created"+(cmds.length>2?", with source "+cmds[2]:"")+".";
+            case "reset":
+                XMLfab.withRoot(settingsPath, "dcafs", "editors").clearChildren().build();
             case "reload":
                 if( cmds.length == 2) {
                     Optional<Element> x = XMLfab.withRoot(settingsPath, "dcafs", "editors").getChild("editor", "id", cmds[1]);
@@ -697,6 +704,8 @@ public class ForwardPool implements Commandable {
                 ff.removeSource("raw:"+cmds[2]);
                 ff.addSource("raw:"+cmds[3]);
                 return "Swapped source of "+cmds[1]+" from "+cmds[2]+" to "+cmds[3];
+            case "reset":
+                XMLfab.withRoot(settingsPath, "dcafs", "filters").clearChildren().build();
             case "reload":
                 if( cmds.length == 2) {
                     Optional<Element> x = XMLfab.withRoot(settingsPath, "dcafs", "filters").getChild("filter", "id", cmds[1]);
