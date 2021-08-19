@@ -18,7 +18,7 @@ public interface TaskBlock {
     TaskBlock link( TaskBlock parent);
     boolean addData(String data);
     boolean build();
-    boolean start();
+    boolean start(TaskBlock starter);
     boolean stop();
 
     void nextOk();

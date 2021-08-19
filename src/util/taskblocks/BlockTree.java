@@ -78,7 +78,7 @@ public class BlockTree {
         return (MetaBlock) root;
     }
     public boolean start(){
-        return root.start();
+        return root.start(null);
     }
     public TaskBlock last(){
         return last;

@@ -48,18 +48,29 @@ public class WritableBlock extends AbstractBlock implements CollectorFuture {
     }
 
     @Override
-    public boolean start() {
+    public boolean start(TaskBlock starter) {
         if( !data.isEmpty()){
             if( cc!=null){
                 for( var p : data.split(";"))
                     cc.addConfirm(p,reply);
                 target.addTarget(cc);
             }else {
-                wr.writeLine(data);
-                doNext();
+                if( wr.writeLine(data) ) {
+                    doNext();
+                }else{
+                    if( parentBlock.get() instanceof TriggerBlock ) // needs to know because of while/waitfor
+                        parentBlock.get().nextFailed();
+                    return false;
+                }
             }
+            if( parentBlock.get() instanceof TriggerBlock ) // needs to know because of while/waitfor
+                parentBlock.get().nextOk();
             return true;
         }
+
+        if( parentBlock.get() instanceof TriggerBlock ) // needs to know because of while/waitfor
+            parentBlock.get().nextFailed();
+
         return false;
     }
     @Override

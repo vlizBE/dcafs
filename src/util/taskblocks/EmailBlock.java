@@ -36,9 +36,9 @@ public class EmailBlock extends AbstractBlock{
     }
 
     @Override
-    public boolean start() {
+    public boolean start(TaskBlock starter) {
         es.sendEmail(email);
-        return super.start();
+        return super.start(starter);
     }
 
     @Override

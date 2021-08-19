@@ -42,7 +42,7 @@ public class LabelBlock extends AbstractBlock{
         return true;
     }
     @Override
-    public boolean start() {
+    public boolean start(TaskBlock starter) {
         for( var p : pairs )
             dQueue.add( Datagram.build(p[1]).label(p[0]) );
         doNext();

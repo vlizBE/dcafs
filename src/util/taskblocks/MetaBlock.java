@@ -30,8 +30,14 @@ public class MetaBlock extends AbstractBlock{
     }
 
     @Override
-    public boolean start() {
-        Logger.info("Starting "+id+ (info.isEmpty()?"":" that "+info));
+    public boolean start(TaskBlock starter) {
+        if( starter instanceof TriggerBlock ){
+            if( !((TriggerBlock) starter).isInterval())
+                Logger.info("Starting "+id+ (info.isEmpty()?"":" that "+info));
+        }else{
+            Logger.info("Starting "+id+ (info.isEmpty()?"":" that "+info));
+        }
+
         doNext();
         return true;
     }
@@ -49,7 +55,8 @@ public class MetaBlock extends AbstractBlock{
 
     @Override
     public void nextFailed() {
-
+        Logger.error("Run of the list failed, start failure list?");
+        next.forEach( TaskBlock::stop);
     }
     public String toString(){
         return "Metablock named "+id+(info.isEmpty()?"":" and info '"+info+"'");

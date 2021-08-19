@@ -48,7 +48,7 @@ public class BlockPool {
         return Optional.ofNullable(startBlocks.get(id));
     }
     public boolean runStartBlock( String id){
-        return getStartBlock(id,false).map( TaskBlock::start ).orElse(false);
+        return getStartBlock(id,false).map( tb->tb.start(null) ).orElse(false);
     }
     public void readFromXML( Path script){
 

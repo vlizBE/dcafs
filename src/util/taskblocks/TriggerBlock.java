@@ -93,8 +93,11 @@ public class TriggerBlock extends AbstractBlock{
         }
         return true;
     }
+    public boolean isInterval(){
+        return trigType==TYPE.INTERVAL;
+    }
     @Override
-    public boolean start(){
+    public boolean start(TaskBlock starter){
         Logger.info("Trigger started!");
 
         if( time!=null ) {
@@ -110,7 +113,7 @@ public class TriggerBlock extends AbstractBlock{
             return true;
         }else if(tries==1){ // one shot
             if( interval_ms==0) {
-                next.forEach( n -> scheduler.submit(()->n.start()));
+                next.forEach( n -> scheduler.submit(()->n.start(this)));
             }else {
                 scheduler.schedule(() -> doNext(), interval_ms, time==null?TimeUnit.MILLISECONDS:TimeUnit.SECONDS);
             }
@@ -171,10 +174,10 @@ public class TriggerBlock extends AbstractBlock{
 
     @Override
     public void doNext(){
-        next.forEach( n -> scheduler.submit(()->n.start()));
+        next.forEach( n -> scheduler.submit(()->n.start(this)));
 
         if( time!=null )
-            start();
+            start(this);
     }
     @Override
     public boolean addNext(TaskBlock block) {

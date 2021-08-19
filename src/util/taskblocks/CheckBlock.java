@@ -40,7 +40,7 @@ public class CheckBlock extends AbstractBlock{
     }
 
     @Override
-    public boolean start() {
+    public boolean start(TaskBlock starter) {
         Double[] work= new Double[steps.size()+sharedMem.size()];
         for (int a = 0; a < sharedMem.size();a++ ){
             work[steps.size()+a]=sharedMem.get(a).getValue();
@@ -51,11 +51,17 @@ public class CheckBlock extends AbstractBlock{
         pass = negate?!pass:pass;
         if( pass ) {
             doNext();
-            parentBlock.ifPresent( TaskBlock::nextOk );
+            if( parentBlock.get() instanceof TriggerBlock ) // needs to know because of while/waitfor
+                parentBlock.get().nextOk();
+
+           // parentBlock.ifPresent( TaskBlock::nextOk );
         }else{
-            parentBlock.ifPresent( TaskBlock::nextFailed );
+            Logger.debug( "Check failed : "+ori );
+            if( parentBlock.get() instanceof TriggerBlock ) // needs to know because of while/waitfor
+                parentBlock.get().nextFailed();
+            //parentBlock.ifPresent( TaskBlock::nextFailed );
         }
-        Logger.info( "Result of ori: "+pass);
+
         return pass;
     }
 

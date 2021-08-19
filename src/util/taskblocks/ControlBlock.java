@@ -25,10 +25,10 @@ public class ControlBlock extends AbstractBlock{
     }
 
     @Override
-    public boolean start() {
+    public boolean start(TaskBlock starter) {
         switch(TODO){
             case STOP : target.stop(); return true;
-            case START : target.start(); return true;
+            case START : target.start(this); return true;
         }
         return false;
     }

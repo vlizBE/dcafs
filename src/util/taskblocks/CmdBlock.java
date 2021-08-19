@@ -41,7 +41,7 @@ public class CmdBlock extends AbstractBlock{
         return true;
     }
     @Override
-    public boolean start() {
+    public boolean start(TaskBlock starter) {
         for( var cmd : cmds) {
            var ans = cmdPool.createResponse(cmd, null, false);
            next.forEach( n -> n.addData(ans));

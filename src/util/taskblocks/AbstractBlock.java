@@ -62,7 +62,7 @@ public abstract class AbstractBlock implements TaskBlock{
             stopFuture=false;
             return;
         }
-        next.forEach( TaskBlock::start);
+        next.forEach( tb-> tb.start(this));
     }
     public boolean addData(String data){
         return true;
@@ -77,7 +77,7 @@ public abstract class AbstractBlock implements TaskBlock{
             b.getBlockInfo(join,offset+"  ");
         }
     }
-    public boolean start(){
+    public boolean start(TaskBlock starter){
         doNext();
         return true;
     }
