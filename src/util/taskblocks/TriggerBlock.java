@@ -119,7 +119,8 @@ public class TriggerBlock extends AbstractBlock{
         return false;
     }
     public boolean stop(){
-        future.cancel(true);
+        if( future !=null)
+            future.cancel(true);
         next.forEach(TaskBlock::stop);
         return true;
     }
