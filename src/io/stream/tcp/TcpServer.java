@@ -246,7 +246,7 @@ public class TcpServer implements StreamListener, Commandable {
 		return false;
 	}
 
-	private Optional<TransHandler> getHandler( String id){
+	private Optional<TransHandler> getHandler( String id ){
 		int index = Tools.parseInt(id, -1);
 		if( index != -1 ){
 			return Optional.ofNullable(clients.get(index));
@@ -295,7 +295,13 @@ public class TcpServer implements StreamListener, Commandable {
 		}
 		return join.toString();
 	}
-
+	public Optional<Writable> getClientWritable( String id){
+		for( var h:clients){
+			if(h.getID().equalsIgnoreCase(id))
+				return Optional.of(h.getWritable());
+		}
+		return Optional.empty();
+	}
 	/**
 	 * Execute and reply to commands given in as a readable string
 	 * @param request the command
