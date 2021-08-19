@@ -219,7 +219,7 @@ public class CommandPool {
 			
 		find = find.isBlank() ? "nothing" : find;
 		
-		switch( split[0] ){
+		switch( find ){
 			case "admin": result=doADMIN(split, html); break;
 			case "cmds":     result=doCMDS( split, html); break;
 			case "checksum": result=doCHECKSUM(split[0]); break;
