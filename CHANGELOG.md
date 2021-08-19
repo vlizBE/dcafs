@@ -23,6 +23,9 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.10.10 (work in progress)
 
+Note: Contains TaskBlocks code but without interface and standalone meaning, code is present but not usable nor 
+affecting anything else.
+
 ### TaskBlocks (name subject to change)
 - Will replace TaskManager
 - Current blocks
@@ -37,11 +40,12 @@ From 0.5.0 onwards, this should be better documented...
 - Utility classes
   - BlockTree - helps settings up a link
   - BlockPool - manages the MetaBlocks
-- Progess
-  - TriggerBlock, CmdBlock, CheckBlock, MetaBlock functional
+- Progress
+  - TriggerBlock, CmdBlock, CheckBlock, MetaBlock, EmailBlock, WritableBlock functional
   - TriggerBlock and CheckBlock will not be added if duplicates on the link level, will link to the 'original' instead
   - CmdBlock aggregates commands if successive blocks are also CmdBlocks
-  - Can read the taskmanager script variant of the blocks
+  - EmailBlock prepends a CmdBlock to convert the email content to the result of a command (if any)
+  - Can read the taskmanager script variant of the functional blocks
 - Improvements compared to TaskManager
   - Checks and triggers are aggregated if possible
   - Checks can be a lot more complex, taskmanager had the limit of either an ands or ors while checkblock doesn't have
@@ -61,7 +65,9 @@ From 0.5.0 onwards, this should be better documented...
 
 ### Math
 - Added th ~ operand, which translates A~B to ABS(A-B)
-- 
+
+### Other
+- Generics, improved the addblank cmd to also set indexes and added alter cmd to change attr and names
 
 ### Fixes
 - rtval:id works again, wasn't moved to the new commandable format
