@@ -1,6 +1,11 @@
 package util.taskblocks;
 
 import das.CommandPool;
+import io.Writable;
+import io.email.Email;
+import io.email.EmailSending;
+import io.stream.StreamManager;
+import io.stream.tcp.TcpServer;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.data.DataProviding;
@@ -19,12 +24,21 @@ public class BlockPool {
 
     CommandPool cp;
     DataProviding dp;
+    StreamManager ss;
+    TcpServer ts;
+    EmailSending es;
 
-    public BlockPool( CommandPool cp, DataProviding dp){
+    public BlockPool( CommandPool cp, DataProviding dp, StreamManager ss ){
         this.cp=cp;
         this.dp=dp;
+        this.ss=ss;
     }
-
+    public void setTransServer(TcpServer ts){
+        this.ts=ts;
+    }
+    public void addEmailSending(EmailSending es){
+        this.es=es;
+    }
     public Optional<MetaBlock> getStartBlock(String id, boolean createIfNew){
         if( startBlocks.get(id)==null && createIfNew){
             var v = new MetaBlock(id,"");
@@ -36,7 +50,7 @@ public class BlockPool {
     public boolean runStartBlock( String id){
         return getStartBlock(id,false).map( TaskBlock::start ).orElse(false);
     }
-    public void readFromXML( String id, Path script){
+    public void readFromXML( Path script){
 
         var fab=XMLfab.withRoot(script,"tasklist");
         // Go through the sets
@@ -87,9 +101,46 @@ public class BlockPool {
         }
 
         var output = XMLtools.getStringAttribute(t,"output","").split(":");
+        var data = t.getTextContent();
+        var values = data.split(";");
+
         switch(output[0]){
             case "":case "system":
                 tree.addTwig( CmdBlock.prepBlock(cp,t.getTextContent()));
+                break;
+            case "email":
+                String attachment = XMLtools.getStringAttribute(t,"attachment","");
+                tree.branchOut( CmdBlock.prepBlock(cp,values[1]));
+                var email = Email.to(output[1]).subject(values[0]).attachment(attachment).content(values[1]);
+                tree.addTwig( EmailBlock.prepBlock(es,email));
+                tree.branchIn();
+                break;
+            case "stream":
+                var bsOpt = ss.getStream(output[1]);
+                if( bsOpt.isPresent() && bsOpt.get() instanceof Writable ) {
+                    var bl = WritableBlock.prepBlock( bsOpt.get(), t.getTextContent());
+                    var reply = XMLtools.getStringAttribute(t,"reply","");
+                    if( !reply.isEmpty()) {
+                        bl.addReply(reply, scheduler);
+                    }
+                    tree.addTwig(bl);
+                }else{
+                    Logger.error("No such Base stream: "+output[1]);
+                    return;
+                }
+                break;
+            case "trans":
+                if( ts!=null ){
+                    var h = ts.getClientWritable(output[1]);
+                    if( h.isPresent()){
+                        tree.addTwig(WritableBlock.prepBlock( h.get(), t.getTextContent()));
+                    }else{
+                        Logger.error("No such client connected: "+output[1]);
+                    }
+                }else{
+                    Logger.error("No TCP server defined");
+                    return;
+                }
                 break;
             case "manager":
                 var text = t.getTextContent().split(":");

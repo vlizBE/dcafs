@@ -17,6 +17,7 @@ public class BlockTree {
     public static BlockTree trunk( AbstractBlock origin ){
         return new BlockTree((origin));
     }
+
     public BlockTree branchOut( AbstractBlock branch ){
         if( !valid )
             return this;
@@ -26,6 +27,7 @@ public class BlockTree {
             if( getTwigMatch( branch ).map(o->{ last=o; return true; }).orElse(false))
                 return this;
         }
+
         // No matching block found, use the created one
         if( branch.link(last).build() ) {
             last = branch;
@@ -54,8 +56,9 @@ public class BlockTree {
             Logger.error("Twig not added because invalid: "+twig);
             return this;
         }
-        if( last instanceof CmdBlock && twig instanceof CmdBlock ){
-            CmdBlock a = (CmdBlock) last;
+        var lastNext = last.getLastNext();
+        if( lastNext != null && lastNext instanceof CmdBlock && twig instanceof CmdBlock ){
+            CmdBlock a = (CmdBlock) lastNext;
             ((CmdBlock) twig).getCmds().forEach(a::addCmd);
         }else if( !twig.link(last).build() ) {
             Logger.error("Build of block failed: "+twig);
