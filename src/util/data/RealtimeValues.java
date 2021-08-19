@@ -965,7 +965,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		String eol = html?"<br>":"\r\n";
 		String title = html?"<b>Grouped</b>":TelnetCodes.TEXT_CYAN+"Grouped"+TelnetCodes.TEXT_YELLOW;
 		String space = html?"  ":"  ";
-		StringJoiner join = new StringJoiner(eol,title+eol,"");
+		StringJoiner join = new StringJoiner(getGroups().isEmpty()?"":eol,getGroups().isEmpty()?"":title+eol,"");
 
 		// Find & add the groups
 		getGroups().forEach( group -> {
