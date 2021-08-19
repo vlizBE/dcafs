@@ -409,24 +409,32 @@ public class Generic {
     public static String addBlankToXML( XMLfab fab, String id, String format,String delimiter ){
         char[] form = format.toCharArray();
         fab.addParentToRoot("generic").attr("id",id).attr("table");
-
+        var indexes = format.split("[mritfg]");
+        var letters = format.split("\\d+");
+        boolean indexOk=true;
+        if(letters.length==0) {
+            letters = format.split("\\D");
+            indexOk=false;
+        }
         if( format.length() > 1)
             fab.attr("delimiter",delimiter);
         int  cnt=0;
-        for( char f : form ){
-            switch(f){
-                case 'm': fab.addChild("macro").attr(INDEX_STRING,cnt); break;
-                case 'r': fab.addChild("real",".").attr(INDEX_STRING,cnt); break;
-                case 'i': fab.addChild("int",".").attr(INDEX_STRING,cnt); break;
-                case 't': fab.addChild("text",".").attr(INDEX_STRING,cnt); break;
-                case 'f': fab.addChild("filler",".").attr(INDEX_STRING,cnt); break; //filler
-                case 'g': fab.addChild("tag",".").attr(INDEX_STRING,cnt); break;
-                case 's': break; //skip
+        for( int x=0;x<letters.length;x++ ){
+            if( indexOk )
+                cnt=NumberUtils.toInt(indexes[x+1]);
+            switch(letters[x]){
+                case "m": fab.addChild("macro").attr(INDEX_STRING,cnt); break;
+                case "r": fab.addChild("real",".").attr(INDEX_STRING,cnt); break;
+                case "i": fab.addChild("int",".").attr(INDEX_STRING,cnt); break;
+                case "t": fab.addChild("text",".").attr(INDEX_STRING,cnt); break;
+                case "f": fab.addChild("filler",".").attr(INDEX_STRING,cnt); break; //filler
+                case "g": fab.addChild("tag",".").attr(INDEX_STRING,cnt); break;
+                case "s": break; //skip
                 default: 
-                    Logger.warn("Tried to add child with wrong type: "+f); 
-                    return "Incorrect format used with the letter '"+f+"', allowed m(acro),r(eal),i(nteger),t(ext) or s(kip)";
+                    Logger.warn("Tried to add child with wrong type: "+letters[x]);
+                    return "Incorrect format used with the letter '"+letters[x]+"', allowed m(acro),r(eal),i(nteger),t(ext) or s(kip)";
             }
-            if( f!= 'f')
+            if( letters[x] != "f")
                 cnt++;
         }  
         return fab.build()!=null?"Generic created":"Failed to write to xml";  

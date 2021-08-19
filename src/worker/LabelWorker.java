@@ -470,9 +470,9 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 	public String doGENericS( String[] request, Writable wr, boolean html ){
 
 		StringJoiner join = new StringJoiner(html?"<br":"\r\n");
-		String[] cmd = request[1].split(",");
+		String[] cmds = request[1].split(",");
 
-		switch(cmd[0]){
+		switch(cmds[0]){
 			case "?":
 				join.add("")
 						.add(TelnetCodes.TEXT_RED+"Purpose"+TelnetCodes.TEXT_YELLOW)
@@ -495,6 +495,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				join.add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW);
 				join.add("  gens:? -> Show this info")
 						.add("  gens:reload -> Reloads all generics")
+						.add("  gens:alter,id,param:value -> Change a parameter of the specified generic")
 						.add("  gens:list -> Lists all generics");
 
 				return join.toString();
@@ -502,36 +503,78 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				loadGenerics();
 				return getGenericInfo();
 			case "fromtable":
-				if(cmd.length < 4 )
+				if(cmds.length < 4 )
 					return "To few parameters, gens:fromtable,dbid,table,gen id,delimiter";
-				var db = queryWriting.getDatabase(cmd[1]);
+				var db = queryWriting.getDatabase(cmds[1]);
 				if( db ==null)
-					return "No such database found "+cmd[1];
-				if( db.buildGenericFromTable(XMLfab.withRoot(settingsPath, "dcafs","generics"),cmd[2],cmd[3],cmd.length>4?cmd[4]:",") ){
+					return "No such database found "+cmds[1];
+				if( db.buildGenericFromTable(XMLfab.withRoot(settingsPath, "dcafs","generics"),cmds[2],cmds[3],cmds.length>4?cmds[4]:",") ){
 					return "Generic written";
 				}else{
 					return "Failed to write to xml";
 				}
 			case "fromdb":
-				if(cmd.length < 3 )
+				if(cmds.length < 3 )
 					return "To few parameters, gens:fromdb,dbid,delimiter";
-				var dbs = queryWriting.getDatabase(cmd[1]);
+				var dbs = queryWriting.getDatabase(cmds[1]);
 				if( dbs ==null)
-					return "No such database found "+cmd[1];
+					return "No such database found "+cmds[1];
 
-				if( dbs.buildGenericFromTables(XMLfab.withRoot(settingsPath, "dcafs","generics"),false,cmd.length>2?cmd[2]:",") >0 ){
+				if( dbs.buildGenericFromTables(XMLfab.withRoot(settingsPath, "dcafs","generics"),false,cmds.length>2?cmds[2]:",") >0 ){
 					return "Generic(s) written";
 				}else{
 					return "No generics written";
 				}
 			case "addblank":
-				if( cmd.length < 3 )
+				if( cmds.length < 3 )
 					return "Not enough arguments, must be generics:addblank,id,format[,delimiter]";
-				return Generic.addBlankToXML(XMLfab.withRoot(settingsPath, "dcafs","generics"), cmd[1], cmd[2],cmd.length==4?cmd[3]:",");
+				return Generic.addBlankToXML(XMLfab.withRoot(settingsPath, "dcafs","generics"), cmds[1], cmds[2],cmds.length==4?cmds[3]:",");
+			case "alter":
+				if( cmds.length < 3 )
+					return "Not enough arguments, must be generics:alter,id,param:value";
+				var gen = generics.get(cmds[1]);
+				if( gen == null )
+					return "No such generic "+cmds[1];
+				int in = cmds[2].indexOf(":");
+				if( in==-1)
+					return "Missing valid param:value pair";
+				var fab = XMLfab.withRoot(settingsPath,"generics")
+						.selectChildAsParent("generic","id",cmds[1]);
+				if( fab.isPresent() ){
+					String attr = cmds[2].substring(0,in);
+					var val = cmds[2].substring(in+1);
+					switch( attr ){
+						case "names":
+							cmds[2]=val;
+							int i=0;
+							for( var f : fab.get().getChildren("*")){
+								if( cmds.length-2>i){
+									if( !cmds[i+2].equalsIgnoreCase("."))
+										f.setTextContent(cmds[i+2]);
+								}
+								i++;
+							}
+							if( fab.get().build()!=null) {
+								loadGenerics();
+								return "Names set, generics reloaded";
+							}
+						case "dbid":
+						case "delimiter":
+						case "table":
+						case "id":
+							fab.get().attr(attr,val).build();
+							break;
+						default: return "No such attr "+attr;
+					}
+					loadGenerics();
+					return "Added/changed attribute and reloaded";
+				}
+				return "No such node found";
+
 			case "list":
 				return getGenericInfo();
 			default:
-				return UNKNOWN_CMD+": "+cmd[0];
+				return UNKNOWN_CMD+": "+cmds[0];
 		}
 	}
 
