@@ -2,6 +2,7 @@ package worker;
 
 import das.Commandable;
 import io.telnet.TelnetCodes;
+import org.apache.commons.lang3.ArrayUtils;
 import org.w3c.dom.Element;
 import util.data.DataProviding;
 import io.Readable;
@@ -527,8 +528,11 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				}
 			case "addblank":
 				if( cmds.length < 3 )
-					return "Not enough arguments, must be generics:addblank,id,format[,delimiter]";
-				return Generic.addBlankToXML(XMLfab.withRoot(settingsPath, "dcafs","generics"), cmds[1], cmds[2],cmds.length==4?cmds[3]:",");
+					return "Not enough arguments, must be generics:addblank,id,format,delimiter";
+
+				var delimiter=request[1].endsWith(",")?",":cmds[cmds.length-1];
+				var format = String.join(",", ArrayUtils.subarray(cmds,2,cmds.length>3?cmds.length-1:cmds.length));
+				return Generic.addBlankToXML(XMLfab.withRoot(settingsPath, "dcafs","generics"), cmds[1], format,delimiter);
 			case "alter":
 				if( cmds.length < 3 )
 					return "Not enough arguments, must be generics:alter,id,param:value";

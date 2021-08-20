@@ -407,35 +407,35 @@ public class Generic {
         return generic;
     }
     public static String addBlankToXML( XMLfab fab, String id, String format,String delimiter ){
-        char[] form = format.toCharArray();
-        fab.addParentToRoot("generic").attr("id",id).attr("table");
-        var indexes = format.split("[mritfg]");
-        var letters = format.split("\\d+");
-        boolean indexOk=true;
-        if(letters.length==0) {
-            letters = format.split("\\D");
-            indexOk=false;
-        }
-        if( format.length() > 1)
-            fab.attr("delimiter",delimiter);
-        int  cnt=0;
-        for( int x=0;x<letters.length;x++ ){
-            if( indexOk )
-                cnt=NumberUtils.toInt(indexes[x+1]);
-            switch(letters[x]){
-                case "m": fab.addChild("macro").attr(INDEX_STRING,cnt); break;
-                case "r": fab.addChild("real",".").attr(INDEX_STRING,cnt); break;
-                case "i": fab.addChild("int",".").attr(INDEX_STRING,cnt); break;
-                case "t": fab.addChild("text",".").attr(INDEX_STRING,cnt); break;
-                case "f": fab.addChild("filler",".").attr(INDEX_STRING,cnt); break; //filler
-                case "g": fab.addChild("tag",".").attr(INDEX_STRING,cnt); break;
+
+        fab.addParentToRoot("generic").attr("id",id).attr("table").attr("delimiter",delimiter);
+
+        for( var row : format.split(",")){
+            if( row.isEmpty()) {
+                Logger.warn("Invalid/Empty row");
+                continue;
+            }
+            String type = row.substring(0,1);
+            String name = row.substring(1).replaceFirst("^\\d+","");
+            if( name.isEmpty() )
+                name=".";
+            int index = NumberUtils.toInt(row.substring(1).replace(name,""),-1);
+            if( index == -1) {
+                Logger.warn( "Bad index in : "+row);
+                continue;
+            }
+            switch(type){
+                case "m": fab.addChild("macro").attr(INDEX_STRING,index); break;
+                case "r": fab.addChild("real",name).attr(INDEX_STRING,index); break;
+                case "i": fab.addChild("int",name).attr(INDEX_STRING,index); break;
+                case "t": fab.addChild("text",name).attr(INDEX_STRING,index); break;
+                case "f": fab.addChild("filler",name).attr(INDEX_STRING,index); break; //filler
+                case "g": fab.addChild("tag",name).attr(INDEX_STRING,index); break;
                 case "s": break; //skip
                 default: 
-                    Logger.warn("Tried to add child with wrong type: "+letters[x]);
-                    return "Incorrect format used with the letter '"+letters[x]+"', allowed m(acro),r(eal),i(nteger),t(ext) or s(kip)";
+                    Logger.warn("Tried to add child with wrong type: "+type);
+                    return "Incorrect format used with the letter '"+type+"', allowed m(acro),r(eal),i(nteger),t(ext) or s(kip)";
             }
-            if( letters[x] != "f")
-                cnt++;
         }  
         return fab.build()!=null?"Generic created":"Failed to write to xml";  
     }
