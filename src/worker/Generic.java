@@ -409,7 +409,6 @@ public class Generic {
     public static String addBlankToXML( XMLfab fab, String id, String format,String delimiter ){
 
         fab.addParentToRoot("generic").attr("id",id).attr("table").attr("delimiter",delimiter);
-
         for( var row : format.split(",")){
             if( row.isEmpty()) {
                 Logger.warn("Invalid/Empty row");

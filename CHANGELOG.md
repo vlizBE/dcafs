@@ -67,7 +67,7 @@ affecting anything else.
 - Added th ~ operand, which translates A~B to ABS(A-B)
 
 ### Other
-- Generics, improved the addblank cmd to also set indexes and added alter cmd to change attr and names
+- Generics, improved the addblank cmd to also set indexes and names
 
 ### Fixes
 - rtval:id works again, wasn't moved to the new commandable format
