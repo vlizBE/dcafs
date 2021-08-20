@@ -145,7 +145,7 @@ public class DAS implements DeadThreadListener {
 
             /* Database manager */
             dbManager = new DatabaseManager(workPath,rtvals);
-            addCommandable(dbManager,"dbm","myd");
+
 
             /* RealtimeValues */
             rtvals = new RealtimeValues( settingsPath, dQueue );
@@ -158,6 +158,7 @@ public class DAS implements DeadThreadListener {
             addCommandable("issue",issuePool);
             addCommandable("flags;fv;doubles;double;dv;texts;tv",rtvals);
             addCommandable(rtvals,"rtval","rtvals");
+            addCommandable(dbManager,"dbm","myd");
 
             /* Waypoints */
             waypoints = new Waypoints( settingsPath, nettyGroup, rtvals, dQueue );
