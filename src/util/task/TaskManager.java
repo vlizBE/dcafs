@@ -131,18 +131,9 @@ public class TaskManager implements CollectorFuture {
 	 */
 	public boolean changeState(String state) {
 		String[] split = state.split(":");
-		for (int index = 0; index < states.size(); index++) {
-			if (states.get(index).startsWith(split[0] + ":")) {
-				Logger.tag(TINY_TAG).info("[" + id + "] Changing state: " + states.get(index) + " to " + state);
-				states.set(index, state);
-				// State changed so we need to check if this affects anything?
-				return true;
-			}
-		}
-		Logger.tag(TINY_TAG).info("[" + id + "] New state added: " + state);
-		states.add(state);
-		states.trimToSize();
-		return false;
+		boolean altered = dp.getText(split[0],"").equalsIgnoreCase(split[1]);
+		dp.setText(split[0],split[1]);
+		return altered;
 	}
 
 	/**
@@ -168,7 +159,7 @@ public class TaskManager implements CollectorFuture {
 	}
 
 	/**
-	 * Check whether or not a state is active
+	 * Check whether a state is active
 	 * 
 	 * @param id The state to check
 	 * @return True if it's active
@@ -176,18 +167,8 @@ public class TaskManager implements CollectorFuture {
 	public boolean checkState(String id) {
 		if (id.isBlank() || id.equalsIgnoreCase("always"))
 			return true;
-		return states.contains(id);
-	}
-
-	/**
-	 * Get a ; delimited list of all the current states/flags
-	 * @return List of the states/flags
-	 */
-	public String getStatesListing() {
-		StringJoiner b = new StringJoiner("; ");
-		b.setEmptyValue("No states/flags yet");
-		states.forEach(b::add);
-		return b.toString();
+		var state = id.split(":");
+		return dp.getText(state[0],"").equalsIgnoreCase(state[1]);
 	}
 
 	/* ************************ * WAYS OF RETRIEVING TASKS ************************************************/
@@ -1274,7 +1255,6 @@ public class TaskManager implements CollectorFuture {
 			case "forcereload": return forceReloadTasks()?"Reloaded tasks":"Reload failed";
 			case "listtasks": case "tasks": return getTaskListing(html?"<br>":"\r\n");
 			case "listsets": case "sets":  return getTaskSetListing(html?"<br>":"\r\n");
-			case "states":    return getStatesListing();
 			case "setstate":
 				if( parts.length!=2)
 					return "To few arguments, need setstate,id:state";
