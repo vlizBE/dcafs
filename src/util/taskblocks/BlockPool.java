@@ -95,11 +95,22 @@ public class BlockPool {
         if( !trigger.isEmpty()){
             tree.branchOut( TriggerBlock.prepBlock(scheduler,trigger));
         }
+
+        // Read and process the state attribute
+        var state = XMLtools.getStringAttribute(t,"state","");
+        state=state.replace("always",""); // remove the old default
+        if( !state.isEmpty() && state.contains(":")){
+            var stat = state.split(":");
+            tree.branchOut( CheckBlock.prepBlock(dp, "{t:"+stat[0]+"} equals "+stat[1]));
+        }
+
+        // Read and process the req attribute
         var req = XMLtools.getStringAttribute(t,"req","");
         if( !req.isEmpty()){
             tree.branchOut( CheckBlock.prepBlock(dp,req));
         }
 
+        // Read and process the output attribute
         var output = XMLtools.getStringAttribute(t,"output","").split(":");
         var data = t.getTextContent();
         var values = data.split(";");
@@ -161,10 +172,14 @@ public class BlockPool {
                 }
                 break;
         }
+
         if( !trigger.isEmpty()){
             tree.branchIn();
         }
         if( !req.isEmpty()){
+            tree.branchIn();
+        }
+        if( !state.isEmpty()){
             tree.branchIn();
         }
     }
