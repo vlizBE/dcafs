@@ -353,8 +353,6 @@ public class StreamManager implements StreamListener, CollectorFuture {
 	 * @return True if reload was successful
 	 */
 	public String reloadStream( String id ) {
-		
-		BaseStream stream = streams.get(id.toLowerCase());
 
 		Logger.info("Reloading "+id+ " from "+ settingsPath.toAbsolutePath());
 		Document xmlDoc = XMLtools.readXML(settingsPath);
@@ -375,7 +373,6 @@ public class StreamManager implements StreamListener, CollectorFuture {
 				addStreamFromXML(child.get());
 				return "Loading new stream.";
 			}
-
 		}else{
 			Logger.error("Failed to read xml file at "+ settingsPath.toAbsolutePath());
 			return "Failed to read xml";
@@ -389,16 +386,6 @@ public class StreamManager implements StreamListener, CollectorFuture {
 		getStream(id).ifPresent(BaseStream::disconnect);
 	}
 	/* ***************************** A D D I N G C H A N N E L S ******************************************/
-	/**
-	 * Checks whether or not StreamManager info can be found in the settings file.
-	 * 
-	 * @param xml The settings file
-	 * @return True if settings were found
-	 */
-	public static boolean inXML(Document xml) {
-		return XMLfab.hasRoot(xml, "settings",XML_PARENT_TAG);
-	}
-
 	/**
 	 * Add the streams by reading the settings.xml
 	 * 

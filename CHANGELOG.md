@@ -23,6 +23,28 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.10.10 (work in progress)
 
+### Datapaths
+- to remain consisted changed the cmd to pf(pathforward) or paths, path:id is still used to request data
+- Added the pf:addgen command to directly add a 'full' generic to a path (uses the same code as the gens:addblank)
+- Added the pf:? command to get info on the possible cmds
+- refactored the .java to PathForward.java
+
+### MathForward
+- Fixed, Addop/addblank now works as intended again (instead of i1=i1=...)
+- Addblank altered ? to show that it could also add an optional op `mf:addblank,id,src<,op>`
+- Fixed an op with only an index as argument `<op cmd="doubles:new,temp,$" scale="1">i0</op>`
+- Allows for creating doubles/flags by using uppercase {D:id} or {F:id} instead of lowercase
+- Fixed op that just sets a double `<op scale="1">{D:temp}=i0</op>`
+ 
+### Other
+- Generics, improved the addblank cmd to also set indexes, names and reload afterwards
+
+### Other Fixed
+- rtvals was missing the eol delimiter (mistake between delimiter and prefix)
+- EditorForward, resplit fixed when using i's above 10
+
+## 0.10.10 PR (21/08/21)
+
 Note: Contains TaskBlocks code but without interface and standalone meaning, code is present but not usable nor 
 affecting anything else.
 
@@ -65,9 +87,6 @@ affecting anything else.
 
 ### Math
 - Added th ~ operand, which translates A~B to ABS(A-B)
-
-### Other
-- Generics, improved the addblank cmd to also set indexes and names
 
 ### Fixes
 - rtval:id works again, wasn't moved to the new commandable format
