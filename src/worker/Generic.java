@@ -406,10 +406,14 @@ public class Generic {
         }
         return generic;
     }
-    public static String addBlankToXML( XMLfab fab, String id, String format,String delimiter ){
+    public static boolean addBlankToXML( XMLfab fab, String id, String[] format,String delimiter ){
 
-        fab.addParentToRoot("generic").attr("id",id).attr("table").attr("delimiter",delimiter);
-        for( var row : format.split(",")){
+        fab.addParentToRoot("generic").attr("id",id).attr("table");
+
+        if( !delimiter.isEmpty())
+            fab.attr("delimiter",delimiter);
+
+        for( var row : format){
             if( row.isEmpty()) {
                 Logger.warn("Invalid/Empty row");
                 continue;
@@ -433,10 +437,11 @@ public class Generic {
                 case "s": break; //skip
                 default: 
                     Logger.warn("Tried to add child with wrong type: "+type);
-                    return "Incorrect format used with the letter '"+type+"', allowed m(acro),r(eal),i(nteger),t(ext) or s(kip)";
+                    return false;
             }
-        }  
-        return fab.build()!=null?"Generic created":"Failed to write to xml";  
+        }
+
+        return fab.build()!=null;
     }
     /**
      * Class to store filters that can be applied before the generic is applied

@@ -534,8 +534,12 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 					return "Not enough arguments, must be generics:addblank,id,format,delimiter";
 
 				var delimiter=request[1].endsWith(",")?",":cmds[cmds.length-1];
-				var format = String.join(",", ArrayUtils.subarray(cmds,2,cmds.length>3?cmds.length-1:cmds.length));
-				return Generic.addBlankToXML(XMLfab.withRoot(settingsPath, "dcafs","generics"), cmds[1], format,delimiter);
+				if( Generic.addBlankToXML(XMLfab.withRoot(settingsPath, "dcafs","generics"), cmds[1],
+					ArrayUtils.subarray(cmds,2,cmds.length>3?cmds.length-1:cmds.length),delimiter)){
+					loadGenerics();
+					return "Generic added & reloaded";
+				}
+				return "Failed to write generic";
 			case "alter":
 				if( cmds.length < 3 )
 					return "Not enough arguments, must be generics:alter,id,param:value";
