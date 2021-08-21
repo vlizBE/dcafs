@@ -16,7 +16,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-public class ForwardPath{
+public class PathForward {
 
     String type="";
     String src = "";
@@ -32,7 +32,7 @@ public class ForwardPath{
     String id;
     ArrayList<AbstractForward> stepsForward;
 
-    public ForwardPath(DataProviding dataProviding, BlockingQueue<Datagram> dQueue,EventLoopGroup nettyGroup ){
+    public PathForward(DataProviding dataProviding, BlockingQueue<Datagram> dQueue, EventLoopGroup nettyGroup ){
         this.dataProviding = dataProviding;
         this.dQueue=dQueue;
         this.nettyGroup=nettyGroup;
