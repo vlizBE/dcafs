@@ -206,7 +206,7 @@ public class DAS implements DeadThreadListener {
             addCommandable(forwardPool,"filter","ff");
             addCommandable(forwardPool,"math","mf");
             addCommandable(forwardPool,"editor","ef");
-            commandPool.addCommandable("path", forwardPool);
+            addCommandable(forwardPool,"paths","path","pf");
 
             /* Math Collectors */
             MathCollector.createFromXml( XMLfab.getRootChildren(settingsDoc,"dcafs","maths","*") ).forEach(
