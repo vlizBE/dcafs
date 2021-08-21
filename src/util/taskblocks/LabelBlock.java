@@ -48,14 +48,4 @@ public class LabelBlock extends AbstractBlock{
         doNext();
         return true;
     }
-
-    @Override
-    public void nextOk() {
-
-    }
-
-    @Override
-    public void nextFailed() {
-
-    }
 }

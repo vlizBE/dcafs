@@ -22,7 +22,7 @@ public interface TaskBlock {
     boolean stop();
 
     void nextOk();
-    void nextFailed();
+    void nextFailed(TaskBlock failed);
     void getBlockInfo(StringJoiner join,String offset);
 
     Optional<TaskBlock> getSourceBlock();

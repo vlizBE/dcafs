@@ -46,10 +46,6 @@ public class EmailBlock extends AbstractBlock{
 
     }
 
-    @Override
-    public void nextFailed() {
-
-    }
     public String toString(){
         return "Email to '"+email.to()+"' with subject '"+email.subject()+"' and content/cmd '"+email.content()+"'";
     }

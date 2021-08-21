@@ -70,15 +70,6 @@ public class CmdBlock extends AbstractBlock{
         }
         return false;
     }
-    @Override
-    public void nextOk() {
-
-    }
-
-    @Override
-    public void nextFailed() {
-
-    }
     public String toString(){
         if( cmds.size()==1)
             return "Execute cmd: "+cmds.get(0);

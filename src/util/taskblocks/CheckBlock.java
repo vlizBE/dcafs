@@ -35,11 +35,6 @@ public class CheckBlock extends AbstractBlock{
     }
 
     @Override
-    public void nextFailed() {
-
-    }
-
-    @Override
     public boolean start(TaskBlock starter) {
         Double[] work= new Double[steps.size()+sharedMem.size()];
         for (int a = 0; a < sharedMem.size();a++ ){
@@ -51,14 +46,11 @@ public class CheckBlock extends AbstractBlock{
         pass = negate?!pass:pass;
         if( pass ) {
             doNext();
-            if( parentBlock.get() instanceof TriggerBlock ) // needs to know because of while/waitfor
-                parentBlock.get().nextOk();
-
-           // parentBlock.ifPresent( TaskBlock::nextOk );
+            parentBlock.ifPresent( TaskBlock::nextOk );
         }else{
             Logger.debug( "Check failed : "+ori );
             if( parentBlock.get() instanceof TriggerBlock ) // needs to know because of while/waitfor
-                parentBlock.get().nextFailed();
+                parentBlock.get().nextFailed(this);
             //parentBlock.ifPresent( TaskBlock::nextFailed );
         }
 

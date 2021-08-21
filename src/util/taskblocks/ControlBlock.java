@@ -27,10 +27,14 @@ public class ControlBlock extends AbstractBlock{
     @Override
     public boolean start(TaskBlock starter) {
         switch(TODO){
-            case STOP : target.stop(); return true;
-            case START : target.start(this); return true;
+            case STOP : target.stop(); break;
+            case START : target.start(this); break;
+            default:
+                nextFailed(this);
+                return false;
         }
-        return false;
+        nextOk();
+        return true;
     }
     public String toString(){
         switch(TODO){
@@ -38,14 +42,5 @@ public class ControlBlock extends AbstractBlock{
             case START : return "CB: Start the block: " +target.toString();
         }
         return "CB: Nothing to do";
-    }
-    @Override
-    public void nextOk() {
-
-    }
-
-    @Override
-    public void nextFailed() {
-
     }
 }

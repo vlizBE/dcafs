@@ -142,10 +142,11 @@ public class TriggerBlock extends AbstractBlock{
                 break;
         }
         future.cancel(true);
+        super.nextOk();
     }
 
     @Override
-    public void nextFailed() {
+    public void nextFailed(TaskBlock failed) {
         if(future==null) // can't do anything without a future
             return;
 
@@ -231,7 +232,7 @@ public class TriggerBlock extends AbstractBlock{
             case DELAY: return "Delayed trigger of "+interval;
 
         }
-        return "triggr todo";
+        return "trigger todo";
     }
     public boolean equals( TriggerBlock tb){
         return ori.equalsIgnoreCase(tb.ori);

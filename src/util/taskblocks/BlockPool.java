@@ -61,9 +61,10 @@ public class BlockPool {
             String info = XMLtools.getStringAttribute(ts,"info","");
             String failure = XMLtools.getStringAttribute(ts,"failure","");
             String req = XMLtools.getStringAttribute(ts,"req","");
+            String type = XMLtools.getStringAttribute(ts,"run","");
 
             BlockTree tree = BlockTree.trunk( getStartBlock(tsId,true).get() );
-            var start = tree.getMetaBlock().info(info);
+            var start = tree.getMetaBlock().info(info).type(type);
             if( !failure.isEmpty() ){
                 start.failure(getStartBlock(failure,true).get());
             }

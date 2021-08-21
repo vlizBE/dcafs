@@ -59,7 +59,7 @@ public class WritableBlock extends AbstractBlock implements CollectorFuture {
                     doNext();
                 }else{
                     if( parentBlock.get() instanceof TriggerBlock ) // needs to know because of while/waitfor
-                        parentBlock.get().nextFailed();
+                        parentBlock.get().nextFailed(this);
                     return false;
                 }
             }
@@ -69,7 +69,7 @@ public class WritableBlock extends AbstractBlock implements CollectorFuture {
         }
 
         if( parentBlock.get() instanceof TriggerBlock ) // needs to know because of while/waitfor
-            parentBlock.get().nextFailed();
+            parentBlock.get().nextFailed(this);
 
         return false;
     }
@@ -79,7 +79,7 @@ public class WritableBlock extends AbstractBlock implements CollectorFuture {
         if( !res ){
             Logger.error("Reply send failed (tasksetid_streamid) -> "+id);
             // run failure?
-            parentBlock.get().nextFailed();
+            parentBlock.get().nextFailed(this);
         }else{
             doNext();
         }

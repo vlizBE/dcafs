@@ -63,6 +63,8 @@ public abstract class AbstractBlock implements TaskBlock{
             return;
         }
         next.forEach( tb-> tb.start(this));
+        if( next.isEmpty()) // If this is the last block in the branch, notify parent
+            nextOk();
     }
     public boolean addData(String data){
         return true;
@@ -85,10 +87,13 @@ public abstract class AbstractBlock implements TaskBlock{
         next.forEach(TaskBlock::stop);
         return true;
     }
-    public void nextOk(){}
-    public void nextFailed(){
+    public void nextOk(){
         if( parentBlock!=null )
-            parentBlock.get().nextFailed();
+            parentBlock.get().nextOk();
+    }
+    public void nextFailed(TaskBlock failed){
+        if( parentBlock!=null )
+            parentBlock.get().nextFailed(failed);
     }
 }
 
