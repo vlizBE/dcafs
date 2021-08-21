@@ -24,10 +24,10 @@ import util.DeadThreadListener;
 import util.data.DataProviding;
 import util.data.RealtimeValues;
 import util.database.*;
-import util.gis.Waypoint;
 import util.gis.Waypoints;
 import util.task.TaskManager;
 import util.task.TaskManagerPool;
+import util.taskblocks.BlockPool;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
@@ -75,7 +75,7 @@ public class DAS implements DeadThreadListener {
     private MqttPool mqttPool;
     private TaskManagerPool taskManagerPool;
     private IssuePool issuePool;
-    private Waypoints waypoints;
+
 
     private final Map<String, FileCollector> fileCollectors = new HashMap<>();
 
@@ -158,11 +158,8 @@ public class DAS implements DeadThreadListener {
             addCommandable("issue",issuePool);
             addCommandable("flags;fv;doubles;double;dv;texts;tv",rtvals);
             addCommandable(rtvals,"rtval","rtvals");
+            addCommandable( "wpts",rtvals.enableWaypoints(nettyGroup) );
             addCommandable(dbManager,"dbm","myd");
-
-            /* Waypoints */
-            waypoints = new Waypoints( settingsPath, nettyGroup, rtvals, dQueue );
-            addCommandable("wpts",waypoints);
 
             /* TransServer */
             addTransServer(-1);
@@ -243,12 +240,7 @@ public class DAS implements DeadThreadListener {
     }
     public DatabaseManager getDatabaseManager(){return dbManager;}
     public IssuePool getIssuePool(){ return issuePool;}
-    public Waypoint getWaypoint(String id){
-        return waypoints.getWaypoint(id);
-    }
-    public Waypoints getWaypoints(){
-        return waypoints;
-    }
+
     /**
      * Check if the boot up was successful
      * 
@@ -836,8 +828,14 @@ public class DAS implements DeadThreadListener {
         if( das.telnet == null ){
             das.addTelnetServer();
         }
-        das.startAll();   
+        das.startAll();
+/*
+        BlockPool bp = new BlockPool(das.getCommandPool(),das.getDataProvider(),das.getStreamPool());
+        bp.setTransServer(das.trans);
 
+        bp.readFromXML(Path.of(das.workPath,"tmscripts","pump.xml"));
+        bp.runStartBlock("startpump");
+*/
         Logger.info("Dcafs "+version+" boot finished!");
     }
 }

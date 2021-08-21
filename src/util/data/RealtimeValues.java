@@ -8,6 +8,7 @@ import io.telnet.TelnetCodes;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.gis.Waypoints;
 import util.math.MathUtils;
 import util.tools.TimeTools;
 import util.tools.Tools;
@@ -32,32 +33,34 @@ import java.util.stream.Stream;
  */
 public class RealtimeValues implements CollectorFuture, DataProviding, Commandable {
 
-	/* Other */
-	protected ConcurrentHashMap<String, DoubleVal> doubleVals = new ConcurrentHashMap<>();
-	protected HashMap<String, List<Writable>> doubleRequest = new HashMap<>();
+	/* Data stores */
+	private final ConcurrentHashMap<String, DoubleVal> doubleVals = new ConcurrentHashMap<>(); // doubles
+	private final ConcurrentHashMap<String, String> texts = new ConcurrentHashMap<>(); // strings
+	private final ConcurrentHashMap<String, FlagVal> flagVals = new ConcurrentHashMap<>(); // booleans
+	private final HashMap<String, MathCollector> mathCollectors = new HashMap<>(); // Math collectors
+	private Waypoints waypoints; //waypoints
 
-	protected ConcurrentHashMap<String, String> rttext = new ConcurrentHashMap<>();
-	protected HashMap<String, List<Writable>> textRequest = new HashMap<>();
+	/* Data update requests */
+	private final HashMap<String, List<Writable>> doubleRequest = new HashMap<>();
+	private final HashMap<String, List<Writable>> textRequest = new HashMap<>();
 
-	protected ConcurrentHashMap<String, FlagVal> flagVals = new ConcurrentHashMap<>();
-
-	protected String workPath = "";
-
-	/* Variables for during debug mode because no longer realtime */
-	protected long passed;
-
-	private final HashMap<String, MathCollector> mathCollectors = new HashMap<>();
+	/* General settings */
+	private final Path settingsPath;
 
 	/* Patterns */
-	private Pattern words = Pattern.compile("[a-zA-Z]+[_:0-9]*[a-zA-Z]+\\d*"); // find references to doublevals etc
+	private final Pattern words = Pattern.compile("[a-zA-Z]+[_:0-9]*[a-zA-Z]+\\d*"); // find references to doublevals etc
 
-	private Path settingsPath;
-	private BlockingQueue<Datagram> dQueue;
+	/* Other */
+	private final BlockingQueue<Datagram> dQueue;
 
 	public RealtimeValues( Path settingsPath,BlockingQueue<Datagram> dQueue ){
 		this.settingsPath=settingsPath;
 		this.dQueue=dQueue;
 		readFromXML();
+	}
+	public Waypoints enableWaypoints(ScheduledExecutorService scheduler){
+		waypoints = new Waypoints(settingsPath,scheduler,this,dQueue);
+		return waypoints;
 	}
 	/**
 	 * Read the rtvals node in the settings.xml
@@ -74,7 +77,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					if( id.isEmpty())
 						return;
 					if( rtval.getTagName().equals("group")){
-						id += id.isEmpty()?"":"_";
+						id += "_";
 						for( var groupie : XMLtools.getChildElements(rtval)){
 							var gid = XMLtools.getStringAttribute(groupie,"id","");
 							gid = id+XMLtools.getStringAttribute(groupie,"name",gid);
@@ -170,19 +173,28 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		var pairs = Tools.parseKeyValue(line,true);
 		for( var p : pairs ){
 			if(p.length==2) {
-				if (p[0].equals("d")||p[0].equals("double")) {
-					var d = getDouble(p[1], Double.NaN);
-					if( !Double.isNaN(d)||!error.isEmpty())
-						line = line.replace("{"+p[0] + ":" + p[1] + "}", Double.isNaN(d)?error:""+d );
-				} else if (p[0].equals("t")||p[0].equals("text")) {
-						String t = getText(p[1],error);
-						if( !t.isEmpty())
-							line = line.replace("{"+p[0] + ":" + p[1] + "}", t);
-				} else if( p[0].equals("f")||p[0].equals("flag")){
-					var d = getFlagVal(p[1]);
-					var r = d.map(f->f.toString()).orElse(error);
-					if( !r.isEmpty())
-						line = line.replace("{"+p[0] + ":" + p[1] + "}",r );
+				switch (p[0]) {
+					case "d":
+					case "double": {
+						var d = getDouble(p[1], Double.NaN);
+						if (!Double.isNaN(d) || !error.isEmpty())
+							line = line.replace("{" + p[0] + ":" + p[1] + "}", Double.isNaN(d) ? error : "" + d);
+						break;
+					}
+					case "t":
+					case "text":
+						String t = getText(p[1], error);
+						if (!t.isEmpty())
+							line = line.replace("{" + p[0] + ":" + p[1] + "}", t);
+						break;
+					case "f":
+					case "flag": {
+						var d = getFlagVal(p[1]);
+						var r = d.map(FlagVal::toString).orElse(error);
+						if (!r.isEmpty())
+							line = line.replace("{" + p[0] + ":" + p[1] + "}", r);
+						break;
+					}
 				}
 			}else{
 				switch(p[0]){
@@ -216,7 +228,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				}
 				if( ok )
 					continue;
-				int index=0;
+				int index;
 				switch(p[0]){
 					case "d": case "double":
 						var d = getDoubleVal(p[1]);
@@ -290,8 +302,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				}
 			}
 		}
-		if(nums!=null)
-			nums.trimToSize();
+		nums.trimToSize();
 		return exp;
 	}
 	public Optional<NumericVal> getNumericVal( String id){
@@ -447,7 +458,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	}
 	/* *********************************** T E X T S  ************************************************************* */
 	public boolean hasText(String id){
-		return rttext.containsKey(id);
+		return texts.containsKey(id);
 	}
 	public boolean setText(String parameter, String value) {
 		final String param=parameter.toLowerCase();
@@ -458,7 +469,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		}
 		Logger.debug("Setting "+parameter+" to "+value);
 
-		boolean created = rttext.put(parameter, value)==null;
+		boolean created = texts.put(parameter, value)==null;
 
 		if( !doubleRequest.isEmpty()){
 			var res = doubleRequest.get(param);
@@ -468,25 +479,25 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		return created;
 	}
 	public boolean updateText( String id, String value){
-		if( rttext.containsKey(id)) {
-			rttext.put(id, value);
+		if( texts.containsKey(id)) {
+			texts.put(id, value);
 			return true;
 		}
 		return false;
 	}
 	public String getText(String parameter, String def) {
-		String result = rttext.get(parameter);
+		String result = texts.get(parameter);
 		return result == null ? def : result;
 	}
 	public List<String> getTextPairs() {
 		ArrayList<String> params = new ArrayList<>();
-		rttext.forEach((param, value) -> params.add(param + " : " + value));
+		texts.forEach((param, value) -> params.add(param + " : " + value));
 		Collections.sort(params);
 		return params;
 	}
 	public List<String> getTextIDs() {
 		ArrayList<String> params = new ArrayList<>();
-		rttext.forEach((param, value) -> params.add(param));
+		texts.forEach((param, value) -> params.add(param));
 		Collections.sort(params);
 		return params;
 	}
@@ -499,17 +510,17 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	public String getFilteredTexts(String id, String eol) {
 		Stream<Entry<String, String>> stream;
 		if (id.endsWith("*") && id.startsWith("*")) {
-			stream = rttext.entrySet().stream()
+			stream = texts.entrySet().stream()
 					.filter(e -> e.getKey().contains(id.substring(1, id.length() - 1)));
 		} else if (id.endsWith("*")) {
-			stream = rttext.entrySet().stream()
+			stream = texts.entrySet().stream()
 					.filter(e -> e.getKey().startsWith(id.substring(0, id.length() - 1)));
 		} else if (id.startsWith("*")) {
-			stream = rttext.entrySet().stream().filter(e -> e.getKey().endsWith(id.substring(1)));
+			stream = texts.entrySet().stream().filter(e -> e.getKey().endsWith(id.substring(1)));
 		} else if (id.isEmpty()) {
-			stream = rttext.entrySet().stream();
+			stream = texts.entrySet().stream();
 		} else {
-			stream = rttext.entrySet().stream().filter(e -> e.getKey().equalsIgnoreCase(id));
+			stream = texts.entrySet().stream().filter(e -> e.getKey().equalsIgnoreCase(id));
 		}
 		return stream.sorted(Map.Entry.comparingByKey()).map(e -> e.getKey() + " : " + e.getValue()).collect(Collectors.joining(eol));
 	}
@@ -534,17 +545,17 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		var f = flagVals.get(flag);
 		if( f==null)
 			Logger.warn("No such flag: "+flag);
-		return f==null?false:f.isUp();
+		return f != null && f.isUp();
 	}
 	public boolean isFlagDown( String flag ){
 		var f = flagVals.get(flag);
 		if( f==null)
 			Logger.warn("No such flag: "+flag);
-		return f==null?false:!f.isDown();
+		return f != null && !f.isDown();
 	}
 
 	/**
-	 * Raises a flag/sets a boolean.
+	 * Raises a flag
 	 * @param flag The flags/bits to set
 	 * @return True if this is a new flag/bit
 	 */
@@ -556,7 +567,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		return cnt!= flagVals.size();
 	}
 	/**
-	 * Lowers a flag/clears a boolean.
+	 * Lowers a flag or clears a bool.
 	 * @param flag The flags/bits to clear
 	 * @return True if this is a new flag/bit
 	 */
@@ -585,23 +596,23 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 
 	public String storeRTVals(Path settings){
 		XMLfab fab = XMLfab.withRoot(settings,"dcafs","settings","rtvals");
-		var keys = doubleVals.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(e->e.getKey()).collect(Collectors.toList());
+		var keys = doubleVals.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Entry::getKey).collect(Collectors.toList());
 		for( var dv : keys ){
 			var dd = doubleVals.get(dv);
 			fab.selectOrAddChildAsParent("double","id",dv)
 					.attr("unit",dd.unit)
 					.up();
 		}
-		keys = rttext.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(e->e.getKey()).collect(Collectors.toList());
+		keys = texts.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Entry::getKey).collect(Collectors.toList());
 		for( var dt : keys ){
 			fab.selectOrAddChildAsParent("text","id",dt).up();
 		}
-		keys = flagVals.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(e->e.getKey()).collect(Collectors.toList());
+		keys = flagVals.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Entry::getKey).collect(Collectors.toList());
 		for( var dt : keys ){
 			fab.selectOrAddChildAsParent("flag","id",dt).up();
 		}
 		fab.build();
-		return "New rtvals/rttexts/flags added";
+		return "New doubles/texts/flags added";
 	}
 	/* ******************************************************************************************************/
 	/**
@@ -621,10 +632,10 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		StringJoiner join = new StringJoiner("\r\n");
 		join.setEmptyValue("None yet");
 		switch (req[0]) {
-			case "rtval":
+			case "rtval": case "double": case "doubles":
 				doubleRequest.forEach((rq, list) -> join.add(rq +" -> "+list.size()+" requesters"));
 				break;
-			case "rttext":
+			case "texts":
 				textRequest.forEach((rq, list) -> join.add(rq +" -> "+list.size()+" requesters"));
 				break;
 		}
@@ -876,7 +887,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					return Double.NaN;
 				}
 			}
-			result = MathUtils.decodeDoublesOp(parts.get(0),parts.get(2),parts.get(1),0).apply(new Double[]{});
+			result = Objects.requireNonNull(MathUtils.decodeDoublesOp(parts.get(0), parts.get(2), parts.get(1), 0)).apply(new Double[]{});
 		}else{
 			try {
 				result = MathUtils.simpleCalculation(exp, Double.NaN, false);
@@ -896,10 +907,10 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 
 		String[] cmds = request[1].split(",");
 		if( cmds.length==1 ){
-			switch(cmds[0]){
-				case "store": return storeRTVals(settingsPath);
-				default:
-					addRequest(wr,request);
+			if ("store" .equals(cmds[0])) {
+				return storeRTVals(settingsPath);
+			} else {
+				addRequest(wr, request);
 			}
 		}else if(cmds.length==2){
 			switch(cmds[0]){
@@ -927,7 +938,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		join.setEmptyValue("No matches found");
 		doubleVals.values().stream().filter( dv -> dv.getGroup().equalsIgnoreCase(group))
 				.forEach(dv -> join.add(space+dv.getName()+" : "+dv));
-		rttext.entrySet().stream().filter(ent -> ent.getKey().startsWith(group+"_"))
+		texts.entrySet().stream().filter(ent -> ent.getKey().startsWith(group+"_"))
 				.forEach( ent -> join.add( space+ent.getKey().split("_")[1]+" : "+ent.getValue()) );
 		flagVals.entrySet().stream().filter(ent -> ent.getKey().startsWith(group+"_"))
 				.forEach( ent -> join.add( space+ent.getKey().split("_")[1]+" : "+ent.getValue()) );
@@ -954,11 +965,11 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			regex=name;
 		}
 		doubleVals.values().stream().filter( dv -> dv.getName().matches(regex))
-				.forEach(dv -> join.add(space+(dv.getGroup().isEmpty()?"":dv.getGroup()+" -> ")+dv.getName()+" : "+dv.toString()));
-		rttext.entrySet().stream().filter(ent -> ent.getKey().matches(regex))
+				.forEach(dv -> join.add(space+(dv.getGroup().isEmpty()?"":dv.getGroup()+" -> ")+dv.getName()+" : "+dv));
+		texts.entrySet().stream().filter(ent -> ent.getKey().matches(regex))
 				.forEach( ent -> join.add( space+ent.getKey().replace("_","->")+" : "+ent.getValue()) );
 		flagVals.values().stream().filter(fv -> fv.getName().matches(regex))
-				.forEach(fv -> join.add(space+(fv.getGroup().isEmpty()?"":fv.getGroup()+" -> ")+fv.getName()+" : "+fv.toString()));
+				.forEach(fv -> join.add(space+(fv.getGroup().isEmpty()?"":fv.getGroup()+" -> ")+fv.getName()+" : "+fv));
 		return join.toString();
 	}
 	public String getFullList(boolean html){
@@ -968,13 +979,11 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		StringJoiner join = new StringJoiner(eol,getGroups().isEmpty()?"":title+eol,"");
 
 		// Find & add the groups
-		getGroups().forEach( group -> {
-			join.add(getRTValsGroupList(group,html));
-		});
+		getGroups().forEach( group -> join.add(getRTValsGroupList(group,html)) );
 
 		// Add the not grouped ones
 		boolean ngDoubles = doubleVals.values().stream().anyMatch( dv -> dv.getGroup().isEmpty());
-		boolean ngTexts = rttext.keySet().stream().anyMatch( k -> k.contains("_"));
+		boolean ngTexts = texts.keySet().stream().anyMatch(k -> k.contains("_"));
 		boolean ngFlags = flagVals.keySet().stream().anyMatch(k -> k.contains("_"));
 
 		if( ngDoubles || ngTexts || ngFlags) {
@@ -989,7 +998,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			if (ngTexts) {
 				join.add("");
 				join.add(html ? "<b>Texts</b>" : TelnetCodes.TEXT_BLUE + "Texts" + TelnetCodes.TEXT_YELLOW);
-				rttext.entrySet().stream().filter(e -> !e.getKey().contains("_"))
+				texts.entrySet().stream().filter(e -> !e.getKey().contains("_"))
 						.forEach(e -> join.add(space + e.getKey() + " : " + e.getValue()));
 			}
 			if (ngFlags) {
@@ -1003,20 +1012,20 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	}
 	public List<String> getGroups(){
 		var groups = doubleVals.values().stream()
-				.filter( dv -> !dv.getGroup().isEmpty())
-				.map( dv -> dv.getGroup()).distinct().collect(Collectors.toList());
-		rttext.keySet().stream()
+				.map(DoubleVal::getGroup)
+				.filter(group -> !group.isEmpty()).distinct().collect(Collectors.toList());
+		texts.keySet().stream()
 						.filter( k -> k.contains("_"))
 						.map( k -> k.split("_")[0] )
 						.distinct()
 						.filter( g -> !groups.contains(g))
-						.forEach( t->groups.add(t));
+						.forEach(groups::add);
 		flagVals.values().stream()
-						.filter( f -> !f.getGroup().isEmpty() )
-						.map( f -> f.getGroup())
+						.map(FlagVal::getGroup)
+						.filter(group -> !group.isEmpty() )
 						.distinct()
 						.filter( g -> !groups.contains(g))
-						.forEach( t->groups.add(t));
+						.forEach(groups::add);
 
 		Collections.sort(groups);
 		return groups;
