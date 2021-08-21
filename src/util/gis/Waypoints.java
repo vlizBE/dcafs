@@ -1,8 +1,8 @@
 package util.gis;
 
 import das.Commandable;
+import util.data.DataProviding;
 import util.data.DoubleVal;
-import util.data.RealtimeValues;
 import io.Writable;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
@@ -38,7 +38,7 @@ public class Waypoints implements Commandable {
     BlockingQueue<Datagram> dQueue;
 
     /* *************************** C O N S T R U C T O R *********************************/
-    public Waypoints(Path settingsPath, ScheduledExecutorService scheduler, RealtimeValues rtvals, BlockingQueue<Datagram> dQueue){
+    public Waypoints(Path settingsPath, ScheduledExecutorService scheduler, DataProviding rtvals, BlockingQueue<Datagram> dQueue){
         this.settingsPath=settingsPath;
         this.scheduler=scheduler;
         this.dQueue=dQueue;
@@ -73,10 +73,10 @@ public class Waypoints implements Commandable {
         }
         return false;
     }
-    public boolean readFromXML(RealtimeValues rtvals){
+    public boolean readFromXML(DataProviding rtvals){
         return readFromXML(rtvals,true);
     }
-    public boolean readFromXML( RealtimeValues rtvals, boolean clear ){
+    public boolean readFromXML( DataProviding rtvals, boolean clear ){
         
         if( settingsPath == null){
             Logger.warn("Reading Waypoints failed because invalid XML.");
