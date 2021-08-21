@@ -1,5 +1,6 @@
 package io.forward;
 
+import org.apache.commons.lang3.ArrayUtils;
 import util.data.DataProviding;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
@@ -371,35 +372,19 @@ public class EditorForward extends AbstractForward{
                 .map(MatchResult::group)
                 .toArray(String[]::new);
 
+        String[] filler = resplit.split("[i][0-9]{1,3}");
+
         if(is.length==0) {
             Logger.warn(id+"(ef)-> No original data referenced in the resplit");
             return;
         }
 
         int[] indexes = new int[is.length];
-        ArrayList<String> fillers = new ArrayList<>();
-        String prefix;
-        if( resplit.indexOf(is[0])!=0) {
-            prefix = resplit.substring(0, resplit.indexOf(is[0]));
-        }else{
-            prefix="";
+
+        for( int a=0;a<is.length;a++){
+            indexes[a] = Integer.parseInt(is[a].substring(1));
         }
 
-        for( int a=0;a<is.length;a++ ){
-            try {
-                // Get the indexes
-                indexes[a] = Integer.parseInt(is[a].substring(1));
-
-                // Get the filler elements
-                int end = a + 1 < is.length ? resplit.indexOf(is[a + 1]) : resplit.length();
-                fillers.add(resplit.substring(resplit.indexOf(is[a]) + is[a].length(), end));
-
-                resplit = resplit.substring(end);
-            }catch(StringIndexOutOfBoundsException e){
-                Logger.error(id+" (ef)-> Failed to process "+resplit );
-            }
-        }
-        String[] fill = fillers.toArray(new String[0]);
         String deli;
         if( delimiter.equalsIgnoreCase("*")){
             deli="\\*";
@@ -409,19 +394,21 @@ public class EditorForward extends AbstractForward{
 
         Function<String,String> edit = input ->
         {
-            String[] split = input.split(deli); // Get the source data
-            StringJoiner join = new StringJoiner("",dataProviding.parseRTline(prefix,error),"");
+            String[] inputEles = input.split(deli); // Get the source data
+            StringJoiner join = new StringJoiner("",filler[0].isEmpty()?"":dataProviding.parseRTline(filler[0],error),"");
             for( int a=0;a<indexes.length;a++){
                 try {
-                    join.add(split[indexes[a]]).add( dataProviding.parseRTline(fill[a],error) );
-                    split[indexes[a]] = null;
+                    join.add(inputEles[indexes[a]]);
+                    if( filler.length>a+1)
+                        join.add( dataProviding.parseRTline(filler[a+1],error));
+                    inputEles[indexes[a]] = null;
                 }catch( IndexOutOfBoundsException e){
                     Logger.error("Out of bounds when processing: "+input);
                 }
             }
-            if( indexes.length!=split.length && append){
+            if( indexes.length!=inputEles.length && append){
                 StringJoiner rest = new StringJoiner(delimiter,delimiter,"");
-                for( var a : split){
+                for( var a : inputEles){
                     if( a!=null)
                         rest.add(a);
                 }
