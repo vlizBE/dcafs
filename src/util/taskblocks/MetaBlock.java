@@ -7,13 +7,18 @@ import java.util.StringJoiner;
 public class MetaBlock extends AbstractBlock{
     String id;
     String info;
+    TaskBlock failure;
 
     public MetaBlock( String id, String info){
         this.id=id;
         this.info=info;
     }
-    public TaskBlock info(String info){
+    public MetaBlock info(String info){
         this.info=info;
+        return this;
+    }
+    public MetaBlock failure( TaskBlock fail){
+        this.failure=fail;
         return this;
     }
     public String getTreeInfo(){
@@ -56,7 +61,10 @@ public class MetaBlock extends AbstractBlock{
     @Override
     public void nextFailed() {
         Logger.error("Run of the list failed, start failure list?");
-        next.forEach( TaskBlock::stop);
+        if( next.size()==1){ // If only one branch, run failure?
+            failure.start(this);
+        }
+        //next.forEach( TaskBlock::stop);
     }
     public String toString(){
         return "Metablock named "+id+(info.isEmpty()?"":" and info '"+info+"'");

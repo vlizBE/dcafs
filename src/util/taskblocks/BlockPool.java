@@ -59,10 +59,14 @@ public class BlockPool {
         for( var ts : fab.getChildren("taskset")){
             String tsId = XMLtools.getStringAttribute(ts,"id","");
             String info = XMLtools.getStringAttribute(ts,"info","");
+            String failure = XMLtools.getStringAttribute(ts,"failure","");
             String req = XMLtools.getStringAttribute(ts,"req","");
 
             BlockTree tree = BlockTree.trunk( getStartBlock(tsId,true).get() );
-            tree.getMetaBlock().info(info);
+            var start = tree.getMetaBlock().info(info);
+            if( !failure.isEmpty() ){
+                start.failure(getStartBlock(failure,true).get());
+            }
 
             startBlocks.put( tsId,tree.getMetaBlock());
 
@@ -109,15 +113,18 @@ public class BlockPool {
         if( !req.isEmpty()){
             tree.branchOut( CheckBlock.prepBlock(dp,req));
         }
+        // Read and process the check attribute
+        var check = XMLtools.getStringAttribute(t,"check","");
 
         // Read and process the output attribute
         var output = XMLtools.getStringAttribute(t,"output","").split(":");
         var data = t.getTextContent();
         var values = data.split(";");
 
+        AbstractBlock outblock=null;
         switch(output[0]){
             case "":case "system":
-                tree.addTwig( CmdBlock.prepBlock(cp,t.getTextContent()));
+                outblock = CmdBlock.prepBlock(cp, t.getTextContent());
                 break;
             case "email":
                 String attachment = XMLtools.getStringAttribute(t,"attachment","");
@@ -134,7 +141,7 @@ public class BlockPool {
                     if( !reply.isEmpty()) {
                         bl.addReply(reply, scheduler);
                     }
-                    tree.addTwig(bl);
+                    outblock=bl;
                 }else{
                     Logger.error("No such Base stream: "+output[1]);
                     return;
@@ -144,7 +151,7 @@ public class BlockPool {
                 if( ts!=null ){
                     var h = ts.getClientWritable(output[1]);
                     if( h.isPresent()){
-                        tree.addTwig(WritableBlock.prepBlock( h.get(), t.getTextContent()));
+                        outblock=WritableBlock.prepBlock( h.get(), t.getTextContent());
                     }else{
                         Logger.error("No such client connected: "+output[1]);
                     }
@@ -157,22 +164,32 @@ public class BlockPool {
                 var text = t.getTextContent().split(":");
                 switch( text[0]){
                     case "taskset":
-                        tree.addTwig( getStartBlock(text[1],true).get() );
+                        outblock = getStartBlock(text[1],true).get() ;
                         break;
                     case "stop":
                         var b = getStartBlock(text[1],false);
                         if( b.isPresent() ){
-                            tree.addTwig( ControlBlock.prepBlock(b.get(),"stop"));
+                            outblock = ControlBlock.prepBlock(b.get(),"stop");
                         }else{
                             var mb=new MetaBlock(text[1],"");
                             startBlocks.put(text[1],mb);
-                            tree.addTwig( ControlBlock.prepBlock(mb,"stop"));
+                            outblock = ControlBlock.prepBlock(mb,"stop");
                         }
                         break;
                 }
                 break;
         }
-
+        // If an outblock was created
+        if( outblock!=null) {
+            // and a check isn't requested
+            if (check.isEmpty()) {
+                tree.addTwig(outblock);
+            }else{// and a check needs to be done
+                tree.branchOut(outblock);
+                tree.addTwig(CheckBlock.prepBlock(dp,check));
+                tree.branchIn();
+            }
+        }
         if( !trigger.isEmpty()){
             tree.branchIn();
         }
