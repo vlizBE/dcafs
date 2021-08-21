@@ -195,11 +195,16 @@ public class MathForward extends AbstractForward {
             defines.forEach((key, value) -> fab.addChild("def", value).attr("ref", key));
         }
         if( rulesString.size()==1 && sources.size()==1){
-            fab.content("i"+rulesString.get(0)[1]+"="+rulesString.get(0)[2]);
+            if( rulesString.get(0)[2].startsWith("i"+rulesString.get(0)[1]+"=")){
+                fab.content(rulesString.get(0)[2]);
+            }else{
+                fab.content("i"+rulesString.get(0)[1]+"="+rulesString.get(0)[2]);
+            }
+
         }else{
             fab.comment("Operations go here, possible types: complex (default) ,scale");
             rulesString.forEach( rule -> {
-                fab.addChild("op",rule[2]).attr("index",rule[1]);
+                fab.addChild("op",rule[2]);
                 if( !rule[0].equalsIgnoreCase("complex"))
                     fab.attr("type",rule[0]);
             } );
@@ -306,9 +311,18 @@ public class MathForward extends AbstractForward {
         expression=expression.replace("--","-=1");
         expression=expression.replace(" ",""); //remove spaces
 
-        if( !expression.contains("=") ) // If this doesn't contain a '=' it's no good
-            return Optional.empty();
-
+        if( !expression.contains("=") ) {// If this doesn't contain a '=' it's no good
+            if(expression.matches("[i][0-9]{1,3}")){
+                var op = new Operation( expression, NumberUtils.toInt(expression.substring(1),-1));
+                op.setCmd(cmd);
+                op.setScale(scale);
+                rulesString.add(new String[]{"std",""+NumberUtils.toInt(expression.substring(1)),expression});
+                ops.add(op);
+                return Optional.of(op);
+            }else {
+                return Optional.empty();
+            }
+        }
         String exp = expression;
         var split = expression.split("[+-/*^]?[=]");
 
@@ -325,9 +339,19 @@ public class MathForward extends AbstractForward {
             expression=expression.replace(split[0],ii[1]+","+ii[0]); //swap the {d to front
         }
 
-        if( ii[0].startsWith("{d")&&ii.length==1)
-            index=-2;
+        if( ii[0].toLowerCase().startsWith("{d")&&ii.length==1) {
+            if( split[1].matches("[i][0-9]{1,3}")){
+                var op = new Operation( expression, NumberUtils.toInt(split[1].substring(1),-1));
+                op.setCmd(cmd);
+                op.setScale(scale);
+                rulesString.add(new String[]{"std",""+NumberUtils.toInt(split[1].substring(1)),expression});
+                ops.add(op);
+                return Optional.of(op);
+            }else{
+                index = -2;
+            }
 
+        }
         exp = split[1];
 
         if( index == -1 ){
@@ -351,20 +375,12 @@ public class MathForward extends AbstractForward {
             op = new Operation( expression, new MathFab(exp.replace(",",".")),index);
         }
 
-
         ops.add(op);
 
-        if( scale != -1){ // Check if there's a scale op needed
-            int pos =index;
-            Function<BigDecimal[],BigDecimal> proc = x -> x[pos].setScale(scale, RoundingMode.HALF_UP);
-            var p = new Operation( expression, proc,index);
-            p.setCmd(cmd);  // this is the operation that should get the command
-            ops.add( p );
-            rulesString.add(new String[]{"std",""+index,"scale("+expression+", "+scale+")"});
-        }else{
-            op.setCmd(cmd);
-            rulesString.add(new String[]{"std",""+index,expression});
-        }
+        op.setScale(scale);
+        op.setCmd(cmd);
+
+        rulesString.add(new String[]{"std",""+index,expression});
         return Optional.ofNullable(ops.get(ops.size()-1)); // return the one that was added last
     }
 
@@ -500,7 +516,7 @@ public class MathForward extends AbstractForward {
     /**
      * Check the expression for references to:
      * - doubles -> {d:id} or {double:id}
-     * - flags -> {f:id} or{flag:id}
+     * - flags -> {f:id} or {flag:id}
      * If found, check if those exist and if so, add them to the corresponding list
      *
      * @param exp The expression to check
@@ -510,20 +526,22 @@ public class MathForward extends AbstractForward {
 
         // Find all the double/flag pairs
         var pairs = Tools.parseKeyValue(exp,true);
+        if( referencedNums==null)
+            referencedNums = new ArrayList<>();
         for( var p : pairs ) {
             if (p.length == 2) {
                 switch(p[0]){
                     case "d": case "double":
-                        var d = dataProviding.getDoubleVal(p[1]);
-                        if( referencedNums==null)
-                            referencedNums = new ArrayList<>();
-                        d.ifPresent( referencedNums::add );
+                        dataProviding.getDoubleVal(p[1]).ifPresent( referencedNums::add );
+                        break;
+                    case "D":
+                        referencedNums.add( dataProviding.getOrAddDoubleVal(p[1]) );
                         break;
                     case "f": case "flag":
-                        var f = dataProviding.getFlagVal(p[1]);
-                        if( referencedNums == null)
-                            referencedNums = new ArrayList<>();
-                        f.ifPresent( referencedNums::add );
+                        dataProviding.getFlagVal(p[1]).ifPresent( referencedNums::add );
+                        break;
+                    case "F":
+                        referencedNums.add( dataProviding.getOrAddFlagVal(p[1]));
                         break;
                     default:
                         Logger.error(id+" (mf)-> Operation containing unknown pair: "+p[0]+":"+p[1]);
@@ -568,7 +586,7 @@ public class MathForward extends AbstractForward {
         for( var p : Tools.parseKeyValue(exp,true) ) {
             if (p.length == 2) { // The pair should be an actual pair
                 boolean ok=false; // will be used at the end to check if ok
-                if ( p[0].equals("d")||p[0].equals("double")||p[0].equals("f")||p[0].equals("flag") ) { // if the left of the pair is a double
+                if ( p[0].toLowerCase().equals("d")||p[0].equals("double")||p[0].toLowerCase().equals("f")||p[0].equals("flag") ) { // if the left of the pair is a double
                     for( int pos=0;pos<referencedNums.size();pos++ ){ // go through the known doubleVals
                         var d = referencedNums.get(pos);
                         if( d.getID().equalsIgnoreCase(p[1])) { // If a match is found
@@ -601,6 +619,7 @@ public class MathForward extends AbstractForward {
         Function<BigDecimal[],BigDecimal> op=null; // for the scale type
         MathFab fab=null;    // for the complex type
         int index;           // index for the result
+        int scale=-1;
         String ori;          // The expression before it was decoded mainly for listing purposes
         String cmd ="";      // Command in which to replace the $ with the result
         DoubleVal update;
@@ -616,6 +635,11 @@ public class MathForward extends AbstractForward {
                                     update=dv;
                                     doUpdate=true;
                                 } );
+                if( !doUpdate )
+                    Logger.warn("Asking to update {d:"+ori.substring(ori.indexOf(":")+1,ori.indexOf("}")+1)+" but doesn't exist");
+            }else if( ori.startsWith("{D:")){
+                update=dataProviding.getOrAddDoubleVal(ori.substring(ori.indexOf(":")+1,ori.indexOf("}")));
+                doUpdate=true;
             }
         }
         public Operation(String ori, Function<BigDecimal[],BigDecimal> op, int index ){
@@ -629,6 +653,9 @@ public class MathForward extends AbstractForward {
         public Operation(String ori, String value, int index ){
             this(ori,index);
             this.directSet = NumberUtils.createBigDecimal(value);
+        }
+        public void setScale( int scale ){
+            this.scale=scale;
         }
         public void setCmd(String cmd){
             if( cmd.isEmpty())
@@ -647,8 +674,8 @@ public class MathForward extends AbstractForward {
             }
         }
         public BigDecimal solve( BigDecimal[] data){
-            BigDecimal bd;
-
+            BigDecimal bd=null;
+            boolean changeIndex=true;
             if( op != null ){
                 if( data.length>index) {
                     try {
@@ -671,14 +698,19 @@ public class MathForward extends AbstractForward {
                 }
             }else if( directSet!= null ){
                 bd = directSet;
-            }else{
-                return null;
+            }else if(index!=-1){
+                bd = data[index];
+                changeIndex=false;
             }
+
             if( bd == null ){
                 Logger.error(getID()+"(mf) -> Failed to solve the received data");
                 return null;
             }
-            if( index>= 0 && index < data.length)
+            if( scale != -1)
+                bd=bd.setScale(scale,RoundingMode.HALF_UP);
+
+            if( index>= 0 && index < data.length && changeIndex )
                 data[index]=bd;
 
             if( update != null ) {
