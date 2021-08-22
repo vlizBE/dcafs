@@ -23,8 +23,17 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.10.10 (work in progress)
 
+### Breaking
+- Changed `<cmd trigger="open"></cmd` to `<cmd when="open"></cmd>` in a stream node because all the other cmd node use when
+- Changed the hello/wakeup cmd node in a stream to a write node to limit possible confusion (cmd node didn't actually cmd)
+
+### DoubleVals
+- Now writes changes to XML (new,alter,addcmd)
+- Added `dv:addcmd,id,when:cmd` to add a cmd
+- Added `dv:alter,id,unit:value` to change the unit
+
 ### Datapaths
-- to remain consisted changed the cmd to pf(pathforward) or paths, path:id is still used to request data
+- to remain consistent, changed the cmd to pf(pathforward) or paths, path:id is still used to request data
 - Added the pf:addgen command to directly add a 'full' generic to a path (uses the same code as the gens:addblank)
 - Added the pf:? cmd to get info on the possible cmds
 - refactored the .java to PathForward.java
@@ -41,9 +50,11 @@ From 0.5.0 onwards, this should be better documented...
 
 ### TaskBlock
 - Implemented TaskManager state attribute
+- Implemented oneshot/step taskset run types
 
 ### Other
 - Generics, improved the addblank cmd to also set indexes, names and reload afterwards
+- Moved IssuePool and Waypoints into RealtimeValus
 
 ### Other Fixed
 - rtvals was missing the eol delimiter (mistake between delimiter and prefix)

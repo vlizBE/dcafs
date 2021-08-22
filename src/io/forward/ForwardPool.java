@@ -174,7 +174,7 @@ public class ForwardPool implements Commandable {
                     return "Incorrect amount of arguments, expected mf:addcomplex,id,source,op";
             case "addblank":
                 if( cmds.length<3)
-                    return "Incorrect amount of arguments, expected mf:addblank,id,source";
+                    return "Incorrect amount of arguments, expected mf:addblank,id,source<,op>";
                 if( getMathForward(cmds[1]).isPresent() )
                     return "Already math with that id";
                 cmds[1]=cmds[1].toLowerCase();
