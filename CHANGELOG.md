@@ -26,7 +26,7 @@ From 0.5.0 onwards, this should be better documented...
 ### Datapaths
 - to remain consisted changed the cmd to pf(pathforward) or paths, path:id is still used to request data
 - Added the pf:addgen command to directly add a 'full' generic to a path (uses the same code as the gens:addblank)
-- Added the pf:? command to get info on the possible cmds
+- Added the pf:? cmd to get info on the possible cmds
 - refactored the .java to PathForward.java
 
 ### MathForward
@@ -36,6 +36,12 @@ From 0.5.0 onwards, this should be better documented...
 - Allows for creating doubles/flags by using uppercase {D:id} or {F:id} instead of lowercase
 - Fixed op that just sets a double `<op scale="1">{D:temp}=i0</op>`
  
+### TaskManager
+- Replaced 'state' logic with rtval text
+
+### TaskBlock
+- Implemented TaskManager state attribute
+
 ### Other
 - Generics, improved the addblank cmd to also set indexes, names and reload afterwards
 
