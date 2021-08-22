@@ -102,10 +102,14 @@ public abstract class BaseStream {
         triggeredCmds.clear();
         for( Element cmd : XMLtools.getChildElements(stream, "cmd") ){
             String c = cmd.getTextContent();
-            String trigger = XMLtools.getStringAttribute(cmd,"trigger","open");
-            triggeredCmds.add(new TriggeredCommand(trigger, c));
+            String when = XMLtools.getStringAttribute(cmd,"when","open");
+            triggeredCmds.add(new TriggeredCommand(when, c));
         }
-
+        for( Element cmd : XMLtools.getChildElements(stream, "write") ){
+            String c = cmd.getTextContent();
+            String when = XMLtools.getStringAttribute(cmd,"when","hello");
+            triggeredCmds.add(new TriggeredCommand(when, c));
+        }
         return readExtraFromXML(stream);
     }
     protected abstract boolean readExtraFromXML( Element stream );
@@ -126,7 +130,8 @@ public abstract class BaseStream {
                     .down(); //make it the parent
         }
 
-        var list = fab.getChildren("");
+        var list = fab.getChildren("*");
+
 
         if( !label.equalsIgnoreCase("void")) {
             fab.alterChild("label", label);
@@ -156,7 +161,23 @@ public abstract class BaseStream {
         if( echo )
             fab.alterChild("echo", echo?"yes":"no");
         fab.alterChild("eol", Tools.getEOLString(eol) );
-        
+
+        fab.clearChildren("cmd"); // easier to just remove first instead of checking if existing
+        for( var tr : triggeredCmds){
+            switch(tr.trigger){
+                case OPEN: case IDLE: case CLOSE: case IDLE_END:
+                    fab.addChild("cmd",tr.command);
+                    break;
+                case HELLO:  case WAKEUP:
+                    fab.addChild("write",tr.command);
+                    break;
+            }
+            if( tr.trigger==TRIGGER.IDLE_END){
+                fab.attr("when","!idle");
+            }else{
+                fab.attr("when",tr.trigger.toString().toLowerCase());
+            }
+        }
         return writeExtraToXML(fab);
     }
 
