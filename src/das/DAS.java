@@ -24,7 +24,6 @@ import util.DeadThreadListener;
 import util.data.DataProviding;
 import util.data.RealtimeValues;
 import util.database.*;
-import util.gis.Waypoints;
 import util.task.TaskManager;
 import util.task.TaskManagerPool;
 import util.taskblocks.BlockPool;
@@ -74,7 +73,7 @@ public class DAS implements DeadThreadListener {
     private DatabaseManager dbManager;
     private MqttPool mqttPool;
     private TaskManagerPool taskManagerPool;
-    private IssuePool issuePool;
+
 
 
     private final Map<String, FileCollector> fileCollectors = new HashMap<>();
@@ -150,12 +149,9 @@ public class DAS implements DeadThreadListener {
             /* RealtimeValues */
             rtvals = new RealtimeValues( settingsPath, dQueue );
 
-            /* IssuePool */
-            issuePool = new IssuePool(dQueue, settingsPath,rtvals);
-
             /* CommandPool */
-            commandPool = new CommandPool(issuePool, workPath);
-            addCommandable("issue",issuePool);
+            commandPool = new CommandPool( workPath);
+            addCommandable("issues",rtvals.getIssuePool());
             addCommandable("flags;fv;doubles;double;dv;texts;tv",rtvals);
             addCommandable(rtvals,"rtval","rtvals");
             addCommandable( "wpts",rtvals.enableWaypoints(nettyGroup) );
@@ -239,7 +235,6 @@ public class DAS implements DeadThreadListener {
         return settingsPath;
     }
     public DatabaseManager getDatabaseManager(){return dbManager;}
-    public IssuePool getIssuePool(){ return issuePool;}
 
     /**
      * Check if the boot up was successful
@@ -304,7 +299,7 @@ public class DAS implements DeadThreadListener {
     }
 
     /**
-     * Adds a check to do to see if it's allowed to shutdown now
+     * Adds a check to do to see if it's allowed to shut down now
      * @param sdp
      */
     public void addShutdownPreventing( ShutdownPreventing sdp){
@@ -343,7 +338,7 @@ public class DAS implements DeadThreadListener {
      */
     public void addStreamPool() {
 
-        streampool = new StreamManager(dQueue, issuePool, nettyGroup);
+        streampool = new StreamManager(dQueue, rtvals.getIssuePool(), nettyGroup);
         commandPool.setStreamPool(streampool);
 
         if (debug) {
@@ -797,17 +792,17 @@ public class DAS implements DeadThreadListener {
     public void notifyCancelled(String thread) {
 
         Logger.error("Thread: " + thread + " stopped for some reason.");
-        issuePool.addIfNewAndIncrement("threaddied:" + thread, thread + " died and got restarted");
+        rtvals.getIssuePool().addIfNewAndIncrement("threaddied:" + thread, thread + " died and got restarted");
 
         switch (thread) {
             case "BaseWorker": // done
-                int retries = issuePool.getIssueTriggerCount("thread died:" + thread);
+                int retries = rtvals.getIssuePool().getIssueTriggerCount("thread died:" + thread);
                 if (labelWorker != null && retries < 50) {
                     Logger.error("BaseWorker not alive, trying to restart...");
                     new Thread(labelWorker, "BaseWorker").start();// Start the thread
                 } else {
                     Logger.error("BaseWorker died 50 times, giving up reviving.");
-                    issuePool.addIfNewAndIncrement("fatal:" + thread, thread + " permanently dead.");
+                    rtvals.getIssuePool().addIfNewAndIncrement("fatal:" + thread, thread + " permanently dead.");
                 }
                 break;
             case "DigiWorker": // done

@@ -1,6 +1,7 @@
 package util.data;
 
 import das.Commandable;
+import das.IssuePool;
 import io.Writable;
 import io.collector.CollectorFuture;
 import io.collector.MathCollector;
@@ -39,6 +40,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	private final ConcurrentHashMap<String, FlagVal> flagVals = new ConcurrentHashMap<>(); // booleans
 	private final HashMap<String, MathCollector> mathCollectors = new HashMap<>(); // Math collectors
 	private Waypoints waypoints; //waypoints
+	private IssuePool issuePool;
 
 	/* Data update requests */
 	private final HashMap<String, List<Writable>> doubleRequest = new HashMap<>();
@@ -56,11 +58,17 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	public RealtimeValues( Path settingsPath,BlockingQueue<Datagram> dQueue ){
 		this.settingsPath=settingsPath;
 		this.dQueue=dQueue;
+
+		issuePool = new IssuePool(dQueue, settingsPath,this);
+
 		readFromXML();
 	}
 	public Waypoints enableWaypoints(ScheduledExecutorService scheduler){
 		waypoints = new Waypoints(settingsPath,scheduler,this,dQueue);
 		return waypoints;
+	}
+	public IssuePool getIssuePool(){
+		return issuePool;
 	}
 	/**
 	 * Read the rtvals node in the settings.xml

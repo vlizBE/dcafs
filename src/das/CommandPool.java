@@ -58,15 +58,6 @@ public class CommandPool {
 		Logger.info("CommandPool started with workpath: "+workPath);
 	}
 	/**
-	 * Constructor requiring a link to @see IssueCollector to notify problems
-	 * @param issues The collector for the issues created by the BaseReq
-	 */
-	public CommandPool( IssuePool issues, String workPath) {
-		this(workPath);
-		this.issues = issues;
-	}
-
-	/**
 	 * Add an implementation of the Commandable interface
 	 * @param id The first part of the command (so whatever is in front of the : )
 	 * @param cmdbl The implementation
