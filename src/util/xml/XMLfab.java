@@ -294,8 +294,23 @@ public class XMLfab {
      * Remove all the children of the parent node
      * @return The fab after removing the child nodes of the current parent node
      */
-    public XMLfab clearChildren(){
-        XMLtools.removeAllChildren(parent);
+    public XMLfab clearChildren(  ){
+        return clearChildren("");
+    }
+
+    /**
+     * Remove all children with a specified tag, or empty/* for all
+     * @param tag The tag to remove (or empty for all)
+     * @return This fab after removing childnodes
+     */
+    public XMLfab clearChildren( String tag ){
+        if( tag.isEmpty() || tag.equalsIgnoreCase("*")) {
+            XMLtools.removeAllChildren(parent);
+        }else{
+            Optional<Element> child;
+            while( (child = getChild(tag)).isPresent() )
+                parent.removeChild(child.get());
+        }
         return this;
     }
 
@@ -434,7 +449,17 @@ public class XMLfab {
         }
         return this;
     }
-
+    public XMLfab alterChild( String tag, String attr, String val ){
+        alter=true;
+        var ch = getChild(tag,attr,val);
+        if( ch.isPresent() ){
+            last = ch.get();
+        }else{
+            last = XMLtools.createChildElement(xmlDoc, parent, tag );
+            attr(attr,val);
+        }
+        return this;
+    }
     /**
      * Select a child node for later alterations (eg. attributes etc) and alter the content or create it if it doesn't exist
      * @param tag The tag of the child node to look for
