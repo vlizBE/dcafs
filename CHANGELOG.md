@@ -21,49 +21,14 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (will be trigger for 0.11.0)
 
-## 0.10.10 (work in progress)
+## 0.10.10 (22/08/21)
+
+Note: Contains TaskBlocks code but without interface and standalone meaning, code is present but not usable nor 
+affecting anything else.
 
 ### Breaking
 - Changed `<cmd trigger="open"></cmd` to `<cmd when="open"></cmd>` in a stream node because all the other cmd node use when
 - Changed the hello/wakeup cmd node in a stream to a write node to limit possible confusion (cmd node didn't actually cmd)
-
-### DoubleVals
-- Now writes changes to XML (new,alter,addcmd)
-- Added `dv:addcmd,id,when:cmd` to add a cmd
-- Added `dv:alter,id,unit:value` to change the unit
-
-### Datapaths
-- to remain consistent, changed the cmd to pf(pathforward) or paths, path:id is still used to request data
-- Added the pf:addgen command to directly add a 'full' generic to a path (uses the same code as the gens:addblank)
-- Added the pf:? cmd to get info on the possible cmds
-- refactored the .java to PathForward.java
-
-### MathForward
-- Fixed, Addop/addblank now works as intended again (instead of i1=i1=...)
-- Addblank altered ? to show that it could also add an optional op `mf:addblank,id,src<,op>`
-- Fixed an op with only an index as argument `<op cmd="doubles:new,temp,$" scale="1">i0</op>`
-- Allows for creating doubles/flags by using uppercase {D:id} or {F:id} instead of lowercase
-- Fixed op that just sets a double `<op scale="1">{D:temp}=i0</op>`
- 
-### TaskManager
-- Replaced 'state' logic with rtval text
-
-### TaskBlock
-- Implemented TaskManager state attribute
-- Implemented oneshot/step taskset run types
-
-### Other
-- Generics, improved the addblank cmd to also set indexes, names and reload afterwards
-- Moved IssuePool and Waypoints into RealtimeValus
-
-### Other Fixed
-- rtvals was missing the eol delimiter (mistake between delimiter and prefix)
-- EditorForward, resplit fixed when using i's above 10
-
-## 0.10.10 PR (21/08/21)
-
-Note: Contains TaskBlocks code but without interface and standalone meaning, code is present but not usable nor 
-affecting anything else.
 
 ### TaskBlocks (name subject to change)
 - Will replace TaskManager
@@ -85,6 +50,8 @@ affecting anything else.
   - CmdBlock aggregates commands if successive blocks are also CmdBlocks
   - EmailBlock prepends a CmdBlock to convert the email content to the result of a command (if any)
   - Can read the taskmanager script variant of the functional blocks
+  - Implemented step/oneshot (taskset runtype)
+  - Implemented state attribute (task attribute)
 - Improvements compared to TaskManager
   - Checks and triggers are aggregated if possible
   - Checks can be a lot more complex, taskmanager had the limit of either an ands or ors while checkblock doesn't have
@@ -97,16 +64,39 @@ affecting anything else.
 
 ### TaskManager
 - Tasksets now allow for the if attribute do to a check before starting the set
+- Replaced 'state' logic with rtval text
+
+### MathForward
+- Fixed, Addop/addblank now works as intended again (instead of i1=i1=...)
+- Addblank altered ? to show that it could also add an optional op `mf:addblank,id,src<,op>`
+- Fixed an op with only an index as argument `<op cmd="doubles:new,temp,$" scale="1">i0</op>`
+- Allows for creating doubles/flags by using uppercase {D:id} or {F:id} instead of lowercase
+- Fixed op that just sets a double `<op scale="1">{D:temp}=i0</op>`
+
+### DoubleVals
+- Now writes changes to XML (new,alter,addcmd)
+- Added `dv:addcmd,id,when:cmd` to add a cmd
+- Added `dv:alter,id,unit:value` to change the unit
+
+### Datapaths
+- to remain consistent, changed the cmd to pf(pathforward) or paths, path:id is still used to request data
+- Added the pf:addgen command to directly add a 'full' generic to a path (uses the same code as the gens:addblank)
+- Added the pf:? cmd to get info on the possible cmds
+- refactored the .java to PathForward.java
 
 ### XMLfab
 - Refactored the 'parent' methods to make it clear when this is actually 'child becomes parent'
 - Select methods can now return an Optional fab (so can be continued with ifPresent)
 
-### Math
-- Added th ~ operand, which translates A~B to ABS(A-B)
-
 ### Fixes
 - rtval:id works again, wasn't moved to the new commandable format
+- rtvals was missing the eol delimiter (mistake between delimiter and prefix)
+- EditorForward, resplit fixed when using i's above 10
+
+### Other
+- Generics, improved the addblank cmd to also set indexes, names and reload afterwards
+- Moved IssuePool and Waypoints into RealtimeValus
+- Math,Added th ~ operand, which translates A~B to ABS(A-B)
 
 ## 0.10.9 (14/08/21)
 
