@@ -182,9 +182,9 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		for( var p : pairs ){
 			if(p.length==2) {
 				switch (p[0]) {
-					case "d":
+					case "d": case "D":
 					case "double": {
-						var d = getDouble(p[1], Double.NaN);
+						var d = p[0].equals("D")?getOrAddDoubleVal(p[1]).getValue():getDouble(p[1], Double.NaN);
 						if (!Double.isNaN(d) || !error.isEmpty())
 							line = line.replace("{" + p[0] + ":" + p[1] + "}", Double.isNaN(d) ? error : "" + d);
 						break;
@@ -195,9 +195,9 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 						if (!t.isEmpty())
 							line = line.replace("{" + p[0] + ":" + p[1] + "}", t);
 						break;
-					case "f":
+					case "f": case "F":
 					case "flag": {
-						var d = getFlagVal(p[1]);
+						var d = p[0].equalsIgnoreCase("F")?Optional.of(getOrAddFlagVal(p[1])):getFlagVal(p[1]);
 						var r = d.map(FlagVal::toString).orElse(error);
 						if (!r.isEmpty())
 							line = line.replace("{" + p[0] + ":" + p[1] + "}", r);
@@ -214,6 +214,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		}
 		if( line.contains("{")){
 			Logger.error("Found a {, this means couldn't parse a section of "+line);
+			return "";
 		}
 		return line;
 	}
@@ -238,8 +239,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					continue;
 				int index;
 				switch(p[0]){
-					case "d": case "double":
-						var d = getDoubleVal(p[1]);
+					case "d": case "double": case "D":
+						var d = p[0].equalsIgnoreCase("D")?Optional.of(getOrAddDoubleVal(p[1])):getDoubleVal(p[1]);
 						if( d.isPresent() ){
 							index = nums.indexOf(d.get());
 							if(index==-1){
@@ -352,6 +353,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		var val = doubleVals.get(id);
 		if( val==null){
 			doubleVals.put(id,DoubleVal.newVal(id));
+			XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals").alterChild("double","id",id).build();
 		}
 		return doubleVals.get(id);
 	}
@@ -540,6 +542,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		var val = flagVals.get(id);
 		if( val==null){
 			flagVals.put(id,FlagVal.newVal(id));
+			XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals").alterChild("flag","id",id).build();
 		}
 		return flagVals.get(id);
 	}
@@ -763,6 +766,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 
 		var cmds = request[1].split(",");
 		var join = new StringJoiner(html?"<br>":"\r\n");
+		var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
 		switch( cmds[0] ){
 			case "?":
 				join.add("flags or flags:list -> Give a listing of all current flags and their state")
@@ -777,6 +781,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				if( cmds.length !=3)
 					return "Not enough arguments, need flags:new,id,state or fv:new,id,state";
 				setFlagState(cmds[1],Tools.parseBool(cmds[2],false));
+				fab.alterChild("flag","id",cmds[1]).attr("default",cmds[2]).build();
 				return "Flag created/updated "+cmds[1];
 			case "raise": case "set":
 				if( cmds.length !=2)
@@ -808,6 +813,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 
 		var cmds = request[1].split(",");
 		double result;
+		var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
 		switch( cmds[0] ){
 			case "?":
 				var join = new StringJoiner(html?"<br>":"\r\n");
@@ -819,11 +825,19 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			case "list":
 				return String.join(html?"<br>":"\r\n",getTextPairs());
 			case "new": case "create":
-				result = processExpression(cmds[2],true);
-				if( Double.isNaN(result) )
-					return "Failed to create new double";
-				setDouble(cmds[1],result);
-				return cmds[1]+" created/updated to "+result;
+				if( cmds.length==3 ) {
+					result = processExpression(cmds[2], true);
+					if (Double.isNaN(result))
+						return "Failed to create new double";
+					setDouble(cmds[1], result);
+					fab.alterChild("double","id",cmds[1]).build();
+					return cmds[1]+" created/updated to "+result;
+				}
+				if( hasDouble(cmds[1]))
+					return "Already exists";
+				doubleVals.put(cmds[1],DoubleVal.newVal(cmds[1]));
+				fab.alterChild("double","id",cmds[1]).build();
+				return cmds[1]+" created";
 			case "alter":
 				if( cmds.length<3)
 					return "Not enough arguments: doubles:alter,id,param:value";
@@ -833,7 +847,11 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				return getDoubleVal(cmds[1]).map( d -> {
 					if( vals[0].equals("scale")) {
 						d.fractionDigits(NumberUtils.toInt(vals[1]));
+						fab.alterChild("double","id",cmds[1]).attr("scale",d.digits).build();
 						return "Scaling for " +cmds[1]+" set to " + d.digits + " digits";
+					}else if( vals[0].equals("unit")) {
+						fab.alterChild("double","id",cmds[1]).attr("unit",vals[1]).build();
+						return "Unit for "+cmds[1]+" set to "+vals[1];
 					}else{
 						return "Unknown param: "+vals[0];
 					}
@@ -851,6 +869,17 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				if( up == 0)
 					return "No double's updated";
 				return "Updated "+up+" doubles";
+			case "addcmd":
+				if( cmds.length < 4 )
+					return "Not enough arguments, dv:addcmd,id,when,cmd";
+				var d = doubleVals.get(cmds[1]);
+				if( d==null)
+					return "No such double: "+cmds[1];
+				d.addTriggeredCmd(cmds[3],cmds[2]);
+				XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals")
+						.selectChildAsParent("double","id",cmds[1])
+						.ifPresent( f -> f.addChild("cmd",cmds[3]).attr("when",cmds[2]).build());
+				return "Cmd added";
 			default:
 				if( hasDouble(cmds[0]) ) {
 					result = processExpression(cmds[0],false);
@@ -864,6 +893,17 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	}
 	private double processExpression( String exp, boolean create ){
 		double result=Double.NaN;
+
+		if( create ) {
+			exp = exp.replace("d:","D:");
+			exp = exp.replace("double:","D:");
+			exp = exp.replace("f:","F:");
+			exp = exp.replace("flag:","F:");
+		}
+
+		exp = parseRTline(exp,"");
+		exp.replace("true","1");
+		exp.replace("false","0");
 
 		exp = simpleParseRT(exp,create?"create":"");
 		if( exp.isEmpty())
