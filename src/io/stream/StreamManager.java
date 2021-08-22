@@ -689,7 +689,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 			case "trigger":
 				stream = streams.get(cmds[1].toLowerCase());
 				if( cmds.length<4)
-					return "Incorrect amount of arguments, expected ms:trigger,id,event,cmd";
+					return "Incorrect amount of arguments, expected ss:trigger,id,when,cmd";
 				if( stream == null )
 					return "No such stream: "+cmds[1];
 
@@ -701,7 +701,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 				if( fab.selectChildAsParent("stream","id",cmds[1]).isEmpty() )
 					return "No such stream  "+cmds[1];
 
-				fab.addChild("cmd",cmd).attr("trigger",event);
+				fab.addChild("cmd",cmd).attr("when",event);
 				stream.addTriggeredCmd(event,cmd);
 				return fab.build()!=null?"Trigger added":"Altering xml failed";
 			case "alter":
