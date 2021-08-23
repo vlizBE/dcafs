@@ -103,7 +103,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				int scale = XMLtools.getIntAttribute(rtval,"fractiondigits",-1);
 				if( scale == -1)
 					scale = XMLtools.getIntAttribute(rtval,"scale",-1);
-				var dv = getOrAddDoubleVal(id);
+				setDouble(id,defDouble,true);
+				var dv = getDoubleVal(id).get();
 				dv.name(XMLtools.getChildValueByTag(rtval,"name",dv.getName()))
 						.group(XMLtools.getChildValueByTag(rtval,"group",dv.getGroup()))
 						.unit(XMLtools.getStringAttribute(rtval,"unit",""))
