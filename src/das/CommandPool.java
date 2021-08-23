@@ -939,6 +939,9 @@ public class CommandPool {
 					 .add("   fc:addcmd,id,trigger:cmd -> Add a triggered command, triggers: maxsize,idle,rollover")
 					 .add("   fc:addheader,id,headerline -> Adds the header to the given fc")
 					 .add("   fc:addsizelimit,id,size,zip? -> Adds a limit of the given size with optional zipping");
+				join.add(TelnetCodes.TEXT_GREEN+"Get info"+TelnetCodes.TEXT_YELLOW)
+					 .add("   fc:list -> Get a list of all active File Collectors")
+					 .add("   fc:? -> Show this message");
 				return join.toString();
 			case "addnew":
 				if( cmds.length<4)
@@ -950,7 +953,7 @@ public class CommandPool {
 
 				return "FileCollector "+cmds[1]+" created and added to xml.";
 			case "list":
-				return das.getFileCollectorsList(", ");
+				return das.getFileCollectorsList(html?"<br":"\r\n");
 			case "addrollover":
 				if( cmds.length<6)
 					return "Not enough arguments given: fc:addrollover,id,count,unit,format,zip?";

@@ -54,7 +54,7 @@ public class FileCollector extends AbstractCollector{
     private boolean zippedRoll=false;
 
     private String currentForm = "";
-    private String workPath="";
+    //private String workPath="";
 
     long lastData=-1;
     long firstData=-1;
@@ -122,17 +122,13 @@ public class FileCollector extends AbstractCollector{
         }
         /* Source and destination */
         addSource( XMLtools.getStringAttribute(fcEle,"src",""));
-        setWorkPath(workpath);
         String path = XMLtools.getChildValueByTag(fcEle,"path","");
         if( path.isEmpty() ){
             Logger.error(id+"(fc) -> No valid destination given");
             return;
         }
-        Path dest = Path.of(path);
-        if( !dest.isAbsolute()) {
-            setWorkPath(workpath);
-        }
-        setPath(dest);
+
+        setPath(path,workpath);
 
         /* Headers */
         headers.clear();
@@ -177,13 +173,15 @@ public class FileCollector extends AbstractCollector{
         setLineSeparator( Tools.fromEscapedStringToBytes( XMLtools.getStringAttribute(fcEle,"eol",System.lineSeparator())) );
 
         /* Headers change ?*/
-        var curHead = FileTools.readLines(getPath(),1,headers.size());
-        headerChanged = false;
-        if( curHead.size()==headers.size() ) {
-            for (int a = 0; a < headers.size(); a++) {
-                if (!headers.get(a).equals(curHead.get(a))) {
-                    headerChanged = true;
-                    break;
+        if( Files.exists(getPath()) ) {
+            var curHead = FileTools.readLines(getPath(), 1, headers.size());
+            headerChanged = false;
+            if (curHead.size() == headers.size()) {
+                for (int a = 0; a < headers.size(); a++) {
+                    if (!headers.get(a).equals(curHead.get(a))) {
+                        headerChanged = true;
+                        break;
+                    }
                 }
             }
         }
@@ -267,17 +265,23 @@ public class FileCollector extends AbstractCollector{
     public void setPath( Path path ){
         this.destPath=path;
     }
+    public void setPath( String path, String workPath ){
+       setPath(Path.of(path),workPath);
+    }
     public void setPath( Path path, String workPath ){
-        this.destPath =path;
-        if( !path.isAbsolute())
-            this.workPath=workPath;
+        if( !path.isAbsolute()) {
+            destPath = Path.of(workPath).resolve(path);
+        }else{
+            destPath=path;
+        }
+        Logger.info(id+"(fc) -> Path set to "+destPath);
     }
     /**
      * Get the current path this file can be found at
      * @return The path to the file as a string
      */
     public Path getPath(){
-        String path = workPath+destPath.toString();
+        String path = destPath.toString();
 
         //without rollover
         if( currentForm.isEmpty() )
@@ -290,17 +294,6 @@ public class FileCollector extends AbstractCollector{
         // with rollover but on default position
         return Path.of(path.replace(".", currentForm+'.'));
     }
-
-    /**
-     * Alter the work path used
-     * @param workPath The new path
-     */
-    public void setWorkPath( String workPath ){
-        if( !workPath.endsWith(File.separator)&&!workPath.isEmpty())
-            workPath+= File.separator;
-        this.workPath=workPath;
-    }
-
     /**
      * Set the amount of messages in the batch before it's flushed to disk
      * @param batch The amount
