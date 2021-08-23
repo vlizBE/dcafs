@@ -122,9 +122,12 @@ public class PathForward {
             if( !step.hasAttribute("delimiter")&& !delimiter.isEmpty())
                 step.setAttribute("delimiter",delimiter);
 
-            step.setAttribute("id",id+"_"+a);
-            if( stepsForward.isEmpty()&& !src.isEmpty())
-                step.setAttribute("src",src);
+            if( !step.hasAttribute("id"))
+                step.setAttribute("id",id+"_"+a);
+
+            src = XMLtools.getStringAttribute(step,"src","");
+            if( stepsForward.isEmpty() && !src.isEmpty())
+                step.setAttribute("src","");
             switch( step.getTagName() ){
                 case "filter":
                     FilterForward ff = new FilterForward( step, dQueue );
@@ -227,11 +230,12 @@ public class PathForward {
         targets.removeIf( x -> !x.isConnectionValid());
         switch( type){
             case "cmd":; targets.forEach( t->dQueue.add( Datagram.build(src).label("telnet").writable(t))); break;
-            default:
             case "rtvals":
                 var data = dataProviding.parseRTline(src,"-999");
                 targets.forEach( x -> x.writeLine(data));
                 break;
+            default:
+            case "plain": targets.forEach( x -> x.writeLine(src)); break;
         }
 
         if( targets.isEmpty() ){
