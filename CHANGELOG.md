@@ -23,10 +23,22 @@ From 0.5.0 onwards, this should be better documented...
   * 
 ## 0.10.11 (work in progress)
 
+### RealtimeValues
+- Fixed, reading from xml caused writing to xml...
+
 ### FileCollector
 - Fixed, path was recognized as absolute but workpath still got prepended
 - Fixed, fc:list used , as delimiter but should be eol
-  
+- Fixed, on startup it checks if the headers are changed, but not if that file exists first
+- Fixed, `fc:reload,id` checked for three arguments instead of two
+
+### MathForward
+- Fixed, now checks the size of the array after split to prevent out of bounds
+- Fixed, now it actually cancels when to much bad data was received
+
+### PathForward
+- ID's and local src's are now possible, !id is allowed to get reversed/negated filter output
+
 ## 0.10.10 (22/08/21)
 
 Note: Contains TaskBlocks code but without interface and standalone meaning, code is present but not usable nor 
