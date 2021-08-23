@@ -1050,7 +1050,7 @@ public class CommandPool {
 						return "No such param "+alter[0];
 				}
 			case "reload":
-				if( cmds.length<3)
+				if( cmds.length!=2)
 					return "Not enough arguments given: fc:reload,id";
 
 				fco = das.getFileCollector(cmds[1]);
