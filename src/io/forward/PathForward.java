@@ -141,14 +141,14 @@ public class PathForward {
                     break;
                 case "math":
                     MathForward mf = new MathForward( step,dQueue,dataProviding );
-                    if( !stepsForward.isEmpty() )
-                        lastStep().addTarget(mf);
+                    mf.removeSources();
+                    addAsTarget(mf,src);
                     stepsForward.add(mf);
                     break;
                 case "editor":
                     var ef = new EditorForward( step,dQueue,dataProviding );
-                    if( !stepsForward.isEmpty() )
-                        lastStep().addTarget(ef);
+                    ef.removeSources();
+                    addAsTarget(ef,src);
                     stepsForward.add(ef);
                     break;
             }
@@ -162,20 +162,57 @@ public class PathForward {
 
         }
     }
+    private void addAsTarget( AbstractForward f, String src ){
+        if( !src.isEmpty() ){
+            var s = getStep(src);
+            if( s!= null ) {
+                if( s instanceof FilterForward && src.startsWith("!")){
+                    ((FilterForward) s).addReverseTarget(f);
+                }else {
+                    s.addTarget(f);
+                }
+            }
+        }else if( !stepsForward.isEmpty() ) {
+            lastStep().addTarget(f);
+        }
+    }
     public boolean debugStep( int step, Writable wr ){
         if( step >= stepsForward.size() || step == -1 || wr==null )
             return false;
         for( var ab : stepsForward )
             ab.removeTarget(wr);
-        stepsForward.get(step).addTarget(wr);
+        if( !type.isEmpty() ){
+            if( step == 0){
+                targets.add(wr);
+                if( future==null || future.isCancelled())
+                    start();
+            }else{
+                stepsForward.get(step-1).addTarget(wr);
+            }
+        }else{
+            stepsForward.get(step).addTarget(wr);
+        }
+
         return true;
     }
     private AbstractForward lastStep(){
         return stepsForward.get(stepsForward.size()-1);
     }
+    private AbstractForward getStep(String id){
+        for( var step : stepsForward){
+            if( id.endsWith(step.id)) // so that the ! is ignored
+                return step;
+        }
+        return null;
+    }
     public void useCustomSrc( String src, String interval, String type){
         this.src =src;
         this.millis = TimeTools.parsePeriodStringToMillis(interval);
+        if( src.contains("{") && src.contains("}")) {
+            type = "rtvals";
+        }else if(type.equalsIgnoreCase("rtvals")){
+            type="plain";
+        }
         this.type=type;
     }
     public void useRegularSrc( String src){
