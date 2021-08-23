@@ -101,6 +101,12 @@ public class FileTools {
      */
     public static ArrayList<String> readLines( Path path, int start, int amount) {
         var read = new ArrayList<String>();
+
+        if( Files.notExists(path)){
+            Logger.error("Tried to read lines from "+path+" but no such file");
+            return read;
+        }
+
         if( start<0 || amount<0 )
             return read;
              
