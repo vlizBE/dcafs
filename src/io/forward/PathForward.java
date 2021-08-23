@@ -63,12 +63,7 @@ public class PathForward {
         String delimiter = XMLtools.getStringAttribute(pathEle,"delimiter","");;
         String src = XMLtools.getStringAttribute(pathEle,"src","");
 
-        var custSrc = XMLtools.getFirstChildByTag(pathEle,"customsrc");
-        if( custSrc!=null) {
-            useCustomSrc( custSrc.getTextContent(),
-                    XMLtools.getStringAttribute(custSrc,"interval","1s"),
-                    XMLtools.getStringAttribute(custSrc,"type","rtvals"));
-        }else{
+        if( XMLtools.getFirstChildByTag(pathEle,"customsrc")==null) {
             useRegularSrc(src);
         }
 
@@ -98,9 +93,9 @@ public class PathForward {
             Element step = steps.get(a);
 
             if(step.getTagName().equalsIgnoreCase("customsrc")){
-                useCustomSrc( custSrc.getTextContent(),
-                              XMLtools.getStringAttribute(custSrc,"interval","1s"),
-                              XMLtools.getStringAttribute(custSrc,"type","rtvals"));
+                useCustomSrc( step.getTextContent(),
+                              XMLtools.getStringAttribute(step,"interval","1s"),
+                              XMLtools.getStringAttribute(step,"type","plain"));
                 continue;
             }
 
