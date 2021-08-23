@@ -1027,7 +1027,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		StringJoiner join = new StringJoiner(eol,getGroups().isEmpty()?"":title+eol,"");
 
 		// Find & add the groups
-		getGroups().forEach( group -> join.add(getRTValsGroupList(group,html)) );
+		getGroups().forEach( group -> join.add(getRTValsGroupList(group,html)).add("") );
 
 		// Add the not grouped ones
 		boolean ngDoubles = doubleVals.values().stream().anyMatch( dv -> dv.getGroup().isEmpty());
