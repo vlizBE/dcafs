@@ -77,6 +77,7 @@ public abstract class AbstractForward implements Writable {
         }
         return false;
     }
+    public void removeSources(){ sources.clear();}
     public void removeSource( String source ){
         sources.remove(source);
     }
