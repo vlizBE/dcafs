@@ -227,6 +227,12 @@ public class MathForward extends AbstractForward {
         if( bds == null ){
             badDataCount++;
             Logger.error(id+" (mf)-> No valid numbers in the data: "+data+" after split on "+delimiter+ " "+badDataCount+"/"+MAX_BAD_COUNT);
+            if( badDataCount>=MAX_BAD_COUNT) {
+                Logger.error(id+"(mf)-> Too many bad data received, no longer accepting data");
+                valid=false;
+                return false;
+            }
+            return true;
         }
 
         ops.forEach( op -> {
@@ -243,10 +249,7 @@ public class MathForward extends AbstractForward {
         } ); // Solve the operations with the converted data
         if( oldBad == badDataCount )
             badDataCount=0;
-        if( badDataCount>=MAX_BAD_COUNT) {
-            Logger.error(id+"(mf)-> Too many bad data received, no longer accepting data");
-            return false;
-        }
+
         if( badDataCount > 0 || bds == null)
             return true;
 
