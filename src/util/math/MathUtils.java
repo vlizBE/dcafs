@@ -912,7 +912,7 @@ public class MathUtils {
 
         int nulls=0;
         for( int a=0;a<=maxIndex;a++){
-            if( NumberUtils.isCreatable(split[a])) {
+            if( a<split.length&&NumberUtils.isCreatable(split[a]) ) {
                 try {
                     bds[a] = NumberUtils.createBigDecimal(split[a]);
                 }catch(NumberFormatException e) {
