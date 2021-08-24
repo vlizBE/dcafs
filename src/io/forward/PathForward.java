@@ -12,25 +12,25 @@ import worker.Datagram;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 public class PathForward {
 
-    String type="";
-    String src = "";
-    long millis = 0;
+    private String src = "";
 
-    protected final ArrayList<Writable> targets = new ArrayList<>();
+    private final ArrayList<Writable> targets = new ArrayList<>();
+    private ArrayList<CustomSrc> customs;
 
-    ScheduledFuture future;
     DataProviding dataProviding;
     BlockingQueue<Datagram> dQueue;
     EventLoopGroup nettyGroup;
 
     String id;
     ArrayList<AbstractForward> stepsForward;
+    enum SRCTYPE {REG,PLAIN,RTVALS,CMD}
 
     public PathForward(DataProviding dataProviding, BlockingQueue<Datagram> dQueue, EventLoopGroup nettyGroup ){
         this.dataProviding = dataProviding;
@@ -47,9 +47,8 @@ public class PathForward {
         oldTargets.addAll(targets);
         targets.clear();
 
-        if( future!=null) { // if any future is active, stop it
-            if (!future.isCancelled())
-                future.cancel(true);
+        if( customs!=null) { // if any future is active, stop it
+            customs.forEach(CustomSrc::stop);
         }
 
         if( stepsForward!=null) {// If this is a reload, reset the steps
@@ -93,7 +92,7 @@ public class PathForward {
             Element step = steps.get(a);
 
             if(step.getTagName().equalsIgnoreCase("customsrc")){
-                useCustomSrc( step.getTextContent(),
+                addCustomSrc( step.getTextContent(),
                               XMLtools.getStringAttribute(step,"interval","1s"),
                               XMLtools.getStringAttribute(step,"type","plain"));
                 continue;
@@ -123,7 +122,7 @@ public class PathForward {
                 step.setAttribute("delimiter",delimiter);
 
             if( !step.hasAttribute("id"))
-                step.setAttribute("id",id+"_"+a);
+                step.setAttribute("id","step_"+stepsForward.size());
 
             src = XMLtools.getStringAttribute(step,"src","");
             if( stepsForward.isEmpty() && !src.isEmpty())
@@ -152,14 +151,10 @@ public class PathForward {
                     stepsForward.add(ef);
                     break;
             }
+
         }
         if( !oldTargets.isEmpty()&&!stepsForward.isEmpty()){ // Restore old requests
             oldTargets.forEach( wr->addTarget(wr) );
-        }
-        if( !stepsForward.isEmpty() && !type.isEmpty()){
-            targets.add(stepsForward.get(0));
-        }else{
-
         }
     }
     private void addAsTarget( AbstractForward f, String src ){
@@ -181,13 +176,14 @@ public class PathForward {
             return false;
         for( var ab : stepsForward )
             ab.removeTarget(wr);
-        if( !type.isEmpty() ){
+        if( !customs.isEmpty() ){
             if( step == 0){
                 targets.add(wr);
-                if( future==null || future.isCancelled())
-                    start();
+                customs.forEach(CustomSrc::start);
+            }else if( step < stepsForward.size()){
+                stepsForward.get(step).addTarget(wr);
             }else{
-                stepsForward.get(step-1).addTarget(wr);
+                return false;
             }
         }else{
             stepsForward.get(step).addTarget(wr);
@@ -200,44 +196,51 @@ public class PathForward {
     }
     private AbstractForward getStep(String id){
         for( var step : stepsForward){
-            if( id.endsWith(step.id)) // so that the ! is ignored
+            if( id.endsWith(step.id)) // so that the ! (for reversed) is ignored
                 return step;
         }
         return null;
     }
-    public void useCustomSrc( String src, String interval, String type){
-        this.src =src;
-        this.millis = TimeTools.parsePeriodStringToMillis(interval);
-        if( src.contains("{") && src.contains("}")) {
-            type = "rtvals";
+    public void addCustomSrc( String data, String interval, String type){
+        if( data.contains("{") && data.contains("}")) {
+            type ="rtvals";
         }else if(type.equalsIgnoreCase("rtvals")){
             type="plain";
         }
-        this.type=type;
+        if( customs==null)
+            customs = new ArrayList<>();
+        customs.add( new CustomSrc(data,type,TimeTools.parsePeriodStringToMillis(interval)) );
     }
     public void useRegularSrc( String src){
         this.src =src;
-        type="";
     }
     public String toString(){
-        if( type.isEmpty() ){
+        if( customs.isEmpty() ){
+            if( stepsForward.isEmpty())
+                return "Nothing in the path yet";
             return " gives the data from "+stepsForward.get(stepsForward.size()-1).getID();
         }
-        return "'"+ src +"' send to "+targets.size()+" targets every "+TimeTools.convertPeriodtoString(millis, TimeUnit.MILLISECONDS);
+        var join = new StringJoiner("\r\n");
+        customs.forEach(CustomSrc::toString);
+        return join.toString();
     }
     public void addTarget(Writable wr){
-        if( stepsForward.isEmpty() ) {
+
+        if( stepsForward.isEmpty() ){ // If no steps are present
             if (!targets.contains(wr))
                 targets.add(wr);
         }else{
-            // Add a target to the last step
+            if (!targets.contains(stepsForward.get(0)))
+                targets.add(stepsForward.get(0));
             stepsForward.get(stepsForward.size()-1).addTarget(wr);
         }
-        // Now enable the source
-        if( !type.isEmpty()) {
-            start();
-        }else{
-            dQueue.add( Datagram.system(src).writable(stepsForward.get(0)));
+
+        if( targets.size()==1 ){
+            if( customs.isEmpty()){
+                dQueue.add( Datagram.system(src).writable(stepsForward.get(0)));
+            }else{
+                customs.forEach(CustomSrc::start);
+            }
         }
     }
     public void removeTarget( Writable wr){
@@ -250,33 +253,60 @@ public class PathForward {
                 step.removeTarget(wr);
 
             if( lastStep().noTargets() ){ // if the final step has no more targets, stop the first step
-               if( !type.isEmpty() ) {
-                   if(future!=null)
-                       future.cancel(true);
-               }
+                customs.forEach(CustomSrc::stop);
             }
         }
-        // Stop asking data if no more target
     }
-    public void start(){
-        if( future==null || future.isDone())
-            future = nettyGroup.scheduleAtFixedRate(()-> writeData(),millis,millis, TimeUnit.MILLISECONDS);
-    }
+
     public void writeData(){
 
         targets.removeIf( x -> !x.isConnectionValid());
-        switch( type){
-            case "cmd":; targets.forEach( t->dQueue.add( Datagram.build(src).label("telnet").writable(t))); break;
-            case "rtvals":
-                var data = dataProviding.parseRTline(src,"-999");
-                targets.forEach( x -> x.writeLine(data));
-                break;
-            default:
-            case "plain": targets.forEach( x -> x.writeLine(src)); break;
-        }
+        customs.forEach( CustomSrc::write );
 
         if( targets.isEmpty() ){
-            future.cancel(true);
+            customs.forEach(CustomSrc::stop);
+        }
+    }
+    private class CustomSrc{
+        String data;
+        SRCTYPE srcType;
+        long intervalMillis;
+        ScheduledFuture future;
+
+        public CustomSrc( String data, String type, long intervalMillis){
+            this.data =data;
+            this.intervalMillis=intervalMillis;
+            switch(type){
+                case "rtvals": srcType=SRCTYPE.RTVALS; break;
+                case "src": srcType=SRCTYPE.CMD; break;
+                case "plain": srcType=SRCTYPE.PLAIN; break;
+            }
+        }
+        public void start(){
+            if( future==null || future.isDone())
+                future = nettyGroup.scheduleAtFixedRate(()-> write(),intervalMillis,intervalMillis, TimeUnit.MILLISECONDS);
+        }
+        public void stop(){
+            if( future!=null && !future.isCancelled())
+                future.cancel(true);
+        }
+        public void write(){
+            targets.removeIf( x -> !x.isConnectionValid());
+            if( targets.isEmpty() )
+                stop();
+
+            switch( srcType){
+                case CMD:; targets.forEach( t->dQueue.add( Datagram.build(data).label("telnet").writable(t))); break;
+                case RTVALS:
+                    var write = dataProviding.parseRTline(data,"-999");
+                    targets.forEach( x -> x.writeLine(write));
+                    break;
+                default:
+                case PLAIN: targets.forEach( x -> x.writeLine(data)); break;
+            }
+        }
+        public String toString(){
+            return "Send '"+data+"' every "+TimeTools.convertPeriodtoString(intervalMillis,TimeUnit.MILLISECONDS);
         }
     }
 }
