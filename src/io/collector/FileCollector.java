@@ -78,6 +78,8 @@ public class FileCollector extends AbstractCollector{
         super(id);
         this.dQueue=dQueue;
     }
+    @Override
+    public String getID(){ return "fc:"+id;}
     public String toString(){
         return "Writing to "+getPath()+" buffer containing "+byteCount+"bytes";
     }
@@ -455,7 +457,8 @@ public class FileCollector extends AbstractCollector{
             }
 
         } catch (IOException e) {
-            Logger.error(id + "(fc) -> Failed to write to "+ dest.toString());
+            Logger.error(id + "(fc) -> Failed to write to "+ dest+" because "+e.getMessage());
+
         }
     }
     /* ***************************** Overrides  ******************************************************************* */
