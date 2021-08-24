@@ -2,37 +2,45 @@ package util.data;
 
 import org.tinylog.Logger;
 import util.math.MathUtils;
+import util.tools.TimeTools;
 import util.tools.Tools;
 import worker.Datagram;
 
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.*;
 import java.util.ArrayList;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 public class DoubleVal implements NumericVal{
 
-    String group="";
-    String name="";
+    private String group="";
+    private String name="";
 
-    double value;
-    double defVal=Double.NaN;
+    private double value;
 
-    String unit="";
-    int digits=-1;
+    private double defVal=Double.NaN;
+
+    private String unit="";
+    private int digits=-1;
 
     /* Keep Time */
-    long timestamp;
-    boolean keepTime=false;
+    private Instant timestamp;
+    private boolean keepTime=false;
+
+    /* Min max*/
+    private double min=Double.MAX_VALUE;
+    private double max=Double.MIN_VALUE;
+    private boolean keepMinMax=false;
 
     /* History */
-    ArrayList<Double> history;
-    int keepHistory=0;
+    private ArrayList<Double> history;
+    private int keepHistory=0;
 
     /* Triggering */
-    ArrayList<TriggeredCmd> triggered;
-    BlockingQueue<Datagram> dQueue;
+    private ArrayList<TriggeredCmd> triggered;
+    private BlockingQueue<Datagram> dQueue;
 
     public DoubleVal(){}
 
@@ -79,8 +87,13 @@ public class DoubleVal implements NumericVal{
         }
         /* Keep time of last value */
         if( keepTime )
-            timestamp= Instant.now().toEpochMilli();
+            timestamp= Instant.now();
 
+        /* Keep min max */
+        if( keepMinMax ){
+            min = Math.min(min,val);
+            max = Math.max(max,val);
+        }
         /* Respond to triggered command based on value */
         if( dQueue!=null && triggered!=null ) {
             // Execute all the triggers, only if it's the first time
@@ -106,14 +119,18 @@ public class DoubleVal implements NumericVal{
         return this;
     }
     public DoubleVal enableHistory(int count){
-       if(count==-1)
+        if(count==-1)
            return this;
-       keepHistory=count;
+        keepHistory=count;
         history=new ArrayList<>();
         return this;
     }
-    public DoubleVal enableTimekeeping(){
+    public DoubleVal keepTime(){
         keepTime=true;
+        return this;
+    }
+    public DoubleVal keepMinMax(){
+        keepMinMax=true;
         return this;
     }
     public DoubleVal enableTriggeredCmds(BlockingQueue<Datagram> dQueue){
@@ -131,6 +148,8 @@ public class DoubleVal implements NumericVal{
     }
 
     /* ***************************************** U S I N G ********************************************************** */
+    public String unit(){ return unit; }
+    public int scale(){ return digits; }
     public String getGroup(){
         return group;
     }
@@ -168,7 +187,14 @@ public class DoubleVal implements NumericVal{
         return Double.compare(value,d)==0;
     }
     public String toString(){
-        return value+unit;
+        String line = value+unit;
+        if( keepMinMax )
+            line += " (Min:"+min+unit+", Max: "+max+unit+")";
+        if( keepHistory>0)
+            line = (line.endsWith(")")?line.substring(0,line.length()-1)+", ":line+" (")+"Avg:"+getAvg()+unit+")";
+        if( keepTime )
+            line += " Age: "+ TimeTools.convertPeriodtoString(Duration.between(timestamp,Instant.now()).getSeconds(), TimeUnit.SECONDS);
+        return line;
     }
 
     private class TriggeredCmd{

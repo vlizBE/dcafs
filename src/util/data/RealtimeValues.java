@@ -109,10 +109,17 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 						.group(XMLtools.getChildValueByTag(rtval,"group",dv.getGroup()))
 						.unit(XMLtools.getStringAttribute(rtval,"unit",""))
 						.fractionDigits(scale)
-						.defValue(XMLtools.getDoubleAttribute(rtval,"default",defDouble))
-						.enableHistory(XMLtools.getChildIntValueByTag(rtval,"history",-1));
-					if( XMLtools.getBooleanAttribute(rtval,"keeptime",false) )
-						dv.enableTimekeeping();
+						.defValue(XMLtools.getDoubleAttribute(rtval,"default",defDouble));
+
+					String options = XMLtools.getStringAttribute(rtval,"options","");
+					for( var opt : options.split(",")){
+						var arg = opt.split(":");
+						switch( arg[0]){
+							case "minmax":  dv.keepMinMax(); break;
+							case "time":    dv.keepTime();   break;
+							case "history": dv.enableHistory( NumberUtils.toInt(arg[1],-1));
+						}
+					}
 				if( !XMLtools.getChildElements(rtval,"cmd").isEmpty() )
 					dv.enableTriggeredCmds(dQueue);
 				for( Element trigCmd : XMLtools.getChildElements(rtval,"cmd")){
@@ -612,7 +619,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		for( var dv : keys ){
 			var dd = doubleVals.get(dv);
 			fab.selectOrAddChildAsParent("double","id",dv)
-					.attr("unit",dd.unit)
+					.attr("unit",dd.unit())
 					.up();
 		}
 		keys = texts.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Entry::getKey).collect(Collectors.toList());
@@ -848,8 +855,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				return getDoubleVal(cmds[1]).map( d -> {
 					if( vals[0].equals("scale")) {
 						d.fractionDigits(NumberUtils.toInt(vals[1]));
-						fab.alterChild("double","id",cmds[1]).attr("scale",d.digits).build();
-						return "Scaling for " +cmds[1]+" set to " + d.digits + " digits";
+						fab.alterChild("double","id",cmds[1]).attr("scale",d.scale()).build();
+						return "Scaling for " +cmds[1]+" set to " + d.scale() + " digits";
 					}else if( vals[0].equals("unit")) {
 						fab.alterChild("double","id",cmds[1]).attr("unit",vals[1]).build();
 						return "Unit for "+cmds[1]+" set to "+vals[1];
