@@ -448,8 +448,11 @@ public class EditorForward extends AbstractForward{
         edits.add( input -> input.trim() );
     }
     public void addRegexReplacement( String find, String replace){
-        rulesString.add( new String[]{"","regexreplace","from "+find+" -> "+replace} );
-        edits.add( input -> input.replaceAll(find,replace) );
+        if( replace.isEmpty())
+            replace=" ";
+        String r = replace.isEmpty()?" ":replace;
+        rulesString.add( new String[]{"","regexreplace","from "+find+" -> '"+r+"'"} );
+        edits.add( input -> input.replaceAll(find,r ) );
     }
     public void addCutStart(int characters ){
         rulesString.add( new String[]{"","cropstart","remove "+characters+" chars from start of data"} );
