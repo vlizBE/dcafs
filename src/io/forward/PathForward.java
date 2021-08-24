@@ -172,12 +172,12 @@ public class PathForward {
         }
     }
     public boolean debugStep( int step, Writable wr ){
-        if( step >= stepsForward.size() || step == -1 || wr==null )
+        if( step >= stepsForward.size() || wr==null )
             return false;
         for( var ab : stepsForward )
             ab.removeTarget(wr);
         if( !customs.isEmpty() ){
-            if( step == 0){
+            if( step == -1){
                 targets.add(wr);
                 customs.forEach(CustomSrc::start);
             }else if( step < stepsForward.size()){
@@ -185,8 +185,10 @@ public class PathForward {
             }else{
                 return false;
             }
-        }else{
+        }else if(step !=-1 && step <stepsForward.size() ){
             stepsForward.get(step).addTarget(wr);
+        }else{
+            return false;
         }
 
         return true;
@@ -221,7 +223,12 @@ public class PathForward {
             return " gives the data from "+stepsForward.get(stepsForward.size()-1).getID();
         }
         var join = new StringJoiner("\r\n");
-        customs.forEach(CustomSrc::toString);
+        customs.forEach(c->join.add(c.toString()));
+
+        for( int a=0;a<stepsForward.size();a++){
+            join.add("   -> "+stepsForward.get(a).toString());
+        }
+
         return join.toString();
     }
     public void addTarget(Writable wr){
@@ -306,7 +313,7 @@ public class PathForward {
             }
         }
         public String toString(){
-            return "Send '"+data+"' every "+TimeTools.convertPeriodtoString(intervalMillis,TimeUnit.MILLISECONDS);
+            return "Writes '"+data+"' every "+TimeTools.convertPeriodtoString(intervalMillis,TimeUnit.MILLISECONDS);
         }
     }
 }

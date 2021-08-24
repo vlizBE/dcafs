@@ -792,7 +792,7 @@ public class ForwardPool implements Commandable {
                 help.add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW)
                 .add(" paths:reload,id -> reload the path with the given id")
                 .add(" paths:list -> List all the currently loaded paths")
-                .add(" paths:debug,id,stepnr -> Request the data from a single step in the path (0=first)");
+                .add(" paths:debug,id,stepnr -> Request the data from a single step in the path (0=first; -1=custom src)");
                 return help.toString();
             case "reload":
                 if( cmds.length==1)
@@ -890,7 +890,7 @@ public class ForwardPool implements Commandable {
             case "list":
                 StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
                 join.setEmptyValue("No paths yet");
-                paths.forEach((key, value) -> join.add("path:" + key + " -> " + value.toString()));
+                paths.forEach((key, value) -> join.add(TelnetCodes.TEXT_GREEN+"Path: " + key+TelnetCodes.TEXT_YELLOW).add( value.toString() ).add(""));
                 return join.toString();
             case "debug":
                 if( cmds.length!=3)
