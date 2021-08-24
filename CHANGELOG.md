@@ -23,6 +23,12 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.10.12 (work in progress)
 
+### DoubleVal
+- Combined timekeep, history in a single attribute options
+  - Usage options="time,history:10" to keep the time of last value and a history of 10 values
+- Added minmax to options to keep track of min/max values (options="minmax")
+- Altered rtvals to include min/max/avg/age info if available
+
 ## 0.10.11 (24/08/21)
 Bugfixes!
 

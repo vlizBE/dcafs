@@ -74,8 +74,6 @@ public class DAS implements DeadThreadListener {
     private MqttPool mqttPool;
     private TaskManagerPool taskManagerPool;
 
-
-
     private final Map<String, FileCollector> fileCollectors = new HashMap<>();
 
     private boolean debug = false;
