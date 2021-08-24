@@ -20,8 +20,11 @@ From 0.5.0 onwards, this should be better documented...
     * Bring javadoc up to date
     * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (will be trigger for 0.11.0)
-  * 
-## 0.10.11 (work in progress)
+
+## 0.10.12 (work in progress)
+
+## 0.10.11 (24/08/21)
+Bugfixes!
 
 ### RealtimeValues
 - Fixed, reading from xml caused writing to xml...
@@ -34,10 +37,12 @@ From 0.5.0 onwards, this should be better documented...
 
 ### MathForward
 - Fixed, now checks the size of the array after split to prevent out of bounds
-- Fixed, now it actually cancels when to much bad data was received
+- Fixed, now it actually cancels when too much bad data was received
 
 ### PathForward
 - ID's and local src's are now possible, !id is allowed to get reversed/negated filter output
+- Multiple customsrc are now possible
+- pf:list should now give useful info
 
 ## 0.10.10 (22/08/21)
 
@@ -46,7 +51,7 @@ affecting anything else.
 
 ### Breaking
 - Changed `<cmd trigger="open"></cmd` to `<cmd when="open"></cmd>` in a stream node because all the other cmd node use when
-- Changed the hello/wakeup cmd node in a stream to a write node to limit possible confusion (cmd node didn't actually cmd)
+- Changed the hello/wakeup cmd node in a stream from cmd to write node to limit possible confusion (cmd node didn't actually apply a cmd)
 
 ### TaskBlocks (name subject to change)
 - Will replace TaskManager
