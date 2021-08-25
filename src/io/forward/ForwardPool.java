@@ -327,6 +327,7 @@ public class ForwardPool implements Commandable {
 
         StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
         EditorForward ef;
+        XMLfab fab;
 
         switch( cmds[0] ) {
             case "?":
@@ -398,6 +399,31 @@ public class ForwardPool implements Commandable {
                 join.setEmptyValue("No editors yet");
                 editors.values().forEach( f -> join.add(f.toString()).add("") );
                 return join.toString();
+            case "alter":
+                ef = editors.get(cmds[1]);
+                if( cmds.length < 3)
+                    return "Bad amount of arguments, should be ef:alter,id,param:value";
+                if( ef == null )
+                    return "No such editor: "+cmds[1];
+
+                if( !cmds[2].contains(":"))
+                    return "No proper param:value pair";
+
+                String param = cmds[2].substring(0,cmds[2].indexOf(":"));
+
+                String val = cmd.substring(cmd.indexOf(param+":")+param.length()+1);
+
+                fab = XMLfab.withRoot(settingsPath,"dcafs","editors"); // get a fab pointing to the maths node
+
+                if( fab.selectChildAsParent("editor","id",cmds[1]).isEmpty() )
+                    return "No such editor node '"+cmds[1]+"'";
+
+                if (param.equals("label")) {
+                    ef.setLabel(val);
+                    fab.attr("label", val);
+                    return fab.build() != null ? "Label changed" : "Label change failed";
+                }
+                return "No valid alter target: " + param;
             case "edits": return EditorForward.getHelp(html?"<br>":"\r\n");
             case "addedit":
                 if( cmds.length < 3) // might be larger if the value contains  a ,
@@ -409,48 +435,69 @@ public class ForwardPool implements Commandable {
                 var e = eOpt.get();
                 int x = cmd.indexOf(":");
                 if( x==-1)
-                    return "Incorrect format, needs to be ef:addedit,id,type:value";
+                    return "Incorrect format, needs to be ef:addedit,id,type:value(s)";
                 // The value might contain , so make sure to split properly
                 String type = cmds[2].substring(0,cmds[2].indexOf(":"));
                 String value = cmd.substring(x+1);
                 String deli = e.delimiter;
 
                 var p = value.split(",");
-                var fab = XMLfab.withRoot(settingsPath,"dcafs","editors");
+                fab = XMLfab.withRoot(settingsPath,"dcafs","editors");
                 fab.selectOrAddChildAsParent("editor","id",cmds[1]);
 
                 switch(type){
                     /* Splitting */
                     case "rexsplit":
                         if( value.equals("?"))
-                            return "ef:addedit,rexsplit:regextosplitwith (delimiter will be , )";
+                            return "ef:addedit,"+cmds[1]+",rexsplit:delimiter,regextomatch";
+                        if( value.startsWith(",")){
+                            deli=",";
+                            value=value.substring(2);
+                        }else{
+                            int in = value.indexOf(",");
+                            deli = value.substring(0,in);
+                            value=value.substring(in+1);
+                        }
                         e.addRexsplit(deli,value);
-                        addEditNode(fab,type,value,true);
-                        return "Rexsplit to "+value+" added with delimiter "+deli;
+                        fab.comment("Find matches on "+value+" then concatenate with "+deli);
+                        addEditNode(fab,type,value,false)
+                                .attr( "delimiter",deli)
+                                .attr("leftover","append").build();
+                        return "Find matches on "+value+" then concatenate with "+deli;
                     case "resplit":
                         if( value.equals("?"))
-                            return "ef:addedit,resplit:tosplitwith (delimiter will be , )";
+                            return "ef:addedit,"+cmds[1]+",resplit:delimiter,format";
+                        if( value.startsWith(",")){
+                            deli=",";
+                            value=value.substring(2);
+                        }else{
+                            int in = value.indexOf(",");
+                            deli = value.substring(0,in);
+                            value=value.substring(in+1);
+                        }
                         e.addResplit(deli,value,"",true);
-                        addEditNode(fab,type,value,false);
-                        fab.attr("leftover","append").build();
-                        return "Resplit to "+value+" added with default delimiter + and leftover";
+                        fab.comment("Split on "+deli+" then combine according to "+value);
+                        addEditNode(fab,type,value,false)
+                                .attr( "delimiter",deli)
+                                .attr("leftover","append").build();
+                        return "Split on '"+deli+ "', then combine according to "+value+" and append leftover data";
                     case "charsplit":
                         if( value.equals("?"))
-                            return "ef:addedit,rexplit:regextosplitwith";
+                            return "ef:addedit,"+cmds[1]+",rexplit:regextosplitwith";
                         e.addCharSplit( ",",value );
                         addEditNode(fab,type,value,true);
                         return "Charsplit added with default delimiter";
                     /* Timestamp stuff */
                     case "redate":
                         if( value.equals("?"))
-                            return "ef:addedit,redate:index,from,to";
+                            return "ef:addedit,"+cmds[1]+",redate:index,from,to";
                         e.addRedate(p[1],p[2],NumberUtils.toInt(p[0]),deli);
                         addEditNode(fab,"redate",p[2],false);
                         fab.attr("index",p[0]).build();
                         return "After splitting on "+deli+" the date on index "+p[0]+" is reformatted from "+p[1]+" to "+p[2];
                     case "retime":
                         if( value.equals("?"))
-                            return "ef:addedit,retime:index,from,to";
+                            return "ef:addedit,"+cmds[1]+",retime:index,from,to";
                         e.addRetime(p[0],p[2],NumberUtils.toInt(p[1]),",");
                         addEditNode(fab,"retime",p[2],false);
                         fab.attr("index",p[1]).build();
@@ -458,62 +505,63 @@ public class ForwardPool implements Commandable {
                     /* Replacing */
                     case "replace":
                         if( value.equals("?"))
-                            return "ef:addedit,replace:what,with";
+                            return "ef:addedit,"+cmds[1]+",replace:what,with";
                         e.addReplacement(p[0],p[1]);
+                        fab.comment("Replace "+p[0]+" with "+p[1]);
                         fab.addChild("edit",p[1]).attr( "type",type).attr("find",p[0]).build();
                         return "Replacing "+p[0]+" with "+p[1];
                     case "rexreplace":
                         if( value.equals("?"))
-                            return "ef:addedit,rexreplace:regexwhat,with";
+                            return "ef:addedit,"+cmds[1]+",rexreplace:regexwhat,with";
                         e.addRegexReplacement(p[0],p[1]);
                         fab.addChild("edit",p[1]).attr( "type",type).attr("find",p[0]).build();
                         return "Replacing "+p[0]+" with "+p[1];
                     /* Remove stuff */
                     case "remove":
                         if( value.equals("?"))
-                            return "ef:addedit,remove:find";
+                            return "ef:addedit,"+cmds[1]+",remove:find";
                         e.addReplacement(value,"");
                         fab.addChild("edit",value).attr( "type",type).build();
                         return "Removing "+value+" from the data";
                     case "rexremove":
                         if( value.equals("?"))
-                            return "ef:addedit,rexremove:regexfind";
+                            return "ef:addedit,"+cmds[1]+",rexremove:regexfind";
                         e.addRegexReplacement(value,"");
                         fab.addChild("edit",value).attr( "type",type).build();
                         return "Removing matches of "+value+" from the data";
                     case "trim":
                         if( value.equals("?"))
-                            return "ef:addedit,trim";
+                            return "ef:addedit,"+cmds[1]+",trim";
                         e.addTrim();
                         fab.addChild("edit").attr( "type",type).build();
                         return "Trimming spaces from data";
                     case "cutstart":
                         if( value.equals("?"))
-                            return "ef:addedit,custart:charcount";
+                            return "ef:addedit,"+cmds[1]+",cutstart:charcount";
                         e.addCutStart(NumberUtils.toInt(value));
                         fab.addChild("edit",value).attr( "type",type).build();
                         return "Cutting "+value+" char(s) from the start";
                     case "cutend":
                         if( value.equals("?"))
-                            return "ef:addedit,custend:charcount";
+                            return "ef:addedit,"+cmds[1]+",cutend:charcount";
                         e.addCutEnd(NumberUtils.toInt(value));
                         return "Cutting "+value+" char(s) from the end";
                     /* Adding stuff */
                     case "prepend": case "prefix":
                         if( value.equals("?"))
-                            return "ef:addedit,prepend:toprepend or ef:addedit,prefix:toprepend";
+                            return "ef:addedit,"+cmds[1]+",prepend:toprepend or ef:addedit,prefix:toprepend";
                         e.addPrepend(value);
                         fab.addChild("edit",value).attr( "type",type).build();
                         return "Prepending "+value+" to the data";
                     case "insert":
                         if( value.equals("?"))
-                            return "ef:addedit,insert:position,toinsert";
+                            return "ef:addedit,"+cmds[1]+",insert:position,toinsert";
                         e.addInsert(NumberUtils.toInt(p[0]),p[1]);
                         fab.addChild("edit",p[1]).attr("position",p[0]).attr( "type",type).build();
                         return "Inserting "+value+" at char "+p[0]+" in the data";
                     case "append": case "suffix":
                         if( value.equals("?"))
-                            return "ef:addedit,append:toappend or ef:addedit,suffix:toappend";
+                            return "ef:addedit,"+cmds[1]+",append:toappend or ef:addedit,"+cmds[1]+",suffix:toappend";
                         e.addAppend(value);
                         return "Appending "+value+" to the data";
                 }
@@ -521,11 +569,12 @@ public class ForwardPool implements Commandable {
         }
         return "Unknown command: "+cmds[0];
     }
-    private void addEditNode( XMLfab fab, String type, String value, boolean build){
+    private XMLfab addEditNode( XMLfab fab, String type, String value, boolean build){
         fab.addChild("edit",value).attr( "type",type)
                 .attr("delimiter",",");
         if( build )
             fab.build();
+        return fab;
     }
     /*    ------------------------ Filter ---------------------------------    */
     public FilterForward addFilter(String id, String source, String rule ){

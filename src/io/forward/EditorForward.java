@@ -124,9 +124,6 @@ public class EditorForward extends AbstractForward{
         /* Attributes and nodes that are the same for all forwards fe.label and src */
         writeBasicsToXML(fab);
 
-        /* If edits is stil empty, this means this is a blank add */
-        if( edits.isEmpty())
-            fab.addChild("edit",".").attr("type","xxx");
         return fab.build()!=null;
     }
 
