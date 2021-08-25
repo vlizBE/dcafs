@@ -965,17 +965,21 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 
 		String[] cmds = request[1].split(",");
 		if( cmds.length==1 ){
-			if ("store" .equals(cmds[0])) {
-				return storeRTVals(settingsPath);
-			} else {
-				addRequest(wr, request);
+			switch( cmds[0]){
+				case "store": return  storeRTVals(settingsPath);
+				case "reload":
+					readFromXML();
+					return "Reloaded rtvals";
+				default:
+					if( addRequest(wr,request) ){
+						return "Request added";
+					}
+					return "Request failed";
 			}
 		}else if(cmds.length==2){
 			switch(cmds[0]){
 				case "group":  return getRTValsGroupList(cmds[1],html);
-				case "reload":
-					readFromXML();
-					return "Reloaded rtvals";
+
 				case "groups":
 					String groups = String.join(html?"<br>":"\r\n",getGroups());
 					return groups.isEmpty()?"No groups yet":groups;
