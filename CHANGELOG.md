@@ -27,7 +27,13 @@ From 0.5.0 onwards, this should be better documented...
 - Combined timekeep, history in a single attribute options
   - Usage options="time,history:10" to keep the time of last value and a history of 10 values
 - Added minmax to options to keep track of min/max values (options="minmax")
+- Added order to options to allow to specify in which position it is listed in the group (options="order:1"), lower number
+first, default -1. Equal order is sorted as usual.
 - Altered rtvals to include min/max/avg/age info if available
+
+### RealtimeValues
+- rtvals listings are now sorted
+- added `rtvals:reload` to reload the rtvals
 
 ## 0.10.11 (24/08/21)
 Bugfixes!

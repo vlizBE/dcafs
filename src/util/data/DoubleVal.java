@@ -24,6 +24,7 @@ public class DoubleVal implements NumericVal{
 
     private String unit="";
     private int digits=-1;
+    private int order = -1;
 
     /* Keep Time */
     private Instant timestamp;
@@ -132,6 +133,13 @@ public class DoubleVal implements NumericVal{
     public DoubleVal keepMinMax(){
         keepMinMax=true;
         return this;
+    }
+    public DoubleVal order( int order){
+        this.order=order;
+        return this;
+    }
+    public int order(){
+        return order;
     }
     public DoubleVal enableTriggeredCmds(BlockingQueue<Datagram> dQueue){
         this.dQueue=dQueue;

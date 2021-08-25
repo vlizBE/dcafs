@@ -119,7 +119,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 						switch( arg[0]){
 							case "minmax":  dv.keepMinMax(); break;
 							case "time":    dv.keepTime();   break;
-							case "history": dv.enableHistory( NumberUtils.toInt(arg[1],-1));
+							case "order":   dv.order( NumberUtils.toInt(arg[1],-1)); break;
+							case "history": dv.enableHistory( NumberUtils.toInt(arg[1],-1)); break;
 						}
 					}
 				if( !XMLtools.getChildElements(rtval,"cmd").isEmpty() )
@@ -1002,8 +1003,15 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		StringJoiner join = new StringJoiner(eol,title+eol,"");
 		join.setEmptyValue("No matches found");
 		doubleVals.values().stream().filter( dv -> dv.getGroup().equalsIgnoreCase(group))
+				.sorted( (dv1,dv2)-> {
+					if( dv1.order()!= dv2.order() ) {
+						return Integer.compare(dv1.order(), dv2.order());
+					}else{
+						return dv1.getName().compareTo(dv2.getName());
+					}
+				})
 				.map( dv -> space+dv.getName()+" : "+dv) //Change it to strings
-				.sorted().forEach(join::add); // Then add the sorted the strings
+				.forEach(join::add); // Then add the sorted the strings
 		texts.entrySet().stream().filter(ent -> ent.getKey().startsWith(group+"_"))
 				.map( ent -> space+ent.getKey().split("_")[1]+" : "+ent.getValue())
 				.sorted().forEach(join::add);
