@@ -48,10 +48,10 @@ public class TaskSet {
             return "";
         return req.toString();
     }
-    public boolean doReq(DataProviding dp, ArrayList<String> issues ){
+    public boolean doReq(DataProviding dp ){
         if( req==null)
             return true;
-        return req.test(dp,issues);
+        return req.test(dp);
     }
     public void setManagerID( String manID ){
         managerID=manID;

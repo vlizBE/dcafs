@@ -1106,4 +1106,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		Collections.sort(groups);
 		return groups;
 	}
+	/* ******************************** I S S U E P O O L ********************************************************** */
+	public ArrayList<String> getActiveIssues(){
+		return issuePool.getActives();
+	}
 }

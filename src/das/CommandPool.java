@@ -37,7 +37,6 @@ public class CommandPool {
 
 	private StreamManager streampool = null; // To be able to interact with attached devices
 	private EmailWorker emailWorker; // To be able to send emails and get status
-	private IssuePool issues=null;
 
 	private DAS das;
 
@@ -109,19 +108,6 @@ public class CommandPool {
 	public void setStreamPool(StreamManager streampool) {
 		this.streampool = streampool;
 	}
-	/**
-	 * Set the IssueCollector to get answers from it
-	 * 
-	 * @param issues The currently used IssueCollector
-	 */
-	public void setIssues(IssuePool issues) {
-		this.issues = issues;
-	}
-
-	public ArrayList<String> getActiveIssues(){
-		return issues.getActives();
-	}
-
 
 	/* ************************************ * R E S P O N S E *************************************************/
 

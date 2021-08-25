@@ -286,14 +286,14 @@ public class IssuePool implements Commandable{
             }
             if( resolve!=null){ // meaning both and activate test and a resolve test
                 if( active ){
-                    if( resolve.test(dp,getActives()) )
+                    if( resolve.test(dp) )
                         stop();
                 }else{
-                    if( activate.test(dp,getActives()))
+                    if( activate.test(dp))
                         start();
                 }
             }else{ //meaning only an activated test
-                if( activate.test(dp,getActives()) ){
+                if( activate.test(dp) ){
                     start();
                 }else{
                     stop();

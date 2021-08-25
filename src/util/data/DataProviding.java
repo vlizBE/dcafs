@@ -36,4 +36,7 @@ public interface DataProviding {
     boolean lowerFlag( String... flag );
     boolean setFlagState( String flag, boolean state);
     ArrayList<String> listFlags();
+
+    /* Issues */
+    ArrayList<String> getActiveIssues();
 }

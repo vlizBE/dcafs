@@ -202,13 +202,15 @@ public class TaskManagerPool implements Commandable {
                             .down().addChild("task", "Hello World from " + cmd[1]).attr("output", "telnet:info")
                             .addChild("task", "Goodbye :(").attr("output", "telnet:error").attr("trigger", "delay:2s")
                             .up()
+                            .comment("id is how the taskset is referenced and info is a some info on what the taskset does,")
+                            .comment("this will be shown when using "+cmd[1]+":list")
                             .addParentToRoot("tasks", "Tasks are single commands to execute")
                             .comment("Below is an example task, this will be called on startup or if the script is reloaded")
                             .addChild("task", "taskset:example").attr("output", "system").attr("trigger", "delay:1s")
                             .comment("This task will wait a second and then start the example taskset")
                             .comment("A task doesn't need an id but it's allowed to have one")
                             .comment("Possible outputs: stream:id , system (default), log:info, email:ref, manager, telnet:info/warn/error")
-                            .comment("Possible triggers: delay, interval, while,")
+                            .comment("Possible triggers: delay, interval, while, ...")
                             .comment("For more extensive info and examples, check Reference Guide - Taskmanager in the manual")
                             .build();
                 }else{

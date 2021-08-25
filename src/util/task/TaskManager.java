@@ -315,10 +315,10 @@ public class TaskManager implements CollectorFuture {
 		TaskSet ts = tasksets.get(id);
 		if (ts != null) {
 			if (ts.getTaskCount() != 0) {
-				if( ts.doReq(dp,commandPool.getActiveIssues()) ) {
+				if( ts.doReq(dp) ) {
 					Logger.tag(TINY_TAG).debug("[" + this.id + "] Taskset started " + id);
 					if (ts.getRunType() == RUNTYPE.ONESHOT) {
-						if( ts.doReq(dp,commandPool.getActiveIssues())) {
+						if( ts.doReq(dp)) {
 							startTasks(ts.getTasks());
 							return "Taskset should be started: " + id;
 						}else{
@@ -326,7 +326,7 @@ public class TaskManager implements CollectorFuture {
 						}
 
 					} else if (ts.getRunType() == RUNTYPE.STEP) {
-						if( ts.doReq(dp,commandPool.getActiveIssues())) {
+						if( ts.doReq(dp)) {
 							startTask(ts.getTasks().get(0));
 							return "Started first task of taskset: " + id;
 						}else{
@@ -631,10 +631,15 @@ public class TaskManager implements CollectorFuture {
 
 			if (task.value.startsWith("taskset:") || task.value.startsWith("task:")) { // Incase the task starts a taskset
 				String setid = task.value.split(":")[1];
-				if (hasTaskset(setid)) {
-					Logger.tag(TINY_TAG).info("[" + this.id + "] " + startTaskset(setid));
-				} else if (!this.startTask(setid)) {
-					Logger.tag(TINY_TAG).info("[" + this.id + "] No such task or taskset");
+				try {
+					if (hasTaskset(setid)) {
+						Logger.tag(TINY_TAG).info("[" + this.id + "] " + startTaskset(setid));
+					} else if (!this.startTask(setid)) {
+						Logger.tag(TINY_TAG).info("[" + this.id + "] No such task or taskset");
+					}
+				}catch( NullPointerException e){
+					Logger.error("Nullpointer trying to run startTaskset "+setid+" -> "+e.getMessage());
+					return false;
 				}
 			} else { // If not a supposed to run a taskset, check if any of the text needs to be
 						// replaced
@@ -1070,7 +1075,7 @@ public class TaskManager implements CollectorFuture {
 		if( check==null||check.isEmpty())
 			return 1;
 
-		return check.test(dp, commandPool.getActiveIssues())?1:0;
+		return check.test(dp)?1:0;
 	}
 	/**
 	 * Create a readable string based on the check
@@ -1080,7 +1085,7 @@ public class TaskManager implements CollectorFuture {
 	public String printCheck(RtvalCheck check) {
 		if( dp == null )
 			return "No RealtimeValues defined!";
-		return check.toString(dp,commandPool.getActiveIssues());
+		return check.toString(dp);
 	}
 
 	/* *******************************************************************************************************/
