@@ -188,12 +188,17 @@ public class DoubleVal implements NumericVal{
     }
     public String toString(){
         String line = value+unit;
-        if( keepMinMax )
+        if( keepMinMax && max!=Double.MIN_VALUE )
             line += " (Min:"+min+unit+", Max: "+max+unit+")";
-        if( keepHistory>0)
+        if( keepHistory>0 && !history.isEmpty())
             line = (line.endsWith(")")?line.substring(0,line.length()-1)+", ":line+" (")+"Avg:"+getAvg()+unit+")";
-        if( keepTime )
-            line += " Age: "+ TimeTools.convertPeriodtoString(Duration.between(timestamp,Instant.now()).getSeconds(), TimeUnit.SECONDS);
+        if( keepTime ) {
+            if (timestamp != null) {
+                line += " Age: " + TimeTools.convertPeriodtoString(Duration.between(timestamp, Instant.now()).getSeconds(), TimeUnit.SECONDS);
+            } else {
+                line += " Age: No updates yet.";
+            }
+        }
         return line;
     }
 
