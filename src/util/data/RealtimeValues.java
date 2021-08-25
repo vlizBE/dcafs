@@ -103,7 +103,9 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				int scale = XMLtools.getIntAttribute(rtval,"fractiondigits",-1);
 				if( scale == -1)
 					scale = XMLtools.getIntAttribute(rtval,"scale",-1);
-				setDouble(id,defDouble,true);
+
+				if( !hasDouble(id))
+					setDouble(id,defDouble,true);
 				var dv = getDoubleVal(id).get();
 				dv.name(XMLtools.getChildValueByTag(rtval,"name",dv.getName()))
 						.group(XMLtools.getChildValueByTag(rtval,"group",dv.getGroup()))
@@ -203,7 +205,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 						if (!t.isEmpty())
 							line = line.replace("{" + p[0] + ":" + p[1] + "}", t);
 						break;
-					case "f": case "F":
+					case "f": case "F": case "b":
 					case "flag": {
 						var d = p[0].equalsIgnoreCase("F")?Optional.of(getOrAddFlagVal(p[1])):getFlagVal(p[1]);
 						var r = d.map(FlagVal::toString).orElse(error);
@@ -262,7 +264,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 							return "";
 						}
 						break;
-					case "f": case "flag":
+					case "f": case "flag": case "b": case "F":
 						var f = getFlagVal(p[1]);
 						if( f.isPresent() ){
 							index = nums.indexOf(f.get());
@@ -326,10 +328,10 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		if( id.startsWith("{")){
 			id = id.substring(1,id.length()-2);
 			var pair = id.split(":");
-			switch(pair[0]) {
+			switch(pair[0].toLowerCase()) {
 				case "d":case "double":
 					return Optional.ofNullable(doubleVals.get(id));
-				case "f": case "flag":
+				case "f": case "flag": case "b":
 					return Optional.ofNullable(flagVals.get(id));
 			}
 			return Optional.empty();
@@ -971,6 +973,9 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		}else if(cmds.length==2){
 			switch(cmds[0]){
 				case "group":  return getRTValsGroupList(cmds[1],html);
+				case "reload":
+					readFromXML();
+					return "Reloaded rtvals";
 				case "groups":
 					String groups = String.join(html?"<br>":"\r\n",getGroups());
 					return groups.isEmpty()?"No groups yet":groups;
@@ -993,11 +998,14 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		StringJoiner join = new StringJoiner(eol,title+eol,"");
 		join.setEmptyValue("No matches found");
 		doubleVals.values().stream().filter( dv -> dv.getGroup().equalsIgnoreCase(group))
-				.forEach(dv -> join.add(space+dv.getName()+" : "+dv));
+				.map( dv -> space+dv.getName()+" : "+dv) //Change it to strings
+				.sorted().forEach(join::add); // Then add the sorted the strings
 		texts.entrySet().stream().filter(ent -> ent.getKey().startsWith(group+"_"))
-				.forEach( ent -> join.add( space+ent.getKey().split("_")[1]+" : "+ent.getValue()) );
-		flagVals.entrySet().stream().filter(ent -> ent.getKey().startsWith(group+"_"))
-				.forEach( ent -> join.add( space+ent.getKey().split("_")[1]+" : "+ent.getValue()) );
+				.map( ent -> space+ent.getKey().split("_")[1]+" : "+ent.getValue())
+				.sorted().forEach(join::add);
+		flagVals.values().stream().filter(fv -> fv.getGroup().equalsIgnoreCase(group))
+				.map( v -> space+v.getName()+" : "+v) //Change it to strings
+				.sorted().forEach(join::add); // Then add the sorted the strings
 		return join.toString();
 	}
 	/**
@@ -1049,19 +1057,19 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			if (ngDoubles) {
 				join.add(html ? "<b>Doubles</b>" : TelnetCodes.TEXT_BLUE + "Doubles" + TelnetCodes.TEXT_YELLOW);
 				doubleVals.values().stream().filter(dv -> dv.getGroup().isEmpty())
-						.forEach(dv -> join.add(space + dv.getName() + " : " + dv));
+						.map(dv->space + dv.getName() + " : " + dv).sorted().forEach(join::add);
 			}
 			if (ngTexts) {
 				join.add("");
 				join.add(html ? "<b>Texts</b>" : TelnetCodes.TEXT_BLUE + "Texts" + TelnetCodes.TEXT_YELLOW);
 				texts.entrySet().stream().filter(e -> !e.getKey().contains("_"))
-						.forEach(e -> join.add(space + e.getKey() + " : " + e.getValue()));
+						.map( e -> space + e.getKey() + " : " + e.getValue()).sorted().forEach(join::add);
 			}
 			if (ngFlags) {
 				join.add("");
 				join.add(html ? "<b>Flags</b>" : TelnetCodes.TEXT_BLUE + "Flags" + TelnetCodes.TEXT_YELLOW);
-				flagVals.entrySet().stream().filter(e -> !e.getKey().contains("_"))
-						.forEach(e -> join.add(space + e.getKey() + " : " + e.getValue()));
+				flagVals.values().stream().filter(fv -> fv.getGroup().isEmpty())
+						.map(fv->space + fv.getName() + " : " + fv).sorted().forEach(join::add);
 			}
 		}
 		return join.toString();
