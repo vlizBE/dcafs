@@ -17,6 +17,7 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
+import javax.swing.text.html.Option;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -67,9 +68,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		waypoints = new Waypoints(settingsPath,scheduler,this,dQueue);
 		return waypoints;
 	}
-	public IssuePool getIssuePool(){
-		return issuePool;
-	}
+
 	/**
 	 * Read the rtvals node in the settings.xml
 	 */
@@ -1109,5 +1108,12 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	/* ******************************** I S S U E P O O L ********************************************************** */
 	public ArrayList<String> getActiveIssues(){
 		return issuePool.getActives();
+	}
+	public IssuePool getIssuePool(){
+		return issuePool;
+	}
+	/* ******************************** W A Y P O I N T ************************************************************ */
+	public Optional<Waypoints> getWaypoints(){
+		return Optional.ofNullable(waypoints);
 	}
 }

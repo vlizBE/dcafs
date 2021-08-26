@@ -1,5 +1,9 @@
 package util.data;
 
+import das.IssuePool;
+import util.gis.Waypoint;
+import util.gis.Waypoints;
+
 import java.util.ArrayList;
 import java.util.Optional;
 
@@ -39,4 +43,6 @@ public interface DataProviding {
 
     /* Issues */
     ArrayList<String> getActiveIssues();
+    IssuePool getIssuePool();
+    Optional<Waypoints> getWaypoints();
 }

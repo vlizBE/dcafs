@@ -168,10 +168,10 @@ public class Waypoints implements Commandable {
     /**
      * Get the waypoint with the given name
      * @param id The id of the waypoint
-     * @return The waypoint found or null if not
+     * @return An optional waypoint
      */
-    public Waypoint getWaypoint( String id ) {
-    	return getWaypoint(id,"",false);
+    public Optional<Waypoint> getWaypoint( String id ) {
+    	return Optional.ofNullable(getWaypoint(id,"",false));
     }
     public Waypoint getWaypoint( String id, String name, boolean createIfNew ) {
         var wp = wps.get(id);
@@ -185,6 +185,9 @@ public class Waypoints implements Commandable {
         }else{
             return wp;
         }
+    }
+    public boolean hasWaypoint( String id ){
+        return wps.get(id)!=null;
     }
     /* ****************************** R E M O V E ****************************************/
 
