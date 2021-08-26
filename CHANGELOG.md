@@ -36,11 +36,13 @@ first, default -1. Equal order is sorted as usual.
 this caused a nullpointer when doing a check for a taskmanager
 
 ### RealtimeValues
+- `rtvals:store`,`dv:new` etc now stores in groups
 - rtvals listings are now sorted
 - added `rtvals:reload` to reload the rtvals
 - fixed, "dv:new" always wrote to xml instead of only on new
 - fixed, getoradddouble wasn't writing according to the newer group layout
 - fixed, multiple underscore id's again
+- fixed, isFlagDown was inverted when it shouldn't be
 
 ### Other Fixes
 - Pathforward, for some reason initial src setup when using generics wasn't working anymore
