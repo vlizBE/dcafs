@@ -76,26 +76,31 @@ public class Waypoint implements Comparable<Waypoint>{
 	public STATE currentState( OffsetDateTime when, double lat, double lon ){
 		lastDist = GisTools.roughDistanceBetween(lon, lat, this.lon, this.lat, 3)*1000;// From km to m				
 		bearing = GisTools.calcBearing( lon, lat, this.lon, this.lat, 2 );
-		
-		boolean ok = lastDist < range;
-		
-		if( ok == lastCheck){			
-			state = lastDist < range?STATE.INSIDE:STATE.OUTSIDE;
-		}else{
-			lastCheck = ok;
-			state = ok?STATE.ENTER:STATE.LEAVE;
+
+		switch( state ){
+			case INSIDE:
+				if( lastDist > range ){ // Was inside but went beyond the range
+					state = STATE.LEAVE;
+					leaveTime=when;
+					leaveDistance=lastDist;
+				}
+				break;
+			case OUTSIDE:
+				if( lastDist < range ){ // Was outside but came within the range
+					state=STATE.ENTER;
+					if( !active ){
+						enterTime=when;
+					}
+					active = true;
+				}
+				break;
+			case ENTER:
+			case LEAVE:
+			case UNKNOWN:
+				state = lastDist < range?STATE.INSIDE:STATE.OUTSIDE;
+				break;
 		}
-		if( state == STATE.ENTER ){
-			if( !active ){
-				enterTime=when;
-			}
-			active = true;
-		}
-		if( state == STATE.LEAVE ){
-			leaveTime=when;
-			leaveDistance=lastDist;
-		}
-		if( state == STATE.OUTSIDE && lastDist > 600 && active){			
+		if( state == STATE.OUTSIDE && lastDist > 600 && active){
 			active = false;
 			movementReady=true;
 		}
