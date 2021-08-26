@@ -87,7 +87,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 						id += "_";
 						for( var groupie : XMLtools.getChildElements(rtval)){
 							var gid = XMLtools.getStringAttribute(groupie,"id","");
-							gid = id+XMLtools.getStringAttribute(groupie,"name",gid);
+							gid = id + XMLtools.getStringAttribute(groupie,"name",gid);
 							processRtvalElement(groupie, gid.toLowerCase(), defDouble, defText, defFlag);
 						}
 					}else {
@@ -362,10 +362,18 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 
 		var val = doubleVals.get(id);
 		if( val==null){
-			doubleVals.put(id,DoubleVal.newVal(id));
-			XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals").alterChild("double","id",id).build();
+			val = DoubleVal.newVal(id);
+			doubleVals.put(id,val);
+			Logger.info("doubleval new, adding to xml :"+id);
+			if( val.getGroup().isEmpty()) {
+				XMLfab.withRoot(settingsPath, "dcafs", "settings", "rtvals").alterChild("double", "id", id).build();
+			}else{
+				XMLfab.withRoot(settingsPath, "dcafs", "settings", "rtvals")
+						.alterChild("group","id",val.getGroup())
+						.down().addChild("double").attr("name",val.getName()).build();
+			}
 		}
-		return doubleVals.get(id);
+		return val;
 	}
 	public boolean hasDouble( String id){
 		return doubleVals.containsKey(id);
