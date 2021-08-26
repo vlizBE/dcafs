@@ -292,7 +292,7 @@ public class MathForward extends AbstractForward {
             Logger.tag("RAW").info( "1\t" + (label.isEmpty()?"void":label)+"|"+getID() + "\t" + result);
 
         // If there are no target, no label and no ops that build a command, this no longer needs to be a target
-        if( targets.isEmpty() && label.isEmpty() && !doCmd && !log){
+        if( noTargets() && !log){
             valid=false;
             if( deleteNoTargets )
                 dQueue.add( Datagram.system("mf:remove,"+id) );
