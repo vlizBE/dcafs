@@ -53,16 +53,12 @@ public class DoubleVal implements NumericVal{
         return new DoubleVal().group(group).name(name);
     }
     public static DoubleVal newVal(String combined){
-        String[] spl = combined.split("_");
-        if( spl.length==2) {
-            return new DoubleVal().group(spl[0]).name(spl[1]);
-        }else if( spl.length>2){
-            String name = spl[1]+"_"+spl[2];
-            for( int a=3;a<spl.length;a++)
-                name+="_"+spl[a];
-            return new DoubleVal().group(spl[0]).name(name);
+        int us = combined.indexOf("_");
+
+        if( us != -1) {
+            return new DoubleVal().group(combined.substring(0,us)).name(combined.substring(us+1));
         }
-        return new DoubleVal().name(spl[0]);
+        return new DoubleVal().name(combined);
     }
     /* ********************************* Constructing ************************************************************ */
     public DoubleVal name(String name){
