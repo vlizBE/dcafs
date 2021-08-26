@@ -45,7 +45,10 @@ public class IssuePool implements Commandable{
                 issueEle ->
                 {
                     String id = XMLtools.getStringAttribute(issueEle,"id","");
-                    var issue = new Issue(XMLtools.getChildValueByTag(issueEle,"message",""));
+                    String message = XMLtools.getStringAttribute(issueEle,"message","");
+                    message = XMLtools.getChildValueByTag(issueEle,"message",message);
+                    var issue = new Issue(message);
+
                     String start = XMLtools.getChildValueByTag(issueEle,"test","");
                     start = XMLtools.getChildValueByTag(issueEle,"startif",start);
                     String stop = XMLtools.getChildValueByTag(issueEle,"stopif","");
@@ -239,6 +242,9 @@ public class IssuePool implements Commandable{
         return false;
     }
     public void addIssue(String id, String message){
+        if( message.isEmpty()){
+            Logger.warn("Issue created without message: "+id);
+        }
         issues.put(id,new Issue(message));
     }
     public boolean isActive( String id ){
