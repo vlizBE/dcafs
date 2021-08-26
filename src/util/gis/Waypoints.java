@@ -45,8 +45,6 @@ public class Waypoints implements Commandable {
 
         readFromXML(rtvals);
 
-        if( wps.isEmpty() )
-            scheduler.schedule(() -> checkWaypoints(),checkInterval, TimeUnit.SECONDS);
     }
 
     /* ****************************** A D D I N G ****************************************/
@@ -55,6 +53,8 @@ public class Waypoints implements Commandable {
      * @param wp The waypoint to add
      */
     public Waypoint addWaypoint( String id, Waypoint wp ) {
+        if(wps.isEmpty())
+            scheduler.scheduleAtFixedRate(() -> checkWaypoints(),5,checkInterval, TimeUnit.SECONDS);
     	wps.put(id,wp);
     	return wp;
     }
@@ -63,7 +63,7 @@ public class Waypoints implements Commandable {
     }
     public void addWaypoint( String id, double lat, double lon, double range) {
     	if(wps.isEmpty())
-            scheduler.schedule(() -> checkWaypoints(),checkInterval, TimeUnit.SECONDS);
+            scheduler.scheduleAtFixedRate(() -> checkWaypoints(),5,checkInterval, TimeUnit.SECONDS);
         wps.put( id, Waypoint.build(id).lat(lat).lon(lon).range(range) );
     }
     public boolean addHere(  String id, double range) {
