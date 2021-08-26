@@ -154,22 +154,46 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		var found = words.matcher(line).results().map(MatchResult::group).collect(Collectors.toList());
 
 		for( var word : found ){
-			var d = getDouble(word, Double.NaN);
-			if (!Double.isNaN(d)) {
-				line = line.replace(word,""+d);
-			}else{
-				var t = getText(word,"");
-				if( !t.isEmpty()) {
-					line = line.replace(word, t);
-				}else if( hasFlag(word)){
-					line = line.replace(word, isFlagUp(word)?"1":"0");
-				}else if( error.equalsIgnoreCase("create")){
-					getOrAddDoubleVal(word).setValue(0);
-					Logger.warn("Created doubleval "+word+" with value 0");
-					line = line.replace(word, "0");
-				}else if( !error.equalsIgnoreCase("ignore")){
-					Logger.error("Couldn't process "+word+" found in "+line);
-					return error;
+			if( word.contains(":")){
+				var id = word.split(":")[1];
+				switch( word.charAt(0) ) {
+					case 'd':
+						if( !hasDouble(id)) {
+							Logger.error("No such double "+id+", extracted from "+line);
+							return error;
+						}
+					case 'D':
+						line = line.replace(word,""+getOrAddDoubleVal(id).getValue());
+						break;
+					case 'f':
+						if( !hasFlag(id)) {
+							Logger.error("No such flag "+id+ ", extracted from "+line);
+							return error;
+						}
+					case 'F':
+						if( !hasFlag(id))
+							setFlagState(id,false);
+						line = line.replace(word, isFlagUp(id) ? "1" : "0");
+						break;
+				}
+			}else {
+				var d = getDouble(word, Double.NaN);
+				if (!Double.isNaN(d)) {
+					line = line.replace(word, "" + d);
+				} else {
+					var t = getText(word, "");
+					if (!t.isEmpty()) {
+						line = line.replace(word, t);
+					} else if (hasFlag(word)) {
+						line = line.replace(word, isFlagUp(word) ? "1" : "0");
+					} else if (error.equalsIgnoreCase("create")) {
+						getOrAddDoubleVal(word).setValue(0);
+						Logger.warn("Created doubleval " + word + " with value 0");
+						line = line.replace(word, "0");
+					} else if (!error.equalsIgnoreCase("ignore")) {
+						Logger.error("Couldn't process " + word + " found in " + line);
+						return error;
+					}
 				}
 			}
 		}
@@ -364,13 +388,32 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		if( val==null){
 			val = DoubleVal.newVal(id);
 			doubleVals.put(id,val);
-			Logger.info("doubleval new, adding to xml :"+id);
-			if( val.getGroup().isEmpty()) {
-				XMLfab.withRoot(settingsPath, "dcafs", "settings", "rtvals").alterChild("double", "id", id).build();
-			}else{
-				XMLfab.withRoot(settingsPath, "dcafs", "settings", "rtvals")
-						.alterChild("group","id",val.getGroup())
-						.down().addChild("double").attr("name",val.getName()).build();
+
+			var fab = XMLfab.withRoot(settingsPath, "dcafs","settings","rtvals");
+
+			if( fab.hasChild("double","id",id).isEmpty()){
+				if( val.getGroup().isEmpty()) {
+					if( fab.hasChild("double","id",id).isEmpty()) {
+						Logger.info("doubleval new, adding to xml :"+id);
+						fab.addChild("double").attr("id", id).attr("unit", val.unit()).build();
+					}
+				}else{
+					if( fab.hasChild("group","id",val.getGroup()).isEmpty() ){
+						fab.addChild("group").attr("id",val.getGroup()).down();
+						if( fab.hasChild("double","id",val.getName()).isEmpty() )
+							fab.addChild("double").attr("name", val.getName()).attr("unit", val.unit()).build();
+					}else{
+						String name = val.getName();
+						String unit = val.unit();
+						fab.selectChildAsParent("group","id",val.getGroup())
+								.ifPresent( f->{
+									if( f.hasChild("double","name",name).isEmpty()) {
+										Logger.info("doubleval new, adding to xml :"+id);
+										fab.addChild("double").attr("name", name).attr("unit", unit).build();
+									}
+								});
+					}
+				}
 			}
 		}
 		return val;
@@ -386,29 +429,29 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	 * @return True if it was created
 	 */
 	private boolean setDouble(String id, double value, boolean createIfNew) {
-		boolean ok = false;
+
 		if( id.isEmpty()) {
 			Logger.error("Empty id given");
 			return false;
 		}
-		var d = doubleVals.get(id);
-		if( d==null ) {
-			if( createIfNew ) {
-				doubleVals.put(id, DoubleVal.newVal(id).value(value) );
-				ok=true;
-			}else{
-				Logger.error("No such double "+id+" yet, create it first");
-			}
+		DoubleVal d;
+		if( createIfNew ) {
+			d = getOrAddDoubleVal(id);
 		}else{
-			d.setValue(value);
+			d = doubleVals.get(id);
 		}
 
+		if( d==null ) {
+			Logger.error("No such double "+id+" yet, create it first");
+			return false;
+		}
+		d.setValue(value);
 		if( !doubleRequest.isEmpty()){
 			var res = doubleRequest.get(id);
 			if( res != null)
 				res.forEach( wr -> wr.writeLine(id + " : " + value));
 		}
-		return ok;
+		return true;
 	}
 	public boolean setDouble(String id, double value){
 		return setDouble(id,value,true);
@@ -554,10 +597,18 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 
 		var val = flagVals.get(id);
 		if( val==null){
-			flagVals.put(id,FlagVal.newVal(id));
-			XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals").alterChild("flag","id",id).build();
+			val = FlagVal.newVal(id);
+			flagVals.put(id,val);
+
+			if( val.getGroup().isEmpty()) {
+				XMLfab.withRoot(settingsPath, "dcafs", "settings", "rtvals").alterChild("flag", "id", id).build();
+			}else{
+				XMLfab.withRoot(settingsPath, "dcafs", "settings", "rtvals")
+						.alterChild("group","id",val.getGroup())
+						.down().addChild("flag").attr("name",val.getName()).build();
+			}
 		}
-		return flagVals.get(id);
+		return val;
 	}
 	public Optional<FlagVal> getFlagVal( String flag){
 		return Optional.ofNullable(flagVals.get(flag));
@@ -567,15 +618,19 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	}
 	public boolean isFlagUp( String flag ){
 		var f = flagVals.get(flag);
-		if( f==null)
-			Logger.warn("No such flag: "+flag);
-		return f != null && f.isUp();
+		if( f==null) {
+			Logger.warn("No such flag: " + flag);
+			return false;
+		}
+		return f.isUp();
 	}
 	public boolean isFlagDown( String flag ){
 		var f = flagVals.get(flag);
-		if( f==null)
-			Logger.warn("No such flag: "+flag);
-		return f != null && !f.isDown();
+		if( f==null) {
+			Logger.warn("No such flag: " + flag);
+			return false;
+		}
+		return f.isDown();
 	}
 
 	/**
@@ -609,8 +664,9 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	 * @return True if the state was changed, false if a new flag was made
 	 */
 	public boolean setFlagState( String id, boolean state){
+
 		int size = flagVals.size();
-		getFlagVal(id).ifPresentOrElse(f->f.setState(state),()->flagVals.put(id, FlagVal.newVal(id).setState(state)));
+		getOrAddFlagVal(id).setState(state);
 		return size==flagVals.size();
 	}
 	public ArrayList<String> listFlags(){
@@ -620,20 +676,31 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 
 	public String storeRTVals(Path settings){
 		XMLfab fab = XMLfab.withRoot(settings,"dcafs","settings","rtvals");
-		var keys = doubleVals.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Entry::getKey).collect(Collectors.toList());
-		for( var dv : keys ){
-			var dd = doubleVals.get(dv);
-			fab.selectOrAddChildAsParent("double","id",dv)
-					.attr("unit",dd.unit())
-					.up();
+		var vals = doubleVals.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Entry::getValue).collect(Collectors.toList());
+		for( var dv : vals ){
+			if( dv.getGroup().isEmpty()) {
+				fab.alterChild("double", "id",dv.getID()).build();
+			}else{
+				fab.alterChild("group","id",dv.getGroup())
+						.down().addChild("double").attr("name",dv.getName()).attr("unit",dv.unit());
+						if( dv.scale()!=-1)
+							fab.attr("scale",dv.scale());
+						fab.up();
+			}
 		}
-		keys = texts.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Entry::getKey).collect(Collectors.toList());
+		var keys = texts.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Entry::getKey).collect(Collectors.toList());
 		for( var dt : keys ){
 			fab.selectOrAddChildAsParent("text","id",dt).up();
 		}
-		keys = flagVals.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Entry::getKey).collect(Collectors.toList());
-		for( var dt : keys ){
-			fab.selectOrAddChildAsParent("flag","id",dt).up();
+		var flags = flagVals.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Entry::getValue).collect(Collectors.toList());
+		for( var fv : flags ){
+			if( fv.getGroup().isEmpty()) {
+				fab.alterChild("double", "id",fv.getID()).build();
+			}else{
+				fab.alterChild("group","id",fv.getGroup())
+						.down().addChild("flag").attr("name",fv.getName())
+						.up();
+			}
 		}
 		fab.build();
 		return "New doubles/texts/flags added";
@@ -1057,7 +1124,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		// Add the not grouped ones
 		boolean ngDoubles = doubleVals.values().stream().anyMatch( dv -> dv.getGroup().isEmpty());
 		boolean ngTexts = texts.keySet().stream().anyMatch(k -> k.contains("_"));
-		boolean ngFlags = flagVals.keySet().stream().anyMatch(k -> k.contains("_"));
+		boolean ngFlags = flagVals.values().stream().anyMatch( fv -> fv.getGroup().isEmpty());
 
 		if( ngDoubles || ngTexts || ngFlags) {
 			join.add("");
