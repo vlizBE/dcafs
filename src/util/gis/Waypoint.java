@@ -295,7 +295,7 @@ public class Waypoint implements Comparable<Waypoint>{
 		bearing = GisTools.calcBearing( lon, lat, this.lon, this.lat, 2 );
 		return bearing;
 	}
-	static class Travel{
+	public class Travel{
 		String name="";
 		String bearing="";
 		Function<Double,Boolean> check;
