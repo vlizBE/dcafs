@@ -252,9 +252,9 @@ public class Generic {
                 double val=-999;
                 switch( entry.type ){
                     case INTEGER:
-                            if( doubles!=null && doubles.length>a && doubles[a]!=null){
-                                data[a] = doubles[a].intValue();
-                                dp.setDouble( ref, doubles[a] );
+                            if( doubles!=null && doubles.length>entry.index && doubles[entry.index]!=null){
+                                data[a] = doubles[entry.index].intValue();
+                                dp.setDouble( ref, doubles[entry.index] );
                             }else if( NumberUtils.isCreatable(split[entry.index])){
                                 val=NumberUtils.toInt(split[entry.index],-999);
                                 data[a]=val;
@@ -264,13 +264,13 @@ public class Generic {
                             }
                             break;
                     case REAL:
-                            if( doubles!=null && doubles.length>a && doubles[a]!=null){
-                                data[a]=doubles[a];
-                                dp.setDouble( ref, doubles[a] );
+                            if( doubles!=null && doubles.length>entry.index && doubles[entry.index]!=null){
+                                data[a]=doubles[entry.index];
+                                dp.getOrAddDoubleVal( ref ).setValue( doubles[entry.index] );
                             }else if( NumberUtils.isCreatable(split[entry.index])) {
                                 val = NumberUtils.toDouble(split[entry.index], val);
                                 data[a] = val;
-                                dp.setDouble( ref, val );
+                                dp.getOrAddDoubleVal( ref ).setValue( val );
                             }else{
                                 data[a]=null;
                             }
