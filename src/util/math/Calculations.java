@@ -1,6 +1,7 @@
 package util.math;
 
 import org.apache.commons.lang3.math.NumberUtils;
+import org.tinylog.Logger;
 import util.tools.Tools;
 
 import java.math.BigDecimal;
@@ -214,7 +215,8 @@ public class Calculations {
     public static double calcTrueWindVelocity(double windvel, double winddir, double sogKnots, double cog,
             double heading) {
         double dev = 0;
-
+        if( cog <0 )
+            cog=heading;
         double app = Math.toRadians(270 - (heading + dev + winddir));
         double course = Math.toRadians(90 - cog);
         double sogms = sogKnots * 0.5144444;
@@ -281,7 +283,7 @@ public class Calculations {
             headingVal=NumberUtils.toDouble(heading);
         }
         return x -> {
-            var dir = calcTrueWindDirection(
+            var dir = calcTrueWindVelocity(
                     windvelIndex==-1?windvelVal:x[windvelIndex].doubleValue(),
                     winddirIndex==-1?winddirVal:x[winddirIndex].doubleValue(),
                     sogKnotsIndex==-1?sogKnotsVal:x[sogKnotsIndex].doubleValue(),
@@ -304,7 +306,9 @@ public class Calculations {
     public static double calcTrueWindDirection(double windvel, double winddir, double sogKnots, double cog,
             double heading) {
         double dev = 0;
-
+        if( cog < 0 ) {
+            cog = heading;
+        }
         double app = Math.toRadians(270 - (heading + dev + winddir));
         double course = Math.toRadians(90 - cog);
         double sogms = sogKnots * 0.5144444;

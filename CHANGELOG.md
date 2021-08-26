@@ -19,7 +19,7 @@ From 0.5.0 onwards, this should be better documented...
   * Code cleanup
     * Bring javadoc up to date
     * Decide on final class structure (mainly StreamManager)   
-  * Rework the TaskManager (will be trigger for 0.11.0)
+  * Rework the TaskManager (might be trigger for 0.11.0)
 
 ## 0.10.12 (work in progress)
 
@@ -48,6 +48,7 @@ this caused a nullpointer when doing a check for a taskmanager
 - Pathforward, for some reason initial src setup when using generics wasn't working anymore
 - Generic, when using the datagram payload, it used the wrong index
 - MathForward, the check to see it can be stopped didn't check the update flag
+- IssuePool, message was read from a node instead of both node and attribute
 
 ## 0.10.11 (24/08/21)
 Bugfixes!
