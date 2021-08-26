@@ -394,12 +394,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		var d = doubleVals.get(id);
 		if( d==null ) {
 			if( createIfNew ) {
-				var par = id.split("_");
-				if (par.length == 2) {
-					doubleVals.put(id, DoubleVal.newVal(par[0], par[1]).value(value) );
-				} else {
-					doubleVals.put(id, DoubleVal.newVal("", par[0]).value(value));
-				}
+				doubleVals.put(id, DoubleVal.newVal(id).value(value) );
 				ok=true;
 			}else{
 				Logger.error("No such double "+id+" yet, create it first");
