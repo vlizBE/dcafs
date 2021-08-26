@@ -44,6 +44,8 @@ this caused a nullpointer when doing a check for a taskmanager
 
 ### Other Fixes
 - Pathforward, for some reason initial src setup when using generics wasn't working anymore
+- Generic, when using the datagram payload, it used the wrong index
+- MathForward, the check to see it can be stopped didn't check the update flag
 
 ## 0.10.11 (24/08/21)
 Bugfixes!
