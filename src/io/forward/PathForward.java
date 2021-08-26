@@ -12,6 +12,7 @@ import worker.Datagram;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ScheduledFuture;
@@ -53,7 +54,7 @@ public class PathForward {
 
         if( stepsForward!=null) {// If this is a reload, reset the steps
             dQueue.add(Datagram.system("nothing").writable(stepsForward.get(0))); // stop asking for data
-            oldTargets.addAll( lastStep().getTargets() );
+            lastStep().ifPresent(ls -> oldTargets.addAll(ls.getTargets()));
             stepsForward.clear();
         }
 
@@ -111,12 +112,14 @@ public class PathForward {
                         step.setAttribute("label","valmap:"+next.getAttribute("id"));
                 }
             }
+            if( step.hasAttribute("label"))
+                hasLabel=true;
+
             boolean lastGenMap = false;
             if( !stepsForward.isEmpty() ) {
                 var prev = steps.get(a - 1);
                 lastGenMap = prev.getTagName().equalsIgnoreCase("generic")
                                 ||prev.getTagName().equalsIgnoreCase("valmap");
-                hasLabel=true;
             }
 
             // If this step doesn't have a delimiter, alter it
@@ -132,10 +135,10 @@ public class PathForward {
             switch( step.getTagName() ){
                 case "filter":
                     FilterForward ff = new FilterForward( step, dQueue );
-                    if( lastff != null && (!(lastStep() instanceof FilterForward) || lastGenMap)) {
+                    if( lastff != null && (!(lastStep().get() instanceof FilterForward) || lastGenMap)) {
                         lastff.addReverseTarget(ff);
                     }else if( !stepsForward.isEmpty() ){
-                        lastStep().addTarget(ff);
+                        lastStep().get().addTarget(ff);
                     }
                     lastff=ff;
                     stepsForward.add(ff);
@@ -158,8 +161,8 @@ public class PathForward {
         if( !oldTargets.isEmpty()&&!stepsForward.isEmpty()){ // Restore old requests
             oldTargets.forEach( wr->addTarget(wr) );
         }
-        if( hasLabel ) {
-            if ( customs==null||customs.isEmpty()) {
+        if( !lastStep().map(AbstractForward::noTargets).orElse(false) || hasLabel) {
+            if (customs == null || customs.isEmpty()) {
                 dQueue.add(Datagram.system(this.src).writable(stepsForward.get(0)));
             } else {
                 customs.forEach(CustomSrc::start);
@@ -178,7 +181,7 @@ public class PathForward {
                 }
             }
         }else if( !stepsForward.isEmpty() ) {
-            lastStep().addTarget(f);
+            lastStep().get().addTarget(f);
         }
     }
     public boolean debugStep( int step, Writable wr ){
@@ -203,8 +206,10 @@ public class PathForward {
 
         return true;
     }
-    private AbstractForward lastStep(){
-        return stepsForward.get(stepsForward.size()-1);
+    private Optional<AbstractForward> lastStep(){
+        if( stepsForward.isEmpty())
+            return Optional.empty();
+        return Optional.ofNullable(stepsForward.get(stepsForward.size()-1));
     }
     private AbstractForward getStep(String id){
         for( var step : stepsForward){
@@ -267,7 +272,7 @@ public class PathForward {
             for( var step : stepsForward )
                 step.removeTarget(wr);
 
-            if( lastStep().noTargets() ){ // if the final step has no more targets, stop the first step
+            if( lastStep().map(ls->ls.noTargets()).orElse(true) ){ // if the final step has no more targets, stop the first step
                 customs.forEach(CustomSrc::stop);
             }
         }
