@@ -353,7 +353,7 @@ public class XMLfab {
      * @param tag The tag of the child node to look for
      * @param attr The attribute to look for
      * @param value The value of the attribute
-     * @return True if found
+     * @return The fab if found
      */
     public Optional<XMLfab> hasChild( String tag, String attr, String value){
         return getChildren(tag).stream().anyMatch(x ->

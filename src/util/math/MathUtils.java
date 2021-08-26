@@ -60,7 +60,7 @@ public class MathUtils {
 
                     while (opIndex != -1) {
                         if( parts.size()<=opIndex+1) {
-                            Logger.error("Not enough data in parts...");
+                            Logger.error("Not enough data in parts -> Expression'"+expression+"' Parts:"+parts.size()+" needed "+(opIndex+1) );
                             return result;
                         }
                         String res = parts.get(opIndex - 1) + parts.get(opIndex) + parts.get(opIndex + 1);

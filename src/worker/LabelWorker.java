@@ -452,7 +452,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 			}catch( ArrayIndexOutOfBoundsException e ){
 				Logger.error("Generic requested ("+d.label+") but no valid id given.");
 			} catch( Exception e){
-				Logger.error("Caught an exception when processing "+d.getData()+" from "+d.getOriginID());
+				Logger.error("Caught an exception when processing "+d.getData()+" from "+d.getOriginID()+" message: "+e.getMessage());
 				Logger.error(e);
 			}
 			procCount.incrementAndGet();

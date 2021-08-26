@@ -116,7 +116,7 @@ public class DoubleVal implements NumericVal{
         return this;
     }
     public DoubleVal enableHistory(int count){
-        if(count==-1)
+        if(count<=0)
            return this;
         keepHistory=count;
         history=new ArrayList<>();
@@ -179,7 +179,7 @@ public class DoubleVal implements NumericVal{
                 total+=h;
             }
         }else{
-            Logger.warn("Asked for the average of "+name+" but no history kept");
+            Logger.warn("Asked for the average of "+(group.isEmpty()?"":group+"_")+name+" but no history kept");
             return value;
         }
         return Tools.roundDouble(total/history.size(),digits==-1?3:digits);
