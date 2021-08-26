@@ -293,8 +293,10 @@ public class PathForward {
             this.intervalMillis=intervalMillis;
             switch(type){
                 case "rtvals": srcType=SRCTYPE.RTVALS; break;
-                case "src": srcType=SRCTYPE.CMD; break;
+                case "cmd": srcType=SRCTYPE.CMD; break;
                 case "plain": srcType=SRCTYPE.PLAIN; break;
+                default:
+                    Logger.error(id+ "(pf) -> no valid srctype '"+type+"'");
             }
         }
         public void start(){
