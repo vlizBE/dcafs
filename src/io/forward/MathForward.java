@@ -728,6 +728,6 @@ public class MathForward extends AbstractForward {
     /* ************************************************************************************************************* */
     @Override
     public boolean noTargets(){
-        return !(!targets.isEmpty() || !label.isEmpty() || doCmd || doUpdate);
+        return super.noTargets() && !doCmd && !doUpdate;
     }
 }
