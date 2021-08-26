@@ -1,5 +1,6 @@
 package util.gis;
 
+import io.telnet.TelnetCodes;
 import org.tinylog.Logger;
 import util.math.MathUtils;
 import util.tools.FileTools;
@@ -157,7 +158,7 @@ public class Waypoint implements Comparable<Waypoint>{
 
 		if(state==null)
 			return "Unknown state";
-		
+
 		int sec=0;
 		String suffix=".";
 		if( sog != 0.0 ){
@@ -191,9 +192,18 @@ public class Waypoint implements Comparable<Waypoint>{
 			return mess + name+" at " +TimeTools.formatLongUTCNow()+ " and "+m+" from center, bearing "+bearing+"° "+suffix;
 		}
 	}
-	public String simpleList(String newline){
+	public String getInfo(String newline){
+		String prefix;
+		if( !newline.startsWith("<")) {
+			prefix = TelnetCodes.TEXT_GREEN + name + TelnetCodes.TEXT_YELLOW;
+		}else{
+			prefix = name;
+		}
+		prefix += " ["+GisTools.fromDegrToDegrMin(lat,4,"°")+";"+GisTools.fromDegrToDegrMin(lon,4,"°")+"]\tRange:"+range+"m";
+
 		StringJoiner join = new StringJoiner(newline,
-					this.name+" ["+GisTools.fromDegrToDegrMin(lat,4,"°")+";"+GisTools.fromDegrToDegrMin(lon,4,"°")+"]\tRange:"+range+"m","");
+					prefix,"");
+		join.add("");
 		if( this.travels.isEmpty() ){
 			join.add(" |-> No travel linked.");
 		}else{
@@ -323,7 +333,10 @@ public class Waypoint implements Comparable<Waypoint>{
 			}
 		}
 		public String toString(){
-			return (direction==STATE.ENTER?"Entering ":"Leaving")+" with bearing "+bearing+"° is called "+name;
+			String info = name +" = "+(direction==STATE.ENTER?" coming closer than "+range+"m":" going further away than "+range+"m");
+			if( bearing.equalsIgnoreCase("from 0 to 360"))
+				return info;
+			return info+" with a bearing "+bearing+"°";
 		}
 		public Travel addCmd( String cmd){
 			if( cmd==null) {

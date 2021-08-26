@@ -229,25 +229,27 @@ public class Waypoints implements Commandable {
     }
     /**
      * Get an overview off all the available waypoints
-     * @param coords Whether or not to add coordinates
+     * @param coords Whether to add coordinates
      * @param sog Speed is used to calculate the time till the waypoint
      * @return A descriptive overview off all the current waypoints
      */
-	public String getListing( boolean coords, double sog ){
-        StringBuilder b = new StringBuilder();
-        if( wps.isEmpty() )
-            return "No waypoints collected yet.";
-
+	public String getCurrentStates(boolean coords, double sog ){
+        StringJoiner b = new StringJoiner("\r\n");
+        b.setEmptyValue( "No waypoints yet.");
+        if( !wps.isEmpty() ){
+            b.add("Current Coordinates: "+latitude +" "+longitude);
+        }
     	for( Waypoint w : wps.values())
-    		b.append( w.toString(coords, true, sog) ).append("\r\n");
+    		b.add( w.toString(coords, true, sog) );
     	return b.toString();
     }
-    public String getSimpleListing( String newline ){
-        StringBuilder b = new StringBuilder();
+    public String getWaypointList(String newline ){
+        StringJoiner b = new StringJoiner(newline);
         if( wps.isEmpty() )
-            return "No waypoints collected yet.";
+            return "No waypoints yet.";
         for( Waypoint wp : wps.values() ){
-            b.append(wp.simpleList(newline));
+            b.add( wp.getInfo(newline) );
+            b.add( wp.toString(false, true, sog.getValue()) ).add("");
         }
         return b.toString();
     }
@@ -318,7 +320,7 @@ public class Waypoints implements Commandable {
 		switch( cmd[0] ){
             case "?":
                     StringJoiner b = new StringJoiner(html?"<br>":"\r\n");
-                    b.add( "wpts:print or wpts:list or wpts:listing -> Get a listing of all waypoints with travel.")
+                    b.add( "wpts:list -> Get a listing of all waypoints with travel.")
                     .add( "wpts:states -> Get a listing  of the state of each waypoint.")
                     .add( "wpts:reload -> Reloads the waypoints from the settings file.")
                     .add( "wpts:remove,<name> -> Remove a waypoint with a specific name")
@@ -326,11 +328,11 @@ public class Waypoints implements Commandable {
                     .add( "wpts:update,id,lat,lon -> Update the waypoint coords lat and lon in decimal degrees")
                     .add( "wpts:travel,waypoint,bearing,name -> Add travel to a waypoint.");
                     return b.toString();
-			case "print": case "list": case "listing": return getSimpleListing(html?"<br>":"\r\n");
+			case "list": return getWaypointList(html?"<br>":"\r\n");
             case "states":
                 if( sog == null)
                     return "Can't determine state, no sog defined";
-                return getListing(false, sog.getValue() );
+                return getCurrentStates(false, sog.getValue() );
             case "store": 
                 if( this.storeInXML(false) ){
                     return "Storing waypoints succesful";
