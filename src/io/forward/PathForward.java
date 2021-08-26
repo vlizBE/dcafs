@@ -87,7 +87,7 @@ public class PathForward {
         }
 
         FilterForward lastff=null;
-
+        boolean hasLabel=false;
         for( int a=0;a<steps.size();a++  ){
             Element step = steps.get(a);
 
@@ -115,6 +115,7 @@ public class PathForward {
                 var prev = steps.get(a - 1);
                 lastGenMap = prev.getTagName().equalsIgnoreCase("generic")
                                 ||prev.getTagName().equalsIgnoreCase("valmap");
+                hasLabel=true;
             }
 
             // If this step doesn't have a delimiter, alter it
@@ -155,6 +156,13 @@ public class PathForward {
         }
         if( !oldTargets.isEmpty()&&!stepsForward.isEmpty()){ // Restore old requests
             oldTargets.forEach( wr->addTarget(wr) );
+        }
+        if( hasLabel ) {
+            if ( customs==null||customs.isEmpty()) {
+                dQueue.add(Datagram.system(this.src).writable(stepsForward.get(0)));
+            } else {
+                customs.forEach(CustomSrc::start);
+            }
         }
     }
     private void addAsTarget( AbstractForward f, String src ){
@@ -217,13 +225,14 @@ public class PathForward {
         this.src =src;
     }
     public String toString(){
-        if( customs.isEmpty() ){
+        if( customs==null||customs.isEmpty() ){
             if( stepsForward.isEmpty())
                 return "Nothing in the path yet";
             return " gives the data from "+stepsForward.get(stepsForward.size()-1).getID();
         }
         var join = new StringJoiner("\r\n");
-        customs.forEach(c->join.add(c.toString()));
+        if( customs!=null)
+            customs.forEach(c->join.add(c.toString()));
 
         for( int a=0;a<stepsForward.size();a++){
             join.add("   -> "+stepsForward.get(a).toString());
