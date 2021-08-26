@@ -61,11 +61,7 @@ public class PathForward {
         id = XMLtools.getStringAttribute(pathEle,"id","");
         String imp = XMLtools.getStringAttribute(pathEle,"import","");
         String delimiter = XMLtools.getStringAttribute(pathEle,"delimiter","");;
-        String src = XMLtools.getStringAttribute(pathEle,"src","");
-
-        if( XMLtools.getFirstChildByTag(pathEle,"customsrc")==null) {
-            useRegularSrc(src);
-        }
+        this.src = XMLtools.getStringAttribute(pathEle,"src","");
 
         if( !imp.isEmpty() ) {
             var p = XMLfab.getRootChildren(Path.of(imp),"dcafs","path").findFirst();
@@ -127,9 +123,9 @@ public class PathForward {
                 step.setAttribute("delimiter",delimiter);
 
             if( !step.hasAttribute("id"))
-                step.setAttribute("id","step_"+stepsForward.size());
+                step.setAttribute("id",id+"_"+stepsForward.size());
 
-            src = XMLtools.getStringAttribute(step,"src","");
+            var src = XMLtools.getStringAttribute(step,"src","");
             if( stepsForward.isEmpty() && !src.isEmpty())
                 step.setAttribute("src","");
             switch( step.getTagName() ){
@@ -226,9 +222,7 @@ public class PathForward {
         }
         customs.add( new CustomSrc(data,type,TimeTools.parsePeriodStringToMillis(interval)) );
     }
-    public void useRegularSrc( String src){
-        this.src =src;
-    }
+
     public String toString(){
         if( customs.isEmpty() ){
             if( stepsForward.isEmpty())
