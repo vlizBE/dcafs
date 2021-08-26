@@ -204,7 +204,7 @@ public class EditorForward extends AbstractForward{
                 Logger.info(id+" -> Trimming spaces");
                 break;
             case "rexremove":
-                addRegexReplacement(content,"");
+                addRexRemove(content);
                 Logger.info(id+" -> Remove matches off "+content);
                 break;
             case "rexkeep":
@@ -444,9 +444,11 @@ public class EditorForward extends AbstractForward{
         rulesString.add( new String[]{"","Trim","Trim spaces "} );
         edits.add( input -> input.trim() );
     }
+    public void addRexRemove( String find ){
+        rulesString.add( new String[]{"","regexremove","Remove "+find} );
+        edits.add( input -> input.replaceAll(find,"" ) );
+    }
     public void addRegexReplacement( String find, String replace){
-        if( replace.isEmpty())
-            replace=" ";
         String r = replace.isEmpty()?" ":replace;
         rulesString.add( new String[]{"","regexreplace","from "+find+" -> '"+r+"'"} );
         edits.add( input -> input.replaceAll(find,r ) );
