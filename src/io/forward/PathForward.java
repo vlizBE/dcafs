@@ -22,7 +22,7 @@ public class PathForward {
     private String src = "";
 
     private final ArrayList<Writable> targets = new ArrayList<>();
-    private ArrayList<CustomSrc> customs;
+    private ArrayList<CustomSrc> customs=new ArrayList<>();
 
     DataProviding dataProviding;
     BlockingQueue<Datagram> dQueue;
@@ -88,6 +88,7 @@ public class PathForward {
 
         FilterForward lastff=null;
         boolean hasLabel=false;
+
         for( int a=0;a<steps.size();a++  ){
             Element step = steps.get(a);
 
@@ -164,6 +165,7 @@ public class PathForward {
                 customs.forEach(CustomSrc::start);
             }
         }
+        customs.trimToSize();
     }
     private void addAsTarget( AbstractForward f, String src ){
         if( !src.isEmpty() ){
@@ -217,22 +219,19 @@ public class PathForward {
         }else if(type.equalsIgnoreCase("rtvals")){
             type="plain";
         }
-        if( customs==null)
-            customs = new ArrayList<>();
         customs.add( new CustomSrc(data,type,TimeTools.parsePeriodStringToMillis(interval)) );
     }
     public void useRegularSrc( String src){
         this.src =src;
     }
     public String toString(){
-        if( customs==null||customs.isEmpty() ){
+        if( customs.isEmpty() ){
             if( stepsForward.isEmpty())
                 return "Nothing in the path yet";
             return " gives the data from "+stepsForward.get(stepsForward.size()-1).getID();
         }
         var join = new StringJoiner("\r\n");
-        if( customs!=null)
-            customs.forEach(c->join.add(c.toString()));
+        customs.forEach(c->join.add(c.toString()));
 
         for( int a=0;a<stepsForward.size();a++){
             join.add("   -> "+stepsForward.get(a).toString());
