@@ -24,16 +24,26 @@ From 0.5.0 onwards, this should be better documented...
 ## 0.10.12 (work in progress)
 
 ### DoubleVal
-- Combined timekeep, history in a single attribute options
+- Combined timekeep, history in a single attribute 'options'
   - Usage options="time,history:10" to keep the time of last value and a history of 10 values
 - Added minmax to options to keep track of min/max values (options="minmax")
-- Added order to options to allow to specify in which position it is listed in the group (options="order:1"), lower number
+- Added order to options to allow specifying in which position it is listed in the group (options="order:1"), lower number
 first, default -1. Equal order is sorted as usual.
 - Altered rtvals to include min/max/avg/age info if available
+
+### CommandPool
+- fixed, Still had a method that referenced issuePool while all the other code was moved to Realtimevalues
+this caused a nullpointer when doing a check for a taskmanager
 
 ### RealtimeValues
 - rtvals listings are now sorted
 - added `rtvals:reload` to reload the rtvals
+- fixed, "dv:new" always wrote to xml instead of only on new
+- fixed, getoradddouble wasn't writing according to the newer group layout
+- fixed, multiple underscore id's again
+
+### Other Fixes
+- Pathforward, for some reason initial src setup when using generics wasn't working anymore
 
 ## 0.10.11 (24/08/21)
 Bugfixes!
