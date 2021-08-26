@@ -835,30 +835,25 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			case "list":
 				return String.join(html?"<br>":"\r\n",getTextPairs());
 			case "new": case "create":
+				result=0;
 				if( cmds.length==3 ) {
 					result = processExpression(cmds[2], true);
 					if (Double.isNaN(result))
-						return "Failed to create new double";
-					setDouble(cmds[1], result);
-					fab.alterChild("double","id",cmds[1]).build();
-					return cmds[1]+" created/updated to "+result;
+						return "Failed to process expression";
 				}
-				if( hasDouble(cmds[1]))
-					return "Already exists";
-				doubleVals.put(cmds[1],DoubleVal.newVal(cmds[1]));
-				fab.alterChild("double","id",cmds[1]).build();
-				return cmds[1]+" created";
+				getOrAddDoubleVal(cmds[1]).setValue(result);
+				return "DoubleVal set to "+result;
 			case "alter":
 				if( cmds.length<3)
 					return "Not enough arguments: doubles:alter,id,param:value";
 				var vals = cmds[2].split(":");
 				if( vals.length==1)
 					return "Incorrect param:value pair: "+cmds[2];
-				return getDoubleVal(cmds[1]).map( d -> {
+				return getDoubleVal(cmds[1]).map( dv -> {
 					if( vals[0].equals("scale")) {
-						d.fractionDigits(NumberUtils.toInt(vals[1]));
-						fab.alterChild("double","id",cmds[1]).attr("scale",d.scale()).build();
-						return "Scaling for " +cmds[1]+" set to " + d.scale() + " digits";
+						dv.fractionDigits(NumberUtils.toInt(vals[1]));
+						fab.alterChild("double","id",cmds[1]).attr("scale",dv.scale()).build();
+						return "Scaling for " +cmds[1]+" set to " + dv.scale() + " digits";
 					}else if( vals[0].equals("unit")) {
 						fab.alterChild("double","id",cmds[1]).attr("unit",vals[1]).build();
 						return "Unit for "+cmds[1]+" set to "+vals[1];
@@ -882,10 +877,10 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			case "addcmd":
 				if( cmds.length < 4 )
 					return "Not enough arguments, dv:addcmd,id,when,cmd";
-				var d = doubleVals.get(cmds[1]);
-				if( d==null)
+				var dv = doubleVals.get(cmds[1]);
+				if( dv==null)
 					return "No such double: "+cmds[1];
-				d.addTriggeredCmd(cmds[3],cmds[2]);
+				dv.addTriggeredCmd(cmds[3],cmds[2]);
 				XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals")
 						.selectChildAsParent("double","id",cmds[1])
 						.ifPresent( f -> f.addChild("cmd",cmds[3]).attr("when",cmds[2]).build());
