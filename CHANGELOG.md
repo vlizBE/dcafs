@@ -21,7 +21,12 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (might be trigger for 0.11.0)
 
-## 0.10.12 (work in progress)
+## 0.10.13 (work in progress)
+
+
+## 0.10.12 (28/08/21)
+
+More fixes and some improvements to rtvals xml and doubleval functionality 
 
 ### DoubleVal
 - Combined timekeep, history in a single attribute 'options'
