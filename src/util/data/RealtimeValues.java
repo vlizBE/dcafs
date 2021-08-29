@@ -620,6 +620,9 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 
 			var fab = XMLfab.withRoot(settingsPath, "dcafs", "settings", "rtvals");
 
+			if( fab.hasChild("flag","id",id).isPresent() )
+				return val;
+
 			if( val.group().isEmpty()) {
 				fab.alterChild("flag", "id", id).build();
 			}else{
