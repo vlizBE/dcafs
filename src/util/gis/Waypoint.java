@@ -270,11 +270,16 @@ public class Waypoint implements Comparable<Waypoint>{
 	 * @param dir The direction either in(or enter) or out( or leave)
 	 * @param bearing Range of bearing in readable english, fe. from 100 to 150
 	 */
-	public Travel addTravel( String name, String dir, String bearing ){
+	public Optional<Travel> addTravel( String name, String dir, String bearing ){
 		var travel = new Travel(name, dir, bearing);
-		travels.add(travel);
-		Logger.info("Added travel named "+name+" to waypoint "+this.name);
-		return travel;
+		if( travel.isValid()) {
+			travels.add(travel);
+			Logger.info("Added travel named "+name+" to waypoint "+this.name);
+			return Optional.ofNullable(travel);
+		}else{
+			Logger.error( id+" (wp)-> Failed to add travel, parsing bearing failed: "+bearing);
+			return Optional.empty();
+		}
 	}
 	/**
 	 * Check if any travel occurred, if so return the travel in question
@@ -282,7 +287,7 @@ public class Waypoint implements Comparable<Waypoint>{
 	 */
 	public Travel checkTravel(){
 		for( Travel t : travels ){
-			if( state == t.direction && t.check.apply(bearing) ){
+			if( t.check(state,bearing) ){
 				Logger.info("Travel occurred "+t.name);
 				return t;
 			}
@@ -320,7 +325,19 @@ public class Waypoint implements Comparable<Waypoint>{
 			if( dir.equals("out")||dir.equals("leave"))
 				direction = STATE.LEAVE;
 			check=MathUtils.parseSingleCompareFunction(bearing);
-			this.bearing=bearing;
+			if( check == null){
+				Logger.error( name+" (wp)-> Failed to convert the bearing to a comparison: "+bearing);
+			}else {
+				this.bearing = bearing;
+			}
+		}
+		public boolean isValid(){
+			return check!=null;
+		}
+		public boolean check(STATE state, double curBearing){
+			if( check == null)
+				return false;
+			return state == direction && check.apply(curBearing);
 		}
 		public ArrayList<String> getCmds(){
 			return cmds;
