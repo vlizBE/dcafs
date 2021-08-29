@@ -46,7 +46,7 @@ public class DoubleVal implements NumericVal{
     public DoubleVal(){}
 
     public DoubleVal(double val){
-        setValue(val);
+        updateValue(val);
     }
 
     /**
@@ -243,7 +243,7 @@ public class DoubleVal implements NumericVal{
 
         var td = new TriggeredCmd(cmd,trigger);
         if( td.isInvalid()) {
-            Logger.error(getID()+" (dv)-> Failed to convert trigger: "+trigger);
+            Logger.error(id()+" (dv)-> Failed to convert trigger: "+trigger);
             return false;
         }
         triggered.add( new TriggeredCmd(cmd,trigger) );
@@ -252,22 +252,38 @@ public class DoubleVal implements NumericVal{
 
     /* ***************************************** U S I N G ********************************************************** */
     public String unit(){ return unit; }
+
+    /**
+     *
+     * @return The amount of digits to scale to using rounding half up
+     */
     public int scale(){ return digits; }
-    public String getGroup(){
+    public String group(){
         return group;
     }
-    public String getName(){
+    public String name(){
         return name;
     }
-    public String getID(){
+
+    /**
+     * Get the id, which is group + underscore + name
+     * @return The concatenation of group, underscore and name
+     */
+    public String id(){
         return group.isEmpty()?name:(group+"_"+name);
     }
-    public void setValue( double val){
-        value(val);
-    }
-    public double getValue(){
+    public double value(){
         return value;
     }
+
+    /**
+     * Update the value
+     * @param val The new value
+     */
+    public void updateValue(double val){
+        value(val);
+    }
+
 
     /**
      * Get the value but as a BigDecimal instead of double
@@ -300,7 +316,7 @@ public class DoubleVal implements NumericVal{
      * @return True if they have the same value
      */
     public boolean equals( DoubleVal dv){
-        return Double.compare(value,dv.getValue())==0;
+        return Double.compare(value,dv.value())==0;
     }
 
     /**
@@ -328,7 +344,12 @@ public class DoubleVal implements NumericVal{
     }
 
     /**
-     * TriggeredCmd is a way to run cmd's if the new value succeeds in the compare
+     * TriggeredCmd is a way to run cmd's if the new value succeeds in either the compare or meets the other options
+     * Cmd: if it contains a '$' this will be replaced with the current value
+     * Current triggers:
+     * - Double comparison fe. above 5 and below 10
+     * - always, means always issue the cmd independent of the value
+     * - changed, only issue the command if the value has changed
      */
     private class TriggeredCmd{
         String cmd; // The cmd to issue
@@ -358,7 +379,7 @@ public class DoubleVal implements NumericVal{
         }
         public void apply( double val ){
             if( dQueue==null) {
-                Logger.error(getID()+" (dv)-> Tried to check for a trigger without a dQueue");
+                Logger.error(id()+" (dv)-> Tried to check for a trigger without a dQueue");
                 return;
             }
             if( ori.isEmpty() || ori.equalsIgnoreCase("always") ) { // always run this cmd
