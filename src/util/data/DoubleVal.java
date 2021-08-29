@@ -2,6 +2,7 @@ package util.data;
 
 import org.tinylog.Logger;
 import util.math.MathUtils;
+import util.task.Task;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import worker.Datagram;
@@ -31,6 +32,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
 
     /* Triggering */
     private ArrayList<TriggeredCmd> triggered;
+    enum TRIGGERTYPE {ALWAYS,CHANGED,STDEV,COMP};
 
     private DoubleVal(){}
 
@@ -244,6 +246,20 @@ public class DoubleVal extends AbstractVal implements NumericVal{
     }
 
     /**
+     * Get the current Standard Deviation based on the history rounded to digits + 2 or 5 digits if no scale was set
+     * @return The calculated standard deviation or NaN if either no history is kept or the history hasn't reached
+     * the full size yet.
+     */
+    public double getStdev(){
+        if( history==null) {
+            Logger.error(id()+" (dv)-> Can't calculate standard deviation without history");
+            return Double.NaN;
+        }else if( history.size() != keepHistory){
+            return Double.NaN;
+        }
+        return MathUtils.calcStandardDeviation(history,digits==-1?5:digits+2);
+    }
+    /**
      * Compare two DoubleVal's based on their values
      * @param dv The DoubleVal to compare to
      * @return True if they have the same value
@@ -264,8 +280,12 @@ public class DoubleVal extends AbstractVal implements NumericVal{
         String line = value+unit;
         if( keepMinMax && max!=Double.MIN_VALUE )
             line += " (Min:"+min+unit+", Max: "+max+unit+")";
-        if( keepHistory>0 && !history.isEmpty())
-            line = (line.endsWith(")")?line.substring(0,line.length()-1)+", ":line+" (")+"Avg:"+getAvg()+unit+")";
+        if( keepHistory>0 && !history.isEmpty()) {
+            line = (line.endsWith(")") ? line.substring(0, line.length() - 1) + ", " : line + " (") + "Avg:" + getAvg() + unit + ")";
+            if( history.size()==keepHistory){
+                line = line.substring(0,line.length()-1) +" StDev: "+getStdev()+unit+")";
+            }
+        }
         if( keepTime ) {
             if (timestamp != null) {
                 line += " Age: " + TimeTools.convertPeriodtoString(Duration.between(timestamp, Instant.now()).getSeconds(), TimeUnit.SECONDS);
@@ -287,6 +307,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
     private class TriggeredCmd{
         String cmd; // The cmd to issue
         String ori; // The compare before it was converted to a function (for toString purposes)
+        TRIGGERTYPE type;
         Function<Double,Boolean> comp; // The compare after it was converted to a function
         boolean triggered=false; // The last result of the comparison
 
@@ -299,12 +320,20 @@ public class DoubleVal extends AbstractVal implements NumericVal{
         public TriggeredCmd( String cmd, String trigger){
             this.cmd=cmd;
             this.ori=trigger;
-            if( !trigger.isEmpty() && !trigger.equalsIgnoreCase("always")
-                                    && !trigger.equalsIgnoreCase("changed") ){
-                comp=MathUtils.parseSingleCompareFunction(trigger);
-                if( comp==null){
-                    this.cmd="";
-                }
+            type=TRIGGERTYPE.COMP;
+            switch( trigger ){
+                case "": case "always": type=TRIGGERTYPE.ALWAYS; break;
+                case "changed": type=TRIGGERTYPE.CHANGED; break;
+                default:
+                    if( trigger.contains("stdev")) {
+                        type = TRIGGERTYPE.STDEV;
+                        trigger=trigger.replace("stdev","");
+                    }
+                    comp=MathUtils.parseSingleCompareFunction(trigger);
+                    if( comp==null){
+                        this.cmd="";
+                    }
+                    break;
             }
         }
         public boolean isInvalid(){
@@ -315,18 +344,32 @@ public class DoubleVal extends AbstractVal implements NumericVal{
                 Logger.error(id()+" (dv)-> Tried to check for a trigger without a dQueue");
                 return;
             }
-            if( ori.isEmpty() || ori.equalsIgnoreCase("always") ) { // always run this cmd
+            boolean ok;
+            switch( type ){
+                case ALWAYS:
+                    dQueue.add(Datagram.system(cmd.replace("$",""+val)));
+                    return;
+                case CHANGED:
+                    if( val != value )
+                        dQueue.add(Datagram.system(cmd.replace("$",""+val)));
+                    return;
+                case COMP:
+                    ok = comp.apply(val);
+                    break;
+                case STDEV:
+                    double sd = getStdev();
+                    if( Double.isNaN(sd))
+                        return;
+                    ok = comp.apply(getStdev()); // Compare with the Standard Deviation instead of value
+                    break;
+                default:
+                    Logger.error(id()+" (dv)-> Somehow an invalid trigger sneaked in... ");
+                    return;
+            }
+            if( !triggered && ok ){
                 dQueue.add(Datagram.system(cmd.replace("$",""+val)));
-            }else if( ori.equalsIgnoreCase("changed")) {// run this cmd if the value changed
-                if( val != value )
-                    dQueue.add(Datagram.system(cmd.replace("$",""+val)));
-            }else{
-                boolean ok = comp.apply(val);
-                if( !triggered && ok ){
-                    dQueue.add(Datagram.system(cmd.replace("$",""+val)));
-                }else if( triggered && !ok){
-                    triggered=false;
-                }
+            }else if( triggered && !ok){
+                triggered=false;
             }
         }
     }

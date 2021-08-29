@@ -73,7 +73,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		waypoints = new Waypoints(settingsPath,scheduler,this,dQueue);
 		return waypoints;
 	}
-
+	/* ************************************ X M L ****************************************************************** */
 	/**
 	 * Read the rtvals node in the settings.xml
 	 */
@@ -166,8 +166,10 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				break;
 		}
 	}
+	/* ************************************* P A R S I N G ********************************************************* */
 	/**
-	 * Simple version of the parse realtime line, just checks all the words to see if any matches the hashmaps
+	 * Simple version of the parse realtime line, just checks all the words to see if any matches the hashmaps.
+	 * It assumes all words are double, but also allows for d:id,t:id and f:id or D: or F: if it should create them
 	 * @param line The line to parse
 	 * @param error The line to return on an error or 'ignore' if errors should be ignored
 	 * @return The (possibly) altered line
@@ -183,7 +185,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					case 'd':
 						if( !hasDouble(id)) {
 							Logger.error("No such double "+id+", extracted from "+line);
-							return error;
+							if( !error.equalsIgnoreCase("ignore"))
+								return error;
 						}
 					case 'D':
 						line = line.replace(word,""+getOrAddDoubleVal(id).value());
@@ -191,12 +194,27 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					case 'f':
 						if( !hasFlag(id)) {
 							Logger.error("No such flag "+id+ ", extracted from "+line);
-							return error;
+							if( !error.equalsIgnoreCase("ignore"))
+								return error;
 						}
 					case 'F':
 						if( !hasFlag(id))
 							setFlagState(id,false);
 						line = line.replace(word, isFlagUp(id) ? "1" : "0");
+						break;
+					case 't': case 'T':
+						var te = texts.get(id);
+						if( te == null && word.charAt(0)=='T') {
+							texts.put(id, "");
+							te="";
+						}
+						if( te !=null ) {
+							line = line.replace(word, te);
+						}else{
+							Logger.error("No such text "+id+", extracted from "+line);
+							if( !error.equalsIgnoreCase("ignore"))
+								return error;
+						}
 						break;
 				}
 			}else {
@@ -215,7 +233,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 						line = line.replace(word, "0");
 					} else if (!error.equalsIgnoreCase("ignore")) {
 						Logger.error("Couldn't process " + word + " found in " + line);
-						return error;
+						if( !error.equalsIgnoreCase("ignore"))
+							return error;
 					}
 				}
 			}
@@ -224,7 +243,10 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	}
 
 	/**
-	 * Stricter version to parse a realtime line, must contain the references within {double:... } or {text:...}.
+	 * Stricter version to parse a realtime line, must contain the references within { }
+	 * Options are:
+	 * - DoubleVal: {d:id} and {double:id} if it should already exist, or {D:id} if it should be created if new (value is 0.0)
+	 * - FlagVal: {f:id} or {b:id} and {flag:id} if it should already exist, or {F:id} if it should be created if new (state will be false)
 	 * This also checks for {utc}/{utclong},{utcshort} to insert current timestamp
 	 * @param line The original line to parse/alter
 	 * @param error Value to put if the reference isn't found

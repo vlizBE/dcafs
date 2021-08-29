@@ -30,7 +30,10 @@ Cleanup release, added comments/javadoc moved stuff around in the .java files et
 - Added reset method, because reload didn't reset
 - Added javadocs and comments here and there
 
-### Fixes
+### DoubleVal
+- Added stdev based trigger, requires the history option to be active `<cmd when="stdev below 0.01">dosomething</cmd>`
+
+### Other Fixes
 - MathUtil, comparisons like 1--10 weren't handled properly, the second replacement altered it too
 
 ## 0.10.12 (28/08/21)
