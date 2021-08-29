@@ -212,7 +212,7 @@ public class MathUtils {
      */
     public static Function<Double,Boolean> parseSingleCompareFunction( String op ){
         var comparePattern = Pattern.compile("[><=!][=]?");
-
+        String ori = op;
         op=op.replace("->","-");
 
         // between 40 and 50
@@ -230,7 +230,7 @@ public class MathUtils {
             op=op.replace(" till ", ";<");
         }
         if( op.contains(" through ")){
-            op=op.replace(" through ", "<=var<=");
+            op=op.replace(" through ", "<=$<=");
         }
         // 15 < x <= 25   or x <= 25
         op = op.replace("not below ",">=");   // retain support for below
@@ -244,15 +244,23 @@ public class MathUtils {
 
         op = op.replace(" ",""); // remove all spaces
 
+        // At this point it should no longer contain letters, they should all have been replaced
+        if( Pattern.matches("",op)) {
+            Logger.error("The op shouldn't contain letters at this point! Original op: "+ori+" Parsed: "+op);
+            return null;
+        }
         var cc = comparePattern.matcher(op)
                 .results()
                 .map(MatchResult::group)
                 .collect(Collectors.toList());
         if( cc.isEmpty() ){ // fe. 1-10
-            op=op.replace("--","<=var<=-");
-            op=op.replace("-","<=var<=");
-            if( op.startsWith("<=var<="))
-                op = "-"+op.substring(7);
+            op=op.replace("--","<=$<=-");// -5 - -10 => -5<=$<=-10
+            if(!op.contains("$"))// Don't replace if the previous step already did
+                op=op.replace("-","<=$<=");
+            if( op.equalsIgnoreCase(ori)) {
+                Logger.error("Couldn't process: "+ori+" reached "+op);
+                return null;
+            }
         }else if( cc.size()==1){
             var c1 = op.split(cc.get(0));
             double fi1 = NumberUtils.toDouble(c1[1]);
