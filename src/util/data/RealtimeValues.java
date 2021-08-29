@@ -26,7 +26,6 @@ import java.util.concurrent.*;
 import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * A storage class
@@ -40,7 +39,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	private final ConcurrentHashMap<String, FlagVal> flagVals = new ConcurrentHashMap<>(); // booleans
 	private final HashMap<String, MathCollector> mathCollectors = new HashMap<>(); // Math collectors
 	private Waypoints waypoints; // waypoints
-	private IssuePool issuePool;
+	private final IssuePool issuePool;
 
 	/* Data update requests */
 	private final HashMap<String, List<Writable>> doubleRequest = new HashMap<>();
@@ -83,19 +82,23 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		String defText = XMLtools.getStringAttribute(fab.getCurrentElement(),"textdefault","");
 		boolean defFlag = XMLtools.getBooleanAttribute(fab.getCurrentElement(),"flagdefault",false);
 
-		fab.getChildren("*").forEach(
+		fab.getChildren("*").forEach( // The tag * is special and acts as wildcard
 				rtval -> {
-					String id = XMLtools.getStringAttribute(rtval,"id","");
-					if( id.isEmpty())
+					String id = XMLtools.getStringAttribute(rtval,"id",""); // get the id of the node
+					if( id.isEmpty()) // Can't do anything without an id
 						return;
-					if( rtval.getTagName().equals("group")){
-						id += "_";
-						for( var groupie : XMLtools.getChildElements(rtval)){
-							var gid = XMLtools.getStringAttribute(groupie,"id","");
-							gid = id + XMLtools.getStringAttribute(groupie,"name",gid);
+					if( rtval.getTagName().equals("group")){ // If the node is a group node
+						id += "_"; // The id we got is the group id, so add an underscore for the full id with name
+						for( var groupie : XMLtools.getChildElements(rtval)){ // Get the nodes inside the group node
+							// Both id and name are valid attributes for the node name that forms the full id
+							// First check if id is used
+							var gid = XMLtools.getStringAttribute(groupie,"id",""); // get the node id
+							// then check if it has an attribute name and use this instead if found
+							gid = id + XMLtools.getStringAttribute(groupie,"name",gid); //
 							processRtvalElement(groupie, gid.toLowerCase(), defDouble, defText, defFlag);
 						}
-					}else {
+					}else { // If it isn't a group node
+						// then the id is the full id
 						processRtvalElement(rtval, id.toLowerCase(), defDouble, defText, defFlag);
 					}
 				}
@@ -113,14 +116,15 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	private void processRtvalElement(Element rtval, String id, double defDouble, String defText, boolean defFlag ){
 		switch( rtval.getTagName() ){
 			case "double":
+				// Both attributes fractiondigits and scale are valid, so check for both
 				int scale = XMLtools.getIntAttribute(rtval,"fractiondigits",-1);
 				if( scale == -1)
 					scale = XMLtools.getIntAttribute(rtval,"scale",-1);
 
-				if( !hasDouble(id))
-					setDouble(id,defDouble,true);
-				var dv = getDoubleVal(id).get();
-				dv.reset(); // reset incase this is called because of reload
+				if( !hasDouble(id)) // If it doesn't exist yet
+					setDouble(id,defDouble,true); // create it
+				var dv = getDoubleVal(id).get();//
+				dv.reset(); // reset needed if this is called because of reload
 				dv.name(XMLtools.getChildValueByTag(rtval,"name",dv.name()))
 						.group(XMLtools.getChildValueByTag(rtval,"group",dv.group()))
 						.unit(XMLtools.getStringAttribute(rtval,"unit",""))
@@ -150,7 +154,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				break;
 			case "flag":
 				var fv = getOrAddFlagVal(id);
-				fv.reset(); // reset incase this is called because of reload
+				fv.reset(); // reset is needed if this is called because of reload
 				fv.name(XMLtools.getChildValueByTag(rtval,"name",fv.name()))
 						.group(XMLtools.getChildValueByTag(rtval,"group",fv.group()))
 						.defState(XMLtools.getBooleanAttribute(rtval,"default",defFlag));
@@ -179,7 +183,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		var found = words.matcher(line).results().map(MatchResult::group).collect(Collectors.toList());
 
 		for( var word : found ){
-			if( word.contains(":")){
+			if( word.contains(":")){ // Check if the word contains a : with means it's {d:id} etc
 				var id = word.split(":")[1];
 				switch( word.charAt(0) ) {
 					case 'd':
@@ -217,24 +221,24 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 						}
 						break;
 				}
-			}else {
-				var d = getDouble(word, Double.NaN);
+			}else { // If it doesn't contain : it could be anything...
+				var d = getDouble(word, Double.NaN); // First check if it's a double
 				if (!Double.isNaN(d)) {
 					line = line.replace(word, "" + d);
-				} else {
-					var t = getText(word, "");
+ 				} else { // if not
+					var t = getText(word, ""); // check if it's a text
 					if (!t.isEmpty()) {
 						line = line.replace(word, t);
-					} else if (hasFlag(word)) {
+					} else if (hasFlag(word)) { // if it isn't a text, check if it's a flag
 						line = line.replace(word, isFlagUp(word) ? "1" : "0");
-					} else if (error.equalsIgnoreCase("create")) {
+					} else if (error.equalsIgnoreCase("create")) { // if still not found and error is set to create
+						// add it as a double
 						getOrAddDoubleVal(word).updateValue(0);
 						Logger.warn("Created doubleval " + word + " with value 0");
-						line = line.replace(word, "0");
-					} else if (!error.equalsIgnoreCase("ignore")) {
-						Logger.error("Couldn't process " + word + " found in " + line);
-						if( !error.equalsIgnoreCase("ignore"))
-							return error;
+						line = line.replace(word, "0"); // default of a double is 0
+					} else if (!error.equalsIgnoreCase("ignore")) { // if it's not ignore
+						Logger.error("Couldn't process " + word + " found in " + line); // log it and abort
+						return error;
 					}
 				}
 			}
@@ -297,6 +301,18 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		}
 		return line;
 	}
+
+	/**
+	 * Checks the exp for any mentions of the numerical rtvals and if found adds these to the nums arraylist and replaces
+	 * the reference with i followed by the index in nums+offset. {D:id} and {F:id} will add the rtvals if they don't
+	 * exist yet.
+	 *
+	 * fe. {d:temp}+30, nums still empty and offset 1: will add the DoubleVal temp to nums and alter exp to i1 + 30
+	 * @param exp The expression to check
+	 * @param nums The Arraylist to hold the numerical values
+	 * @param offset The index offset to apply
+	 * @return The altered expression
+	 */
 	public String buildNumericalMem( String exp, ArrayList<NumericVal> nums, int offset){
 		if( nums==null)
 			nums = new ArrayList<>();
@@ -393,8 +409,14 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		nums.trimToSize();
 		return exp;
 	}
+
+	/**
+	 * Look for a numerical val (i.e. DoubleVal or FlagVal) with the given id
+	 * @param id The id to look for
+	 * @return An optional Numericalval that's empty if nothing was found
+	 */
 	public Optional<NumericVal> getNumericVal( String id){
-		if( id.startsWith("{")){
+		if( id.startsWith("{")){ // First check if the id is contained inside a { }
 			id = id.substring(1,id.length()-2);
 			var pair = id.split(":");
 			switch(pair[0].toLowerCase()) {
@@ -404,7 +426,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					return Optional.ofNullable(flagVals.get(id));
 			}
 			return Optional.empty();
-		}
+		} // If it isn't inside { } just check if a match is found in the DoubleVals and then the FlagVals
 		return getDoubleVal(id).map( d -> Optional.of((NumericVal)d)).orElse(Optional.ofNullable((flagVals.get(id))));
 	}
 	/* ************************************ D O U B L E V A L ***************************************************** */
@@ -506,6 +528,13 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			return false;
 		return !setDouble(id,value,false);
 	}
+
+	/**
+	 * Alter all the values of the doubles in the given group
+	 * @param group The group to alter
+	 * @param value The value to set
+	 * @return The amount of doubles updated
+	 */
 	public int updateDoubleGroup(String group, double value){
 		var set = doubleVals.values().stream().filter( dv -> dv.group().equalsIgnoreCase(group)).collect(Collectors.toSet());
 		set.forEach(dv->dv.updateValue(value));
@@ -538,34 +567,6 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			return defVal;
 		}
 		return d.value();
-	}
-	/**
-	 * Get a listing of all the parameters-value pairs currently stored
-	 *
-	 * @return Readable listing of the parameters
-	 */
-	public List<String> getDoublePairs() {
-		ArrayList<String> ids = new ArrayList<>();
-		doubleVals.forEach((id, value) -> ids.add(id + " : " + value));
-		Collections.sort(ids);
-		return ids;
-	}
-	public List<String> getDoubleIDs() {
-		ArrayList<String> ids = new ArrayList<>();
-		doubleVals.forEach((id, value) -> ids.add(id));
-		Collections.sort(ids);
-		return ids;
-	}
-	/**
-	 * Get a listing of double id : value pairs currently stored that meet the id regex request
-	 *
-	 * @return Readable listing of the doubles
-	 */
-	public String getMatchingDoubles(String id, String eol) {
-		return doubleVals.entrySet().stream().filter(e -> e.getKey().matches( id ))
-												.sorted(Map.Entry.comparingByKey())
-												.map(e -> e.getKey() + " : " + e.getValue().toString())
-												.collect(Collectors.joining(eol));
 	}
 	/* *********************************** T E X T S  ************************************************************* */
 	public boolean hasText(String id){
@@ -606,35 +607,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		Collections.sort(params);
 		return params;
 	}
-	public List<String> getTextIDs() {
-		ArrayList<String> params = new ArrayList<>();
-		texts.forEach((param, value) -> params.add(param));
-		Collections.sort(params);
-		return params;
-	}
-	/**
-	 * Get a listing of text ids : value pairs currently stored that meet the id
-	 * request
-	 *
-	 * @return Readable listing of the parameters
-	 */
-	public String getFilteredTexts(String id, String eol) {
-		Stream<Entry<String, String>> stream;
-		if (id.endsWith("*") && id.startsWith("*")) {
-			stream = texts.entrySet().stream()
-					.filter(e -> e.getKey().contains(id.substring(1, id.length() - 1)));
-		} else if (id.endsWith("*")) {
-			stream = texts.entrySet().stream()
-					.filter(e -> e.getKey().startsWith(id.substring(0, id.length() - 1)));
-		} else if (id.startsWith("*")) {
-			stream = texts.entrySet().stream().filter(e -> e.getKey().endsWith(id.substring(1)));
-		} else if (id.isEmpty()) {
-			stream = texts.entrySet().stream();
-		} else {
-			stream = texts.entrySet().stream().filter(e -> e.getKey().equalsIgnoreCase(id));
-		}
-		return stream.sorted(Map.Entry.comparingByKey()).map(e -> e.getKey() + " : " + e.getValue()).collect(Collectors.joining(eol));
-	}
+
 	/* ************************************ F L A G S ************************************************************* */
 	public FlagVal getOrAddFlagVal( String id ){
 		if( id.isEmpty())
@@ -724,8 +697,12 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	}
 	/* ********************************* O V E R V I E W *********************************************************** */
 
-	public String storeRTVals(Path settings){
-		XMLfab fab = XMLfab.withRoot(settings,"dcafs","settings","rtvals");
+	/**
+	 * Store the rtvals in the settings.xml
+	 * @return The result
+	 */
+	public String storeRTVals(){
+		XMLfab fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
 		var vals = doubleVals.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Entry::getValue).collect(Collectors.toList());
 		for( var dv : vals ){
 			if( dv.group().isEmpty()) {
@@ -1095,7 +1072,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		String[] cmds = request[1].split(",");
 		if( cmds.length==1 ){
 			switch( cmds[0]){
-				case "store": return  storeRTVals(settingsPath);
+				case "store": return  storeRTVals();
 				case "reload":
 					readFromXML();
 					return "Reloaded rtvals";
@@ -1175,6 +1152,12 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				.forEach(fv -> join.add(space+(fv.group().isEmpty()?"":fv.group()+" -> ")+fv.name()+" : "+fv));
 		return join.toString();
 	}
+
+	/**
+	 * Get the full listing of all doubles,flags and text, so both grouped and ungrouped
+	 * @param html If true will use html newline etc
+	 * @return The listing
+	 */
 	public String getFullList(boolean html){
 		String eol = html?"<br>":"\r\n";
 		String title = html?"<b>Grouped</b>":TelnetCodes.TEXT_CYAN+"Grouped"+TelnetCodes.TEXT_YELLOW;
@@ -1214,6 +1197,11 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		}
 		return join.toString();
 	}
+
+	/**
+	 * Get a list of all the groups that exist in the rtvals
+	 * @return The list of the groups
+	 */
 	public List<String> getGroups(){
 		var groups = doubleVals.values().stream()
 				.map(DoubleVal::group)
@@ -1235,13 +1223,28 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		return groups;
 	}
 	/* ******************************** I S S U E P O O L ********************************************************** */
+
+	/**
+	 * Get a list of the id's of the active issues
+	 * @return A list of the active issues id's
+	 */
 	public ArrayList<String> getActiveIssues(){
 		return issuePool.getActives();
 	}
+
+	/**
+	 * Get the IssuePool object
+	 * @return The IssuePool object
+	 */
 	public IssuePool getIssuePool(){
 		return issuePool;
 	}
-	/* ******************************** W A Y P O I N T ************************************************************ */
+	/* ******************************** W A Y P O I N T S *********************************************************** */
+
+	/**
+	 * Get the waypoints object in an optional, which is empty if it doesn't exist yet
+	 * @return The optional that could contain the waypoints object
+	 */
 	public Optional<Waypoints> getWaypoints(){
 		return Optional.ofNullable(waypoints);
 	}
