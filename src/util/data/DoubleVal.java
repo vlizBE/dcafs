@@ -148,7 +148,8 @@ public class DoubleVal extends AbstractVal implements NumericVal{
         value=defVal;
         keepMinMax=false;
         digits=-1;
-        triggered.clear();
+        if( triggered!=null)
+            triggered.clear();
         super.reset();
     }
     /**
