@@ -916,11 +916,14 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				var fv = flagVals.get(cmds[1]);
 				if( fv==null)
 					return "No such double: "+cmds[1];
-				String cmd = request[1].substring(request[1].indexOf(":")+1); // Get the cmd
-				fv.addTriggeredCmd(cmds[2], cmd);
+				String cmd = request[1].substring(request[1].indexOf(":")+1);
+				String when = cmds[2].substring(0,cmds[2].indexOf(":"));
+				if( !fv.hasTriggeredCmds())
+					fv.enableTriggeredCmds(dQueue);
+				fv.addTriggeredCmd(when, cmd);
 				XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals")
 						.selectChildAsParent("flag","id",cmds[1])
-						.ifPresent( f -> f.addChild("cmd",cmd).attr("when",cmds[2]).build());
+						.ifPresent( f -> f.addChild("cmd",cmd).attr("when",when).build());
 				return "Cmd added";
 		}
 		return "unknown command "+request[0]+":"+request[1];
@@ -1000,11 +1003,13 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				if( dv==null)
 					return "No such double: "+cmds[1];
 				String cmd = request[1].substring(request[1].indexOf(":")+1);
-
-				dv.addTriggeredCmd(cmds[2],cmd);
+				String when = cmds[2].substring(0,cmds[2].indexOf(":"));
+				if( !dv.hasTriggeredCmds())
+					dv.enableTriggeredCmds(dQueue);
+				dv.addTriggeredCmd(when,cmd);
 				XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals")
 						.selectChildAsParent("double","id",cmds[1])
-						.ifPresent( f -> f.addChild("cmd",cmd).attr("when",cmds[2]).build());
+						.ifPresent( f -> f.addChild("cmd",cmd).attr("when",when).build());
 				return "Cmd added";
 			case "reqs":
 				join.setEmptyValue("None yet");
