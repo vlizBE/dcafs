@@ -116,9 +116,9 @@ public class Waypoints implements Commandable {
                         String dir = XMLtools.getStringAttribute(travelEle,"dir","");
                         String bearing = XMLtools.getStringAttribute(travelEle,"bearing","from 0 to 360");
 
-                        var trav = wp.addTravel(idTravel,dir,bearing);
-                        XMLfab.getRootChildren(settingsPath, "dcafs", "settings", XML_TAG, XML_CHILD_TAG,XML_TRAVEL,"cmd")
-                                .forEach( x -> trav.addCmd(x.getTextContent()));
+                        wp.addTravel(idTravel,dir,bearing).ifPresent(
+                                t -> XMLfab.getRootChildren(settingsPath, "dcafs", "settings", XML_TAG, XML_CHILD_TAG,XML_TRAVEL,"cmd")
+                                            .forEach( x -> t.addCmd(x.getTextContent())));
                     }
                 }
         	}

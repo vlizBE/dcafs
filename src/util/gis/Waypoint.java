@@ -13,6 +13,7 @@ import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -264,11 +265,12 @@ public class Waypoint implements Comparable<Waypoint>{
 	}
 	/* ******************************************************************************** **/
 	/**
-	 * Adds a possible travel to the waypoint
+	 * Adds a travel to the waypoint
 	 * 
 	 * @param name The name of the travel
 	 * @param dir The direction either in(or enter) or out( or leave)
 	 * @param bearing Range of bearing in readable english, fe. from 100 to 150
+	 * @return An optional Travel, which is empty if the bearing parsing failed
 	 */
 	public Optional<Travel> addTravel( String name, String dir, String bearing ){
 		var travel = new Travel(name, dir, bearing);
