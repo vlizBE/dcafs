@@ -196,4 +196,10 @@ public class FlagVal extends AbstractVal implements NumericVal{
         cmdLists[index].add(cmd);// add the cmd to the list on the position determined by the trigger type
         return true;
     }
+    public boolean hasTriggeredCmds(){
+        for( var ar : cmdLists)
+            if( ar!=null)
+                return true;
+        return false;
+    }
 }

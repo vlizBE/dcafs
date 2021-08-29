@@ -198,7 +198,9 @@ public class DoubleVal extends AbstractVal implements NumericVal{
         triggered.add( new TriggeredCmd(cmd,trigger) );
         return true;
     }
-
+    public boolean hasTriggeredCmds(){
+        return triggered!=null&& !triggered.isEmpty();
+    }
     /* ***************************************** U S I N G ********************************************************** */
     public String unit(){ return unit; }
 

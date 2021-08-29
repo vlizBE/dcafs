@@ -79,6 +79,12 @@ public abstract class AbstractVal {
      * @return True if adding was successful
      */
     abstract boolean addTriggeredCmd(String cmd, String trigger);
+
+    /**
+     * Check if this has triggered cmd's
+     * @return True if it has at least one cmd
+     */
+    abstract boolean hasTriggeredCmds();
     /* ************************************** Getters ************************************************************** */
     /**
      * Get the id, which is group + underscore + name
