@@ -63,15 +63,6 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		readFromXML();
 	}
 
-	/**
-	 * Enable tracking/storing waypoints
-	 * @param scheduler Scheduler to use for the tracking
-	 * @return The Waypoints object
-	 */
-	public Waypoints enableWaypoints(ScheduledExecutorService scheduler){
-		waypoints = new Waypoints(settingsPath,scheduler,this,dQueue);
-		return waypoints;
-	}
 	/* ************************************ X M L ****************************************************************** */
 	/**
 	 * Read the rtvals node in the settings.xml
@@ -601,12 +592,6 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		String result = texts.get(parameter);
 		return result == null ? def : result;
 	}
-	public List<String> getTextPairs() {
-		ArrayList<String> params = new ArrayList<>();
-		texts.forEach((param, value) -> params.add(param + " : " + value));
-		Collections.sort(params);
-		return params;
-	}
 
 	/* ************************************ F L A G S ************************************************************* */
 	public FlagVal getOrAddFlagVal( String id ){
@@ -614,6 +599,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			return null;
 
 		var val = flagVals.get(id);
+
 		if( val==null){
 			val = FlagVal.newVal(id);
 			flagVals.put(id,val);
@@ -748,20 +734,6 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 
 	/* ******************************************************************************************************/
 
-	public String getRequestList( String request ){
-		String[] req = request.split(":");
-		StringJoiner join = new StringJoiner("\r\n");
-		join.setEmptyValue("None yet");
-		switch (req[0]) {
-			case "rtval": case "double": case "doubles":
-				doubleRequest.forEach((rq, list) -> join.add(rq +" -> "+list.size()+" requesters"));
-				break;
-			case "texts":
-				textRequest.forEach((rq, list) -> join.add(rq +" -> "+list.size()+" requesters"));
-				break;
-		}
-		return join.toString();
-	}
 	public boolean addRequest(Writable writable, String[] req) {
 
 		switch (req[0]) {
@@ -845,16 +817,31 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				cmds[2]+=","+cmds[3];
 			}
 		}
+		String cyan = html?"":TelnetCodes.TEXT_CYAN;
+		String green=html?"":TelnetCodes.TEXT_GREEN;
+		String ora = html?"":TelnetCodes.TEXT_ORANGE;
+		String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
+
+		var join = new StringJoiner(html?"<br>":"\r\n");
+		join.setEmptyValue("None yet");
 		switch( cmds[0] ){
+			/* Info */
 			case "?":
-				var join = new StringJoiner(html?"<br>":"\r\n");
-				join.add( " texts,? -> Show this message" )
-						.add( " texts or texts:list -> Give a listing of currently stored texts")
-						.add( " texts:new,id,value -> Create a new text (or update) with the given id/value")
-						.add( " texts:update,id,value -> Update an existing text, do nothing if not found")
-						.add( " texts:id,value -> Same as update, so don't call the text new or update...");
+				join.add(ora+"Note: both tv and texts are valid starters"+reg)
+						.add( cyan+" Create or alter"+reg)
+						.add( green+"  tv:new,id,value"+reg+" -> Create a new text (or update) with the given id/value")
+						.add( green+"  tv:update,id,value"+reg+" -> Update an existing text, do nothing if not found")
+						.add( cyan+" Get info"+reg)
+						.add( green+"  tv:?"+reg+" -> Show this message")
+						.add( green+"  tv:list"+reg+" -> Get a listing of currently stored texts")
+						.add( green+"  tv:reqs"+reg+" -> Get a listing of the requests active");
+				return join.toString();
 			case "list":
-				return String.join(html?"<br>":"\r\n",getTextPairs());
+				return String.join(html?"<br>":"\r\n",getRtvalsList(html,false,false,true));
+			case "reqs":
+				textRequest.forEach((rq, list) -> join.add(rq +" -> "+list.size()+" requesters"));
+				return join.toString();
+			/* Create or alter */
 			case "new": case "create":
 				if( setText(cmds[1],cmds[2]) )
 					return cmds[1]+" stored with value "+cmds[2];
@@ -874,19 +861,28 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		if( request[1].isEmpty())
 			request[1]="list";
 
+		String cyan = html?"":TelnetCodes.TEXT_CYAN;
+		String green=html?"":TelnetCodes.TEXT_GREEN;
+		String ora = html?"":TelnetCodes.TEXT_ORANGE;
+		String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
+
 		var cmds = request[1].split(",");
 		var join = new StringJoiner(html?"<br>":"\r\n");
+		join.setEmptyValue("None yet");
 		var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
 		switch( cmds[0] ){
 			case "?":
-				join.add("flags or flags:list -> Give a listing of all current flags and their state")
-						.add("flags:raise,id or flags:set,id -> Raises the flag/Sets the bit, created if new")
-						.add("flags:lower,id or flags:clear,id -> Lowers the flag/Clears the bit, created if new")
-						.add("flags:toggle,id -> Toggles the flag/bit, not created if new");
-			case "list":
-				join.setEmptyValue("No flags yet");
-				listFlags().forEach(join::add);
+				join.add(ora+"Note: both fv and flags are valid starters"+reg)
+						.add( cyan+" Create or alter"+reg)
+						.add( green+"  fv:raise,id"+reg+" or "+green+"flags:set,id"+reg+" -> Raises the flag/Sets the bit, created if new")
+						.add( green+"  fv:lower,id"+reg+" or "+green+"flags:clear,id"+reg+" -> Lowers the flag/Clears the bit, created if new")
+						.add( green+"  fv:toggle,id"+reg+" -> Toggles the flag/bit, not created if new")
+						.add( green+"  fv:addcmd,id,when:cmd"+reg+" -> Add a cmd with the given trigger to id, current triggers:raised,lowered")
+						.add( cyan+" Get info"+reg)
+						.add( green+"  fv:list"+reg+" -> Give a listing of all current flags and their state");
 				return join.toString();
+			case "list":
+				return getRtvalsList(html,false,true,false);
 			case "new":
 				if( cmds.length <2)
 					return "Not enough arguments, need flags:new,id<,state> or fv:new,id<,state>";
@@ -915,16 +911,16 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				raiseFlag(cmds[1]);
 				return "Flag raised";
 			case "addcmd":
-				if( cmds.length < 4 )
-					return "Not enough arguments, fv:addcmd,id,when,cmd";
+				if( cmds.length < 3 )
+					return "Not enough arguments, fv:addcmd,id,when:cmd";
 				var fv = flagVals.get(cmds[1]);
 				if( fv==null)
 					return "No such double: "+cmds[1];
-				int cmdIndex = request[1].indexOf(","+cmds[3]+",")+1; // Get the index at which the cmd starts
-				fv.addTriggeredCmd(cmds[2], request[1].substring(cmdIndex));
+				String cmd = request[1].substring(request[1].indexOf(":")+1); // Get the cmd
+				fv.addTriggeredCmd(cmds[2], cmd);
 				XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals")
 						.selectChildAsParent("flag","id",cmds[1])
-						.ifPresent( f -> f.addChild("cmd",request[1].substring(cmdIndex)).attr("when",cmds[2]).build());
+						.ifPresent( f -> f.addChild("cmd",cmd).attr("when",cmds[2]).build());
 				return "Cmd added";
 		}
 		return "unknown command "+request[0]+":"+request[1];
@@ -934,18 +930,29 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			request[1]="list";
 
 		var cmds = request[1].split(",");
+		String cyan = html?"":TelnetCodes.TEXT_CYAN;
+		String green=html?"":TelnetCodes.TEXT_GREEN;
+		String ora = html?"":TelnetCodes.TEXT_ORANGE;
+		String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
+
 		double result;
 		var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
+		var join = new StringJoiner(html?"<br>":"\r\n");
 		switch( cmds[0] ){
 			case "?":
-				var join = new StringJoiner(html?"<br>":"\r\n");
-				join.add( " double:? -> Show this message" )
-						.add( " doubles or doubles:list -> Give a listing of currently stored texts")
-						.add( " doubles:new,id,value -> Create a new double (or update) with the given id/value")
-						.add( " doubles:update,id,value -> Update an existing double, do nothing if not found")
-						.add( " doubles:id,value -> Same as update, so don't call the double new or update...");
-			case "list":
-				return String.join(html?"<br>":"\r\n",getTextPairs());
+				join.add(ora+"Note: both dv and doubles are valid starters"+reg)
+						.add( cyan+" Create or alter"+reg)
+						.add( green+"  dv:new,id,value"+reg+" -> Create a new double (or update) with the given id/value")
+						.add( green+"  dv:update,id,value"+reg+" -> Update an existing double, do nothing if not found")
+						.add( green+"  dv:addcmd,id,when:cmd"+reg+" -> Add a cmd with the given trigger to id")
+						.add( green+"  dv:alter,id,param:value"+reg+" -> Alter some of the params of id, currently scale and unit are possible")
+						.add( green+"  dv:updategroup,groupid,value"+reg+" -> Update all DoubleVals that belong to the groupid with the given value")
+						.add( cyan+" Get info"+reg)
+				  	    .add( green+"  dv:?"+reg+" -> Show this message" )
+						.add( green+"  dv:list"+reg+" -> Get a listing of currently stored texts")
+						.add( green+"  dv:reqs"+reg+" -> Get a listing of all the requests currently active");
+				return join.toString();
+			case "list": return getRtvalsList(html,true,false,false);
 			case "new": case "create":
 				result=0;
 				if( cmds.length==3 ) {
@@ -987,26 +994,23 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					return "No double's updated";
 				return "Updated "+up+" doubles";
 			case "addcmd":
-				if( cmds.length < 4 )
-					return "Not enough arguments, dv:addcmd,id,when,cmd";
+				if( cmds.length < 3)
+					return "Not enough arguments, dv:addcmd,id,when:cmd";
 				var dv = doubleVals.get(cmds[1]);
 				if( dv==null)
 					return "No such double: "+cmds[1];
-				int cmdIndex = request[1].indexOf(","+cmds[3]+",")+1; // Get the index at which the cmd starts
+				String cmd = request[1].substring(request[1].indexOf(":")+1);
 
-				dv.addTriggeredCmd(cmds[2],request[1].substring(cmdIndex));
+				dv.addTriggeredCmd(cmds[2],cmd);
 				XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals")
 						.selectChildAsParent("double","id",cmds[1])
-						.ifPresent( f -> f.addChild("cmd",request[1].substring(cmdIndex)).attr("when",cmds[2]).build());
+						.ifPresent( f -> f.addChild("cmd",cmd).attr("when",cmds[2]).build());
 				return "Cmd added";
+			case "reqs":
+				join.setEmptyValue("None yet");
+				doubleRequest.forEach((rq, list) -> join.add(rq +" -> "+list.size()+" requesters"));
+				return join.toString();
 			default:
-				if( hasDouble(cmds[0]) ) {
-					result = processExpression(cmds[0],false);
-					if( Double.isNaN(result) )
-						return "Unknown id(s) in the expression "+cmds[1];
-					updateDouble(cmds[0],result);
-					return cmds[0]+" updated to "+result;
-				}
 				return "unknown command: "+request[0]+":"+request[1];
 		}
 	}
@@ -1070,7 +1074,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			return " -> Get a list of all rtvals options";
 
 		if( request[1].isEmpty())
-			return getFullList(html);
+			return getRtvalsList(html,true,true,true);
 
 		String[] cmds = request[1].split(",");
 		if( cmds.length==1 ){
@@ -1087,7 +1091,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			}
 		}else if(cmds.length==2){
 			switch(cmds[0]){
-				case "group":  return getRTValsGroupList(cmds[1],html);
+				case "group":  return getRTValsGroupList(cmds[1],true,true,true,html);
 				case "groups":
 					String groups = String.join(html?"<br>":"\r\n",getGroups());
 					return groups.isEmpty()?"No groups yet":groups;
@@ -1102,29 +1106,35 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	 * @param html Use html formatting or telnet
 	 * @return The listing
 	 */
-	public String getRTValsGroupList(String group, boolean html) {
-		String eol = html?"<br>":"\r\n";
-		String title = html?"<b>Group: "+group+"</b>": TelnetCodes.TEXT_CYAN+"Group: "+group+TelnetCodes.TEXT_YELLOW;
-		String space = html?"  ":"  ";
+	public String getRTValsGroupList(String group, boolean showDoubles, boolean showFlags, boolean showTexts, boolean html) {
+		String eol = html ? "<br>" : "\r\n";
+		String title = html ? "<b>Group: " + group + "</b>" : TelnetCodes.TEXT_CYAN + "Group: " + group + TelnetCodes.TEXT_YELLOW;
+		String space = html ? "  " : "  ";
 
-		StringJoiner join = new StringJoiner(eol,title+eol,"");
-		join.setEmptyValue("No matches found");
-		doubleVals.values().stream().filter( dv -> dv.group().equalsIgnoreCase(group))
-				.sorted( (dv1,dv2)-> {
-					if( dv1.order()!= dv2.order() ) {
-						return Integer.compare(dv1.order(), dv2.order());
-					}else{
-						return dv1.name().compareTo(dv2.name());
-					}
-				})
-				.map( dv -> space+dv.name()+" : "+dv) //Change it to strings
-				.forEach(join::add); // Then add the sorted the strings
-		texts.entrySet().stream().filter(ent -> ent.getKey().startsWith(group+"_"))
-				.map( ent -> space+ent.getKey().split("_")[1]+" : "+ent.getValue())
-				.sorted().forEach(join::add);
-		flagVals.values().stream().filter(fv -> fv.group().equalsIgnoreCase(group))
-				.map( v -> space+v.name()+" : "+v) //Change it to strings
-				.sorted().forEach(join::add); // Then add the sorted the strings
+		StringJoiner join = new StringJoiner(eol, title + eol, "");
+		join.setEmptyValue("None yet");
+		if (showDoubles){
+			doubleVals.values().stream().filter(dv -> dv.group().equalsIgnoreCase(group))
+					.sorted((dv1, dv2) -> {
+						if (dv1.order() != dv2.order()) {
+							return Integer.compare(dv1.order(), dv2.order());
+						} else {
+							return dv1.name().compareTo(dv2.name());
+						}
+					})
+					.map(dv -> space + dv.name() + " : " + dv) //Change it to strings
+					.forEach(join::add); // Then add the sorted strings
+		}
+		if( showTexts ) {
+			texts.entrySet().stream().filter(ent -> ent.getKey().startsWith(group + "_"))
+					.map(ent -> space + ent.getKey().split("_")[1] + " : " + ent.getValue())
+					.sorted().forEach(join::add);
+		}
+		if( showFlags ) {
+			flagVals.values().stream().filter(fv -> fv.group().equalsIgnoreCase(group))
+					.map(v -> space + v.name() + " : " + v) //Change it to strings
+					.sorted().forEach(join::add); // Then add the sorted the strings
+		}
 		return join.toString();
 	}
 	/**
@@ -1161,7 +1171,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	 * @param html If true will use html newline etc
 	 * @return The listing
 	 */
-	public String getFullList(boolean html){
+	public String getRtvalsList(boolean html, boolean showDoubles, boolean showFlags, boolean showTexts){
 		String eol = html?"<br>":"\r\n";
 		String title = html?"<b>Grouped</b>":TelnetCodes.TEXT_CYAN+"Grouped"+TelnetCodes.TEXT_YELLOW;
 		String space = html?"  ":"  ";
@@ -1169,12 +1179,12 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		join.setEmptyValue("None yet");
 
 		// Find & add the groups
-		getGroups().forEach( group -> join.add(getRTValsGroupList(group,html)).add("") );
+		getGroups().forEach( group -> join.add(getRTValsGroupList(group,showDoubles,showFlags,showTexts,html)).add("") );
 
 		// Add the not grouped ones
-		boolean ngDoubles = doubleVals.values().stream().anyMatch( dv -> dv.group().isEmpty());
-		boolean ngTexts = texts.keySet().stream().anyMatch(k -> k.contains("_"));
-		boolean ngFlags = flagVals.values().stream().anyMatch( fv -> fv.group().isEmpty());
+		boolean ngDoubles = doubleVals.values().stream().anyMatch( dv -> dv.group().isEmpty())&&showDoubles;
+		boolean ngTexts = texts.keySet().stream().anyMatch(k -> k.contains("_"))&&showTexts;
+		boolean ngFlags = flagVals.values().stream().anyMatch( fv -> fv.group().isEmpty())&&showFlags;
 
 		if( ngDoubles || ngTexts || ngFlags) {
 			join.add("");
@@ -1243,7 +1253,15 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		return issuePool;
 	}
 	/* ******************************** W A Y P O I N T S *********************************************************** */
-
+	/**
+	 * Enable tracking/storing waypoints
+	 * @param scheduler Scheduler to use for the tracking
+	 * @return The Waypoints object
+	 */
+	public Waypoints enableWaypoints(ScheduledExecutorService scheduler){
+		waypoints = new Waypoints(settingsPath,scheduler,this,dQueue);
+		return waypoints;
+	}
 	/**
 	 * Get the waypoints object in an optional, which is empty if it doesn't exist yet
 	 * @return The optional that could contain the waypoints object
