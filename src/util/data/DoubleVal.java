@@ -49,31 +49,67 @@ public class DoubleVal implements NumericVal{
         setValue(val);
     }
 
+    /**
+     * Constructs a new DoubleVal with the given group and name
+     *
+     * @param group The group this DoubleVal belongs to
+     * @param name The name for the DoubleVal
+     * @return The constructed DoubleVal
+     */
     public static DoubleVal newVal(String group, String name){
         return new DoubleVal().group(group).name(name);
     }
+
+    /**
+     * Construct a new DoubleVal with the given id which is the combination of the group and name separated with an
+     * underscore
+     * @param combined group + underscore + name = id
+     * @return the constructed DoubleVal
+     */
     public static DoubleVal newVal(String combined){
         int us = combined.indexOf("_");
 
-        if( us != -1) {
+        if( us != -1) { // If this contains an underscore, split it
             return new DoubleVal().group(combined.substring(0,us)).name(combined.substring(us+1));
         }
-        return new DoubleVal().name(combined);
+        return new DoubleVal().name(combined);// If no underscore, this means no group id given
     }
     /* ********************************* Constructing ************************************************************ */
+
+    /**
+     * Set the name, this needs to be unique within the group
+     * @param name The new name
+     * @return This object with altered name
+     */
     public DoubleVal name(String name){
         this.name=name;
         return this;
     }
+    /**
+     * Set the group, multiple DoubleVals can share a group id
+     * @param group The new group
+     * @return This object with altered group
+     */
     public DoubleVal group(String group){
         this.group=group;
         return this;
     }
 
+    /**
+     * Set the unit of the value fe. °C
+     * @param unit The unit for the value
+     * @return This object with updated unit
+     */
     public DoubleVal unit(String unit){
         this.unit=unit;
         return this;
     }
+
+    /**
+     * Update the value, this will -depending on the options set- also update related variables
+     * @param val The new value
+     * @return This object after updating the value etc
+     */
     public DoubleVal value( double val){
 
         /* Keep history of passed values */
@@ -103,18 +139,41 @@ public class DoubleVal implements NumericVal{
         }
         return this;
     }
+
+    /**
+     * Set the default value, this will be used as initial value and after a reset
+     * @param defVal The default value
+     * @return This object after altering the defValue if not NaN
+     */
     public DoubleVal defValue( double defVal){
-        if( !Double.isNaN(defVal) ) {
+        if( !Double.isNaN(defVal) ) { // If the given value isn't NaN
             this.defVal = defVal;
             value=defVal;
         }
         return this;
     }
 
+    /**
+     * Reset this DoubleVal to its default value
+     */
+    public void reset(){
+        value=defVal;
+    }
+    /**
+     * Set the amount of digits to scale to using half up rounding
+     * @param fd The amount of digits
+     * @return This object after setting the digits
+     */
     public DoubleVal fractionDigits(int fd){
         this.digits=fd;
         return this;
     }
+
+    /**
+     * Enable keeping old values up till the given count
+     * @param count The amount of old values to store
+     * @return This object with updated count and created history arraylist
+     */
     public DoubleVal enableHistory(int count){
         if(count<=0)
            return this;
@@ -122,33 +181,73 @@ public class DoubleVal implements NumericVal{
         history=new ArrayList<>();
         return this;
     }
+
+    /**
+     * Enable keeping time of the last value update
+     * @return This object but with time keeping enabled
+     */
     public DoubleVal keepTime(){
         keepTime=true;
         return this;
     }
+
+    /**
+     * Enable keeping track of the max and min values received since last reset
+     * @return This object but with min max enabled
+     */
     public DoubleVal keepMinMax(){
         keepMinMax=true;
         return this;
     }
-    public DoubleVal order( int order){
+
+    /**
+     * Set the order in which this item should be listed in the group list, the higher the order the higher in the list.
+     * If the order is shared, it will be sorted alphabetically
+     * @param order The new order for this object
+     * @return This object with updated order
+     */
+    public DoubleVal order( int order ){
         this.order=order;
         return this;
     }
+
+    /**
+     * Get the order, which determines its place in the group list
+     * @return The order of this object
+     */
     public int order(){
         return order;
     }
+
+    /**
+     * Enable allowing triggered commands to be added to this DoubleVal
+     * @param dQueue The queue in which the datagram holding the command needs to be put
+     * @return This object but with triggered commands enabled
+     */
     public DoubleVal enableTriggeredCmds(BlockingQueue<Datagram> dQueue){
         this.dQueue=dQueue;
         return this;
     }
-    public DoubleVal addTriggeredCmd(String cmd, String trigger){
+
+    /**
+     * Tries to add a cmd with given trigger, will warn if no valid queue is present to actually execute them
+     * @param cmd The cmd to trigger, $ will be replaced with the current value
+     * @param trigger The trigger which is either a comparison between the value and another fixed value fe. above 10 or
+     *                'always' to trigger on every update or 'changed' to trigger only on a changed value
+     */
+    public boolean addTriggeredCmd(String cmd, String trigger){
         if( dQueue==null)
             Logger.error("Tried to add cmd "+cmd+" but dQueue still null");
         if( triggered==null)
             triggered = new ArrayList<>();
 
+        var td = new TriggeredCmd(cmd,trigger);
+        if( td.isInvalid()) {
+            Logger.error(getID()+" (dv)-> Failed to convert trigger: "+trigger);
+            return false;
+        }
         triggered.add( new TriggeredCmd(cmd,trigger) );
-        return this;
+        return true;
     }
 
     /* ***************************************** U S I N G ********************************************************** */
@@ -169,9 +268,19 @@ public class DoubleVal implements NumericVal{
     public double getValue(){
         return value;
     }
+
+    /**
+     * Get the value but as a BigDecimal instead of double
+     * @return The BigDecimal value of this object
+     */
     public BigDecimal toBigDecimal(){
         return BigDecimal.valueOf(value);
     }
+
+    /**
+     * Calculate the average of all the values stored in the history
+     * @return The average of the stored values
+     */
     public double getAvg(){
         double total=0;
         if(history!=null){
@@ -184,9 +293,21 @@ public class DoubleVal implements NumericVal{
         }
         return Tools.roundDouble(total/history.size(),digits==-1?3:digits);
     }
+
+    /**
+     * Compare two DoubleVal's based on their values
+     * @param dv The DoubleVal to compare to
+     * @return True if they have the same value
+     */
     public boolean equals( DoubleVal dv){
         return Double.compare(value,dv.getValue())==0;
     }
+
+    /**
+     * Compare with a double
+     * @param d The double to compare to
+     * @return True if they are equal
+     */
     public boolean equals( double d){
         return Double.compare(value,d)==0;
     }
@@ -206,35 +327,40 @@ public class DoubleVal implements NumericVal{
         return line;
     }
 
+    /**
+     * TriggeredCmd is a way to run cmd's if the new value succeeds in the compare
+     */
     private class TriggeredCmd{
-        String cmd="";
-        String ori="";
-        Function<Double,Boolean> comp;
-        boolean triggered=false;
+        String cmd; // The cmd to issue
+        String ori; // The compare before it was converted to a function (for toString purposes)
+        Function<Double,Boolean> comp; // The compare after it was converted to a function
+        boolean triggered=false; // The last result of the comparison
 
+        /**
+         * Create a new TriggeredCmd with the given cmd and trigger, doesn't set the cmd of it failed to convert the trigger
+         * @param cmd The cmd to execute when triggered
+         * @param trigger Either 'always' if the cmd should be done on each update, or 'changed' if the value changed
+         *                or a single or double compare fe 'above 10' or 'below 5 or above 50' etc
+         */
         public TriggeredCmd( String cmd, String trigger){
             this.cmd=cmd;
             this.ori=trigger;
-            if( !trigger.isEmpty() && !trigger.equalsIgnoreCase("always") ){
+            if( !trigger.isEmpty() && !trigger.equalsIgnoreCase("always")
+                                    && !trigger.equalsIgnoreCase("changed") ){
                 comp=MathUtils.parseSingleCompareFunction(trigger);
+                if( comp==null){
+                    this.cmd="";
+                }
             }
         }
-        public String getCmd(){
-            Logger.info("Triggered for "+(group.isEmpty()?"":group+"_")+name+" "+ori+" => "+cmd);
-            triggered=true;
-            return cmd;
-        }
-        private void resetTrigger(){
-            Logger.info("Trigger reset for "+(group.isEmpty()?"":group+"_")+name+" "+ori+" => "+cmd);
-            triggered=false;
-        }
-        public boolean reset( double val ){
-            if( triggered ){
-                triggered = comp.apply(val);
-            }
-            return true;
+        public boolean isInvalid(){
+            return cmd.isEmpty();
         }
         public void apply( double val ){
+            if( dQueue==null) {
+                Logger.error(getID()+" (dv)-> Tried to check for a trigger without a dQueue");
+                return;
+            }
             if( ori.isEmpty() || ori.equalsIgnoreCase("always") ) { // always run this cmd
                 dQueue.add(Datagram.system(cmd.replace("$",""+val)));
             }else if( ori.equalsIgnoreCase("changed")) {// run this cmd if the value changed
