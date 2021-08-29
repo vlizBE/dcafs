@@ -831,7 +831,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 						.add( cyan+" Create or alter"+reg)
 						.add( green+"  tv:new,id,value"+reg+" -> Create a new text (or update) with the given id/value")
 						.add( green+"  tv:update,id,value"+reg+" -> Update an existing text, do nothing if not found")
-						.add( cyan+" Get info"+reg)
+						.add("").add( cyan+" Get info"+reg)
 						.add( green+"  tv:?"+reg+" -> Show this message")
 						.add( green+"  tv:list"+reg+" -> Get a listing of currently stored texts")
 						.add( green+"  tv:reqs"+reg+" -> Get a listing of the requests active");
@@ -878,7 +878,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 						.add( green+"  fv:lower,id"+reg+" or "+green+"flags:clear,id"+reg+" -> Lowers the flag/Clears the bit, created if new")
 						.add( green+"  fv:toggle,id"+reg+" -> Toggles the flag/bit, not created if new")
 						.add( green+"  fv:addcmd,id,when:cmd"+reg+" -> Add a cmd with the given trigger to id, current triggers:raised,lowered")
-						.add( cyan+" Get info"+reg)
+						.add("").add( cyan+" Get info"+reg)
 						.add( green+"  fv:list"+reg+" -> Give a listing of all current flags and their state");
 				return join.toString();
 			case "list":
@@ -947,7 +947,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 						.add( green+"  dv:addcmd,id,when:cmd"+reg+" -> Add a cmd with the given trigger to id")
 						.add( green+"  dv:alter,id,param:value"+reg+" -> Alter some of the params of id, currently scale and unit are possible")
 						.add( green+"  dv:updategroup,groupid,value"+reg+" -> Update all DoubleVals that belong to the groupid with the given value")
-						.add( cyan+" Get info"+reg)
+						.add("").add( cyan+" Get info"+reg)
 				  	    .add( green+"  dv:?"+reg+" -> Show this message" )
 						.add( green+"  dv:list"+reg+" -> Get a listing of currently stored texts")
 						.add( green+"  dv:reqs"+reg+" -> Get a listing of all the requests currently active");
@@ -1070,15 +1070,32 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		return result;
 	}
 	public String replyToRtvalsCmd( String[] request, Writable wr, boolean html ){
-		if( request[1].equals("?") )
-			return " -> Get a list of all rtvals options";
 
 		if( request[1].isEmpty())
 			return getRtvalsList(html,true,true,true);
 
 		String[] cmds = request[1].split(",");
+
+		String cyan = html?"":TelnetCodes.TEXT_CYAN;
+		String green=html?"":TelnetCodes.TEXT_GREEN;
+		String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
+
+		var join = new StringJoiner(html?"<br>":"\r\n");
+		join.setEmptyValue("None Yet");
+
 		if( cmds.length==1 ){
 			switch( cmds[0]){
+				case "?":
+					join.add( cyan+" Interact with XML"+reg)
+							.add(green+"  rtvals:store"+reg+" -> Store all rtvals to XML")
+							.add(green+"  rtvals:reload"+reg+" -> Reload all rtvals from XML")
+							.add("").add( cyan+" Get info"+reg)
+							.add(green+"  rtvals:?"+reg+" -> Get this message")
+							.add(green+"  rtvals"+reg+" -> Get a listing of all rtvals")
+							.add(green+"  rtvals:groups"+reg+" -> Get a listing of all the available groups")
+							.add(green+"  rtvals:group,groupid"+reg+" -> Get a listing of all rtvals belonging to the group")
+							.add(green+"  rtvals:name,valname"+reg+" -> Get a listing of all rtvals with the given valname (independent of group)");
+					return join.toString();
 				case "store": return  storeRTVals();
 				case "reload":
 					readFromXML();
