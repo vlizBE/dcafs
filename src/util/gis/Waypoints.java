@@ -68,7 +68,7 @@ public class Waypoints implements Commandable {
     }
     public boolean addHere(  String id, double range) {
         if( latitude!= null && longitude != null) {
-            addWaypoint(id, latitude.getValue(), longitude.getValue(),range);
+            addWaypoint(id, latitude.value(), longitude.value(),range);
             return true;
         }
         return false;
@@ -249,7 +249,7 @@ public class Waypoints implements Commandable {
             return "No waypoints yet.";
         for( Waypoint wp : wps.values() ){
             b.add( wp.getInfo(newline) );
-            b.add( wp.toString(false, true, sog.getValue()) ).add("");
+            b.add( wp.toString(false, true, sog.value()) ).add("");
         }
         return b.toString();
     }
@@ -277,7 +277,7 @@ public class Waypoints implements Commandable {
       * @return The id found
      */
     public String getNearestWaypoint( ){
-        return getClosestWaypoint( latitude.getValue(),longitude.getValue());
+        return getClosestWaypoint( latitude.value(),longitude.value());
     }
     /**
      * Check the waypoints to see if any travel occurred, if so execute the commands associated with it
@@ -285,7 +285,7 @@ public class Waypoints implements Commandable {
     private void checkWaypoints(){
         var now = OffsetDateTime.now(ZoneOffset.UTC);
         wps.values().forEach( wp -> {
-            var travel = wp.checkIt(now, latitude.getValue(), longitude.getValue());
+            var travel = wp.checkIt(now, latitude.value(), longitude.value());
             if( travel !=null) {
                 travel.getCmds().forEach(cmd -> dQueue.add(Datagram.system(cmd)));
             }
@@ -301,7 +301,7 @@ public class Waypoints implements Commandable {
         var wp = wps.get(id);
         if( wp == null || longitude==null || latitude==null)
             return -1;
-        return wp.distanceTo(latitude.getValue(), longitude.getValue());
+        return wp.distanceTo(latitude.value(), longitude.value());
     }
     /* ****************************************************************************************************/
     /* ****************************************************************************************************/
@@ -332,7 +332,7 @@ public class Waypoints implements Commandable {
             case "states":
                 if( sog == null)
                     return "Can't determine state, no sog defined";
-                return getCurrentStates(false, sog.getValue() );
+                return getCurrentStates(false, sog.value() );
             case "store": 
                 if( this.storeInXML(false) ){
                     return "Storing waypoints succesful";
