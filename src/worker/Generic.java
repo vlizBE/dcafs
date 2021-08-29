@@ -266,11 +266,11 @@ public class Generic {
                     case REAL:
                             if( doubles!=null && doubles.length>entry.index && doubles[entry.index]!=null){
                                 data[a]=doubles[entry.index];
-                                dp.getOrAddDoubleVal( ref ).setValue( doubles[entry.index] );
+                                dp.getOrAddDoubleVal( ref ).updateValue( doubles[entry.index] );
                             }else if( NumberUtils.isCreatable(split[entry.index])) {
                                 val = NumberUtils.toDouble(split[entry.index], val);
                                 data[a] = val;
-                                dp.getOrAddDoubleVal( ref ).setValue( val );
+                                dp.getOrAddDoubleVal( ref ).updateValue( val );
                             }else{
                                 data[a]=null;
                             }

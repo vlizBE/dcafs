@@ -38,7 +38,7 @@ public class CheckBlock extends AbstractBlock{
     public boolean start(TaskBlock starter) {
         Double[] work= new Double[steps.size()+sharedMem.size()];
         for (int a = 0; a < sharedMem.size();a++ ){
-            work[steps.size()+a]=sharedMem.get(a).getValue();
+            work[steps.size()+a]=sharedMem.get(a).value();
         }
         for( int a=0;a<steps.size();a++)
             work[a]=steps.get(a).apply(work);

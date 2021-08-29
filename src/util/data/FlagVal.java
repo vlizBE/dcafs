@@ -64,17 +64,17 @@ public class FlagVal implements NumericVal{
     }
 
     /* *************************************** U S I N G *********************************************************** */
-    public String getID(){
+    public String id(){
         return group.isEmpty()?name:(group+"_"+name);
     }
-    public String getGroup(){
+    public String group(){
         return group;
     }
-    public String getName(){
+    public String name(){
         return name;
     }
     @Override
-    public void setValue(double val) {
+    public void updateValue(double val) {
         state = Double.compare(val,0.0)!=0;
     }
     public BigDecimal toBigDecimal(){
@@ -95,7 +95,7 @@ public class FlagVal implements NumericVal{
     public boolean isDown(){
         return !state;
     }
-    public double getValue(){
+    public double value(){
         return state?1:0;
     }
     public String toString(){

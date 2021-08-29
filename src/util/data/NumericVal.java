@@ -4,12 +4,12 @@ import java.math.BigDecimal;
 
 public interface NumericVal {
 
-    String getName();
-    String getGroup();
-    String getID();
+    String name();
+    String group();
+    String id();
     BigDecimal toBigDecimal();
 
-    double getValue();
-    void setValue( double val);
+    double value();
+    void updateValue(double val);
 
 }

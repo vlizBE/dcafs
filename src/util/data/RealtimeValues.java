@@ -17,7 +17,6 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
-import javax.swing.text.html.Option;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -106,8 +105,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				if( !hasDouble(id))
 					setDouble(id,defDouble,true);
 				var dv = getDoubleVal(id).get();
-				dv.name(XMLtools.getChildValueByTag(rtval,"name",dv.getName()))
-						.group(XMLtools.getChildValueByTag(rtval,"group",dv.getGroup()))
+				dv.name(XMLtools.getChildValueByTag(rtval,"name",dv.name()))
+						.group(XMLtools.getChildValueByTag(rtval,"group",dv.group()))
 						.unit(XMLtools.getStringAttribute(rtval,"unit",""))
 						.fractionDigits(scale)
 						.defValue(XMLtools.getDoubleAttribute(rtval,"default",defDouble));
@@ -135,8 +134,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				break;
 			case "flag":
 				var fv = getOrAddFlagVal(id);
-				fv.name(XMLtools.getChildValueByTag(rtval,"name",fv.getName()))
-						.group(XMLtools.getChildValueByTag(rtval,"group",fv.getGroup()))
+				fv.name(XMLtools.getChildValueByTag(rtval,"name",fv.name()))
+						.group(XMLtools.getChildValueByTag(rtval,"group",fv.group()))
 						.defState(XMLtools.getBooleanAttribute(rtval,"default",defFlag));
 				if( XMLtools.getBooleanAttribute(rtval,"keeptime",false) )
 					fv.enableTimekeeping();
@@ -163,7 +162,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 							return error;
 						}
 					case 'D':
-						line = line.replace(word,""+getOrAddDoubleVal(id).getValue());
+						line = line.replace(word,""+getOrAddDoubleVal(id).value());
 						break;
 					case 'f':
 						if( !hasFlag(id)) {
@@ -187,7 +186,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					} else if (hasFlag(word)) {
 						line = line.replace(word, isFlagUp(word) ? "1" : "0");
 					} else if (error.equalsIgnoreCase("create")) {
-						getOrAddDoubleVal(word).setValue(0);
+						getOrAddDoubleVal(word).updateValue(0);
 						Logger.warn("Created doubleval " + word + " with value 0");
 						line = line.replace(word, "0");
 					} else if (!error.equalsIgnoreCase("ignore")) {
@@ -218,7 +217,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				switch (p[0]) {
 					case "d": case "D":
 					case "double": {
-						var d = p[0].equals("D")?getOrAddDoubleVal(p[1]).getValue():getDouble(p[1], Double.NaN);
+						var d = p[0].equals("D")?getOrAddDoubleVal(p[1]).value():getDouble(p[1], Double.NaN);
 						if (!Double.isNaN(d) || !error.isEmpty())
 							line = line.replace("{" + p[0] + ":" + p[1] + "}", Double.isNaN(d) ? error : "" + d);
 						break;
@@ -263,7 +262,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			if (p.length == 2) {
 				for( int pos=0;pos<nums.size();pos++ ){ // go through the known doubleVals
 					var d = nums.get(pos);
-					if( d.getID().equalsIgnoreCase(p[1])) { // If a match is found
+					if( d.id().equalsIgnoreCase(p[1])) { // If a match is found
 						exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + (offset + pos));
 						ok=true;
 						break;
@@ -392,20 +391,20 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			var fab = XMLfab.withRoot(settingsPath, "dcafs","settings","rtvals");
 
 			if( fab.hasChild("double","id",id).isEmpty()){
-				if( val.getGroup().isEmpty()) {
+				if( val.group().isEmpty()) {
 					if( fab.hasChild("double","id",id).isEmpty()) {
 						Logger.info("doubleval new, adding to xml :"+id);
 						fab.addChild("double").attr("id", id).attr("unit", val.unit()).build();
 					}
 				}else{
-					if( fab.hasChild("group","id",val.getGroup()).isEmpty() ){
-						fab.addChild("group").attr("id",val.getGroup()).down();
-						if( fab.hasChild("double","id",val.getName()).isEmpty() )
-							fab.addChild("double").attr("name", val.getName()).attr("unit", val.unit()).build();
+					if( fab.hasChild("group","id",val.group()).isEmpty() ){
+						fab.addChild("group").attr("id",val.group()).down();
+						if( fab.hasChild("double","id",val.name()).isEmpty() )
+							fab.addChild("double").attr("name", val.name()).attr("unit", val.unit()).build();
 					}else{
-						String name = val.getName();
+						String name = val.name();
 						String unit = val.unit();
-						fab.selectChildAsParent("group","id",val.getGroup())
+						fab.selectChildAsParent("group","id",val.group())
 								.ifPresent( f->{
 									if( f.hasChild("double","name",name).isEmpty()) {
 										Logger.info("doubleval new, adding to xml :"+id);
@@ -445,7 +444,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			Logger.error("No such double "+id+" yet, create it first");
 			return false;
 		}
-		d.setValue(value);
+		d.updateValue(value);
 		if( !doubleRequest.isEmpty()){
 			var res = doubleRequest.get(id);
 			if( res != null)
@@ -462,8 +461,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		return !setDouble(id,value,false);
 	}
 	public int updateDoubleGroup(String group, double value){
-		var set = doubleVals.values().stream().filter( dv -> dv.getGroup().equalsIgnoreCase(group)).collect(Collectors.toSet());
-		set.forEach(dv->dv.setValue(value));
+		var set = doubleVals.values().stream().filter( dv -> dv.group().equalsIgnoreCase(group)).collect(Collectors.toSet());
+		set.forEach(dv->dv.updateValue(value));
 		return set.size();
 	}
 	/**
@@ -488,11 +487,11 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			}
 			return defVal;
 		}
-		if (Double.isNaN(d.getValue())) {
+		if (Double.isNaN(d.value())) {
 			Logger.error("ID: " + id + " is NaN.");
 			return defVal;
 		}
-		return d.getValue();
+		return d.value();
 	}
 	/**
 	 * Get a listing of all the parameters-value pairs currently stored
@@ -600,12 +599,12 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			val = FlagVal.newVal(id);
 			flagVals.put(id,val);
 
-			if( val.getGroup().isEmpty()) {
+			if( val.group().isEmpty()) {
 				XMLfab.withRoot(settingsPath, "dcafs", "settings", "rtvals").alterChild("flag", "id", id).build();
 			}else{
 				XMLfab.withRoot(settingsPath, "dcafs", "settings", "rtvals")
-						.alterChild("group","id",val.getGroup())
-						.down().addChild("flag").attr("name",val.getName()).build();
+						.alterChild("group","id",val.group())
+						.down().addChild("flag").attr("name",val.name()).build();
 			}
 		}
 		return val;
@@ -678,11 +677,11 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		XMLfab fab = XMLfab.withRoot(settings,"dcafs","settings","rtvals");
 		var vals = doubleVals.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Entry::getValue).collect(Collectors.toList());
 		for( var dv : vals ){
-			if( dv.getGroup().isEmpty()) {
-				fab.alterChild("double", "id",dv.getID()).build();
+			if( dv.group().isEmpty()) {
+				fab.alterChild("double", "id",dv.id()).build();
 			}else{
-				fab.alterChild("group","id",dv.getGroup())
-						.down().addChild("double").attr("name",dv.getName()).attr("unit",dv.unit());
+				fab.alterChild("group","id",dv.group())
+						.down().addChild("double").attr("name",dv.name()).attr("unit",dv.unit());
 						if( dv.scale()!=-1)
 							fab.attr("scale",dv.scale());
 						fab.up();
@@ -694,11 +693,11 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		}
 		var flags = flagVals.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Entry::getValue).collect(Collectors.toList());
 		for( var fv : flags ){
-			if( fv.getGroup().isEmpty()) {
-				fab.alterChild("double", "id",fv.getID()).build();
+			if( fv.group().isEmpty()) {
+				fab.alterChild("double", "id",fv.id()).build();
 			}else{
-				fab.alterChild("group","id",fv.getGroup())
-						.down().addChild("flag").attr("name",fv.getName())
+				fab.alterChild("group","id",fv.group())
+						.down().addChild("flag").attr("name",fv.name())
 						.up();
 			}
 		}
@@ -911,7 +910,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					if (Double.isNaN(result))
 						return "Failed to process expression";
 				}
-				getOrAddDoubleVal(cmds[1]).setValue(result);
+				getOrAddDoubleVal(cmds[1]).updateValue(result);
 				return "DoubleVal set to "+result;
 			case "alter":
 				if( cmds.length<3)
@@ -1066,21 +1065,21 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 
 		StringJoiner join = new StringJoiner(eol,title+eol,"");
 		join.setEmptyValue("No matches found");
-		doubleVals.values().stream().filter( dv -> dv.getGroup().equalsIgnoreCase(group))
+		doubleVals.values().stream().filter( dv -> dv.group().equalsIgnoreCase(group))
 				.sorted( (dv1,dv2)-> {
 					if( dv1.order()!= dv2.order() ) {
 						return Integer.compare(dv1.order(), dv2.order());
 					}else{
-						return dv1.getName().compareTo(dv2.getName());
+						return dv1.name().compareTo(dv2.name());
 					}
 				})
-				.map( dv -> space+dv.getName()+" : "+dv) //Change it to strings
+				.map( dv -> space+dv.name()+" : "+dv) //Change it to strings
 				.forEach(join::add); // Then add the sorted the strings
 		texts.entrySet().stream().filter(ent -> ent.getKey().startsWith(group+"_"))
 				.map( ent -> space+ent.getKey().split("_")[1]+" : "+ent.getValue())
 				.sorted().forEach(join::add);
-		flagVals.values().stream().filter(fv -> fv.getGroup().equalsIgnoreCase(group))
-				.map( v -> space+v.getName()+" : "+v) //Change it to strings
+		flagVals.values().stream().filter(fv -> fv.group().equalsIgnoreCase(group))
+				.map( v -> space+v.name()+" : "+v) //Change it to strings
 				.sorted().forEach(join::add); // Then add the sorted the strings
 		return join.toString();
 	}
@@ -1104,12 +1103,12 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		}else{
 			regex=name;
 		}
-		doubleVals.values().stream().filter( dv -> dv.getName().matches(regex))
-				.forEach(dv -> join.add(space+(dv.getGroup().isEmpty()?"":dv.getGroup()+" -> ")+dv.getName()+" : "+dv));
+		doubleVals.values().stream().filter( dv -> dv.name().matches(regex))
+				.forEach(dv -> join.add(space+(dv.group().isEmpty()?"":dv.group()+" -> ")+dv.name()+" : "+dv));
 		texts.entrySet().stream().filter(ent -> ent.getKey().matches(regex))
 				.forEach( ent -> join.add( space+ent.getKey().replace("_","->")+" : "+ent.getValue()) );
-		flagVals.values().stream().filter(fv -> fv.getName().matches(regex))
-				.forEach(fv -> join.add(space+(fv.getGroup().isEmpty()?"":fv.getGroup()+" -> ")+fv.getName()+" : "+fv));
+		flagVals.values().stream().filter(fv -> fv.name().matches(regex))
+				.forEach(fv -> join.add(space+(fv.group().isEmpty()?"":fv.group()+" -> ")+fv.name()+" : "+fv));
 		return join.toString();
 	}
 	public String getFullList(boolean html){
@@ -1122,9 +1121,9 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		getGroups().forEach( group -> join.add(getRTValsGroupList(group,html)).add("") );
 
 		// Add the not grouped ones
-		boolean ngDoubles = doubleVals.values().stream().anyMatch( dv -> dv.getGroup().isEmpty());
+		boolean ngDoubles = doubleVals.values().stream().anyMatch( dv -> dv.group().isEmpty());
 		boolean ngTexts = texts.keySet().stream().anyMatch(k -> k.contains("_"));
-		boolean ngFlags = flagVals.values().stream().anyMatch( fv -> fv.getGroup().isEmpty());
+		boolean ngFlags = flagVals.values().stream().anyMatch( fv -> fv.group().isEmpty());
 
 		if( ngDoubles || ngTexts || ngFlags) {
 			join.add("");
@@ -1132,8 +1131,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 
 			if (ngDoubles) {
 				join.add(html ? "<b>Doubles</b>" : TelnetCodes.TEXT_BLUE + "Doubles" + TelnetCodes.TEXT_YELLOW);
-				doubleVals.values().stream().filter(dv -> dv.getGroup().isEmpty())
-						.map(dv->space + dv.getName() + " : " + dv).sorted().forEach(join::add);
+				doubleVals.values().stream().filter(dv -> dv.group().isEmpty())
+						.map(dv->space + dv.name() + " : " + dv).sorted().forEach(join::add);
 			}
 			if (ngTexts) {
 				join.add("");
@@ -1144,15 +1143,15 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			if (ngFlags) {
 				join.add("");
 				join.add(html ? "<b>Flags</b>" : TelnetCodes.TEXT_BLUE + "Flags" + TelnetCodes.TEXT_YELLOW);
-				flagVals.values().stream().filter(fv -> fv.getGroup().isEmpty())
-						.map(fv->space + fv.getName() + " : " + fv).sorted().forEach(join::add);
+				flagVals.values().stream().filter(fv -> fv.group().isEmpty())
+						.map(fv->space + fv.name() + " : " + fv).sorted().forEach(join::add);
 			}
 		}
 		return join.toString();
 	}
 	public List<String> getGroups(){
 		var groups = doubleVals.values().stream()
-				.map(DoubleVal::getGroup)
+				.map(DoubleVal::group)
 				.filter(group -> !group.isEmpty()).distinct().collect(Collectors.toList());
 		texts.keySet().stream()
 						.filter( k -> k.contains("_"))
@@ -1161,7 +1160,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 						.filter( g -> !groups.contains(g))
 						.forEach(groups::add);
 		flagVals.values().stream()
-						.map(FlagVal::getGroup)
+						.map(FlagVal::group)
 						.filter(group -> !group.isEmpty() )
 						.distinct()
 						.filter( g -> !groups.contains(g))

@@ -622,7 +622,7 @@ public class SqlTable {
                 }else if( col.type == COLUMN_TYPE.INTEGER){
                     var dvOpt = dp.getDoubleVal(ref);
                     if( dvOpt.isPresent()) {
-                        val = dvOpt.get().getValue();
+                        val = dvOpt.get().value();
                         if( val instanceof Double){
                             val = ((Double)val).intValue();
                         }

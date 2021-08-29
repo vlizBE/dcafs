@@ -592,7 +592,7 @@ public class MathForward extends AbstractForward {
                 if ( p[0].toLowerCase().equals("d")||p[0].equals("double")||p[0].toLowerCase().equals("f")||p[0].equals("flag") ) { // if the left of the pair is a double
                     for( int pos=0;pos<referencedNums.size();pos++ ){ // go through the known doubleVals
                         var d = referencedNums.get(pos);
-                        if( d.getID().equalsIgnoreCase(p[1])) { // If a match is found
+                        if( d.id().equalsIgnoreCase(p[1])) { // If a match is found
                             exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + (highestI + pos + 1));
                             ok=true;
                             break;
@@ -717,7 +717,7 @@ public class MathForward extends AbstractForward {
                 data[index]=bd;
 
             if( update != null ) {
-                update.setValue(bd.doubleValue());
+                update.updateValue(bd.doubleValue());
             }else if( !cmd.isEmpty()){
                 dQueue.add(Datagram.system(cmd.replace("$", bd.toString())));
             }
