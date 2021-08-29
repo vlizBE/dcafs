@@ -22,7 +22,16 @@ From 0.5.0 onwards, this should be better documented...
   * Rework the TaskManager (might be trigger for 0.11.0)
 
 ## 0.10.13 (work in progress)
+Cleanup release, added comments/javadoc moved stuff around in the .java files etc etc etc
 
+### util.data
+- Made AbstractVal as base class for DoubleVal and FlagVal
+- FlagVal now also allows triggered commands (on flag changes)
+- Added reset method, because reload didn't reset
+- Added javadocs and comments here and there
+
+### Fixes
+- MathUtil, comparisons like 1--10 weren't handled properly, the second replacement altered it too
 
 ## 0.10.12 (28/08/21)
 

@@ -39,7 +39,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	private final ConcurrentHashMap<String, String> texts = new ConcurrentHashMap<>(); // strings
 	private final ConcurrentHashMap<String, FlagVal> flagVals = new ConcurrentHashMap<>(); // booleans
 	private final HashMap<String, MathCollector> mathCollectors = new HashMap<>(); // Math collectors
-	private Waypoints waypoints; //waypoints
+	private Waypoints waypoints; // waypoints
 	private IssuePool issuePool;
 
 	/* Data update requests */
@@ -53,7 +53,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	private final Pattern words = Pattern.compile("[a-zA-Z]+[_:0-9]*[a-zA-Z]+\\d*"); // find references to doublevals etc
 
 	/* Other */
-	private final BlockingQueue<Datagram> dQueue;
+	private final BlockingQueue<Datagram> dQueue; // Used to issue triggered cmd's
 
 	public RealtimeValues( Path settingsPath,BlockingQueue<Datagram> dQueue ){
 		this.settingsPath=settingsPath;
@@ -63,6 +63,12 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 
 		readFromXML();
 	}
+
+	/**
+	 * Enable tracking/storing waypoints
+	 * @param scheduler Scheduler to use for the tracking
+	 * @return The Waypoints object
+	 */
 	public Waypoints enableWaypoints(ScheduledExecutorService scheduler){
 		waypoints = new Waypoints(settingsPath,scheduler,this,dQueue);
 		return waypoints;
@@ -95,6 +101,15 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				}
 		);
 	}
+
+	/**
+	 * Process a Val node
+	 * @param rtval The node to process
+	 * @param id The id of the Val
+	 * @param defDouble The default double value
+	 * @param defText The default text value
+	 * @param defFlag The default boolean value
+	 */
 	private void processRtvalElement(Element rtval, String id, double defDouble, String defText, boolean defFlag ){
 		switch( rtval.getTagName() ){
 			case "double":
@@ -105,6 +120,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				if( !hasDouble(id))
 					setDouble(id,defDouble,true);
 				var dv = getDoubleVal(id).get();
+				dv.reset(); // reset incase this is called because of reload
 				dv.name(XMLtools.getChildValueByTag(rtval,"name",dv.name()))
 						.group(XMLtools.getChildValueByTag(rtval,"group",dv.group()))
 						.unit(XMLtools.getStringAttribute(rtval,"unit",""))
@@ -126,7 +142,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				for( Element trigCmd : XMLtools.getChildElements(rtval,"cmd")){
 					String trig = trigCmd.getAttribute("when");
 					String cmd = trigCmd.getTextContent();
-					dv.addTriggeredCmd(cmd,trig);
+					dv.addTriggeredCmd(trig,cmd);
 				}
 				break;
 			case "text":
@@ -134,11 +150,19 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				break;
 			case "flag":
 				var fv = getOrAddFlagVal(id);
+				fv.reset(); // reset incase this is called because of reload
 				fv.name(XMLtools.getChildValueByTag(rtval,"name",fv.name()))
 						.group(XMLtools.getChildValueByTag(rtval,"group",fv.group()))
 						.defState(XMLtools.getBooleanAttribute(rtval,"default",defFlag));
 				if( XMLtools.getBooleanAttribute(rtval,"keeptime",false) )
-					fv.enableTimekeeping();
+					fv.keepTime();
+				if( !XMLtools.getChildElements(rtval,"cmd").isEmpty() )
+					fv.enableTriggeredCmds(dQueue);
+				for( Element trigCmd : XMLtools.getChildElements(rtval,"cmd")){
+					String trig = trigCmd.getAttribute("when");
+					String cmd = trigCmd.getTextContent();
+					fv.addTriggeredCmd(trig,cmd);
+				}
 				break;
 		}
 	}
@@ -599,12 +623,17 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			val = FlagVal.newVal(id);
 			flagVals.put(id,val);
 
+			var fab = XMLfab.withRoot(settingsPath, "dcafs", "settings", "rtvals");
+
 			if( val.group().isEmpty()) {
-				XMLfab.withRoot(settingsPath, "dcafs", "settings", "rtvals").alterChild("flag", "id", id).build();
+				fab.alterChild("flag", "id", id).build();
 			}else{
-				XMLfab.withRoot(settingsPath, "dcafs", "settings", "rtvals")
-						.alterChild("group","id",val.group())
-						.down().addChild("flag").attr("name",val.name()).build();
+				if( fab.hasChild("group","id",val.group()).isEmpty() ) {
+					fab.addChild("group").attr("id", val.group()).down();
+				}else{
+					fab.selectChildAsParent("group","id",val.group());
+				}
+				fab.alterChild("flag").attr("name",val.name()).build();
 			}
 		}
 		return val;
@@ -634,12 +663,12 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 
 	/**
 	 * Raises a flag
-	 * @param flag The flags/bits to set
+	 * @param flags The flags/bits to set
 	 * @return True if this is a new flag/bit
 	 */
-	public boolean raiseFlag( String... flag ){
+	public boolean raiseFlag( String... flags ){
 		int cnt = flagVals.size();
-		for( var f : flag) {
+		for( var f : flags) {
 			setFlagState(f,true);
 		}
 		return cnt!= flagVals.size();
@@ -857,10 +886,10 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				listFlags().forEach(join::add);
 				return join.toString();
 			case "new":
-				if( cmds.length !=3)
-					return "Not enough arguments, need flags:new,id,state or fv:new,id,state";
-				setFlagState(cmds[1],Tools.parseBool(cmds[2],false));
-				fab.alterChild("flag","id",cmds[1]).attr("default",cmds[2]).build();
+				if( cmds.length <2)
+					return "Not enough arguments, need flags:new,id<,state> or fv:new,id<,state>";
+				setFlagState(cmds[1],Tools.parseBool( cmds.length==3?cmds[2]:"false",false));
+				fab.alterChild("flag","id",cmds[1]).attr("default",cmds.length==3?cmds[2]:"false").build();
 				return "Flag created/updated "+cmds[1];
 			case "raise": case "set":
 				if( cmds.length !=2)
@@ -883,6 +912,18 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				}
 				raiseFlag(cmds[1]);
 				return "Flag raised";
+			case "addcmd":
+				if( cmds.length < 4 )
+					return "Not enough arguments, fv:addcmd,id,when,cmd";
+				var fv = flagVals.get(cmds[1]);
+				if( fv==null)
+					return "No such double: "+cmds[1];
+				int cmdIndex = request[1].indexOf(","+cmds[3]+",")+1; // Get the index at which the cmd starts
+				fv.addTriggeredCmd(cmds[2], request[1].substring(cmdIndex));
+				XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals")
+						.selectChildAsParent("flag","id",cmds[1])
+						.ifPresent( f -> f.addChild("cmd",request[1].substring(cmdIndex)).attr("when",cmds[2]).build());
+				return "Cmd added";
 		}
 		return "unknown command "+request[0]+":"+request[1];
 	}
@@ -949,10 +990,12 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				var dv = doubleVals.get(cmds[1]);
 				if( dv==null)
 					return "No such double: "+cmds[1];
-				dv.addTriggeredCmd(cmds[3],cmds[2]);
+				int cmdIndex = request[1].indexOf(","+cmds[3]+",")+1; // Get the index at which the cmd starts
+
+				dv.addTriggeredCmd(cmds[2],request[1].substring(cmdIndex));
 				XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals")
 						.selectChildAsParent("double","id",cmds[1])
-						.ifPresent( f -> f.addChild("cmd",cmds[3]).attr("when",cmds[2]).build());
+						.ifPresent( f -> f.addChild("cmd",request[1].substring(cmdIndex)).attr("when",cmds[2]).build());
 				return "Cmd added";
 			default:
 				if( hasDouble(cmds[0]) ) {
@@ -1043,7 +1086,6 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		}else if(cmds.length==2){
 			switch(cmds[0]){
 				case "group":  return getRTValsGroupList(cmds[1],html);
-
 				case "groups":
 					String groups = String.join(html?"<br>":"\r\n",getGroups());
 					return groups.isEmpty()?"No groups yet":groups;
@@ -1116,6 +1158,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		String title = html?"<b>Grouped</b>":TelnetCodes.TEXT_CYAN+"Grouped"+TelnetCodes.TEXT_YELLOW;
 		String space = html?"  ":"  ";
 		StringJoiner join = new StringJoiner(eol,getGroups().isEmpty()?"":title+eol,"");
+		join.setEmptyValue("None yet");
 
 		// Find & add the groups
 		getGroups().forEach( group -> join.add(getRTValsGroupList(group,html)).add("") );

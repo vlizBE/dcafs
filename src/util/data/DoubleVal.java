@@ -9,14 +9,10 @@ import worker.Datagram;
 import java.math.BigDecimal;
 import java.time.*;
 import java.util.ArrayList;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-public class DoubleVal implements NumericVal{
-
-    private String group="";
-    private String name="";
+public class DoubleVal extends AbstractVal implements NumericVal{
 
     private double value;
 
@@ -24,11 +20,6 @@ public class DoubleVal implements NumericVal{
 
     private String unit="";
     private int digits=-1;
-    private int order = -1;
-
-    /* Keep Time */
-    private Instant timestamp;
-    private boolean keepTime=false;
 
     /* Min max*/
     private double min=Double.MAX_VALUE;
@@ -37,17 +28,11 @@ public class DoubleVal implements NumericVal{
 
     /* History */
     private ArrayList<Double> history;
-    private int keepHistory=0;
 
     /* Triggering */
     private ArrayList<TriggeredCmd> triggered;
-    private BlockingQueue<Datagram> dQueue;
 
-    public DoubleVal(){}
-
-    public DoubleVal(double val){
-        updateValue(val);
-    }
+    private DoubleVal(){}
 
     /**
      * Constructs a new DoubleVal with the given group and name
@@ -156,8 +141,13 @@ public class DoubleVal implements NumericVal{
     /**
      * Reset this DoubleVal to its default value
      */
+    @Override
     public void reset(){
         value=defVal;
+        keepMinMax=false;
+        digits=-1;
+        triggered.clear();
+        super.reset();
     }
     /**
      * Set the amount of digits to scale to using half up rounding
@@ -170,28 +160,6 @@ public class DoubleVal implements NumericVal{
     }
 
     /**
-     * Enable keeping old values up till the given count
-     * @param count The amount of old values to store
-     * @return This object with updated count and created history arraylist
-     */
-    public DoubleVal enableHistory(int count){
-        if(count<=0)
-           return this;
-        keepHistory=count;
-        history=new ArrayList<>();
-        return this;
-    }
-
-    /**
-     * Enable keeping time of the last value update
-     * @return This object but with time keeping enabled
-     */
-    public DoubleVal keepTime(){
-        keepTime=true;
-        return this;
-    }
-
-    /**
      * Enable keeping track of the max and min values received since last reset
      * @return This object but with min max enabled
      */
@@ -200,33 +168,11 @@ public class DoubleVal implements NumericVal{
         return this;
     }
 
-    /**
-     * Set the order in which this item should be listed in the group list, the higher the order the higher in the list.
-     * If the order is shared, it will be sorted alphabetically
-     * @param order The new order for this object
-     * @return This object with updated order
-     */
-    public DoubleVal order( int order ){
-        this.order=order;
-        return this;
-    }
-
-    /**
-     * Get the order, which determines its place in the group list
-     * @return The order of this object
-     */
-    public int order(){
-        return order;
-    }
-
-    /**
-     * Enable allowing triggered commands to be added to this DoubleVal
-     * @param dQueue The queue in which the datagram holding the command needs to be put
-     * @return This object but with triggered commands enabled
-     */
-    public DoubleVal enableTriggeredCmds(BlockingQueue<Datagram> dQueue){
-        this.dQueue=dQueue;
-        return this;
+    @Override
+    public boolean enableHistory(int count){
+        if( count > 0)
+            history=new ArrayList<>();
+        return super.enableHistory(count);
     }
 
     /**
@@ -235,9 +181,9 @@ public class DoubleVal implements NumericVal{
      * @param trigger The trigger which is either a comparison between the value and another fixed value fe. above 10 or
      *                'always' to trigger on every update or 'changed' to trigger only on a changed value
      */
-    public boolean addTriggeredCmd(String cmd, String trigger){
+    public boolean addTriggeredCmd(String trigger,String cmd ){
         if( dQueue==null)
-            Logger.error("Tried to add cmd "+cmd+" but dQueue still null");
+            Logger.error(id() + "(dv)-> Tried to add cmd "+cmd+" but dQueue still null");
         if( triggered==null)
             triggered = new ArrayList<>();
 
@@ -258,23 +204,11 @@ public class DoubleVal implements NumericVal{
      * @return The amount of digits to scale to using rounding half up
      */
     public int scale(){ return digits; }
-    public String group(){
-        return group;
-    }
-    public String name(){
-        return name;
-    }
 
     /**
-     * Get the id, which is group + underscore + name
-     * @return The concatenation of group, underscore and name
+     * @return Get the current value as a double
      */
-    public String id(){
-        return group.isEmpty()?name:(group+"_"+name);
-    }
-    public double value(){
-        return value;
-    }
+    public double value(){ return value; }
 
     /**
      * Update the value
@@ -283,7 +217,6 @@ public class DoubleVal implements NumericVal{
     public void updateValue(double val){
         value(val);
     }
-
 
     /**
      * Get the value but as a BigDecimal instead of double
@@ -304,7 +237,7 @@ public class DoubleVal implements NumericVal{
                 total+=h;
             }
         }else{
-            Logger.warn("Asked for the average of "+(group.isEmpty()?"":group+"_")+name+" but no history kept");
+            Logger.warn(id() + "(dv)-> Asked for the average of "+(group.isEmpty()?"":group+"_")+name+" but no history kept");
             return value;
         }
         return Tools.roundDouble(total/history.size(),digits==-1?3:digits);
