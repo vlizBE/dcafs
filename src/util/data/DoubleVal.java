@@ -135,7 +135,8 @@ public class DoubleVal extends AbstractVal implements NumericVal{
     public DoubleVal defValue( double defVal){
         if( !Double.isNaN(defVal) ) { // If the given value isn't NaN
             this.defVal = defVal;
-            value=defVal;
+            if( Double.isNaN(value))
+                value=defVal;
         }
         return this;
     }
@@ -145,7 +146,6 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      */
     @Override
     public void reset(){
-        value=defVal;
         keepMinMax=false;
         digits=-1;
         if( triggered!=null)
