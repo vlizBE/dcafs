@@ -30,7 +30,7 @@ public class LocalStream extends BaseStream implements Writable {
 
     public LocalStream( String id, String label, String source, BlockingQueue<Datagram> dQueue){
         super(id,label,dQueue);
-        triggeredCmds.add(new TriggeredCommand(TRIGGER.OPEN, source));
+        triggeredActions.add(new TriggerAction(TRIGGER.OPEN, source));
     }
     @Override
     public boolean writeString(String data) {
@@ -83,7 +83,7 @@ public class LocalStream extends BaseStream implements Writable {
     @Override
     public boolean connect() {
         valid=true;
-        applyTriggeredCmd(TRIGGER.OPEN);
+        applyTriggeredAction(TRIGGER.OPEN);
         return true;
     }
 
@@ -105,7 +105,7 @@ public class LocalStream extends BaseStream implements Writable {
 
     @Override
     public String getInfo() {
-        return "LOCAL [" + id + "|" + label + "] " + String.join(";", getTriggeredCommands(TRIGGER.OPEN));
+        return "LOCAL [" + id + "|" + label + "] " + String.join(";", getTriggeredActions(TRIGGER.OPEN));
     }
 
     @Override

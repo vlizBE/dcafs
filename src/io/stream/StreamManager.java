@@ -615,6 +615,8 @@ public class StreamManager implements StreamListener, CollectorFuture {
 					.add(" ss:reload<,id> -> Reload the stream with the given id or all if no id is specified.")
 					.add(" ss:store,id -> Update the xml entry for this stream")
 					.add(" ss:alter,id,parameter:value -> Alter the given parameter options label,baudrate,ttl")
+					.add(" ss:addwrite,id,when:data -> Add a triggered write, possible when are hello (stream opened) and wakeup (stream idle)")
+					.add(" ss:addcmd,id,when:data -> Add a triggered cmd, possible when are open,idle,!idle,close")
 				.add("").add(TelnetCodes.TEXT_GREEN+"Route data from or to a stream"+TelnetCodes.TEXT_YELLOW)
 					.add(" ss:forward,source,id -> Forward the data from a source to the stream, source can be any object that accepts a writable")
 					.add(" ss:connect,id1,if2 -> Data is interchanged between the streams with the given id's")
@@ -635,7 +637,6 @@ public class StreamManager implements StreamListener, CollectorFuture {
 					if( written.isEmpty() )
 						return "Failed to write data";
 					return "Data written: "+written;
-
 			case "buffers": return getConfirmBuffers();
 			case "labels" :case "rios": return this.getActiveLabels();
 			case "requests":
@@ -696,7 +697,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 					return "No such stream  "+cmds[1];
 
 				fab.addChild("cmd",cmd).attr("when",event);
-				stream.addTriggeredCmd(event,cmd);
+				stream.addTriggeredAction(event,cmd);
 				return fab.build()!=null?"Trigger added":"Altering xml failed";
 			case "alter":
 				stream = streams.get(cmds[1].toLowerCase());
@@ -738,6 +739,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 						}else{
 							fab.removeChild("ttl");
 						}
+						reload=true;
 					break;
 					default:
 						fab.alterChild(alter[0],alter[1]);
@@ -745,11 +747,33 @@ public class StreamManager implements StreamListener, CollectorFuture {
 					break;
 				}
 				if( fab.build()!=null ){
-					if( reload)
+					if( reload )
 						this.reloadStream(device);	
 					return "Alteration applied";
 				}
 				return "Failed to alter stream!";
+			case "addwrite":
+				if( cmds.length < 3 ){
+					return "Bad amount of arguments, should be ss:addwrite,id,when:data";
+				}
+			case "addcmd":
+					if( cmds.length < 3 ){
+						return "Bad amount of arguments, should be ss:addcmd,id,when:cmd";
+					}
+					if( cmds[2].split(":").length==1)
+						return "Doesn't contain a proper when:data pair";
+					var sOpt = getStream(cmds[1]);
+					if( sOpt.isEmpty())
+						return "No such stream: "+cmds[1];
+					var data = request.substring(request.indexOf(":")+1);
+					var when= cmds[2].substring(0,cmds[2].indexOf(":"));
+					if( sOpt.get().addTriggeredAction(when,data) ){
+						XMLfab.withRoot(settingsPath,XML_PARENT_TAG).selectChildAsParent("stream","id",cmds[1])
+								.ifPresent( fa -> fa.addChild(cmds[0].substring(3),data).attr("when",when).build());
+						return "Added triggered "+cmds[0].substring(3);
+					}else{
+						return "Failed to add, invalid when";
+					}
 			case "echo":
 					if( cmds.length != 2 ) // Make sure we got the correct amount of arguments
 						return "Bad amount of arguments, need 2 (echo,id)";
@@ -908,14 +932,14 @@ public class StreamManager implements StreamListener, CollectorFuture {
 	public void notifyIdle( String id ) {
 		String device = id.replace(" ", "").toLowerCase(); // Remove spaces
 		issues.addIfNewAndStart(device+".conidle", "TTL passed for "+id);
-		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.IDLE));
-		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.WAKEUP));
+		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredAction(BaseStream.TRIGGER.IDLE));
+		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredAction(BaseStream.TRIGGER.WAKEUP));
 	}
 	@Override
 	public boolean notifyActive(String id ) {
 		String device = id.replace(" ", "").toLowerCase(); // Remove spaces
 		issues.addIfNewAndStop(device+".conidle", "TTL passed for "+id);
-		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.IDLE_END));
+		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredAction(BaseStream.TRIGGER.IDLE_END));
 		return true;
 	}
 	@Override
@@ -923,15 +947,15 @@ public class StreamManager implements StreamListener, CollectorFuture {
 		String device = id.replace(" ", "").toLowerCase(); // Remove spaces
 		issues.addIfNewAndStop(device+".conlost", "Connection lost to "+id);
 
-		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.HELLO));
-		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.OPEN));
+		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredAction(BaseStream.TRIGGER.HELLO));
+		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredAction(BaseStream.TRIGGER.OPEN));
 
 	}
 	@Override
 	public void notifyClosed( String id ) {
 		String device = id.replace(" ", "").toLowerCase(); // Remove spaces
 		issues.addIfNewAndStart(device+".conlost", "Connection lost to "+id);
-		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredCmd(BaseStream.TRIGGER.CLOSE));
+		getStream(id.toLowerCase()).ifPresent( b -> b.applyTriggeredAction(BaseStream.TRIGGER.CLOSE));
 	}
 	@Override
 	public boolean requestReconnection( String id ) {

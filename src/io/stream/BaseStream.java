@@ -47,7 +47,7 @@ public abstract class BaseStream {
     protected boolean echo=false;
 
     protected ScheduledFuture<?> reconnectFuture=null;
-    protected ArrayList<TriggeredCommand> triggeredCmds = new ArrayList<>();
+    protected ArrayList<TriggerAction> triggeredActions = new ArrayList<>();
 
     private static final String XML_PRIORITY_TAG="priority";
     private static final String XML_STREAM_TAG="stream";
@@ -99,16 +99,16 @@ public abstract class BaseStream {
         }
 
         // cmds
-        triggeredCmds.clear();
+        triggeredActions.clear();
         for( Element cmd : XMLtools.getChildElements(stream, "cmd") ){
             String c = cmd.getTextContent();
             String when = XMLtools.getStringAttribute(cmd,"when","open");
-            triggeredCmds.add(new TriggeredCommand(when, c));
+            triggeredActions.add(new TriggerAction(when, c));
         }
         for( Element cmd : XMLtools.getChildElements(stream, "write") ){
             String c = cmd.getTextContent();
             String when = XMLtools.getStringAttribute(cmd,"when","hello");
-            triggeredCmds.add(new TriggeredCommand(when, c));
+            triggeredActions.add(new TriggerAction(when, c));
         }
         return readExtraFromXML(stream);
     }
@@ -163,13 +163,13 @@ public abstract class BaseStream {
         fab.alterChild("eol", Tools.getEOLString(eol) );
 
         fab.clearChildren("cmd"); // easier to just remove first instead of checking if existing
-        for( var tr : triggeredCmds){
+        for( var tr : triggeredActions){
             switch(tr.trigger){
                 case OPEN: case IDLE: case CLOSE: case IDLE_END:
-                    fab.addChild("cmd",tr.command);
+                    fab.addChild("cmd",tr.data);
                     break;
                 case HELLO:  case WAKEUP:
-                    fab.addChild("write",tr.command);
+                    fab.addChild("write",tr.data);
                     break;
             }
             if( tr.trigger==TRIGGER.IDLE_END){
@@ -279,57 +279,57 @@ public abstract class BaseStream {
     public boolean hasEcho(){
         return echo;
     }
-    /* ******************************** TRIGGERED COMMANDS *****************************************************/
-    public void addTriggeredCmd( String trigger, String action ){
-        triggeredCmds.add(new TriggeredCommand(trigger, action));
+    /* ******************************** TRIGGERED ACTIONS *****************************************************/
+    public boolean addTriggeredAction(String when, String action ){
+        var t = new TriggerAction(when, action);
+        if( t.trigger==null)
+            return false;
+        triggeredActions.add(t);
+        return true;
     }
-    public void applyTriggeredCmd(TRIGGER trigger ){
-        for( TriggeredCommand cmd : triggeredCmds){
+    public void applyTriggeredAction(TRIGGER trigger ){
+        for( TriggerAction cmd : triggeredActions){
             if( cmd.trigger!=trigger)
                 continue;
 
             if( cmd.trigger==TRIGGER.HELLO || cmd.trigger==TRIGGER.WAKEUP ){
-                Logger.info(id+" -> "+cmd.trigger+" => "+cmd.command);
+                Logger.info(id+" -> "+cmd.trigger+" => "+cmd.data);
                 if( this instanceof Writable )
-                    ((Writable) this).writeLine(cmd.command);
+                    ((Writable) this).writeLine(cmd.data);
                 continue;
             }
-            Logger.info(id+" -> "+cmd.trigger+" => "+cmd.command);
+            Logger.info(id+" -> "+cmd.trigger+" => "+cmd.data);
             if( this instanceof Writable ){
-
-                dQueue.add( Datagram.system(cmd.command).writable((Writable)this) );
+                dQueue.add( Datagram.system(cmd.data).writable((Writable)this) );
             }else{
-                dQueue.add( Datagram.system(cmd.command) );
+                dQueue.add( Datagram.system(cmd.data) );
             }
         }
     }
-    public List<String> getTriggeredCommands(String trigger ){
-        return getTriggeredCommands(convertTrigger(trigger));
-    }
-    public List<String> getTriggeredCommands(TRIGGER trigger ){
-        return triggeredCmds.stream().filter( x -> x.trigger==trigger).map(x -> x.command).collect(Collectors.toList());
+    public List<String> getTriggeredActions(TRIGGER trigger ){
+        return triggeredActions.stream().filter(x -> x.trigger==trigger).map(x -> x.data).collect(Collectors.toList());
     }
     private static TRIGGER convertTrigger( String trigger ){
         switch (trigger){
-            case "open":  return TRIGGER.OPEN;
+            case "open":   return TRIGGER.OPEN;
             case "close":  return TRIGGER.CLOSE;
-            case "idle":  return TRIGGER.IDLE;
+            case "idle":   return TRIGGER.IDLE;
             case "!idle":  return TRIGGER.IDLE_END;
-            case "hello": return TRIGGER.HELLO;
+            case "hello":  return TRIGGER.HELLO;
             case "wakeup": return TRIGGER.WAKEUP;
             default : Logger.error("Unknown trigger requested : "+trigger); return null;
         }
     }
-    protected static class TriggeredCommand{
-        String command;
+    protected static class TriggerAction {
+        String data;
         TRIGGER trigger;
 
-        TriggeredCommand( TRIGGER trigger, String command ){
+        TriggerAction(TRIGGER trigger, String data ){
             this.trigger=trigger;
-            this.command=command;
-            Logger.info("Added command : "+trigger+" -> "+command);
+            this.data =data;
+            Logger.info("Added action : "+trigger+" -> "+data);
         }
-        TriggeredCommand(String trigger,String command){
+        TriggerAction(String trigger, String command){
             this(convertTrigger(trigger),command);
         }
     }
