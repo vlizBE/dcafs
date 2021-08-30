@@ -633,7 +633,7 @@ public class SqlTable {
                     }
                 }else if( col.type == COLUMN_TYPE.REAL){
                     var dvOpt = dp.getDoubleVal(ref);
-                    val = dvOpt.isPresent()?dvOpt.get():null;
+                    val = dvOpt.isPresent()?dvOpt.get().value():null;
                     if( val==null && col.hasDefault )
                         val = NumberUtils.createDouble(def);
                 }else if( col.type == COLUMN_TYPE.LOCALDTNOW){
