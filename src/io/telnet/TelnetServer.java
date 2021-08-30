@@ -139,7 +139,7 @@ public class TelnetServer implements Commandable {
     @Override
     public String replyToCommand(String[] request, Writable wr, boolean html) {
         var cmds = request[1].split(",");
-        if( request[0].equalsIgnoreCase("nb")){
+        if( request[0].equalsIgnoreCase("nb") || request[1].equalsIgnoreCase("nb")){
             int s = writables.size();
             writables.remove(wr);
             return (s==writables.size())?"Failed to remove":"Removed from targets";
@@ -147,11 +147,16 @@ public class TelnetServer implements Commandable {
             switch (cmds[0]) {
                 case "?":
                     var join = new StringJoiner("\r\n");
-                    join.add( "telnet:broadcast,message -> Broadcast the message to all active telnet sessions.")
-                            .add( "bt -> Get the broadcast target count");
+                    join.add( "telnet:broadcast,message -> Broadcast the message to all active telnet sessions at info level.")
+                        .add( "telnet:broadcast,!message -> Broadcast the message to all active telnet sessions at error level.")
+                        .add( "telnet:broadcast,level,message -> Broadcast the message to all active telnet sessions at the given level. (info,warn,error)")
+                        .add( "telnet:bt -> Get the broadcast target count")
+                        .add(" telnet:nb or nb -> Disable showing broadcasts" );
                     return join.toString();
                 case "broadcast":
                     String send;
+                    if( cmds.length < 2)
+                        return "Not enough arguments, telnet:broadcast,level,message or telnet:broadcast,message for info level";
                     switch(cmds[1]){
                         case "warn":  send = TelnetCodes.TEXT_ORANGE+request[1].substring(15); break;
                         case "error": send = TelnetCodes.TEXT_RED+request[1].substring(16);    break;

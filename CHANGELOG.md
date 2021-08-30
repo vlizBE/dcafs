@@ -29,7 +29,8 @@ Cleanup release, added comments/javadoc moved stuff around in the .java files et
 - FlagVal now also allows triggered commands (on flag changes)
 - Added reset method, because reload didn't reset
 - Added javadocs and comments here and there
-
+- RealtimeValues, changed formatting on the telnet interface (as in the dv:? etc commands)
+ 
 ### DoubleVal
 - Added stdev based trigger, requires the history option to be active `<cmd when="stdev below 0.01">dosomething</cmd>`
 
