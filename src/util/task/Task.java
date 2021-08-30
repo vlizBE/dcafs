@@ -434,7 +434,7 @@ public class Task implements Comparable<Task>{
 		switch(triggerType) {
 			case CLOCK:
 				if( future !=null ){
-					suffix = " scheduled at "+this.time+(utc?" [UTC]":"")+" next occurence in "+ TimeTools.convertPeriodtoString(future.getDelay(TimeUnit.SECONDS), TimeUnit.SECONDS);		
+					suffix = " scheduled at "+this.time+(utc?" [UTC]":"")+" next occurence in "+ TimeTools.convertPeriodtoString(future.getDelay(TimeUnit.SECONDS), TimeUnit.SECONDS);
 					if( future.getDelay(TimeUnit.SECONDS) <0 )
 						suffix=".";
 				}
@@ -455,7 +455,7 @@ public class Task implements Comparable<Task>{
 			suffix += " if state is "+when;
 		}
 		if( preReq != null) {
-			suffix += preReq.toString();
+			suffix += " "+preReq.toString();
 		}else{
 			suffix +=".";
 		}
