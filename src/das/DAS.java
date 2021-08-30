@@ -738,6 +738,9 @@ public class DAS implements DeadThreadListener {
         }else{
             b.append("None yet\r\n");
         }
+        if( html ){
+            return b.toString().replace("\r\n","<br>");
+        }
         return b.toString().replace("false", TEXT_RED + "false" + TEXT_GREEN);
     }
 
