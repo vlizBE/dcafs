@@ -149,7 +149,7 @@ public class DAS implements DeadThreadListener {
 
             /* CommandPool */
             commandPool = new CommandPool( workPath);
-            addCommandable("issues",rtvals.getIssuePool());
+            addCommandable(rtvals.getIssuePool(),"issue","issues");
             addCommandable("flags;fv;doubles;double;dv;texts;tv",rtvals);
             addCommandable(rtvals,"rtval","rtvals");
             addCommandable( "wpts",rtvals.enableWaypoints(nettyGroup) );
@@ -722,13 +722,13 @@ public class DAS implements DeadThreadListener {
             Logger.error("Error reading buffers " + e.getMessage());
         }
 
-            if (html) {
-                b.append("<br><b>Databases</b><br>");
-            } else {
-                b.append(TelnetCodes.TEXT_CYAN)
-                        .append("\r\nDatabases\r\n")
-                        .append(TelnetCodes.TEXT_YELLOW).append(TelnetCodes.UNDERLINE_OFF);
-            }
+        if (html) {
+            b.append("<br><b>Databases</b><br>");
+        } else {
+            b.append(TelnetCodes.TEXT_CYAN)
+                    .append("\r\nDatabases\r\n")
+                    .append(TelnetCodes.TEXT_YELLOW).append(TelnetCodes.UNDERLINE_OFF);
+        }
         if (dbManager.hasDatabases()) {
             for( String l : dbManager.getStatus().split("\r\n") ){
                 if (l.endsWith("(NC)"))
@@ -737,6 +737,9 @@ public class DAS implements DeadThreadListener {
             }
         }else{
             b.append("None yet\r\n");
+        }
+        if( html ){
+            return b.toString().replace("\r\n","<br>");
         }
         return b.toString().replace("false", TEXT_RED + "false" + TEXT_GREEN);
     }

@@ -33,9 +33,17 @@ Cleanup release, added comments/javadoc moved stuff around in the .java files et
  
 ### DoubleVal
 - Added stdev based trigger, requires the history option to be active `<cmd when="stdev below 0.01">dosomething</cmd>`
+and a full history buffer.
+- fixed, defValue only overwrites current value (on reload) if current value is NaN
+
+### Other changes
+- StreamManager, `ss:reload,all` is now done with `ss:reload,all` 
 
 ### Other Fixes
 - MathUtil, comparisons like 1--10 weren't handled properly, the second replacement altered it too
+- SQLTable, buildInsert tried using DoubleVal instead of double, forgot the .value()
+- getStatus, \r\n wasn't replaced with <br> for html 
+- Task, prereq was appended with delimiting space
 
 ## 0.10.12 (28/08/21)
 

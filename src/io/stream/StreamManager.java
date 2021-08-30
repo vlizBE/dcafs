@@ -612,7 +612,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 					.add(" ss:requests -> Get an overview of all the datarequests held by the streams")
 				.add("").add(TelnetCodes.TEXT_GREEN+"Interact with stream objects"+TelnetCodes.TEXT_YELLOW)
 					.add(" ss:recon,id -> Try reconnecting the stream")
-					.add(" ss:reload,id -> Reload the stream or 'all' for all from xml.")
+					.add(" ss:reload<,id> -> Reload the stream with the given id or all if no id is specified.")
 					.add(" ss:store,id -> Update the xml entry for this stream")
 					.add(" ss:alter,id,parameter:value -> Alter the given parameter options label,baudrate,ttl")
 				.add("").add(TelnetCodes.TEXT_GREEN+"Route data from or to a stream"+TelnetCodes.TEXT_YELLOW)
@@ -663,16 +663,10 @@ public class StreamManager implements StreamListener, CollectorFuture {
 					return "Already waiting for reconnect attempt";
 				}
 			case "reload":
-				if( cmds.length != 2 ) // Make sure we got the correct amount of arguments
-					return "Bad amount of arguments, need 2 (reload,id)";
-				int index = Tools.parseInt(cmds[1], -999);
-				if( index != -999 ){
-					cmds[1] = this.getStreamID(index);
-				}
-				if( cmds[1].equalsIgnoreCase("all")){
+				if( cmds.length == 1 ){
 					readSettingsFromXML(settingsPath);
 					return "Settings reloaded.";
-				}else{
+				}else if(cmds.length == 2){
 					return reloadStream( cmds[1] );
 				}
 			case "store":
