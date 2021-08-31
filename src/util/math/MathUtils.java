@@ -98,6 +98,10 @@ public class MathUtils {
     }
     public static List<String> extractParts( String formula ){
 
+        if( formula.isEmpty() ) {
+            Logger.warn("Tried to extract parts from empty formula");
+            return new ArrayList<>();
+        }
         var ee = es.matcher(formula)
                 .results()
                 .map(MatchResult::group)
@@ -123,7 +127,7 @@ public class MathUtils {
         var full = new ArrayList<String>();
         int b=0;
         for (int a = 0; a < spl.length; a++) {
-            if (spl[a].isEmpty()) {
+            if (spl[a].isEmpty() && !formula.startsWith("!")) {
                 spl[a + 1] = "-" + spl[a + 1];
             } else {
                 var m = es.matcher(spl[a]);
@@ -134,8 +138,14 @@ public class MathUtils {
                 }
 
                 // add the op
-                if( b<ops.length())
-                    full.add(""+ops.charAt(b));
+                if( b<ops.length()) {
+                    if( ops.charAt(b)=='=') {
+                        full.add("==");
+                        b++;
+                    }else {
+                        full.add("" + ops.charAt(b));
+                    }
+                }
                 b++;
             }
         }
@@ -612,6 +622,9 @@ public class MathUtils {
             op = "!";
             first=first.substring(1);
             second="";
+        }else if( op.equalsIgnoreCase("!")){
+            first = second.replace("!","");
+            second="";
         }
 
         try{
@@ -629,7 +642,6 @@ public class MathUtils {
                 }else{
                     return i1 == -1 ? x -> db1 : x -> x[i1];
                 }
-
             }
             if(NumberUtils.isCreatable(second) ) {
                 db2 = NumberUtils.createDouble(second);
