@@ -123,7 +123,7 @@ public class MathUtils {
         var full = new ArrayList<String>();
         int b=0;
         for (int a = 0; a < spl.length; a++) {
-            if (spl[a].isEmpty()) {
+            if (spl[a].isEmpty() && !formula.startsWith("!")) {
                 spl[a + 1] = "-" + spl[a + 1];
             } else {
                 var m = es.matcher(spl[a]);
@@ -611,6 +611,9 @@ public class MathUtils {
         if( reverse ) {
             op = "!";
             first=first.substring(1);
+            second="";
+        }else if( op.equalsIgnoreCase("!")){
+            first = second.replace("!","");
             second="";
         }
 
