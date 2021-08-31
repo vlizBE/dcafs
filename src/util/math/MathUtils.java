@@ -134,8 +134,14 @@ public class MathUtils {
                 }
 
                 // add the op
-                if( b<ops.length())
-                    full.add(""+ops.charAt(b));
+                if( b<ops.length()) {
+                    if( ops.charAt(b)=='=') {
+                        full.add("==");
+                        b++;
+                    }else {
+                        full.add("" + ops.charAt(b));
+                    }
+                }
                 b++;
             }
         }
@@ -632,7 +638,6 @@ public class MathUtils {
                 }else{
                     return i1 == -1 ? x -> db1 : x -> x[i1];
                 }
-
             }
             if(NumberUtils.isCreatable(second) ) {
                 db2 = NumberUtils.createDouble(second);
