@@ -49,11 +49,9 @@ public class CheckBlock extends AbstractBlock{
             parentBlock.ifPresent( TaskBlock::nextOk );
         }else{
             Logger.debug( "Check failed : "+ori );
-            if( parentBlock.get() instanceof TriggerBlock ) // needs to know because of while/waitfor
+            if( parentBlock.map( pb -> pb instanceof TriggerBlock ).orElse(false) ) // needs to know because of while/waitfor
                 parentBlock.get().nextFailed(this);
-            //parentBlock.ifPresent( TaskBlock::nextFailed );
         }
-
         return pass;
     }
 
@@ -151,10 +149,10 @@ public class CheckBlock extends AbstractBlock{
 
         // Convert the subformulas to functions
         subFormulas.forEach( x -> {
-            x=x.startsWith("!")?x.substring(1)+"==0":x;
+           // x=x.startsWith("!")?x.substring(1)+"==0":x;
             var parts = MathUtils.extractParts(x);
             try {
-                steps.add(MathUtils.decodeDoublesOp(parts.get(0), parts.size() == 3 ? parts.get(2) : "", parts.get(1), subFormulas.size()));
+                steps.add(MathUtils.decodeDoublesOp(parts.get(0), parts.size() >= 3 ? parts.get(2) : "", parts.get(1), subFormulas.size()));
             }catch( IndexOutOfBoundsException e){
                 Logger.error("CheckBox error during steps adding: "+ e.getMessage());
             }
