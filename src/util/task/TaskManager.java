@@ -307,8 +307,8 @@ public class TaskManager implements CollectorFuture {
 							return "Didn't start anything...! Runtype=" + ts.getRunType();
 						}
 					case 0:
-						Logger.warn("Check failed for "+ts.getID()+" : "+ts.getReqIndex() );
-						return "Check failed for "+ts.getID()+" : "+ts.getReqIndex();
+						Logger.warn("Check failed for "+ts.getID()+" : "+getCheckInfo(ts.getReqIndex()) );
+						return "Check failed for "+ts.getID()+" : "+getCheckInfo(ts.getReqIndex());
 					default:
 					case -1:
 						Logger.error("Error during check for "+ts.getID()+" : "+ts.getReqIndex() );
