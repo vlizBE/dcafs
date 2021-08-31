@@ -56,6 +56,9 @@ public class CheckBlock extends AbstractBlock{
     }
 
     public boolean build(){
+        if( sharedMem==null)
+            sharedMem=new ArrayList<>();
+
         String exp = ori;
 
         // Fix the flag/issue and diff?

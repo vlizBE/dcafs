@@ -1,8 +1,6 @@
 package util.taskblocks;
 
-import org.tinylog.Logger;
 import util.data.NumericVal;
-import util.task.Task;
 
 import java.util.ArrayList;
 import java.util.Optional;
