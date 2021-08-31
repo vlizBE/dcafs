@@ -37,7 +37,6 @@ public class TaskManagerPool implements Commandable {
         this.workPath=workpath;
         this.dp=dp;
         this.cmdReq=cmdReq;
-
     }
     public void setStreamPool(StreamManager streamManager){
         this.streamManager = streamManager;
