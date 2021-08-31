@@ -98,6 +98,10 @@ public class MathUtils {
     }
     public static List<String> extractParts( String formula ){
 
+        if( formula.isEmpty() ) {
+            Logger.warn("Tried to extract parts from empty formula");
+            return new ArrayList<>();
+        }
         var ee = es.matcher(formula)
                 .results()
                 .map(MatchResult::group)
