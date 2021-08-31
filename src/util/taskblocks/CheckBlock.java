@@ -59,14 +59,16 @@ public class CheckBlock extends AbstractBlock{
         if( sharedMem==null)
             sharedMem=new ArrayList<>();
 
-        String exp = ori;
+        String exp = ori.toLowerCase();
 
         // Fix the flag/issue and diff?
-        Pattern words = Pattern.compile("[!a-zA-Z]+[_:0-9]*[a-zA-Z]+\\d*");
+        Pattern words = Pattern.compile("[!a-zA-Z]+[_:0-9]*[a-zA-Z0-9]+\\d*");
         var found = words.matcher(ori).results().map(MatchResult::group).collect(Collectors.toList());
 
         for( var comp : found ) {
-            // Fixes flag:, !flag and issue:/!issue:
+            if( comp.matches("^i\\d+") )
+                continue;
+            // Alters flag:, !flag and issue:/!issue:
             if( comp.contains("flag:")){
                 String val = comp.split(":")[1];
                 exp = exp.replace(comp,"{f:"+val+"}=="+(comp.startsWith("!")?"0":"1"));
@@ -78,10 +80,13 @@ public class CheckBlock extends AbstractBlock{
         //Figure out brackets?
         exp=Tools.parseExpression(exp); // rewrite to math symbols
 
-
         // Figure out the realtime stuff
         exp = dp.buildNumericalMem(exp,sharedMem,0);
 
+        if( exp.isEmpty() ){
+            Logger.error("Failed to build numerical mem for "+ori);
+            return false;
+        }
         // Figure out the brackets?
         // First check if the amount of brackets is correct
         int opens = StringUtils.countMatches(exp,"(");
