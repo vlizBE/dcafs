@@ -21,7 +21,7 @@ public class TaskSet {
     boolean interruptable = true;
     String managerID = "???";
 
-    RtvalCheck req;
+    int reqIndex;
 
     public TaskSet( String id, String description ) {
         this.description=description;
@@ -38,21 +38,13 @@ public class TaskSet {
 
         Logger.tag("TASK").info("["+managerID+"] Created taskset: "+description+" "+id+" "+run+" reps:"+repeats);
     }
-    public void setReq( String check ){
-        if( !check.isEmpty()){
-            req = new RtvalCheck(check);
-        }
+    public void setReqIndex(int index ){
+       reqIndex=index;
     }
-    public String getReqInfo(){
-        if( req==null)
-            return "";
-        return req.toString();
+    public int getReqIndex(){
+        return reqIndex;
     }
-    public boolean doReq(DataProviding dp ){
-        if( req==null)
-            return true;
-        return req.test(dp);
-    }
+
     public void setManagerID( String manID ){
         managerID=manID;
     } 

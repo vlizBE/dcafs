@@ -4,6 +4,9 @@ import io.Writable;
 import org.apache.commons.lang3.tuple.Pair;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.data.DataProviding;
+import util.data.NumericVal;
+import util.taskblocks.CheckBlock;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLtools;
@@ -77,9 +80,9 @@ public class Task implements Comparable<Task>{
 	public enum TRIGGERTYPE {KEYWORD,CLOCK,INTERVAL,DELAY,EXECUTE,RETRY,WHILE,WAITFOR} // The trigger possibilities
 	TRIGGERTYPE triggerType = TRIGGERTYPE.EXECUTE;								  		// Default trigger type is execute (no trigger)
 
-	RtvalCheck preReq = null;
-	RtvalCheck postReq = null;
-		
+	int reqIndex=-1;
+	int checkIndex=-1;
+
 	/* Taskset */ 
 	private String taskset="";			// The taskset this task is part of
 	private int tasksetIndex=-1;		// The index the task has in the taskset it's part of
@@ -89,7 +92,7 @@ public class Task implements Comparable<Task>{
 	 * Constructor that parses an Element to get all the info
 	 * @param tsk The element for a task
 	 */
-	public Task( Element tsk ){
+	public Task(Element tsk, DataProviding dp, ArrayList<CheckBlock> sharedChecks){
 
 		when  = XMLtools.getStringAttribute( tsk, "state", "always"); //The state that determines if it's done or not
 
@@ -105,7 +108,28 @@ public class Task implements Comparable<Task>{
 				case "waitfor": triggerType =TRIGGERTYPE.WAITFOR; break;
 			}
 			var check = XMLtools.getStringAttribute(tsk,"check","");
-			splitReq( check.isEmpty()?tsk.getTextContent():check, true ); // text content has the req
+			if( !check.isEmpty() ){
+				for( int a=0;a<sharedChecks.size();a++ ){
+					if( sharedChecks.get(a).matchesOri(check)){
+						reqIndex=a;
+						break;
+					}
+				}
+				if( checkIndex==-1){
+					var cb = CheckBlock.prepBlock(dp,check);
+					if( sharedChecks.isEmpty()) {
+						cb.setSharedMem(new ArrayList<>());
+					}else{
+						cb.setSharedMem(sharedChecks.get(0).getSharedMem());
+					}
+					if( cb.build() ){
+						sharedChecks.add(cb);
+						reqIndex = sharedChecks.size()-1;
+					}else{
+						Logger.error("Failed to parse "+check);
+					}
+				}
+			}
 		}else{
 			id = XMLtools.getStringAttribute( tsk, "id", ""+new Random().nextLong()).toLowerCase();
 
@@ -120,8 +144,52 @@ public class Task implements Comparable<Task>{
 			stopOnFail = XMLtools.getBooleanAttribute(tsk,"stoponfail",true);
 			enableOnStart = XMLtools.getBooleanAttribute(tsk,"atstartup",true);
 
-			splitReq( XMLtools.getStringAttribute( tsk, "req", ""), true );
-			splitReq( XMLtools.getStringAttribute( tsk, "check", ""), false );
+			String req = XMLtools.getStringAttribute( tsk, "req", "");
+			if( !req.isEmpty() ){
+				for( int a=0;a<sharedChecks.size();a++ ){
+					if( sharedChecks.get(a).matchesOri(req)){
+						reqIndex=a;
+						break;
+					}
+				}
+				if( reqIndex==-1){
+					var cb = CheckBlock.prepBlock(dp,req);
+					if( sharedChecks.isEmpty()) {
+						cb.setSharedMem(new ArrayList<>());
+					}else{
+						cb.setSharedMem(sharedChecks.get(0).getSharedMem());
+					}
+					if( cb.build() ) {
+						sharedChecks.add(cb);
+						reqIndex = sharedChecks.size() - 1;
+					}else{
+						Logger.error("Failed to parse "+req);
+					}
+				}
+			}
+			String check = XMLtools.getStringAttribute( tsk, "check", "");
+			if( !check.isEmpty() ){
+				for( int a=0;a<sharedChecks.size();a++ ){
+					if( sharedChecks.get(a).matchesOri(check)){
+						checkIndex=a;
+						break;
+					}
+				}
+				if( checkIndex==-1){
+					var cb = CheckBlock.prepBlock(dp,check);
+					if( sharedChecks.isEmpty()) {
+						cb.setSharedMem(new ArrayList<>());
+					}else{
+						cb.setSharedMem(sharedChecks.get(0).getSharedMem());
+					}
+					if( cb.build() ){
+						sharedChecks.add(cb);
+						checkIndex = sharedChecks.size()-1;
+					}else{
+						Logger.error("Failed to parse "+check);
+					}
+				}
+			}
 
 			convertOUT( XMLtools.getStringAttribute( tsk, "output", "system") );
 			convertTrigger( XMLtools.getStringAttribute( tsk, "trigger", "") );
@@ -154,6 +222,12 @@ public class Task implements Comparable<Task>{
 				link = linking[1];
 			}
 		}
+	}
+	public int getReqIndex( ){
+		return reqIndex;
+	}
+	public int getCheckIndex(){
+		return checkIndex;
 	}
 	public boolean isEnableOnStart(){
 		return enableOnStart;
@@ -345,27 +419,6 @@ public class Task implements Comparable<Task>{
 	public void setWritable( Writable writable ){
 		this.writable=writable;
 	}
-	/* *********************************************  V E R I F Y ****************************************************/
-	/**
-	 * To split the string representation of the verify in usable objects
-	 * @param req The string representation
-	 * @param isPre True if the Rtvalcheck is done to determine if the task will be executed, false if afterwards if needs to be repeated
-	 */
-	private void splitReq( String req, boolean isPre ) {
-		
-		if( req.isBlank())
-			return;
-
-		req = req.toLowerCase();
-		req = req.replace(" && ", " and ");
-		req = req.replace(" \\|\\| ", " or ");
-
-		if( isPre ){
-			preReq = new RtvalCheck(req);
-		}else{
-			postReq = new RtvalCheck(req);
-		}
-	}
 
 	/* *******************************************  L I N K **********************************************************/
 	/**
@@ -454,11 +507,11 @@ public class Task implements Comparable<Task>{
 		if( !when.equals("always")&&!when.isBlank()) {
 			suffix += " if state is "+when;
 		}
-		if( preReq != null) {
-			suffix += " "+preReq.toString();
-		}else{
+		//if( preReq != null) {
+		//	suffix += " "+preReq.toString();
+		//}else{
 			suffix +=".";
-		}
+		//}
 		switch( out ) {
 			case STREAM: return "Sending '"+ value.replace("\r", "").replace("\n", "")+"' to "+stream + suffix;
 			case EMAIL:   return "Emailing '"+ value +"' to "+outputRef + suffix;

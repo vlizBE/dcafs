@@ -12,6 +12,7 @@ import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import util.task.Task.*;
+import util.taskblocks.CheckBlock;
 import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.tools.Tools;
@@ -34,6 +35,7 @@ public class TaskManager implements CollectorFuture {
 	ArrayList<Task> tasks = new ArrayList<>(); 			// Storage of the tasks
 	Map<String, TaskSet> tasksets = new HashMap<>(); 	// Storage of the tasksets
 	Path xmlPath = null; 								// Path to the xml file containing the tasks/tasksets
+	ArrayList<CheckBlock> sharedChecks =new ArrayList<>();
 
 	/* The different outputs */
 	EmailSending emailer = null;    // Reference to the email send, so emails can be send
@@ -172,7 +174,7 @@ public class TaskManager implements CollectorFuture {
 	 * @return True if the addition was ok
 	 */
 	public Task addTask(Element tsk) {
-		Task task = new Task(tsk);
+		Task task = new Task(tsk, dp, sharedChecks);
 
 		if (startOnLoad && task.getTriggerType()!=TRIGGERTYPE.EXECUTE && task.isEnableOnStart()) {
 			startTask(task);
@@ -292,29 +294,25 @@ public class TaskManager implements CollectorFuture {
 		TaskSet ts = tasksets.get(id);
 		if (ts != null) {
 			if (ts.getTaskCount() != 0) {
-				if( ts.doReq(dp) ) {
-					Logger.tag(TINY_TAG).debug("[" + this.id + "] Taskset started " + id);
-					if (ts.getRunType() == RUNTYPE.ONESHOT) {
-						if( ts.doReq(dp)) {
+				switch( runCheck(ts.getReqIndex()) ){
+					case 1:
+						Logger.tag(TINY_TAG).debug("[" + this.id + "] Taskset started " + id);
+						if (ts.getRunType() == RUNTYPE.ONESHOT) {
 							startTasks(ts.getTasks());
 							return "Taskset should be started: " + id;
-						}else{
-							return "Taskset NOT started: " + id+" if failed "+ts.getReqInfo();
-						}
-
-					} else if (ts.getRunType() == RUNTYPE.STEP) {
-						if( ts.doReq(dp)) {
+						} else if (ts.getRunType() == RUNTYPE.STEP) {
 							startTask(ts.getTasks().get(0));
 							return "Started first task of taskset: " + id;
-						}else{
-							return "Taskset NOT started: " + id+" if failed "+ts.getReqInfo();
+						} else {
+							return "Didn't start anything...! Runtype=" + ts.getRunType();
 						}
-					} else {
-						return "Didn't start anything...! Runtype=" + ts.getRunType();
-					}
-				}else{
-					Logger.warn("Check failed for "+ts.getID()+" : "+ts.getReqInfo() );
-					return "Check failed for "+ts.getID()+" : "+ts.getReqInfo();
+					case 0:
+						Logger.warn("Check failed for "+ts.getID()+" : "+ts.getReqIndex() );
+						return "Check failed for "+ts.getID()+" : "+ts.getReqIndex();
+					default:
+					case -1:
+						Logger.error("Error during check for "+ts.getID()+" : "+ts.getReqIndex() );
+						return "Check not run for "+ts.getID()+" : "+ts.getReqIndex();
 				}
 			} else {
 				Logger.tag(TINY_TAG).info("[" + this.id + "] TaskSet " + ts.getDescription() + " is empty!");
@@ -324,6 +322,24 @@ public class TaskManager implements CollectorFuture {
 			Logger.tag(TINY_TAG).warn("[" + this.id + "] Taskset with " + id+" not found");
 			return "No such taskset:" + id;
 		}
+	}
+	public int runCheck( int index ){
+		if( index == -1 )
+			return 1;
+		if( index >= sharedChecks.size()) {
+			Logger.error( id+" (ts) -> Invalid index asked for check "+index);
+			return -1;
+		}
+		return sharedChecks.get(index).start(null)?1:0;
+	}
+	public String getCheckInfo( int index ){
+		if( index ==-1)
+			return "";
+		if( index >= sharedChecks.size()) {
+			Logger.error( id+" (ts) -> Invalid index asked for check "+index);
+			return "";
+		}
+		return sharedChecks.get(index).toString();
 	}
 
 	/**
@@ -526,7 +542,7 @@ public class TaskManager implements CollectorFuture {
 					task.reset();
 				}else if (task.triggerType == TRIGGERTYPE.WAITFOR) {
 					failure = false;
-					Logger.info("Requirement not met, resetting counter failed "+task.preReq.toString());
+					Logger.info("Requirement not met, resetting counter failed "+getCheckInfo(task.getReqIndex()));
 					task.attempts = 0; // reset the counter
 				}else if (task.triggerType == TRIGGERTYPE.RETRY || task.triggerType == TRIGGERTYPE.INTERVAL) {
 					failure = false;
@@ -1039,30 +1055,9 @@ public class TaskManager implements CollectorFuture {
 	 * @return 1=ok,0=nok,-1=error
 	 */
 	private int checkRequirements(Task task, boolean pre ) {
-
-		if( dp == null ){ // If the verify can't be checked, return false
-			Logger.tag(TINY_TAG).info("["+ id +"] Couldn't check because no DataProviding defined.");
-			return -1;
-		}
-
-		var check = task.preReq;
-		if( !pre ){
-			check = task.postReq;
-		}
-		if( check==null||check.isEmpty())
+		if( sharedChecks.isEmpty()) // If no checks are stored, return ok
 			return 1;
-
-		return check.test(dp)?1:0;
-	}
-	/**
-	 * Create a readable string based on the check
-	 * @param check The check to make the string from
-	 * @return The string representation of the check
-	 */
-	public String printCheck(RtvalCheck check) {
-		if( dp == null )
-			return "No RealtimeValues defined!";
-		return check.toString(dp);
+		return runCheck( pre?task.getReqIndex():task.getCheckIndex() );
 	}
 
 	/* *******************************************************************************************************/
@@ -1167,6 +1162,28 @@ public class TaskManager implements CollectorFuture {
 
 				String tasksetID = el.getAttribute("id");
 				String req = XMLtools.getStringAttribute(el,"req","");
+				int reqIndex=-1;
+				if( !req.isEmpty() ){
+					for( int a=0;a<sharedChecks.size();a++ ){
+						if( sharedChecks.get(a).matchesOri(req)){
+							reqIndex=a;
+						}
+					}
+					if( reqIndex==-1){
+						var cb = CheckBlock.prepBlock(dp,req);
+						if( sharedChecks.isEmpty()) {
+							cb.setSharedMem(new ArrayList<>());
+						}else{
+							cb.setSharedMem(sharedChecks.get(0).getSharedMem());
+						}
+						if( cb.build() ) {
+							sharedChecks.add(cb);
+							reqIndex = sharedChecks.size() - 1;
+						}else{
+							Logger.error("Failed to parse "+req);
+						}
+					}
+				}
 				String failure = el.getAttribute("failure");						
 				int repeats = XMLtools.getIntAttribute(el, "repeat", 0);
 
@@ -1186,12 +1203,12 @@ public class TaskManager implements CollectorFuture {
 						break;
 				}
 				TaskSet set = addTaskSet(tasksetID, description,  run, repeats, failure);
-				set.setReq( req );
+				set.setReqIndex( reqIndex );
 				set.interruptable = XMLtools.getBooleanAttribute(el, "interruptable", true);
 
 				sets++;
 				for( Element ll : XMLtools.getChildElements( el )){
-					addTaskToSet( tasksetID, new Task(ll) );
+					addTaskToSet( tasksetID, new Task(ll, dp, sharedChecks) );
 				}
 			 }
 			
