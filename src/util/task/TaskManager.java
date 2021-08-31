@@ -33,7 +33,6 @@ public class TaskManager implements CollectorFuture {
 	ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(3);// scheduler for the request data action
 	ArrayList<Task> tasks = new ArrayList<>(); 			// Storage of the tasks
 	Map<String, TaskSet> tasksets = new HashMap<>(); 	// Storage of the tasksets
-	ArrayList<String> states = new ArrayList<>(); 		// Storage of the states/keywords
 	Path xmlPath = null; 								// Path to the xml file containing the tasks/tasksets
 
 	/* The different outputs */
@@ -134,28 +133,6 @@ public class TaskManager implements CollectorFuture {
 		boolean altered = dp.getText(split[0],"").equalsIgnoreCase(split[1]);
 		dp.setText(split[0],split[1]);
 		return altered;
-	}
-
-	/**
-	 * Remove a state from the pool
-	 * 
-	 * @param id The identifier of the state
-	 * @return True if it was actually removed
-	 */
-	public boolean removeState(String id) {
-
-		id = id.split(":")[0]; // If it doesn't contain a ':' nothing wil change (meaning id will stay the
-								// same)
-
-		for (int a = 0; a < states.size(); a++) {
-			if (states.get(a).startsWith(id + ":")) {
-				states.remove(a);
-				Logger.tag(TINY_TAG).info("[" + this.id + "] Removing state: " + id);
-				states.trimToSize();
-				return true;
-			}
-		}
-		return false;
 	}
 
 	/**
