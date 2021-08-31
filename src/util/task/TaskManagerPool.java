@@ -253,6 +253,13 @@ public class TaskManagerPool implements Commandable {
                 response.add("Currently active TaskManagers:");
                 tasklists.keySet().forEach(response::add);
                 return response.toString();
+            case "listchecks":
+                if( cmd.length != 2)
+                    return "Not enough parameters, tm:listchecks,id";
+                tl=tasklists.get(cmd[1]);
+                if( tl == null)
+                    return "No such TaskManager: "+cmd[1];
+                return tl.getChecksInfo(nl);
             case "run":
                 if( cmd.length != 2)
                     return "Not enough parameters, missing manager:taskset";

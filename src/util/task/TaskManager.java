@@ -1060,6 +1060,17 @@ public class TaskManager implements CollectorFuture {
 		return runCheck( pre?task.getReqIndex():task.getCheckIndex() );
 	}
 
+	/**
+	 * Get a listing of all the checks shared in this tasklist
+	 * @param eol The eol characters to use as delimiter
+	 * @return The resulting string
+	 */
+	public String getChecksInfo( String eol ){
+		StringJoiner join = new StringJoiner(eol);
+		join.setEmptyValue("No checks yet");
+		sharedChecks.forEach( cb -> join.add(cb.toString()));
+		return join.toString();
+	}
 	/* *******************************************************************************************************/
 	/**
 	 * If a task is prohibited of execution for a set amount of time, this is scheduled after that time.
