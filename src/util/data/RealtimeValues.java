@@ -58,9 +58,10 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		this.settingsPath=settingsPath;
 		this.dQueue=dQueue;
 
+		readFromXML();
+
 		issuePool = new IssuePool(dQueue, settingsPath,this);
 
-		readFromXML();
 	}
 
 	/* ************************************ X M L ****************************************************************** */
