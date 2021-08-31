@@ -18,6 +18,7 @@ public abstract class AbstractBlock implements TaskBlock{
     boolean srcBlock=false;
     boolean valid=true;
 
+    /* Shared mem */
     public void setSharedMem(ArrayList<NumericVal> mem) {
         sharedMem=mem;
     }
@@ -78,6 +79,9 @@ public abstract class AbstractBlock implements TaskBlock{
         for( var b : next ){
             b.getBlockInfo(join,offset+"  ");
         }
+    }
+    public boolean matchesOri( String com ){
+        return ori.equalsIgnoreCase(com);
     }
     public boolean start(TaskBlock starter){
         doNext();
