@@ -49,7 +49,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	private final Path settingsPath;
 
 	/* Patterns */
-	private final Pattern words = Pattern.compile("[a-zA-Z]+[_:0-9]*[a-zA-Z]+\\d*"); // find references to doublevals etc
+	private final Pattern words = Pattern.compile("[a-zA-Z]+[_:0-9]*[a-zA-Z0-9]+\\d*"); // find references to doublevals etc
 
 	/* Other */
 	private final BlockingQueue<Datagram> dQueue; // Used to issue triggered cmd's
@@ -367,6 +367,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		// Figure out the rest?
 		var found = words.matcher(exp).results().map(MatchResult::group).collect(Collectors.toList());
 		for( String fl : found){
+			if( fl.matches("^i\\d+") )
+				continue;
 			int index;
 			if( fl.startsWith("flag:")){
 				var f = getFlagVal(fl.substring(5));
@@ -393,8 +395,20 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					index += offset;
 					exp = exp.replace(fl, "i" + index);
 				}else{
-					Logger.error("Couldn't find a doubleval with id "+fl);
-					return "";
+					var f = getFlagVal(fl);
+					if( f.isPresent() ){
+						index = nums.indexOf(f.get());
+						if(index==-1){
+							nums.add( f.get() );
+							index = nums.size()-1;
+						}
+						index += offset;
+						exp = exp.replace(fl, "i" + index);
+					}else{
+						Logger.error("Couldn't find a doubleval with id "+fl);
+						return "";
+					}
+					return exp;
 				}
 			}
 		}
