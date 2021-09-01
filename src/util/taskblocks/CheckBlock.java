@@ -60,6 +60,10 @@ public class CheckBlock extends AbstractBlock{
     public boolean build(){
         String exp = ori;
 
+        if( ori.isEmpty()) {
+            Logger.error("Ori is empty");
+            return false;
+        }
         // Fix the flag/issue and diff?
         Pattern words = Pattern.compile("[!a-zA-Z]+[_:0-9]*[a-zA-Z]+\\d*");
         var found = words.matcher(ori).results().map(MatchResult::group).collect(Collectors.toList());
@@ -69,9 +73,11 @@ public class CheckBlock extends AbstractBlock{
             if( comp.contains("flag:")){
                 String val = comp.split(":")[1];
                 exp = exp.replace(comp,"{f:"+val+"}=="+(comp.startsWith("!")?"0":"1"));
-            }else if( comp.startsWith("issue")){
+            }else if( comp.startsWith("issue:")){
                 String val = comp.split(":")[1];
                 exp = exp.replace(comp,"{i:"+val+"}=="+(comp.startsWith("!")?"0":"1"));
+            }else if( comp.toLowerCase().startsWith("d:") || comp.toLowerCase().startsWith("f:")){
+                exp = exp.replace(comp,"{"+comp+"}");
             }
         }
         //Figure out brackets?
@@ -80,6 +86,10 @@ public class CheckBlock extends AbstractBlock{
 
         // Figure out the realtime stuff
         exp = dp.buildNumericalMem(exp,sharedMem,0);
+        if( exp.isEmpty() ){
+            Logger.error( "Couldn't process "+ori+", vals missing");
+            return false;
+        }
 
         // Figure out the brackets?
         // First check if the amount of brackets is correct
