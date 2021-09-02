@@ -41,6 +41,8 @@ public class Generic {
     int maxIndex=-1;
     boolean tableMatch=false;
 
+    String group="";
+
     /* Macro */
     String macro="";
     String macroRef="";
@@ -78,6 +80,9 @@ public class Generic {
         macroIndex=index;
         macroRef=value;
         return this;
+    }
+    public void setDefaultGroup( String group ){
+        this.group=group;
     }
     /**
      * Add looking for a real/double on the given index
@@ -144,18 +149,6 @@ public class Generic {
     public Generic storeInDB( String id, String table ){
         dbid=id.split(",");
         this.table=table;
-        return this;
-    }
-    /**
-     * Set the info required for writing to a database, this won't be used to write in the database but for the titles
-     * @param table The table in the database
-     * @return This object
-     */
-    public Generic storeForDB( String table ){
-        if( table.isEmpty())
-            return this;
-        this.table=table;
-        this.dbWrite =false;
         return this;
     }
 
@@ -243,9 +236,9 @@ public class Generic {
         for( int a=0;a<entries.size();a++ ){
             Entry entry = entries.get(a);
 
-            String ref = table.isBlank()?entry.title:table+"_"+entry.title;
+            String ref = (group.isEmpty()||entry.title.contains("_"))?entry.title:group+"_"+entry.title;
             
-            if( entry.title.contains("@macro") )
+            if( ref.contains("@macro") )
                 ref = entry.title.replace("@macro", macro);
             
             try{
@@ -329,8 +322,6 @@ public class Generic {
         StringJoiner join = new StringJoiner("",id+" -> ","");
         if( dbid!=null ){
             join.add("Store in "+String.join(",",dbid)+"(db):(table)"+table+" " );
-        }else if( !table.isEmpty()){
-            join.add("Store for "+table+"(table) ");
         }
         if (!influxID.isEmpty() ){
             join.add(" Store in InfluxDB "+influxID+":"+table+" ");
@@ -355,19 +346,26 @@ public class Generic {
         return join.toString();
     }
     public static Generic readFromXML( Element gen ){
+
         Generic generic = Generic.create(gen.getAttribute("id"));
+        generic.setDefaultGroup(gen.getAttribute("group"));
         generic.setDelimiter(gen.getAttribute("delimiter"));
         generic.setStartsWith(gen.getAttribute("startswith"));
         generic.setMQTTID(gen.getAttribute("mqtt"));
         generic.setInfluxID(gen.getAttribute("influx"));
         generic.setTableMatch( XMLtools.getBooleanAttribute(gen, "exact", false));
 
-        if ( gen.hasAttribute("dbid")) {
-            generic.storeInDB(gen.getAttribute("dbid"), gen.getAttribute("table"));
-        } else {
-            generic.storeForDB(gen.getAttribute("table"));
+        if ( gen.hasAttribute("db")) {
+            var db = gen.getAttribute("db").split(":");
+            if( db.length==2 ) {
+                generic.storeInDB(db[0], db[1]);
+            }else{
+                Logger.error( generic.getID()+" -> Failed to read db tag, must contain dbids:table, multiple dbids separated with ','");
+            }
         }
         for (Element ent : XMLtools.getChildElements(gen)) {
+            String title = ent.getTextContent();
+
             switch (ent.getNodeName()) {
                 case "macro":
                     generic.setMacro(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), ent.getTextContent());
@@ -379,15 +377,15 @@ public class Generic {
                     }
                     break;
                 case "real":
-                    generic.addReal(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), ent.getTextContent(),
+                    generic.addReal(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title,
                             XMLtools.getStringAttribute(ent, "mqtt", ""));
                     break;
                 case "integer":case "int":
-                    generic.addInteger(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), ent.getTextContent(),
+                    generic.addInteger(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title,
                             XMLtools.getStringAttribute(ent, "mqtt", ""));
                     break;
                 case "text": case "timestamp":
-                    generic.addText(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), ent.getTextContent());
+                    generic.addText(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title );
                     break;
                 case "filler":
                     generic.addFiller(-1, ent.getTextContent());
@@ -396,10 +394,10 @@ public class Generic {
                     generic.addTag(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), ent.getTextContent());
                     break;
                 case "localdt":
-                    generic.addThing(XMLtools.getIntAttribute(ent, INDEX_STRING, -1),ent.getTextContent(),DATATYPE.LOCALDT);
+                    generic.addThing(XMLtools.getIntAttribute(ent, INDEX_STRING, -1),title,DATATYPE.LOCALDT);
                     break;
                 case "utcdt":
-                    generic.addThing(XMLtools.getIntAttribute(ent, INDEX_STRING, -1),ent.getTextContent(),DATATYPE.UTCDT);
+                    generic.addThing(XMLtools.getIntAttribute(ent, INDEX_STRING, -1),title,DATATYPE.UTCDT);
                     break;
                 default: Logger.warn("Tried to add generic part with wrong tag: "+ent.getNodeName()); break;
             }
