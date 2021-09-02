@@ -13,7 +13,6 @@ import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class SQLDB extends Database{
@@ -74,7 +73,11 @@ public class SQLDB extends Database{
                 columnRequest="";
                 Logger.error(id+" (db) -> Unknown database type: "+type);
         }
-
+    }
+    protected SQLDB(){
+        tableRequest="";
+        columnRequest="";
+        dbName="";
     }
     /* ************************************************************************************************* */
     public static SQLDB asMSSQL( String address,String dbName, String user, String pass ){
@@ -263,18 +266,18 @@ public class SQLDB extends Database{
      * Build a generic for each local table of this database
      * @param fab The xmlfab to use
      * @param overwrite If true will overwrite existing generics
-     * @param delim The delimiter for the generics
+     * @param delimiter The delimiter for the generics
      * @return The amount of generics build
      */
     @Override
-    public int buildGenericsFromTables(XMLfab fab, boolean overwrite, String delim) {
+    public int buildGenericsFromTables(XMLfab fab, boolean overwrite, String delimiter) {
         var ele = fab.getChildren("generic");
         int cnt=0; // keep track of the amount of generics build
         for( var table : tables.values()){ // Go through the tables
             boolean found = fab.getChildren("generic","dbid",id).stream() // get child nodes with the same dbid
                                     .anyMatch(e->e.getAttribute("table").equalsIgnoreCase(table.name)); // and the same table
             if( !found ){ // If no such node exists yet
-                table.buildGeneric(fab,id,table.name,delim); // build it
+                table.buildGeneric(fab,id,table.name,delimiter); // build it
                 fab.up(); // return the fab to higher level
                 cnt++; // increment the counter
             }
@@ -528,13 +531,13 @@ public class SQLDB extends Database{
     }
 
     /**
-     * Flush all the preparedstatements to the datbase
+     * Flush all the PreparedStatements to the database
      * @return True if flush requested
      */
     protected boolean flushPrepared(){
-        if (!busyPrepared ) {
+        if (!busyPrepared ) { // Don't ask for another flush when one is being done
             if(isValid(1)) {
-                busyPrepared=true;
+                busyPrepared=true; // Set Flag so we know the buffer is being flushed
                 scheduler.submit(new DoPrepared());
                 return true;
             }else{
@@ -641,7 +644,7 @@ public class SQLDB extends Database{
      * @param values The values to insert
      * @return -2=No such table, -1=No such statement,0=bad amount of values,1=ok
      */
-    public synchronized int doDirectInsert(String table, Object... values) {
+    public synchronized int addDirectInsert(String table, Object... values) {
         if( values == null){
             Logger.error(id+" -> Tried to insert a null in "+table);
             return -3;
@@ -912,11 +915,11 @@ public class SQLDB extends Database{
                             }
                     )
             );
-            // If there are still records left, this becomes the nex first
+            // If there are still records left, this becomes the next first
             if(tables.values().stream().anyMatch(t -> t.getRecordCount() != 0) ){
                 firstPrepStamp = Instant.now().toEpochMilli();
             }
-            busyPrepared=false;
+            busyPrepared=false; // Finished work, so reset the flag
         }
     }
 }

@@ -20,7 +20,7 @@ From 0.5.0 onwards, this should be better documented...
     * Bring javadoc up to date
     * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (might be trigger for 0.11.0)
-
+  
 ## 0.10.13 (work in progress)
 Cleanup release, added comments/javadoc moved stuff around in the .java files etc etc etc
 
@@ -31,19 +31,24 @@ Cleanup release, added comments/javadoc moved stuff around in the .java files et
 - Added javadocs and comments here and there
 - RealtimeValues, changed formatting on the telnet interface (as in the dv:? etc commands)
  
+### util.database
+- Cleanup up (removed unused, added comments, added javadoc etc)
+- Changed some methods that could return null to return optional instead
+- Made som more use of lambda's
+
 ### DoubleVal
 - Added stdev based trigger, requires the history option to be active `<cmd when="stdev below 0.01">dosomething</cmd>`
 and a full history buffer.
 - fixed, defValue only overwrites current value (on reload) if current value is NaN
 
 ### Other changes
-- StreamManager, `ss:reload,all` is now done with `ss:reload,all` 
+- StreamManager, `ss:reload,all` is now done with `ss:reload` 
 
 ### Other Fixes
 - MathUtil, comparisons like 1--10 weren't handled properly, the second replacement altered it too
 - SQLTable, buildInsert tried using DoubleVal instead of double, forgot the .value()
 - getStatus, \r\n wasn't replaced with <br> for html 
-- Task, prereq was appended with delimiting space
+- Task, prereq now appended with delimiting space
 
 ## 0.10.12 (28/08/21)
 

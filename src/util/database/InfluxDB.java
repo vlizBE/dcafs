@@ -190,7 +190,7 @@ public class InfluxDB extends Database{
         return !pointBuffer.isEmpty();
     }
 
-    public synchronized int doDirectInsert(String table, Object... values){
+    public synchronized int addDirectInsert(String table, Object... values){
         var mes = measurements.get(table);
         if( mes ==null )
             return 0;

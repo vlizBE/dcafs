@@ -170,7 +170,7 @@ public abstract class Database{
      * @param values The values to insert
      * @return -2=No such table, -1=No such statement,0=bad amount of values,1=ok
      */
-    public abstract int doDirectInsert(String table, Object... values);
+    public abstract int addDirectInsert(String table, Object... values);
     /**
      * Write a select query and then retrieve the content of a single column from it base on the (case insensitive) name
      * @param query The query to execute
