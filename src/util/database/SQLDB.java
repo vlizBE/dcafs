@@ -13,26 +13,27 @@ import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class SQLDB extends Database{
 
-    private String tableRequest = "";
-    private String columnRequest = "";
-    private String dbName="";
+    private final String tableRequest;   // The query to request table information
+    private final String columnRequest;  // The query to request column information
+    private final String dbName;         // The name of the database
     protected HashMap<String, SqlTable> tables = new HashMap<>(); // Map of the tables
-    protected ArrayList<String> views = new ArrayList<>();
-    protected ArrayList<String> simpleQueries = new ArrayList<>();
+    protected ArrayList<String> views = new ArrayList<>();        // List if views
+    protected ArrayList<String> simpleQueries = new ArrayList<>();// Simple query buffer
 
-    protected Connection con = null;
+    protected Connection con = null; // Database connection
 
-    DBTYPE type;
-    enum DBTYPE {MSSQL,MYSQL,MARIADB, POSTGRESQL}
+    DBTYPE type;                                  // The type of database this object connects to
+    enum DBTYPE {MSSQL,MYSQL,MARIADB, POSTGRESQL} // Supported types
 
-    boolean busySimple =false;
-    boolean busyPrepared =false;
+    boolean busySimple =false;   // Busy with the executing the simple queries
+    boolean busyPrepared =false; // Busy with executing the prepared statement queries
 
-    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1); // Scheduler for queries
 
     /**
      * Prepare connection to one of the supported databases
@@ -56,6 +57,7 @@ public class SQLDB extends Database{
             case MSSQL:
                 irl = "jdbc:sqlserver://" + address + (dbName.isBlank() ? "" : ";database=" + dbName);
                 tableRequest="SELECT * FROM information_schema.tables";
+                columnRequest="";
                 break;
             case MARIADB:
                 irl="jdbc:mariadb://" + address + (address.contains(":")?"/":":3306/") + dbName;
@@ -67,11 +69,14 @@ public class SQLDB extends Database{
                 tableRequest="SELECT table_name FROM information_schema.tables WHERE NOT table_schema='pg_catalog'AND NOT table_schema='information_schema';";
                 columnRequest="SELECT column_name,udt_name,is_nullable,is_identity FROM information_schema.columns WHERE table_name=";
                 break;
+            default:
+                tableRequest="";
+                columnRequest="";
+                Logger.error(id+" (db) -> Unknown database type: "+type);
         }
 
     }
-    public SQLDB(){}
-    /* **************************************************************************************************/
+    /* ************************************************************************************************* */
     public static SQLDB asMSSQL( String address,String dbName, String user, String pass ){
         return new SQLDB( DBTYPE.MSSQL,address,dbName,user,pass );
     }
@@ -84,16 +89,25 @@ public class SQLDB extends Database{
     public static SQLDB asPOSTGRESQL(String address, String dbName, String user, String pass ){
         return new SQLDB( DBTYPE.POSTGRESQL,address,dbName,user,pass);
     }
-    /* **************************************************************************************************/
+    /* ************************************************************************************************* */
     public String toString(){
         return type.toString().toLowerCase()+"@"+getTitle() +" -> " +getRecordsCount()+"/"+maxQueries;
     }
 
+    /**
+     * Get the title of the database
+     * @return The title
+     */
     public String getTitle(){
         if( isMySQL() || type==DBTYPE.POSTGRESQL)
             return irl.substring(irl.lastIndexOf("/")+1);
         return irl.substring(irl.lastIndexOf("=")+1);
     }
+
+    /**
+     * Check if the database is a MySQL variant (mysql,mariadb)
+     * @return True if so
+     */
     public boolean isMySQL(){
         return type==DBTYPE.MARIADB || type==DBTYPE.MYSQL;
     }
@@ -114,11 +128,11 @@ public class SQLDB extends Database{
                 }
             }
         } catch (SQLException e) {
-            Logger.error(e.getMessage());
+            Logger.error(id+" (db) -> "+e.getMessage());
         }        
        
         try {
-            switch( type ){
+            switch( type ){ // Set the class according to the database, might not be needed anymore
                 case MSSQL:	  
                     Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");  
                     break;
@@ -133,62 +147,71 @@ public class SQLDB extends Database{
                     break;
             }
 		} catch (ClassNotFoundException ex) {
-            Logger.error( id+" -> Driver issue with SQLite!" );	        	
+            Logger.error( id+"(db) -> Driver issue with SQLite!" );
         	return false;
         }                
 
         try{
             con = DriverManager.getConnection(irl, user, pass);           
-            Logger.info( id+" -> Connection: " + irl +con);
-            state = STATE.HAS_CON;
+            Logger.info( id+"(db) -> Connection: " + irl +con);
+            state = STATE.HAS_CON; // Connection established, change state
     	} catch ( SQLException ex) {              
             String message = ex.getMessage();
             int eol = message.indexOf("\n");
             if( eol != -1 )
                 message = message.substring(0,eol);          
-            Logger.error( id+" -> Failed to make connection to database! "+message );
-            state = STATE.NEED_CON;
+            Logger.error( id+"(db) -> Failed to make connection to database! "+message );
+            state = STATE.NEED_CON; // Failed to connect, set state to try again
             return false;
         }       
     	return true;
     }
     @Override
     public boolean disconnect() {
-        if (con != null) {
+        if (con != null) { // No use trying to disconnect a connection that doesn't exist
             try {
-                if (con.isClosed())
+                if (con.isClosed()) // if no active connection, just return
                     return false;
-                con.close();
+                con.close(); // try closing it
                 Logger.info(id+" -> Closed connection");
                 return true;
-            } catch (SQLException e) {
-                Logger.error(e);
+            } catch (SQLException e) { // Failed to close it somehow
+                Logger.error(id+" (db)-> "+e);
                 return false;
             }
         }
         return false;
     }
     /**
-     * Check whether or not the database is valid with a given timeout in seconds
+     * Check whether the database is valid with a given timeout in seconds
      *
      * @param timeout The timeout in seconds
      * @return True if the connection is still valid
      */
     public boolean isValid(int timeout) {
         try {
-            if (con == null) {
+            if (con == null) { // no con = not valid
                 return false;
             } else {
                 return con.isValid(timeout);
             }
         } catch (SQLException e) {
-            Logger.error(id+" -> SQLException when checking if valid");
+            Logger.error(id+"(db) -> SQLException when checking if valid: "+e.getMessage());
             return false;
         }
     }
+
+    /**
+     * Get the amount of records currently buffered
+     * @return Get the amount of bufferd records
+     */
     public int getRecordsCount() {
         return tables.values().stream().mapToInt(SqlTable::getRecordCount).sum() + simpleQueries.size();
     }
+    /**
+     * Check if there are buffered records
+     * @return True if there's at least one buffered record
+     */
     public boolean hasRecords() {
         return !simpleQueries.isEmpty() || tables.values().stream().anyMatch(t -> t.getRecordCount() != 0);
     }
@@ -196,7 +219,7 @@ public class SQLDB extends Database{
      * Get the SQLiteTable associated with the given id
      *
      * @param id The id of the table
-     * @return The table if found or null if not
+     * @return The table if found or an empty optional if not
      */
     public Optional<SqlTable> getTable(String id) {
         if (tables.get(id) == null && !tablesRetrieved) { // No table info
@@ -205,9 +228,19 @@ public class SQLDB extends Database{
         }
         return Optional.ofNullable(tables.get(id));
     }
+
+    /**
+     * Get a stream of all the table object linked to this database
+     * @return The stream of tables
+     */
     public Stream<SqlTable> getTables() {
         return tables.values().stream();
     }
+    /**
+     * Get all the information on the local tables
+     * @param eol The eol sequence to use
+     * @return The gathered information
+     */
     public String getTableInfo(String eol){
 
         StringJoiner j = new StringJoiner(eol,"Info about "+id+eol,"");
@@ -215,27 +248,35 @@ public class SQLDB extends Database{
         tables.values().forEach( table -> j.add(table.getInfo()));
         return j.toString();
     }
-    public boolean buildGenericFromTable(XMLfab fab, String tablename, String genID, String delim){
-        return getTable(tablename).map(sqlTable -> sqlTable.buildGeneric(fab, id, genID, delim)).orElse(false);
+    /**
+     * Build a generic based on the information of the chosen table
+     * @param fab The xmlfab used
+     * @param tableName The name of the table
+     * @param genID The id for the new generic
+     * @param delimiter The delimiter to use in the generic
+     * @return True if this worked
+     */
+    public boolean buildGenericFromTable(XMLfab fab, String tableName, String genID, String delimiter){
+        return getTable(tableName).map(sqlTable -> sqlTable.buildGeneric(fab, id, genID, delimiter)).orElse(false);
     }
-
+    /**
+     * Build a generic for each local table of this database
+     * @param fab The xmlfab to use
+     * @param overwrite If true will overwrite existing generics
+     * @param delim The delimiter for the generics
+     * @return The amount of generics build
+     */
     @Override
-    public int buildGenericFromTables(XMLfab fab, boolean overwrite, String delim) {
+    public int buildGenericsFromTables(XMLfab fab, boolean overwrite, String delim) {
         var ele = fab.getChildren("generic");
-        int cnt=0;
-        for( var table : tables.values()){
-            boolean found=false;
-            for( var gen : ele ){
-                if( gen.hasAttribute("dbid") && gen.getAttribute("dbid").equals(id) ){
-                    if( gen.hasAttribute("table") && gen.getAttribute("table").equals(table.name) ){
-                        found=true;
-                    }
-                }
-            }
-            if( !found ){
-                table.buildGeneric(fab,id,table.name,delim);
-                fab.up();
-                cnt++;
+        int cnt=0; // keep track of the amount of generics build
+        for( var table : tables.values()){ // Go through the tables
+            boolean found = fab.getChildren("generic","dbid",id).stream() // get child nodes with the same dbid
+                                    .anyMatch(e->e.getAttribute("table").equalsIgnoreCase(table.name)); // and the same table
+            if( !found ){ // If no such node exists yet
+                table.buildGeneric(fab,id,table.name,delim); // build it
+                fab.up(); // return the fab to higher level
+                cnt++; // increment the counter
             }
         }
         return cnt;
@@ -248,20 +289,20 @@ public class SQLDB extends Database{
     @Override
     public boolean getCurrentTables(boolean clear){
         
-        if( !connect(false) )
-            return false;
+        if( !connect(false) ) // if no connection available try to reconnect
+            return false; // Not connected and reconnect failed, can't do anything
 
-        try( Statement stmt = con.createStatement() ){
-            ResultSet rs = stmt.executeQuery(tableRequest);
-            if (rs != null) {
+        try( Statement stmt = con.createStatement() ){ // Prepare a statement
+            ResultSet rs = stmt.executeQuery(tableRequest); // Send the tablerequest query
+            if (rs != null) { // If there's a valid resultset
                 try {
-                    if( clear )
+                    if( clear ) // If clear is set, first clear existing tables
                         tables.clear();
-                    while (rs.next()) {
-                        ResultSetMetaData rsmd = rs.getMetaData();
-                        String tableName = rs.getString(1);
+                    while (rs.next()) { // Go through the resultset
+                        ResultSetMetaData rsmd = rs.getMetaData(); // get the metadata
+                        String tableName = rs.getString(1); // the tablename is in the first column
 
-                        String tableType="base table";
+                        String tableType="base table"; // only interested in the base tables, not system ones
                         if( rsmd.getColumnCount()==2)
                             tableType=rs.getString(2);
 
@@ -273,11 +314,11 @@ public class SQLDB extends Database{
                             }
                             table.toggleServer();
                             table.toggleReadFromDB(); // either way, it's already present in the database
-                            Logger.debug("Found: "+tableName+" -> "+tableType);
+                            Logger.debug(id+" (db) -> Found: "+tableName+" -> "+tableType);
                         }                        
                     }
                 } catch (SQLException e) {
-                    Logger.error(id+" -> Error during table read: "+e.getErrorCode());
+                    Logger.error(id+"(db) -> Error during table read: "+e.getErrorCode());
                     Logger.error(e.getMessage());
                     return false;
                 }  
@@ -289,7 +330,7 @@ public class SQLDB extends Database{
         // Get the column information....
         for( SqlTable table :tables.values() ){
             if( table.hasColumns() ){// Don't overwrite existing info
-                Logger.debug(id+" -> The table "+table.getName()+" has already been setup, not adding the columns");
+                Logger.debug(id+"(db) -> The table "+table.getName()+" has already been setup, not adding the columns");
                 continue;
             }
             try( Statement stmt = con.createStatement() ){
@@ -324,7 +365,7 @@ public class SQLDB extends Database{
                         }
                         Logger.info(table.getInfo());
                     } catch (SQLException e) {
-                        Logger.error(id+" -> Error during table read: "+e.getErrorCode());
+                        Logger.error(id+"(db) -> Error during table read: "+e.getErrorCode());
                         return false;
                     }  
                 }
@@ -351,20 +392,20 @@ public class SQLDB extends Database{
         if( isValid(5) ){
                 // Create the tables
                 tables.values().forEach(tbl -> {
-                    Logger.debug(id+" -> Checking to create "+tbl.getName()+" read from?"+tbl.isReadFromDB());
+                    Logger.debug(id+"(db) -> Checking to create "+tbl.getName()+" read from?"+tbl.isReadFromDB());
                     if( !tbl.isReadFromDB() ){
                         try( Statement stmt = con.createStatement() ){
                             stmt.execute( tbl.create() );
                             if( tables.get(tbl.getName())!=null && tbl.hasIfNotExists() ){
-                                Logger.warn(id+" -> Already a table with the name "+tbl.getName()+" nothing done because 'IF NOT EXISTS'.");
+                                Logger.warn(id+"(db) -> Already a table with the name "+tbl.getName()+" nothing done because 'IF NOT EXISTS'.");
                             }
                         } catch (SQLException e) {
-                            Logger.error(id+" -> Failed to create table with: "+tbl.create() );
+                            Logger.error(id+"(db) -> Failed to create table with: "+tbl.create() );
                             Logger.error(e.getMessage());
                             tbl.setLastError(e.getMessage()+" when creating "+tbl.name+" for "+id);
                         }
                     }else{
-                        Logger.debug(id+" -> Not creating "+tbl.getName()+" because already read from database...");
+                        Logger.debug(id+"(db) -> Not creating "+tbl.getName()+" because already read from database...");
                     }
                 });
                 // Create the views
@@ -405,7 +446,7 @@ public class SQLDB extends Database{
 
         if( !isValid(1) ){
             if( !connect(false) ){
-                Logger.error( "Couldn't connect to database: "+id);
+                Logger.error( id+"(db) -> Couldn't connect to database: "+id);
                 return Optional.empty();
             }
         }
@@ -428,7 +469,7 @@ public class SQLDB extends Database{
                 data.add( record );
             }
         } catch (SQLException e) {
-            Logger.error("Error running query: "+query+" -> "+e.getErrorCode());
+            Logger.error(id+"(db) -> Error running query: "+query+" -> "+e.getErrorCode());
         }
         return Optional.ofNullable(data);
     }
@@ -438,7 +479,7 @@ public class SQLDB extends Database{
             firstPrepStamp = Instant.now().toEpochMilli();
 
         if( getTable(table).isEmpty() ){
-            Logger.error(id+" -> No such table "+table);
+            Logger.error(id+"(db) ->  No such table "+table);
             return false;
         }
 
@@ -447,7 +488,7 @@ public class SQLDB extends Database{
                 flushPrepared();
             return true;
         }else{
-            Logger.error(id+" -> Build insert failed for "+table);
+            Logger.error(id+"(db) -> Build insert failed for "+table);
         }
         return false;
     }
@@ -459,10 +500,19 @@ public class SQLDB extends Database{
         if( simpleQueries.size()>maxQueries && !busySimple )
             flushSimple();
     }
+
+    /**
+     * Flush all the buffers to the database
+     */
     public void flushAll(){
         flushSimple();
         flushPrepared();
     }
+
+    /**
+     * Flush the simple queries to the database
+     * @return True if flush requested
+     */
     protected boolean flushSimple(){
         if( isValid(1)){
             busySimple = true;
@@ -476,6 +526,11 @@ public class SQLDB extends Database{
         }
         return false;
     }
+
+    /**
+     * Flush all the preparedstatements to the datbase
+     * @return True if flush requested
+     */
     protected boolean flushPrepared(){
         if (!busyPrepared ) {
             if(isValid(1)) {
@@ -559,10 +614,17 @@ public class SQLDB extends Database{
 
         fab.build();
     }
-    public int writeTableToXml( XMLfab fab, String tablename ){
+
+    /**
+     * Write the table information to the database node
+     * @param fab The xmlfab to use
+     * @param tableName The name of the table to write or * to write all
+     * @return The amount of tables written
+     */
+    public int writeTableToXml( XMLfab fab, String tableName ){
         int cnt=0;
         for( var table : tables.values() ){
-            if( table.name.equalsIgnoreCase(tablename) || tablename.equals("*")) {
+            if( table.name.equalsIgnoreCase(tableName) || tableName.equals("*")) {
                 if( fab.hasChild("table","name",table.name).isEmpty()){
                     table.writeToXml( fab, false);
                     cnt++;
@@ -597,7 +659,7 @@ public class SQLDB extends Database{
                 Logger.error("Bad amount of values for insert into " + id + ":" + table);
                 break;
             case -1:
-                Logger.error("No such prepstatement found in " + id + ":" + table);
+                Logger.error("No such prepStatement found in " + id + ":" + table);
                 break;
             case -2:
                 Logger.error("No such table ("+table+") found in " + id);
@@ -612,44 +674,44 @@ public class SQLDB extends Database{
      */
     public void checkState( int secondsPassed ) throws Exception{
         switch(state){
-            case FLUSH_REQ:
+            case FLUSH_REQ: // Required a flush
                 if( !simpleQueries.isEmpty() ) {
-                    Logger.info(id+" -> Flushing simple");
+                    Logger.info(id+"(db) -> Flushing simple");
                     flushSimple();
                 }
 
-                if(tables.values().stream().anyMatch(t -> t.getRecordCount() != 0) ){
+                if(tables.values().stream().anyMatch(t -> t.getRecordCount() != 0) ){ // If any table has records
                     flushPrepared();
                 }
 
                 if (isValid(1)) { // If not valid, flush didn't work either
-                    state = STATE.HAS_CON;
+                    state = STATE.HAS_CON; // If valid, the state is has_connection
                 }else{
-                    state = STATE.NEED_CON;
+                    state = STATE.NEED_CON; // If invalid, need a connection
                 }
                 break;
             case HAS_CON: // If we have a connection, but not using it
                 if( !hasRecords() ){
                     idleCount += secondsPassed;
                     if( idleCount > idleTime && idleTime > 0){
-                        Logger.info(getID()+" -> Connection closed because idle: " + id +" for "+TimeTools.convertPeriodtoString( idleCount, TimeUnit.SECONDS)+" > "+
+                        Logger.info(getID()+"(id) -> Connection closed because idle: " + id +" for "+TimeTools.convertPeriodtoString( idleCount, TimeUnit.SECONDS)+" > "+
                                 TimeTools.convertPeriodtoString( idleTime, TimeUnit.SECONDS) );
                         disconnect();
                         state = STATE.IDLE;
                     }
                 }else{
-                    Logger.debug(id+" -> Waiting for max age to pass...");
+                    Logger.debug(id+"(id) -> Waiting for max age to pass...");
                     if( !simpleQueries.isEmpty() ){
                         long age = (Instant.now().toEpochMilli()- firstSimpleStamp)/1000;
-                        Logger.debug(id+" -> Age of simple: "+age+"s versus max: "+maxAge);
+                        Logger.debug(id+"(id) -> Age of simple: "+age+"s versus max: "+maxAge);
                         if( age > maxAge ){
                             state=STATE.FLUSH_REQ;
-                            Logger.info(id+" -> Requesting simple flush because of age");
+                            Logger.info(id+"(id) -> Requesting simple flush because of age");
                         }
                     }
                     if(tables.values().stream().anyMatch(t -> t.getRecordCount() != 0) ) {
                         long age = (Instant.now().toEpochMilli() - firstPrepStamp) / 1000;
-                        Logger.debug(id+" -> Age of prepared: " + age + "s");
+                        Logger.debug(id+"(id) -> Age of prepared: " + age + "s");
                         if (age > maxAge) {
                             state = STATE.FLUSH_REQ;
                         }
@@ -657,8 +719,8 @@ public class SQLDB extends Database{
                     idleCount=0;
                 }
                 break;
-            case IDLE:
-                if( hasRecords() ){
+            case IDLE: // Database is idle
+                if( hasRecords() ){ // If it has records
                     if( connect(false) ){ // try to connect but don't reconnect if connected
                         state=STATE.HAS_CON; // connected
                     }else{
@@ -666,31 +728,35 @@ public class SQLDB extends Database{
                     }
                 }
                 break;
-            case NEED_CON:
+            case NEED_CON: // Needs a connection
                 Logger.info(id+" -> Need con, trying to connect...");
                 if( connect(false) ){
-                    if( hasRecords() ){
+                    if( hasRecords() ){ // If it is connected and has records
                         state=STATE.HAS_CON;
                         Logger.info(id+" -> Got a connection.");
-                    }else{
+                    }else{  // Has a connection but doesn't need it anymore
                         state=STATE.IDLE;
                         Logger.info(id+" -> Got a connection, but don't need it anymore...");
                     }
                 }
                 break;
             default:
+                Logger.warn(id+"(db) -> Unknown state: "+state);
                 break;
         }
     }
 
+    /**
+     * Execute the simple queries one by one
+     */
     public class DoSimple implements Runnable{
 
-        ArrayList<String> temp = new ArrayList<>();
-        int total;
+        ArrayList<String> temp = new ArrayList<>(); // Array to store the queries that are being executed
+        int total; // Counter for the amount of queries to be executed
 
         public DoSimple( ArrayList<String> data){
-            temp.addAll(data);
-            total=temp.size();
+            temp.addAll(data); // Add all the given queries to the temp arraylist
+            total=temp.size(); // Set total to the amount of queries received
         }
         @Override
         public void run() {
@@ -701,18 +767,18 @@ public class SQLDB extends Database{
                         pst.execute();
                         if (!con.getAutoCommit())
                             con.commit();
-                        temp.set(a,"");
+                        temp.set(a,""); // if executed, clear the entry in the temp arraylist
                     } catch (SQLException e) {
                         if( e.getErrorCode()==19){
-                            temp.set(a,"");
+                            temp.set(a,""); // Don't care about this error, clear the entry
                         }else if( e.getMessage().contains("syntax error") || e.getMessage().contains("no such ")
                                 || e.getMessage().contains("has no ") || e.getMessage().contains("PRIMARY KEY constraint")){ //sql errors
-                            Logger.tag("SQL").error(getID()+"\t"+temp.get(a));
-                            Logger.info("Error code:"+e.getErrorCode());
+                            Logger.tag("SQL").error(getID()+"\t"+temp.get(a)); // Bad query, log it
+                            Logger.info(id+" (db)-> Error code: "+e.getErrorCode());
                             temp.set(a,"");
                         }else{
                             Logger.error(temp.get(a)+" -> "+e.getMessage());
-                            Logger.info("Error code:"+e.getErrorCode());
+                            Logger.info(id+" (db)-> Error code: "+e.getErrorCode());
                             temp.set(a,"");
                         }
                     }
@@ -720,22 +786,27 @@ public class SQLDB extends Database{
             }
 
             try {
-                temp.removeIf(String::isEmpty);
-                if( !temp.isEmpty()){
-                    firstSimpleStamp = Instant.now().toEpochMilli();
-                    simpleQueries.addAll(temp);
+                temp.removeIf(String::isEmpty); // Clear the empty entries
+                if( !temp.isEmpty()){ // If there are entries left
+                    firstSimpleStamp = Instant.now().toEpochMilli(); // alter the timestamp
+                    simpleQueries.addAll(temp); // Add the leftover queries back to the buffer
                 }
             }catch(ConcurrentModificationException e){
-                Logger.error("Clean failed");
+                Logger.error(id+" (db) -> Clean failed");
             }catch (Exception e){
                 Logger.error(e);
             }
 
-            Logger.debug("Queries done: "+(total-temp.size())+"/"+total);
+            Logger.debug(id+" (db) -> Queries done: "+(total-temp.size())+"/"+total);
             busySimple =false;
         }
     }
 
+    /**
+     * Execute queries in a batch
+     * @param queries The queries to execute
+     * @return
+     */
     private boolean doBatchRun(ArrayList<String> queries){
 
         boolean batchOk=false;
@@ -780,6 +851,10 @@ public class SQLDB extends Database{
         }
         return batchOk;
     }
+
+    /**
+     * Execute the stored prepared statements
+     */
     private class DoPrepared implements Runnable{
 
         @Override
@@ -807,13 +882,13 @@ public class SQLDB extends Database{
                                         }
                                     } catch (BatchUpdateException e) {
                                         // One or multiple queries in the batch failed
-                                        Logger.error(getID()+" -> Batch error, clearing batched:"+e.getMessage());
+                                        Logger.error(getID()+" (db)-> Batch error, clearing batched:"+e.getMessage());
                                         Logger.error(e.getErrorCode());
-                                        Logger.error(getID()+" -> Removed bad records: "+t.clearRecords( id, e.getLargeUpdateCounts() )); // just drop the data or try one by one?
+                                        Logger.error(getID()+" (db)-> Removed bad records: "+t.clearRecords( id, e.getLargeUpdateCounts() )); // just drop the data or try one by one?
                                     } catch (SQLException e) {
                                         errors++;
                                         if( e.getMessage().contains("no such table")&& SQLDB.this instanceof SQLiteDB){
-                                            Logger.error(getID()+" -> Got no such sqlite table error, trying to resolve...");
+                                            Logger.error(getID()+"(db) -> Got no such sqlite table error, trying to resolve...");
                                             try {
                                                 var c = con.createStatement();
                                                 c.execute(t.create());
@@ -824,12 +899,12 @@ public class SQLDB extends Database{
                                             }
                                         }
                                         if( errors>10) {
-                                            Logger.error(getID()+" -> 10x SQL Error:"+e.getMessage() );
-                                            Logger.error(getID()+" -> "+SQLDB.this.toString());
+                                            Logger.error(getID()+" -(db)> 10x SQL Error:"+e.getMessage() );
+                                            Logger.error(getID()+" (db)-> "+SQLDB.this.toString());
                                             ok = false;
                                         }
                                     } catch (Exception e) {
-                                        Logger.error(getID()+" -> General Error:"+e);
+                                        Logger.error(getID()+"(db) -> General Error:"+e);
                                         Logger.error(e);
                                         ok=false;
                                     }

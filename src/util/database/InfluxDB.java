@@ -284,7 +284,7 @@ public class InfluxDB extends Database{
     }
 
     @Override
-    public int buildGenericFromTables(XMLfab fab, boolean overwrite, String delim) {
+    public int buildGenericsFromTables(XMLfab fab, boolean overwrite, String delim) {
         return 0;
     }
     public String toString(){
