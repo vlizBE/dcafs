@@ -524,7 +524,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				if( dbs ==null)
 					return "No such database found "+cmds[1];
 
-				if( dbs.buildGenericFromTables(XMLfab.withRoot(settingsPath, "dcafs","generics"),false,cmds.length>2?cmds[2]:",") >0 ){
+				if( dbs.buildGenericsFromTables(XMLfab.withRoot(settingsPath, "dcafs","generics"),false,cmds.length>2?cmds[2]:",") >0 ){
 					return "Generic(s) written";
 				}else{
 					return "No generics written";
