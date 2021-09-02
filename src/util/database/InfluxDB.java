@@ -39,6 +39,11 @@ public class InfluxDB extends Database{
         this.dbname=dbname;
     }
 
+    /**
+     * Read the settings for the influxdb from the given element
+     * @param dbe The element containing the setup
+     * @return The Influxdb created with the read setup
+     */
     public static InfluxDB readFromXML(Element dbe ) {
 
         if (dbe == null)
@@ -81,6 +86,12 @@ public class InfluxDB extends Database{
                 .alterChild("address",address)
                 .build();
     }
+
+    /**
+     * Write a single point, if the connection is valid, it's written to the influxdb otherwise it's buffered
+     * @param p The point to write
+     * @return True if written, false if buffered
+     */
     public boolean writePoint( Point p){
         if( isValid(1)) {
             influxDB.write(p);
@@ -94,7 +105,7 @@ public class InfluxDB extends Database{
         switch(state){
             case FLUSH_REQ:
                 if( !pointBuffer.isEmpty() ){
-                    pointBuffer.forEach( p -> writePoint(p));
+                    pointBuffer.forEach(this::writePoint);
                 }
 
                 if (isValid(1)) { // If not valid, flush didn't work either
@@ -115,7 +126,7 @@ public class InfluxDB extends Database{
                 }else{
                     Logger.debug(id+" -> Waiting for max age to pass...");
                     if( !pointBuffer.isEmpty() ){
-                        pointBuffer.forEach( p -> writePoint(p));
+                        pointBuffer.forEach(this::writePoint);
                     }
                     idleCount=0;
                 }
@@ -167,12 +178,21 @@ public class InfluxDB extends Database{
         }
     }
 
+    /**
+     * Disconnect the database
+     * @return True if disconnected
+     */
     @Override
     public boolean disconnect() {
         influxDB.close();
         return true;
     }
 
+    /**
+     * Check if the there's a valid connection to the database
+     * @param timeout How long to wait for a reply to the connection test in seconds
+     * @return True if the connection is valid
+     */
     @Override
     public boolean isValid(int timeout) {
         if( influxDB == null)
@@ -180,22 +200,36 @@ public class InfluxDB extends Database{
         return influxDB.ping().isGood();
     }
 
+    /**
+     * Get the amount of points in the buffer
+     * @return The buffer count
+     */
     @Override
     public int getRecordsCount() {
         return pointBuffer.size();
     }
 
+    /**
+     * Check if there are any points in the buffer
+     * @return True if the buffer isn't empty
+     */
     @Override
     public boolean hasRecords() {
         return !pointBuffer.isEmpty();
     }
 
+    /**
+     * Create a point using the given data and insert it
+     * @param table  The table to insert into
+     * @param values The values to insert
+     * @return -1 if failed, 0 if buffered , 1 if written
+     */
     public synchronized int addDirectInsert(String table, Object... values){
         var mes = measurements.get(table);
-        if( mes ==null )
-            return 0;
+        if( mes == null )
+            return -1;
         if( mes.fields.size()!= values.length)
-            return 0;
+            return -1;
 
         var p = Point.measurement(table);
 
@@ -211,6 +245,13 @@ public class InfluxDB extends Database{
         }
         return writePoint(p.build())?1:0;
     }
+
+    /**
+     * Run a select query
+     * @param query The query to execute
+     * @param includeNames If true, the column names are added as the first row
+     * @return The result of the query or an empty optional if it failed
+     */
     @Override
     public Optional<List<List<Object>>> doSelect(String query, boolean includeNames) {
 
@@ -226,7 +267,7 @@ public class InfluxDB extends Database{
                        recs.add(names);
                    }
                    recs.addAll(series.get(0).getValues());
-                   return Optional.ofNullable(recs);
+                   return Optional.of(recs);
                }
            }
         }
@@ -235,14 +276,20 @@ public class InfluxDB extends Database{
 
     @Override
     public void addQuery(String query) {
-
+        Logger.error("Not supported for influxdb");
     }
 
     @Override
     public boolean buildInsert(String table, DataProviding dp, String macro) {
+        Logger.error("Not supported for influxdb");
         return false;
     }
 
+    /**
+     * Retrieve the tables from the database
+     * @param clear True means clearing the local tables first
+     * @return True if retrieved
+     */
     @Override
     public boolean getCurrentTables(boolean clear){
         var res = influxDB.query(new Query("SHOW MEASUREMENTS",dbname)).getResults();
@@ -270,29 +317,42 @@ public class InfluxDB extends Database{
 
     @Override
     public String createContent(boolean keepConnection) {
+        Logger.error("Not supported for influxdb");
         return "Not supported";
     }
 
     @Override
     public String getTableInfo(String eol) {
+        Logger.error("Not supported for influxdb");
         return null;
     }
 
     @Override
     public boolean buildGenericFromTable(XMLfab fab, String tableName, String genID, String delim) {
+        Logger.error("Not supported for influxdb");
         return false;
     }
 
     @Override
     public int buildGenericsFromTables(XMLfab fab, boolean overwrite, String delim) {
+        Logger.error("Not supported for influxdb");
         return 0;
     }
     public String toString(){
         return "INFluxDB@"+ getTitle()+" -> Buffer managed by lib"+(pointBuffer.isEmpty()?".":" but "+pointBuffer.size()+" waiting for con...");
     }
+
+    /**
+     * Get the title of the database based on the irl
+     * @return The title of the database
+     */
     public String getTitle(){
         return irl.substring(irl.lastIndexOf("=")+1);
     }
+
+    /**
+     * Metadata class that holds fields
+     */
     private static class Measurement{
         String name;
         ArrayList<Field> fields =new ArrayList<>();
@@ -304,6 +364,10 @@ public class InfluxDB extends Database{
             fields.add(new Field(name, type));
         }
     }
+
+    /**
+     *
+     */
     private static class Field{
         String name;
         FIELD_TYPE type;
