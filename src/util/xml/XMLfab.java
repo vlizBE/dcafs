@@ -628,6 +628,23 @@ public class XMLfab {
             return XMLtools.getChildElements(last);
         return XMLtools.getChildElements(last, tag);
     }
+
+    /**
+     * Get a list of all the children with the given tag and attribute value combination
+     * @param tag The tag to look for
+     * @param attr The attribute to compare
+     * @param value The value the attribute should be
+     * @return The list of found child nodes or an empty list if none
+     */
+    public List<Element> getChildren( String tag, String attr, String value ){
+        if( tag.equals("*") )
+            return XMLtools.getChildElements(last).stream()
+                    .filter( e->e.getAttribute(attr).equalsIgnoreCase(value))
+                    .collect(Collectors.toList());
+        return XMLtools.getChildElements(last, tag).stream()
+                            .filter( e->e.getAttribute(attr).equalsIgnoreCase(value))
+                            .collect(Collectors.toList());
+    }
     public Element getCurrentElement(){
         return last;
     }
