@@ -569,9 +569,9 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 								loadGenerics();
 								return "Names set, generics reloaded";
 							}
-						case "dbid":
+						case "db":
 						case "delimiter":
-						case "table":
+						case "group":
 						case "id":
 							fab.get().attr(attr,val).build();
 							break;
