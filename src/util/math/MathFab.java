@@ -55,25 +55,25 @@ public class MathFab {
         // First check if the amount of brackets is correct
         int opens = StringUtils.countMatches(formula,"(");
         int closes = StringUtils.countMatches(formula,")");
+        if( opens != closes ){
+            Logger.error("Brackets count doesn't match, (="+opens+" and )="+closes);
+            return null;
+        }
+        if( formula.charAt(0)!='(') // Then make sure it has surrounding brackets
+            formula= "("+formula+")";
 
-        var is = Pattern.compile("[i][0-9]{1,2}")
+        var is = Pattern.compile("[i][0-9]{1,2}")// Extract all the references
                 .matcher(formula)
                 .results()
                 .map(MatchResult::group)
-                .sorted()
+                .sorted() // so the highest one is at the bottom
                 .toArray(String[]::new);
-        if( is.length==0 ){
+        if( is.length==0 ){ // if there aren't any, then no inputs are required
             requiredInputs = 0;
-        }else{
+        }else{ // if there are, the required inputs is the index of the highest one +1
             requiredInputs = 1+Integer.parseInt(is[is.length-1].substring(1));
         }
 
-        if( opens != closes ){
-            Logger.error("Brackets don't match, (="+opens+" and )="+closes);
-            return null;
-        }
-
-        formula = MathUtils.checkBrackets(formula); // Then make sure it has surrounding brackets
         formula=formula.replace(" ",""); // But doesn't contain any spaces
         if( debug )
             Logger.info("Building: "+formula);
