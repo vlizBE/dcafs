@@ -164,7 +164,7 @@ public class SQLiteDB extends SQLDB{
                             var t= new SqlTable(tableName);
                             tables.put(tableName, t);
                         }
-                        tables.get(tableName).toggleReadFromDB();
+                        tables.get(tableName).flagAsReadFromDB();
                     }
                 } catch (SQLException e) {
                     Logger.error( getID() + " -> Error during table read: "+e.getErrorCode());
@@ -201,8 +201,8 @@ public class SQLiteDB extends SQLDB{
                                 default: Logger.warn("Unknown type: "+type);break;
                             }
                             try{
-                                table.isNotNull( rs.getBoolean(rs.findColumn("notnull")) );
-                                table.isPrimaryKey( rs.getBoolean(rs.findColumn("pk")) );
+                                table.setNotNull( rs.getBoolean(rs.findColumn("notnull")) );
+                                table.setPrimaryKey( rs.getBoolean(rs.findColumn("pk")) );
                             }catch (SQLException e) {
                                 Logger.error(e);
                                 return false;

@@ -316,7 +316,7 @@ public class SQLDB extends Database{
                                 tables.put(tableName, table); //and add it to the hashmap
                             }
                             table.toggleServer();
-                            table.toggleReadFromDB(); // either way, it's already present in the database
+                            table.flagAsReadFromDB(); // either way, it's already present in the database
                             Logger.debug(id+" (db) -> Found: "+tableName+" -> "+tableType);
                         }                        
                     }
