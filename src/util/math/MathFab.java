@@ -18,23 +18,40 @@ public class MathFab {
     int requiredInputs=0;
     boolean debug = false;
     String ori="";
+    boolean valid;
 
     public MathFab( String formula ){
-        build(formula);
+        valid=build(formula)!=null;
     }
-    public MathFab( String formula, boolean debug ){
-        this.debug=debug;
-        build(formula);
-    }
+
     public static MathFab newFormula( String formula ){
         return new MathFab(formula);
     }
+
+    /**
+     * Enable or disable extra debug information
+     * @param debug
+     */
     public void setDebug( boolean debug ){
         this.debug=debug;
     }
-    public MathFab build(String formula ){
+
+    /**
+     * Check if this mathfab is valid or failed the formula parsing
+     * @return True if valid
+     */
+    public boolean isValid(){
+        return valid;
+    }
+    /**
+     * Parse the formula to functions
+     * @param formula The formula to parse
+     * @return This object or null if failed
+     */
+    private MathFab build(String formula ){
         steps.clear(); // reset the steps
         ori=formula;
+
         // First check if the amount of brackets is correct
         int opens = StringUtils.countMatches(formula,"(");
         int closes = StringUtils.countMatches(formula,")");
@@ -80,7 +97,7 @@ public class MathFab {
                 var res = MathUtils.splitExpression( part, subFormulas.size()-1,debug);
                 if( res.isEmpty()) {
                     Logger.error("Failed to build because of issues during "+part);
-                    break;
+                    return null;
                 }
                 subFormulas.addAll( res );    // split that part in the sub-formulas
                 String piece = formula.substring(open,close+1); // includes the brackets
@@ -98,7 +115,7 @@ public class MathFab {
             var x = MathUtils.decodeBigDecimalsOp(sub[0],sub[1],sub[2],offset);
             if( x==null ){
                 Logger.error("Failed to convert "+formula);
-                continue;
+                return null;
             }
             steps.add( x ); // and add it to the steps list
         }
@@ -106,9 +123,21 @@ public class MathFab {
         return this;
     }
 
+    /**
+     * Solve the build equation based on the given data
+     * @param data The data to use
+     * @param delimiter The delimiter to split the data
+     * @return The result
+     */
     public BigDecimal solve( String data, String delimiter ){
         return solve( MathUtils.toBigDecimals(data,delimiter,-1) );
     }
+
+    /**
+     * Solve the build equation using the given values
+     * @param val The values to use
+     * @return The result
+     */
     public double solveFor( double... val){
         var bds = new BigDecimal[val.length];
         for(int a=0;a<val.length;a++)
@@ -119,7 +148,7 @@ public class MathFab {
     }
 
     /**
-     *
+     * Solve the build equation using the given bigdecimals
      * @param data The bigDecimals used in the operation
      * @return Result of the operation
      * @throws ArrayIndexOutOfBoundsException Indicating lack of elements
@@ -142,34 +171,31 @@ public class MathFab {
             Logger.info("Highest expected index: "+total.length+" from offset="+offset+" and data "+data.length);
 
         int i=0;
-        for( var f : steps ){
+        for( var f : steps ){ // Now go through all the steps in the calculation
             try{
-                total[i] = f.apply(total);
+                total[i] = f.apply(total); // store the result of the step in the corresponding field
                 if( debug )
-                    Logger.info(i +" : "+total[i]);
-                i++;
+                    Logger.info(i +" : "+total[i]); // As extra debug information, put the result in the log
+                i++;// increment the counter
             }catch (IndexOutOfBoundsException | NullPointerException e){
                 Logger.error("Bad things when it was processed, array size "+data.length+" versus "+requiredInputs +" with step null?"+(f==null));
                 Logger.error("Original formula: "+ori);
 
-                int a=0;
-                for( var big : data){
-                    if( big!=null) {
-                        Logger.error(a+" -> array:" + big);
+                for( int a=0;a<data.length;a++){
+                    if( data[a]!=null) {
+                        Logger.error(a+" -> array: " + data[a]);
                     }else{
-                        Logger.error(a+" -> array:null");
+                        Logger.error(a+" -> array: null");
                     }
-                    a++;
                 }
                 Logger.error(e);
-                break;
+                return null;
             }
-
         }
-        if( total[resultIndex] != null ) {
+        if( total[resultIndex] != null ) { // If the position in which the result should be isn't null
             if(debug)
                 Logger.info("Result: " + total[resultIndex].doubleValue());
-            return total[resultIndex];
+            return total[resultIndex]; // return this result
         }else{
             Logger.error("Something went wrong during calculation");
             return null;

@@ -375,9 +375,13 @@ public class MathForward extends AbstractForward {
         if( NumberUtils.isCreatable(exp.replace(",","."))) {
             op = new Operation( expression, exp.replace(",","."),index);
         }else{
-            op = new Operation( expression, new MathFab(exp.replace(",",".")),index);
+            var fab = MathFab.newFormula(exp.replace(",","."));
+            if( fab.isValid() ) { // If the formula could be parsed
+                op = new Operation(expression, fab, index); // create an operation
+            }else{
+                return Optional.empty(); // If not, return empty
+            }
         }
-
         ops.add(op);
 
         op.setScale(scale);
@@ -632,8 +636,9 @@ public class MathForward extends AbstractForward {
             this.ori=ori;
             this.index=index;
 
+            String sub = ori.substring(ori.indexOf(":")+1,ori.indexOf("}"));
             if( ori.startsWith("{d")){
-                dataProviding.getDoubleVal(ori.substring(ori.indexOf(":")+1,ori.indexOf("}")))
+                dataProviding.getDoubleVal(sub)
                                 .ifPresent( dv-> {
                                     update=dv;
                                     doUpdate=true;
@@ -641,7 +646,7 @@ public class MathForward extends AbstractForward {
                 if( !doUpdate )
                     Logger.warn("Asking to update {d:"+ori.substring(ori.indexOf(":")+1,ori.indexOf("}")+1)+" but doesn't exist");
             }else if( ori.startsWith("{D:")){
-                update=dataProviding.getOrAddDoubleVal(ori.substring(ori.indexOf(":")+1,ori.indexOf("}")));
+                update=dataProviding.getOrAddDoubleVal(sub);
                 doUpdate=true;
             }
         }
@@ -651,7 +656,8 @@ public class MathForward extends AbstractForward {
         }
         public Operation(String ori, MathFab fab, int index ){
             this(ori,index);
-            this.fab=fab;
+            if( fab.isValid())
+                this.fab=fab;
         }
         public Operation(String ori, String value, int index ){
             this(ori,index);
@@ -696,7 +702,7 @@ public class MathForward extends AbstractForward {
                 try {
                     bd = fab.solve(data);
                 }catch ( ArrayIndexOutOfBoundsException | ArithmeticException | NullPointerException e){
-                    Logger.error(id+" -> "+e.getMessage());
+                    Logger.error(id+"(mf) -> "+e.getMessage());
                     return null;
                 }
             }else if( directSet!= null ){
