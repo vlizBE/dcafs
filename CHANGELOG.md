@@ -21,8 +21,13 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (might be trigger for 0.11.0)
   
-## 0.10.13 (work in progress)
+## 0.10.13 (04/09/21)
+
 Cleanup release, added comments/javadoc moved stuff around in the .java files etc etc etc
+
+### Dependencies
+- Replaced Netty-all with Netty-common & Netty-Handler, saving about 2MB!
+- Removed MySQL connector, shouldn't be needed given that MariaDB connector is present, saves about 4MB
 
 ### util.data
 - Made AbstractVal as base class for DoubleVal and FlagVal
