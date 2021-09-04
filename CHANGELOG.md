@@ -36,6 +36,9 @@ Cleanup release, added comments/javadoc moved stuff around in the .java files et
 - Changed some methods that could return null to return optional instead
 - Made som more use of lambda's
 
+### util.math
+- Cleanup up (removed unused, added comments, added javadoc etc)
+
 ### DoubleVal
 - Added stdev based trigger, requires the history option to be active `<cmd when="stdev below 0.01">dosomething</cmd>`
 and a full history buffer.

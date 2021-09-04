@@ -51,9 +51,7 @@ public class CheckBlock extends AbstractBlock{
             Logger.debug( "Check failed : "+ori );
             if( parentBlock.get() instanceof TriggerBlock ) // needs to know because of while/waitfor
                 parentBlock.get().nextFailed(this);
-            //parentBlock.ifPresent( TaskBlock::nextFailed );
         }
-
         return pass;
     }
 
@@ -83,7 +81,6 @@ public class CheckBlock extends AbstractBlock{
         //Figure out brackets?
         exp=Tools.parseExpression(exp); // rewrite to math symbols
 
-
         // Figure out the realtime stuff
         exp = dp.buildNumericalMem(exp,sharedMem,0);
         if( exp.isEmpty() ){
@@ -98,7 +95,8 @@ public class CheckBlock extends AbstractBlock{
         if( opens!=closes)
             return false;
 
-        exp = MathUtils.checkBrackets(exp); // Then make sure it has surrounding brackets
+        if( exp.charAt(0)!='(') // Make sure it has surrounding brackets
+            exp= "("+exp+")";
 
         // Next go through the brackets from left to right (inner)
         var subFormulas = new ArrayList<String>(); // List to contain all the sub-formulas
@@ -123,7 +121,6 @@ public class CheckBlock extends AbstractBlock{
 
                 var and_ors = part.split("[&|!]{2}",0);
                 for( var and_or : and_ors) {
-                    boolean reverse = and_or.startsWith("!");
                     var comps = MathUtils.extractCompare(and_or);
                     for (var c : comps) {
                         if( c.isEmpty()) {
