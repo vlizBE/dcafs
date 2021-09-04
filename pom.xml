@@ -104,24 +104,24 @@
 		<artifactId>javax.mail</artifactId>
 		<version>1.6.2</version>
 	</dependency>
-	<!-- https://mvnrepository.com/artifact/io.netty/netty-all -->
-	<dependency>
-		<groupId>io.netty</groupId>
-		<artifactId>netty-all</artifactId>
-		<version>4.1.66.Final</version>
-	</dependency>
+	  <!-- https://mvnrepository.com/artifact/io.netty/netty-common -->
+	  <dependency>
+		  <groupId>io.netty</groupId>
+		  <artifactId>netty-common</artifactId>
+		  <version>4.1.67.Final</version>
+	  </dependency>
+	  <!-- https://mvnrepository.com/artifact/io.netty/netty-handler -->
+	  <dependency>
+		  <groupId>io.netty</groupId>
+		  <artifactId>netty-handler</artifactId>
+		  <version>4.1.67.Final</version>
+	  </dependency>
 	  <!-- https://mvnrepository.com/artifact/com.microsoft.sqlserver/mssql-jdbc -->
 	  <dependency>
 		  <groupId>com.microsoft.sqlserver</groupId>
 		  <artifactId>mssql-jdbc</artifactId>
 		  <version>9.2.1.jre11</version>
 	  </dependency>
-	<!-- https://mvnrepository.com/artifact/mysql/mysql-connector-java -->
-	<dependency>
-		<groupId>mysql</groupId>
-		<artifactId>mysql-connector-java</artifactId>
-		<version>8.0.26</version>
-	</dependency>
 	<!-- https://mvnrepository.com/artifact/org.xerial/sqlite-jdbc -->
 	<dependency>
 		<groupId>org.xerial</groupId>
