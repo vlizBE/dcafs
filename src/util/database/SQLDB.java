@@ -140,8 +140,8 @@ public class SQLDB extends Database{
                     Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");  
                     break;
                 case MYSQL:   
-                    Class.forName("com.mysql.cj.jdbc.Driver"); 					  
-                    break;
+                   // Class.forName("com.mysql.cj.jdbc.Driver");
+                   // break;
                 case MARIADB: 
                     Class.forName("org.mariadb.jdbc.Driver");                       
                     break;
