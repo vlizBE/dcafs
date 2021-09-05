@@ -274,8 +274,12 @@ public class SQLDB extends Database{
         var ele = fab.getChildren("generic");
         int cnt=0; // keep track of the amount of generics build
         for( var table : tables.values()){ // Go through the tables
-            boolean found = fab.getChildren("generic","dbid",id).stream() // get child nodes with the same dbid
-                                    .anyMatch(e->e.getAttribute("table").equalsIgnoreCase(table.name)); // and the same table
+            boolean found = fab.getChildren("generic").stream().anyMatch(
+                    e-> {
+                        var s = e.getAttribute("db");
+                        return s.contains(id)&&s.endsWith(":"+table.getName());
+                    });
+
             if( !found ){ // If no such node exists yet
                 table.buildGeneric(fab,id,table.name,delimiter); // build it
                 fab.up(); // return the fab to higher level
