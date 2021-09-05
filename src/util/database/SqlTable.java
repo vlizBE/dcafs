@@ -745,13 +745,13 @@ public class SqlTable {
      * @param fab The fab to create the node, pointing to generics node
      * @param db The database that contains the table
      * @param id The id for this generic
-     * @param delim The delimiter used by the generic
+     * @param delimiter The delimiter used by the generic
      * @return True if build was ok
      */
-    public boolean buildGeneric(XMLfab fab, String db, String id, String delim){
+    public boolean buildGeneric(XMLfab fab, String db, String id, String delimiter){
 
         fab.selectOrAddChildAsParent("generic","id",id).clearChildren();
-        fab.attr("id",id).attr("dbid",db).attr("table",this.name).attr("delimiter",delim);
+        fab.attr("id",id).attr("db",db+":"+this.name).attr("delimiter",delimiter);
 
         int index=0;
         boolean macro=false;
@@ -763,19 +763,27 @@ public class SqlTable {
                 break;
             }
         }
+        boolean groupAllowed = columns.stream().allMatch( col -> col.alias.equalsIgnoreCase(name+"_"+col.title));
+        if( groupAllowed ) // All the colums refer to the same group
+            fab.attr("group",this.name);
+
         for( Column col : columns ){
+            String value = col.title;
+            if( !groupAllowed || macro )
+                value = col.alias;
+
             if( col.defString.contains("@macro"))
                 continue;
             switch( col.type ){
                 case LOCALDTNOW: fab.addChild("filler","localdt");break;
                 case UTCDTNOW: fab.addChild("filler","utcdt");break;
-                case INTEGER:  fab.addChild("integer",macro?col.alias:col.title).attr("index",index++);break;
-                case REAL:     fab.addChild("real",macro?col.alias:col.title).attr("index",index++);break;
-                case TEXT:     fab.addChild("text",macro?col.alias:col.title).attr("index",index++);break;
-                case DATETIME: fab.addChild("utcdt",macro?col.alias:col.title).attr("index",index++);break;
+                case INTEGER:  fab.addChild("integer",value).attr("index",index++);break;
+                case REAL:     fab.addChild("real",value).attr("index",index++);break;
+                case TEXT:     fab.addChild("text",value).attr("index",index++);break;
+                case DATETIME: fab.addChild("utcdt",value).attr("index",index++);break;
                 case TIMESTAMP:
                     if( index !=0)
-                        fab.addChild("timestamp",macro?col.alias:col.title).attr("index",index++);
+                        fab.addChild("timestamp",macro||!col.alias.isEmpty()?col.alias:col.title).attr("index",index++);
                     break;
                 default:
                     break;
