@@ -563,18 +563,26 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 							int i=0;
 							for( var f : fab.get().getChildren("*")){
 								if( cmds.length-2>i){
-									if( !cmds[i+2].equalsIgnoreCase("."))
-										f.setTextContent(cmds[i+2]);
+									if( !cmds[i+2].equalsIgnoreCase(".")) {
+										var gr = f.getAttribute("group");
+										gr=(gr.isEmpty()?"":gr+"_");
+										if( !dp.hasDouble(gr+cmds[i + 2])){
+											dp.renameDouble( gr+f.getTextContent(),gr+cmds[i + 2],false );
+											f.setTextContent(cmds[i + 2]);
+										}else{
+											return "Failed to rename to already existing one";
+										}
+									}
 								}
 								i++;
 							}
-							if( fab.get().build()!=null) {
-								loadGenerics();
-								return "Names set, generics reloaded";
-							}
+							fab.get().build();
+							dp.storeValsInXml(true);
+							loadGenerics();
+							return "Names set, generics reloaded";
+						case "group": // if
 						case "db":
 						case "delimiter":
-						case "group":
 						case "id":
 							fab.get().attr(attr,val).build();
 							break;
