@@ -5,7 +5,6 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import util.tools.Tools;
 
-import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -1148,7 +1147,7 @@ public class MathUtils {
             md = MessageDigest.getInstance("MD5");
             md.update(Files.readAllBytes(file));
             byte[] digest = md.digest();
-            return DatatypeConverter.printHexBinary(digest);
+            return Tools.fromBytesToHexString(digest);
         } catch (NoSuchAlgorithmException | IOException e) {
             Logger.error(e);
             return "";
