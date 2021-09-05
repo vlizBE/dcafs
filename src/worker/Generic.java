@@ -236,10 +236,10 @@ public class Generic {
         for( int a=0;a<entries.size();a++ ){
             Entry entry = entries.get(a);
 
-            String ref = (group.isEmpty()||entry.title.contains("_"))?entry.title:group+"_"+entry.title;
+            String ref = group.isEmpty()?entry.title:(group+"_"+entry.title);
             
-            if( ref.contains("@macro") )
-                ref = entry.title.replace("@macro", macro);
+            if( ref.contains("@macro") ) // If the ref contains @macro, replace it with the macro
+                ref = ref.replace("@macro", macro);
             
             try{
                 double val=-999;
@@ -321,12 +321,16 @@ public class Generic {
     public String toString(){
         StringJoiner join = new StringJoiner("",id+" -> ","");
         if( dbid!=null ){
-            join.add("Store in "+String.join(",",dbid)+"(db):(table)"+table+" " );
+            join.add("Store in "+String.join(",",dbid)+":"+table+" " );
         }
+        if( !group.isEmpty())
+            join.add(" for group "+group+" ");
+
         if (!influxID.isEmpty() ){
             join.add(" Store in InfluxDB "+influxID+":"+table+" ");
         }
         join.add("has delimiter '"+delimiter+"'"+(startsWith.isBlank()?"":"and starts with '"+startsWith+"'") );
+
         join.add("\r\n");
 
         if( !filters.isEmpty() ){
