@@ -189,6 +189,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 
 	public String getGenericInfo() {
 		StringJoiner join = new StringJoiner("\r\n", "Generics:\r\n", "\r\n");
+		join.setEmptyValue("None yet");
 		for (Generic gen : generics.values()) {
 			join.add(gen.toString() + "\r\n");
 		}
@@ -513,6 +514,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				if( db.isEmpty())
 					return "No such database found "+cmds[1];
 				if( db.get().buildGenericFromTable(XMLfab.withRoot(settingsPath, "dcafs","generics"),cmds[2],cmds[3],cmds.length>4?cmds[4]:",") ){
+					loadGenerics();
 					return "Generic written";
 				}else{
 					return "Failed to write to xml";
@@ -525,6 +527,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 					return "No such database found "+cmds[1];
 
 				if( dbs.get().buildGenericsFromTables(XMLfab.withRoot(settingsPath, "dcafs","generics"),false,cmds.length>2?cmds[2]:",") >0 ){
+					loadGenerics();
 					return "Generic(s) written";
 				}else{
 					return "No generics written";
