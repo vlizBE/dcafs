@@ -655,8 +655,10 @@ public class SqlTable {
             if( val == null && col.hasDefault ){
                 record[index]= def;
             }else{
-                if( val == null)
-                    Logger.error("Couldn't find "+ref+" for "+name+" added null");
+                if( val == null) {
+                    Logger.error("Couldn't find " + ref + " for " + name + " aborted insert.");
+                    return false;
+                }
                 record[index] = val;
             }
         }        
