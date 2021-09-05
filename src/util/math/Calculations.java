@@ -71,8 +71,8 @@ public class Calculations {
      * Method that calculates the salinity based on CTP measurements
      *
      * @param C The conductivity in Siemens/meter
-     * @param T The temperature in �C
-     * @param P The pressure in
+     * @param T The temperature in °C
+     * @param P The pressure in dB
      * @return Salinity in PSU
      */
     public static double calcSalinity(double C, double T, double P) {
@@ -165,8 +165,8 @@ public class Calculations {
      * Create a function to calculate soundvelocity based on values present in the array
      * @param temp The index or value of temperature in the array (dC ITS90)
      * @param salinity The index or value of salinity in the array (psu)
-     * @param pressure The index or value pressure in DB
-     * @return Calculated sound velocity in m/s
+     * @param pressure The index or value pressure in dB
+     * @return Function to calculate sound velocity in m/s
      */
     public static Function<BigDecimal[],BigDecimal> procSoundVelocity( String temp, String salinity, String pressure){
         int tempIndex,salIndex,pressIndex;
@@ -202,14 +202,14 @@ public class Calculations {
         };
     }
     /**
-     * Method that calculates the truewindvelocity based on apparant wind and ships
+     * Method that calculates the true windvelocity based on apparent wind and ships
      * navigation Source: http://coaps.fsu.edu/woce/truewind/paper/
      * 
-     * @param windvel The apparant windvelocity in m/s
-     * @param winddir The apparant wind direction in degrees [�]
+     * @param windvel The apparent windvelocity in m/s
+     * @param winddir The apparent wind direction in degrees [°]
      * @param sogKnots The Speed Over Ground in Knots
-     * @param cog     The Course over Ground in degrees [�]
-     * @param heading The ships heading in degrees [�]
+     * @param cog     The Course over Ground in degrees [°]
+     * @param heading The ships heading in degrees [°]
      * @return The True Wind Velocity in m/s
      */
     public static double calcTrueWindVelocity(double windvel, double winddir, double sogKnots, double cog,
@@ -234,7 +234,7 @@ public class Calculations {
      * @param sogKnots The speed over ground in knots
      * @param cog The course over ground in degrees
      * @param heading  The heading in degrees
-     * @return The true wind speed in knots
+     * @return A function that calculates true wind speed in knots
      */
     public static Function<BigDecimal[],BigDecimal> procTrueWindSpeed( String windvel, String winddir, String sogKnots, String cog,String heading){
         int windvelIndex,winddirIndex,sogKnotsIndex,cogIndex,headingIndex;
@@ -338,7 +338,7 @@ public class Calculations {
      * @param sogKnots The speed over ground in knots
      * @param cog The course over ground in degrees
      * @param heading  The heading in degrees
-     * @return The true wind speed in knots
+     * @return A function that calculates true wind speed in knots
      */
     public static Function<BigDecimal[],BigDecimal> procTrueWindDirection( String windvel, String winddir, String sogKnots, String cog,String heading){
         int windvelIndex,winddirIndex,sogKnotsIndex,cogIndex,headingIndex;

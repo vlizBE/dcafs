@@ -40,18 +40,34 @@ public class SqlTable {
         this.name = name;
         preps.put("", new PrepStatement());
     }
+
+    /**
+     * By default this assumes it's for sqlite, with this it's toggled to be for a server instead
+     */
     public void toggleServer(){
         server=true;
     }
     public void setLastError(String error ){
         this.lastError=error;
     }
+
+    /**
+     * Get the last error that has occurred during sql operations
+     * @param clear Clear the error after returning it
+     * @return The last error message
+     */
     public String getLastError( boolean clear ){
         String t = lastError;
         if( clear)
             lastError= "";
         return t;
     }
+
+    /**
+     * Read the setup of the table from a xml element
+     * @param tbl The element containing the setup
+     * @return An optional table, empty if something went wrong
+     */
     public static Optional<SqlTable> readFromXml(Element tbl) {
         String tableName = tbl.getAttribute("name").trim();
         SqlTable table = SqlTable.withName(tableName);
@@ -100,9 +116,9 @@ public class SqlTable {
 
                 /* Setup of the column */
                 String setup = node.getAttribute("setup").toLowerCase();
-                table.isPrimaryKey(setup.contains("primary"));
-                table.isNotNull(setup.contains("notnull"));
-                table.isUnique(setup.contains("unique"));
+                table.setPrimaryKey(setup.contains("primary"));
+                table.setNotNull(setup.contains("notnull"));
+                table.setUnique(setup.contains("unique"));
                 if (node.hasAttribute("def"))
                     table.withDefault(node.getAttribute("def"));
             }
@@ -111,7 +127,14 @@ public class SqlTable {
             return Optional.ofNullable(table);
         return Optional.empty();
     }
-    public void writeToXml( XMLfab fab, boolean build ){
+
+    /**
+     * Store the setup of a table in xml
+     * @param fab The xmlfab to use, pointing to the database as parent node
+     * @param build If true, the xml is build at the end
+     * @return True if all went well
+     */
+    public boolean writeToXml( XMLfab fab, boolean build ){
         fab.addChild("table").attr("name",name).down();
         for( var col : columns ){
             fab.addChild(col.type.toString().toLowerCase(),col.title);
@@ -129,7 +152,8 @@ public class SqlTable {
         fab.up();
 
         if (build)
-            fab.build();
+            return fab.build()!=null;
+        return true;
     }
     /**
      * Create a SQLiteTable object for a table with the given name
@@ -140,12 +164,25 @@ public class SqlTable {
     public static SqlTable withName(String name) {
         return new SqlTable(name);
     }
-    public void toggleReadFromDB(){
+
+    /**
+     * Flag that the sqltable was read from a database (and not from xml)
+     */
+    public void flagAsReadFromDB(){
         readFromDatabase=true;
     }
+
+    /**
+     * Clear the flag that states that the table was read from the database
+     */
     public void clearReadFromDB(){
         readFromDatabase=false;
     }
+
+    /**
+     * Check if the table was rad the the database (instead of xml)
+     * @return True if read from database
+     */
     public boolean isReadFromDB(){
         return readFromDatabase;
     }
@@ -158,10 +195,18 @@ public class SqlTable {
         return name;
     }
 
+    /**
+     * Check if the build query of this table would use 'if not exists'
+     * @return
+     */
     public boolean hasIfNotExists() {
         return ifnotexists;
     }
 
+    /**
+     * Enable the 'if not exists' part of the build query
+     * @return The table
+     */
     public SqlTable enableIfnotexists() {
         ifnotexists = true;
         return this;
@@ -181,16 +226,11 @@ public class SqlTable {
     /**
      * Add a column that contains integer data, using the given alias to link to
      * rtvals
-     * 
+     *
      * @param title The title of the oolumn
      * @param alias The alias to use to find the data
      * @return This object
      */
-    public SqlTable addInteger(String title, String alias, int def) {        
-        addColumn( new Column(title, alias, COLUMN_TYPE.INTEGER) );
-        return this;
-    }
-
     public SqlTable addInteger(String title, String alias) {
         addColumn(new Column(title, alias, COLUMN_TYPE.INTEGER));
         return this;
@@ -199,7 +239,7 @@ public class SqlTable {
     /**
      * Add a column that contains real data
      * 
-     * @param title The title of the oolumn
+     * @param title The title of the column
      * @return This object
      */
     public SqlTable addReal(String title) {
@@ -274,11 +314,11 @@ public class SqlTable {
         addColumn(new Column(title, alias, now?COLUMN_TYPE.UTCDTNOW:COLUMN_TYPE.DATETIME));
         return this;
     }
-    /* Epoc Millis */
+
     /**
      * Add a column that contains timestamp data (in integer format).
      * 
-     * @param title The title of the oolumn
+     * @param title The title of the column
      * @return This object
      */
     public SqlTable addEpochMillis(String title) {
@@ -290,7 +330,7 @@ public class SqlTable {
      * Add a column that contains timestamp data in integer format, using the given
      * alias to link to rtvals
      * 
-     * @param title The title of the oolumn
+     * @param title The title of the column
      * @param alias The alias to use to find the data
      * @return This object
      */
@@ -316,46 +356,23 @@ public class SqlTable {
         preps.get("").addColumn(columns.size()-1);
     }
     /**
-     * Define that the last created column is the primary key
-     * 
-     * @return This object
-     */
-    public SqlTable isPrimaryKey() {
-        int index = columns.size() - 1;
-        columns.get(index).primary = true;
-        return this;
-    }
-
-    /**
-     * Define whether or not the last created column is the primary key
+     * Define whether the last created column is the primary key
      * 
      * @param pk True if primary key, false if not
      * @return This object
      */
-    public SqlTable isPrimaryKey(boolean pk) {
+    public SqlTable setPrimaryKey(boolean pk) {
         int index = columns.size() - 1;
         columns.get(index).primary = pk;
         return this;
     }
-
-    /**
-     * Define that the last created column is not allowed to be null
-     * 
-     * @return This object
-     */
-    public SqlTable isNotNull() {
-        int index = columns.size() - 1;
-        columns.get(index).notnull = true;
-        return this;
-    }
-
     /**
      * Define whether or not the last created column is not allowed to be null
      * 
      * @param nn True if not allowed to be null, false if so
      * @return This object
      */
-    public SqlTable isNotNull(boolean nn) {
+    public SqlTable setNotNull(boolean nn) {
         int index = columns.size() - 1;
         columns.get(index).notnull = nn;
         return this;
@@ -366,13 +383,7 @@ public class SqlTable {
      * 
      * @return This object
      */
-    public SqlTable isUnique() {
-        int index = columns.size() - 1;
-        columns.get(index).unique = true;
-        return this;
-    }
-
-    public SqlTable isUnique(boolean unique) {
+    public SqlTable setUnique(boolean unique) {
         columns.get(columns.size() - 1).unique = unique;
         return this;
     }
@@ -443,7 +454,7 @@ public class SqlTable {
     }
 
     /**
-     * Get a stringjoiner that has been set up to create the INSERT statement and
+     * Get a stringjoiner that has been set up to create the INSERT statement but
      * needs the values added
      * 
      * @return The stringjoiner to create the INSERT statement
@@ -564,12 +575,6 @@ public class SqlTable {
         }
         prep.disableLock();
         return true;
-    }
-    public void clearRecords( int count ){
-        clearRecords( "",count);  
-    }
-    public int doInsert(String id, Object[] values){
-        return getPrep(id).map( p -> p.addData(values)?1:0).orElse(-1);
     }
     public int doInsert(Object[] values){
         return getPrep("").map( p -> p.addData(values)?1:0).orElse(-1);

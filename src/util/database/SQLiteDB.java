@@ -56,13 +56,12 @@ public class SQLiteDB extends SQLDB{
         } catch (NullPointerException e ){
             Logger.error( getID() + " -> Issue trying to create db, path is null");
         }
-
     }
-    /* **************************************************************************************************/
+    /* ************************************************************************************************************** */
     public static SQLiteDB createDB( String id, String workPath, Path db ){
         return new SQLiteDB( id, workPath, db );
     }
-    /* **************************************************************************************************/
+    /* ************************************************************************************************************** */
     @Override
     public String toString(){
         String status = getPath() +" -> " +getRecordsCount()+"/"+maxQueries;
@@ -165,7 +164,7 @@ public class SQLiteDB extends SQLDB{
                             var t= new SqlTable(tableName);
                             tables.put(tableName, t);
                         }
-                        tables.get(tableName).toggleReadFromDB();
+                        tables.get(tableName).flagAsReadFromDB();
                     }
                 } catch (SQLException e) {
                     Logger.error( getID() + " -> Error during table read: "+e.getErrorCode());
@@ -202,8 +201,8 @@ public class SQLiteDB extends SQLDB{
                                 default: Logger.warn("Unknown type: "+type);break;
                             }
                             try{
-                                table.isNotNull( rs.getBoolean(rs.findColumn("notnull")) );
-                                table.isPrimaryKey( rs.getBoolean(rs.findColumn("pk")) );
+                                table.setNotNull( rs.getBoolean(rs.findColumn("notnull")) );
+                                table.setPrimaryKey( rs.getBoolean(rs.findColumn("pk")) );
                             }catch (SQLException e) {
                                 Logger.error(e);
                                 return false;
@@ -474,7 +473,7 @@ public class SQLiteDB extends SQLDB{
      * @param values The values to insert
      * @return -2=No such table, -1=No such statement,0=bad amount of values,1=ok
      */
-    public synchronized int doDirectInsert(String table, Object... values) {
+    public synchronized int addDirectInsert(String table, Object... values) {
         if( values == null){
             Logger.error(id+" -> Tried to insert a null in "+table);
             return -3;

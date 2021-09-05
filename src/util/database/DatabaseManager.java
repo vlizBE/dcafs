@@ -26,16 +26,16 @@ public class DatabaseManager implements QueryWriting, Commandable {
 
     static final String UNKNOWN_CMD = "unknown command";
 
-    private final Map<String, SQLiteDB> lites = new HashMap<>();
-    private final Map<String, SQLDB> sqls = new HashMap<>();
-    private final Map<String, InfluxDB> influxes = new HashMap<>();
+    private final Map<String, SQLiteDB> lites = new HashMap<>();        // Store the SQLite databases
+    private final Map<String, SQLDB> sqls = new HashMap<>();            // Store the SQL databases
+    private final Map<String, InfluxDB> influxes = new HashMap<>();     // Store the InFLuxDB databases
 
-    private static final int CHECK_INTERVAL=5;
-    private final ScheduledExecutorService scheduler;// scheduler for the request data action
-    private static final String XML_PARENT_TAG = "databases";
-    private String workPath;
-    private Path settingsPath;
-    private DataProviding dataProvider;
+    private static final int CHECK_INTERVAL=5;                          // How often to check the state
+    private final ScheduledExecutorService scheduler;                   // Scheduler for the request data action
+    private static final String XML_PARENT_TAG = "databases";           // Main tag in xml
+    private String workPath;                                            // dcafs workpath
+    private Path settingsPath;                                          // Path to dcafs settings.xml
+    private DataProviding dataProvider;                                 // Reference to the realtime data
     /**
      * Create a manager that uses its own scheduler
      */
@@ -44,9 +44,9 @@ public class DatabaseManager implements QueryWriting, Commandable {
         this.dataProvider=dataProvider;
 
         settingsPath = Path.of(workPath,"settings.xml");
-        scheduler = Executors.newScheduledThreadPool(1);
+        scheduler = Executors.newScheduledThreadPool(1); // create a scheduler with a single thread
 
-        readFromXML();
+        readFromXML();  // Read the settings from the xml
     }
 
     /**
@@ -70,12 +70,25 @@ public class DatabaseManager implements QueryWriting, Commandable {
         return db;
     }
 
+    /**
+     * Add a SQL database to the manager and uf the first one, enable the scheduled state checking
+     * @param id The id of the database
+     * @param db The database object
+     * @return The added database
+     */
     public SQLDB addSQLDB(String id, SQLDB db) {
         if (lites.size() == 0 && sqls.size() == 0)
             scheduler.scheduleAtFixedRate(new CheckQueryAge(), 2L*CHECK_INTERVAL, CHECK_INTERVAL, TimeUnit.SECONDS);
         sqls.put(id, db);
         return db;
     }
+
+    /**
+     * Add an influxdb to the manager
+     * @param id The id of the influxdb
+     * @param db The influxdb
+     * @return The added influxdb
+     */
     public InfluxDB addInfluxDB(String id, InfluxDB db){
         influxes.put(id,db);
         return db;
@@ -96,19 +109,28 @@ public class DatabaseManager implements QueryWriting, Commandable {
      * @return True if it has a valid connection
      */
     public boolean isValid(String id,int timeout) {
-        var db = getDatabase(id);
-        if( db == null )
-            return false;
-        return db.isValid(timeout);
+        return getDatabase(id).map( d -> d.isValid(timeout)).orElse(false);
     }
-    public SQLiteDB getSQLiteDB(String id) {
-        return lites.get(id);
+
+    /**
+     * Get a SQLite database based on the id
+     * @param id The id to look for
+     * @return An optional SQLiteDB, empty if none found
+     */
+    public Optional<SQLiteDB> getSQLiteDB(String id) {
+        return Optional.ofNullable(lites.get(id));
     }
-    public Database getDatabase( String id){
+
+    /**
+     * Get a database based on the id (so either implmentation of the Database parent class)
+     * @param id The id to look for
+     * @return An optional database or empty one if not found
+     */
+    public Optional<Database> getDatabase(String id){
         SQLiteDB lite = lites.get(id);
         if( lite != null )
-            return lite;
-        return sqls.get(id);
+            return Optional.of(lite);
+        return Optional.ofNullable(sqls.get(id));
     }
     public boolean hasDatabases() {
         return !lites.isEmpty() || !sqls.isEmpty() || !influxes.isEmpty();
@@ -127,6 +149,10 @@ public class DatabaseManager implements QueryWriting, Commandable {
         influxes.forEach( (id,db) -> join.add( id+ " : " + db.toString() + (db.isValid(1)?"":" (NC)")));
         return join.toString();
     }
+
+    /**
+     * Read the databases' setup from the settings.xml
+     */
     private void readFromXML() {
         XMLfab.getRootChildren(settingsPath,"dcafs","settings","databases","sqlite")
                 .filter( db -> !db.getAttribute("id").isEmpty() )
@@ -147,17 +173,23 @@ public class DatabaseManager implements QueryWriting, Commandable {
                                 }
                         );
     }
-    public Database reloadDatabase( String id ){
+
+    /**
+     * Reload the settings of the requested database
+     * @param id The id of the database
+     * @return The database reloaded
+     */
+    public Optional<Database> reloadDatabase( String id ){
         var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","databases");
         var sqlite = fab.getChild("sqlite","id",id);
         if( sqlite.isPresent()){
-            return addSQLiteDB(id,SQLiteDB.readFromXML( sqlite.get(),workPath));
+            return Optional.ofNullable(addSQLiteDB(id,SQLiteDB.readFromXML( sqlite.get(),workPath)));
         }else{
             var sqldb= fab.getChild("server","id",id);
             if( sqldb.isPresent())
-                return addSQLDB(id, SQLDB.readFromXML(sqldb.get()));
+                return Optional.ofNullable(addSQLDB(id, SQLDB.readFromXML(sqldb.get())));
         }
-        return null;
+        return Optional.empty();
     }
 
     /* ***************************************************************************************************************/
@@ -169,18 +201,26 @@ public class DatabaseManager implements QueryWriting, Commandable {
         sqls.values().forEach(SQLDB::flushAll);
     }
     /* **************************************  Q U E R Y W R I T I N G************************************************/
+
+    /**
+     * Give the data to a database object to be inserted without checking the data (except for amount of elements)
+     * @param id The id of the database
+     * @param table The name of the table
+     * @param values The data to insert
+     * @return How many tables received the insert
+     */
     @Override
-    public int doDirectInsert(String id, String table, Object... values) {
-        lites.entrySet().stream().filter(ent -> ent.getKey().equalsIgnoreCase(id)).forEach(db -> db.getValue().doDirectInsert(table,values));
-        sqls.entrySet().stream().filter(ent -> ent.getKey().equalsIgnoreCase(id)).forEach(db -> db.getValue().doDirectInsert(table,values));
+    public int addDirectInsert(String id, String table, Object... values) {
+        lites.entrySet().stream().filter(ent -> ent.getKey().equalsIgnoreCase(id)).forEach(db -> db.getValue().addDirectInsert(table,values));
+        sqls.entrySet().stream().filter(ent -> ent.getKey().equalsIgnoreCase(id)).forEach(db -> db.getValue().addDirectInsert(table,values));
         int applied=0;
         for( SQLiteDB sqlite : lites.values() ){
             if( sqlite.getID().equalsIgnoreCase(id))
-                return sqlite.doDirectInsert(table,values);
+                return sqlite.addDirectInsert(table,values);
         }
         for( SQLDB sqldb : sqls.values() ){
             if( sqldb.getID().equalsIgnoreCase(id))
-                return sqldb.doDirectInsert(table,values);
+                return sqldb.addDirectInsert(table,values);
         }
         return 0;
     }
@@ -200,6 +240,13 @@ public class DatabaseManager implements QueryWriting, Commandable {
        }
        return ok==ids.split(",").length;
     }
+
+    /**
+     * Add a query to the buffer of the given database
+     * @param id The database to add the query to
+     * @param query the query to add
+     * @return True if added
+     */
     @Override
     public boolean addQuery( String id, String query){
         for( SQLiteDB sqlite : lites.values() ){
@@ -236,12 +283,18 @@ public class DatabaseManager implements QueryWriting, Commandable {
         }
         return Optional.empty();
     }
+
+    /**
+     * Write a point to the given influxdb
+     * @param id The id of the influxdb
+     * @param p The point to add
+     * @return True if it was added
+     */
     @Override
     public boolean writeInfluxPoint( String id, Point p){
         for( InfluxDB influxDB : influxes.values() ){
             if( influxDB.getID().equalsIgnoreCase(id)) {
-                influxDB.writePoint(p);
-                return true;
+                return influxDB.writePoint(p);
             }
         }
         return false;
@@ -281,8 +334,8 @@ public class DatabaseManager implements QueryWriting, Commandable {
     }
 
     /**
-     * Get the sum of all the max buffersizes
-     * @return Sum of buffermaxes
+     * Get the sum of all the max buffer sizes
+     * @return Sum of buffer maxes
      */
     public int getTotalMaxCount(){
         int total=0;
@@ -307,29 +360,26 @@ public class DatabaseManager implements QueryWriting, Commandable {
     }
 
     /**
-     *
-     * @param fab
-     * @param type
-     * @param id
+     * Add a blank server node to the settings xml
+     * @param fab The xmlfa b to use, point to the databases node
+     * @param type The type of database (mysql,mssql,postgresql,mariadb)
+     * @param id The id of the database
      */
     public static void addBlankServerToXML( XMLfab fab, String type, String id ){
             fab.addParentToRoot("server").attr("id", id.isEmpty()?"remote":id).attr("type",type)
                 .addChild("db","name").attr("user").attr("pass")
                 .addChild("setup").attr("idletime",-1).attr("flushtime","30s").attr("batchsize",30)
                 .addChild("address","localhost")
-       .build();
+                .build();
     }
     /**
-     * Adds an empty server node to the databases node, if databases doesn't exist it will be created 
-     * @param xml The loaded settings.xml
+     * Add a blank table node to the given database (can be both server or sqlite)
+     * @param fab The fab to build the node
+     * @param id The id of the database the table belongs to
+     * @param table The name of the table
+     * @param format The format of the table
+     * @return True if build
      */
-    public static void addBlankSQLiteToXML( Document xml, String id ){
-        XMLfab.withRoot(xml, "settings",XML_PARENT_TAG)                
-                    .addParentToRoot("sqlite").attr("id", id.isEmpty()?"lite":id).attr("path","db/"+id+".sqlite")
-                        .addChild("rollover","yyMMdd").attr("count",1).attr("unit","day")                       
-                        .addChild("setup").attr("idletime","2m").attr("flushtime","30s").attr("batchsize",30)                        
-               .build();
-    }
     public static boolean addBlankTableToXML( XMLfab fab, String id, String table, String format){
 
         var serverOpt = fab.selectChildAsParent("server","id",id);
@@ -346,10 +396,23 @@ public class DatabaseManager implements QueryWriting, Commandable {
     }
     /* ********************************** C O M M A N D A B L E *********************************************** */
 
+    /**
+     * Not used
+     * @param wr
+     * @return
+     */
     @Override
     public boolean removeWritable(Writable wr) {
         return false;
     }
+
+    /**
+     * Execute a command related to databases
+     * @param request The command to execute
+     * @param wr The writable the command originated from
+     * @param html If the reply should be in html
+     * @return The response or unknown command if no command was found
+     */
     @Override
     public String replyToCommand(String[] request, Writable wr, boolean html) {
 
@@ -402,12 +465,12 @@ public class DatabaseManager implements QueryWriting, Commandable {
             case "reload":
                 if( cmds.length<2)
                     return "No id given";
-                var dbr = reloadDatabase(cmds[1]);
-                if( dbr!=null){
-                    String error = dbr.getLastError();
-                    return error.isEmpty()?"Database reloaded":error;
-                }
-                return "No such database found";
+                return reloadDatabase(cmds[1]).map(
+                        d ->  {
+                            String error = d.getLastError();
+                            return error.isEmpty()?"Database reloaded":error;
+                        }
+                ).orElse("No such database found" );
             case "addserver":
                 DatabaseManager.addBlankServerToXML( XMLfab.withRoot(settingsPath, "settings","databases"), "mysql", cmds.length>=2?cmds[1]:"" );
                 return "Added blank database server node to the settings.xml";
@@ -477,7 +540,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
                 if( cmds.length<3)
                     return "Not enough arguments: dbm:tablexml,dbid,tablename";
                 var dbOpt = getDatabase(cmds[1]);
-                if( dbOpt == null)
+                if( dbOpt.isEmpty())
                     return "No such database "+cmds[1];
                 // Select the correct server node
                 var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","databases");
@@ -486,8 +549,8 @@ public class DatabaseManager implements QueryWriting, Commandable {
                 if( fab.hasChild("table","name",cmds[2]).isPresent())
                     return "Already present in xml, not adding";
 
-                if( dbOpt instanceof SQLDB){
-                    int rs= ((SQLDB) dbOpt).writeTableToXml(fab,cmds[2]);
+                if( dbOpt.get() instanceof SQLDB){
+                    int rs= ((SQLDB) dbOpt.get()).writeTableToXml(fab,cmds[2]);
                     return rs==0?"None added":"Added "+rs+" tables to xml";
                 }else{
                     return "Not a valid database target (it's an influx?)";
@@ -496,13 +559,13 @@ public class DatabaseManager implements QueryWriting, Commandable {
             case "addrollover":
                 if( cmds.length < 5 )
                     return "Not enough arguments, needs to be dbm:addrollover,dbId,count,unit,pattern";
-                var s= getSQLiteDB(cmds[1]);
-                if( s == null)
-                    return cmds[1] +" is not an SQLite";
-                s.setRollOver(cmds[4], NumberUtils.createInteger(cmds[2]),cmds[3]);
-                s.writeToXml(XMLfab.withRoot(settingsPath,"dcafs","settings","databases"));
-                s.forceRollover();
-                return "Rollover added";
+                return getSQLiteDB(cmds[1])
+                            .map( lite -> {
+                                            lite.setRollOver(cmds[4], NumberUtils.createInteger(cmds[2]),cmds[3])
+                                                .writeToXml(XMLfab.withRoot(settingsPath,"dcafs","settings","databases"));
+                                            lite.forceRollover();
+                                            return "Rollover added";
+                }).orElse( cmds[1] +" is not an SQLite");
             case "addinfluxdb": case "addinflux":
                 var influx = new InfluxDB(address,dbName,user,pass);
                 if( influx.connect(false)){
@@ -562,21 +625,17 @@ public class DatabaseManager implements QueryWriting, Commandable {
             case "fetch":
                 if( cmds.length < 2 )
                     return "Not enough arguments, needs to be dbm:fetch,dbId";
-                db = getDatabase(cmds[1]);
-                if( db==null)
-                    return "No such database";
-                if( db.getCurrentTables(false) )
-                    return "Tables fetched, run dbm:tables,"+cmds[1]+ " to see result.";
-                if( db.isValid(1) )
-                    return "Failed to get tables, but connection valid...";
-                return "Failed to get tables because connection not active.";
+                return getDatabase(cmds[1]).map( d -> {
+                                    if( d.getCurrentTables(false) )
+                                        return "Tables fetched, run dbm:tables,"+cmds[1]+ " to see result.";
+                                    if( d.isValid(1) )
+                                        return "Failed to get tables, but connection valid...";
+                                    return "Failed to get tables because connection not active.";
+                                }).orElse("No such database");
             case "tables":
                 if( cmds.length < 2 )
                     return "Not enough arguments, needs to be dbm:tables,dbId";
-                db = getDatabase(cmds[1]);
-                if( db==null)
-                    return "No such database";
-                return db.getTableInfo(html?"<br":"\r\n");
+                return getDatabase(cmds[1]).map( d -> d.getTableInfo(html?"<br":"\r\n")).orElse("No such database");
             case "alter":
                 return "Not yet implemented";
             case "status": case "list":
@@ -591,6 +650,14 @@ public class DatabaseManager implements QueryWriting, Commandable {
                 return UNKNOWN_CMD+": "+request[0]+":"+request[1];
         }
     }
+
+    /**
+     * Respons to MySQLdump related commands
+     * @param request The command
+     * @param wr The writable that gave the command
+     * @param html Respons in html or not
+     * @return The response
+     */
     public String doMYsqlDump(String[] request, Writable wr, boolean html ){
         String[] cmds = request[1].split(",");
         switch( cmds[0] ){
@@ -598,13 +665,13 @@ public class DatabaseManager implements QueryWriting, Commandable {
             case "run":
                 if( cmds.length != 3 )
                     return "Not enough arguments, must be mysqldump:run,dbid,path";
-                Database db = getDatabase(cmds[1]);
-                if( db == null )
+                var dbOpt = getDatabase(cmds[1]);
+                if( dbOpt.isEmpty() )
                     return "No such database "+cmds[1];
-                if( db instanceof SQLiteDB )
+                if( dbOpt.get() instanceof SQLiteDB )
                     return "Database is an sqlite, not mysql/mariadb";
-                if( db instanceof SQLDB ){
-                    SQLDB sql =(SQLDB)db;
+                if( dbOpt.get() instanceof SQLDB ){
+                    SQLDB sql =(SQLDB)dbOpt.get();
                     if( sql.isMySQL() ){
                         // do the dump
                         String os = System.getProperty("os.name").toLowerCase();

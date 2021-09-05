@@ -436,7 +436,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 									if (!gen.getTable().isEmpty() && gen.writesInDB()) {
 										if (gen.isTableMatch()) {
 											for( String id : gen.getDBID() )
-												queryWriting.doDirectInsert( id, gen.getTable(), data);
+												queryWriting.addDirectInsert( id, gen.getTable(), data);
 										} else {
 											for( String id : gen.getDBID() ){
 												if (!queryWriting.buildInsert(id, gen.getTable(), dp, gen.macro)) {
@@ -510,9 +510,9 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				if(cmds.length < 4 )
 					return "To few parameters, gens:fromtable,dbid,table,gen id,delimiter";
 				var db = queryWriting.getDatabase(cmds[1]);
-				if( db ==null)
+				if( db.isEmpty())
 					return "No such database found "+cmds[1];
-				if( db.buildGenericFromTable(XMLfab.withRoot(settingsPath, "dcafs","generics"),cmds[2],cmds[3],cmds.length>4?cmds[4]:",") ){
+				if( db.get().buildGenericFromTable(XMLfab.withRoot(settingsPath, "dcafs","generics"),cmds[2],cmds[3],cmds.length>4?cmds[4]:",") ){
 					return "Generic written";
 				}else{
 					return "Failed to write to xml";
@@ -521,10 +521,10 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				if(cmds.length < 3 )
 					return "To few parameters, gens:fromdb,dbid,delimiter";
 				var dbs = queryWriting.getDatabase(cmds[1]);
-				if( dbs ==null)
+				if( dbs.isEmpty())
 					return "No such database found "+cmds[1];
 
-				if( dbs.buildGenericFromTables(XMLfab.withRoot(settingsPath, "dcafs","generics"),false,cmds.length>2?cmds[2]:",") >0 ){
+				if( dbs.get().buildGenericsFromTables(XMLfab.withRoot(settingsPath, "dcafs","generics"),false,cmds.length>2?cmds[2]:",") >0 ){
 					return "Generic(s) written";
 				}else{
 					return "No generics written";

@@ -45,7 +45,7 @@ import java.util.stream.Collectors;
 
 public class DAS implements DeadThreadListener {
 
-    private static final String version = "0.10.13";
+    private static final String version = "0.10.14";
 
     private Path settingsPath = Path.of("settings.xml");
     private String workPath=Path.of("").toString();
