@@ -1,11 +1,13 @@
 package util.data;
 
 import org.tinylog.Logger;
+import util.xml.XMLfab;
 import worker.Datagram;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.StringJoiner;
 
 public class FlagVal extends AbstractVal implements NumericVal{
 
@@ -201,5 +203,47 @@ public class FlagVal extends AbstractVal implements NumericVal{
             if( ar!=null)
                 return true;
         return false;
+    }
+
+    @Override
+    public boolean storeInXml(XMLfab fab) {
+        if( group.isEmpty()) {
+            fab.alterChild("flag", "id",id()).build();
+        }else{
+            fab.alterChild("group","id",group )
+                    .down().addChild("flag").attr("name",name);
+        }
+        var opts = getOptions();
+        if( !opts.isEmpty())
+            fab.attr("options",opts);
+        storeTriggeredCmds(fab.down());
+        fab.up();
+        if( !group.isEmpty())
+            fab.up(); // Go back up to rtvals
+        return true;
+    }
+    private void storeTriggeredCmds(XMLfab fab){
+        if( !hasTriggeredCmds())
+            return;
+        var c = cmdLists[TRIGGERTYPE.RAISED.ordinal()];
+        if( c!= null ){
+            for( var cmd : c )
+                fab.addChild("cmd",cmd).attr("when","up");
+        }
+        c = cmdLists[TRIGGERTYPE.LOWERED.ordinal()];
+        if( c!= null ){
+            for( var cmd : c )
+                fab.addChild("cmd",cmd).attr("when","down");
+        }
+    }
+    private String getOptions(){
+        var join = new StringJoiner(",");
+        if( keepTime )
+            join.add("time");
+        if( keepHistory>0)
+            join.add("history:"+keepHistory);
+        if( order !=-1 )
+            join.add("order:"+order);
+        return join.toString();
     }
 }

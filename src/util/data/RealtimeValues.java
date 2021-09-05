@@ -521,6 +521,40 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		}
 		return val;
 	}
+	public boolean renameDouble( String from, String to, boolean alterXml){
+		if( hasDouble(to) ){
+			return false;
+		}
+		var dv = getDoubleVal(from);
+		if( dv.isPresent() ){
+			// Alter the DoubleVal
+			doubleVals.remove(from); // Remove it from the list
+			var name = to;
+			if( name.contains("_") )
+				name = name.substring(name.indexOf("_")+1);
+			String newName = name;
+			String oriName = dv.get().name();
+			dv.get().name(name);
+			doubleVals.put(to,dv.get()); // Add it renamed
+
+			// Correct the XML
+			if( alterXml ) {
+				if (name.equalsIgnoreCase(to)) { // so didn't contain a group
+					XMLfab.withRoot(settingsPath, "dcafs", "rtvals").selectChildAsParent("double", "id", from)
+							.ifPresent(fab -> fab.attr("id", to).build());
+				} else { // If it did contain a group
+					var grOpt = XMLfab.withRoot(settingsPath, "dcafs", "rtvals").selectChildAsParent("group", "id", from.substring(0, from.indexOf("_")));
+					if (grOpt.isPresent()) { // If the group tag is already present alter it there
+						grOpt.get().selectChildAsParent("double", "name", oriName).ifPresent(f -> f.attr("name", newName).build());
+					} else { // If not
+						XMLfab.withRoot(settingsPath, "dcafs", "rtvals").selectChildAsParent("double", "id", from)
+								.ifPresent(fab -> fab.attr("id", to).build());
+					}
+				}
+			}
+		}
+		return true;
+	}
 	public boolean hasDouble( String id){
 		return doubleVals.containsKey(id);
 	}
@@ -735,19 +769,13 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	 * Store the rtvals in the settings.xml
 	 * @return The result
 	 */
-	public String storeRTVals(){
+	public boolean storeValsInXml(boolean clearFirst){
 		XMLfab fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
+		if( clearFirst ) // If it needs to cleared first, remove child nodes
+			fab.clearChildren();
 		var vals = doubleVals.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Entry::getValue).collect(Collectors.toList());
 		for( var dv : vals ){
-			if( dv.group().isEmpty()) {
-				fab.alterChild("double", "id",dv.id()).build();
-			}else{
-				fab.alterChild("group","id",dv.group())
-						.down().addChild("double").attr("name",dv.name()).attr("unit",dv.unit());
-						if( dv.scale()!=-1)
-							fab.attr("scale",dv.scale());
-						fab.up();
-			}
+			dv.storeInXml(fab);
 		}
 		var keys = texts.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Entry::getKey).collect(Collectors.toList());
 		for( var dt : keys ){
@@ -755,16 +783,10 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		}
 		var flags = flagVals.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Entry::getValue).collect(Collectors.toList());
 		for( var fv : flags ){
-			if( fv.group().isEmpty()) {
-				fab.alterChild("double", "id",fv.id()).build();
-			}else{
-				fab.alterChild("group","id",fv.group())
-						.down().addChild("flag").attr("name",fv.name())
-						.up();
-			}
+			fv.storeInXml(fab);
 		}
 		fab.build();
-		return "New doubles/texts/flags added";
+		return true;
 	}
 	/* ******************************************************************************************************/
 	/**
@@ -1075,8 +1097,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		}
 
 		exp = parseRTline(exp,"");
-		exp.replace("true","1");
-		exp.replace("false","0");
+		exp=exp.replace("true","1");
+		exp=exp.replace("false","0");
 
 		exp = simpleParseRT(exp,create?"create":"");
 		if( exp.isEmpty())
@@ -1146,7 +1168,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 							.add(green+"  rtvals:group,groupid"+reg+" -> Get a listing of all rtvals belonging to the group")
 							.add(green+"  rtvals:name,valname"+reg+" -> Get a listing of all rtvals with the given valname (independent of group)");
 					return join.toString();
-				case "store": return  storeRTVals();
+				case "store": return  storeValsInXml(false)?"Written in xml":"Failed to write to xml";
 				case "reload":
 					readFromXML();
 					return "Reloaded rtvals";

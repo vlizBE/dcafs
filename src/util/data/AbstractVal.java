@@ -1,5 +1,6 @@
 package util.data;
 
+import util.xml.XMLfab;
 import worker.Datagram;
 
 import java.time.Instant;
@@ -100,5 +101,5 @@ public abstract class AbstractVal {
         return name;
     }
 
-
+    abstract boolean storeInXml(XMLfab fab);
 }

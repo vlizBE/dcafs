@@ -8,7 +8,8 @@ import java.util.ArrayList;
 import java.util.Optional;
 
 public interface DataProviding {
-
+    /* Global */
+    boolean storeValsInXml( boolean clearFirst );
     /* Parsing */
     String simpleParseRT( String line, String error );
     String parseRTline( String line, String error );
@@ -18,6 +19,7 @@ public interface DataProviding {
     /* Double */
     Optional<DoubleVal> getDoubleVal(String param );
     DoubleVal getOrAddDoubleVal( String id );
+    boolean renameDouble( String from, String to, boolean alterXml);
     boolean hasDouble( String id);
     double getDouble(String id, double defVal, boolean createIfNew);
     double getDouble(String id, double bad);

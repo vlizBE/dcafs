@@ -5,11 +5,13 @@ import util.math.MathUtils;
 import util.task.Task;
 import util.tools.TimeTools;
 import util.tools.Tools;
+import util.xml.XMLfab;
 import worker.Datagram;
 
 import java.math.BigDecimal;
 import java.time.*;
 import java.util.ArrayList;
+import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -201,7 +203,62 @@ public class DoubleVal extends AbstractVal implements NumericVal{
     public boolean hasTriggeredCmds(){
         return triggered!=null&& !triggered.isEmpty();
     }
+    private void storeTriggeredCmds(XMLfab fab){
+        if( triggered==null)
+            return;
+        for( var tc : triggered ){
+            switch(tc.type ){
+                case ALWAYS:  fab.addChild("cmd",tc.cmd); break;
+                case CHANGED: fab.addChild("cmd",tc.cmd).attr("when","changed"); break;
+                case STDEV:
+                case COMP:    fab.addChild("cmd",tc.cmd).attr("when",tc.ori); break;
+            }
+        }
+    }
     /* ***************************************** U S I N G ********************************************************** */
+
+    /**
+     * Store the setup of this val in the settings.xml
+     * @param fab The fab to work with, with the rtvals node as parent
+     * @return True when
+     */
+    public boolean storeInXml( XMLfab fab ){
+        if( !group.isEmpty()) {
+            fab.alterChild("group","id",group)
+                    .down(); // Go down in the group
+            fab.alterChild("double").attr("name",name);
+        }else{
+            fab.alterChild("double").attr("id",id());
+        }
+        fab.attr("unit",unit);
+        if( digits !=-1)
+            fab.attr("scale",digits);
+        var opts = getOptions();
+        if( !opts.isEmpty())
+            fab.attr("options",opts);
+        storeTriggeredCmds(fab.down());
+        fab.up();
+        if( !group.isEmpty())
+            fab.up(); // Go back up to rtvals
+        return true;
+    }
+
+    /**
+     * Get a , delimited string with all the used options
+     * @return The options in a listing or empty if none are used
+     */
+    private String getOptions(){
+        var join = new StringJoiner(",");
+        if( keepTime )
+            join.add("time");
+        if( keepHistory>0)
+            join.add("history:"+keepHistory);
+        if( keepMinMax )
+            join.add("minmax");
+        if( order !=-1 )
+            join.add("order:"+order);
+        return join.toString();
+    }
     public String unit(){ return unit; }
 
     /**
