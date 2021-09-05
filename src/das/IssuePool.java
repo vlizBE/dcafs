@@ -11,14 +11,12 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
+import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.StringJoiner;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -49,7 +47,7 @@ public class IssuePool implements Commandable{
                     String id = XMLtools.getStringAttribute(issueEle,"id","");
                     String message = XMLtools.getStringAttribute(issueEle,"message","");
                     message = XMLtools.getChildValueByTag(issueEle,"message",message);
-                    var issue = new Issue(message);
+                    var issue = new Issue(id,message);
 
                     String start = XMLtools.getChildValueByTag(issueEle,"test","");
                     start = XMLtools.getChildValueByTag(issueEle,"startif",start);
@@ -247,7 +245,10 @@ public class IssuePool implements Commandable{
         if( message.isEmpty()){
             Logger.warn("Issue created without message: "+id);
         }
-        issues.put(id,new Issue(message));
+        issues.put(id,new Issue(id,message));
+    }
+    public Optional<NumericVal> getIssue(String id ){
+        return Optional.ofNullable(issues.get(id));
     }
     public boolean isActive( String id ){
         var is = issues.get(id);
@@ -258,7 +259,7 @@ public class IssuePool implements Commandable{
     public ArrayList<String> getActives(){
         return issues.entrySet().stream().filter(ent -> ent.getValue().isActive()).map(Map.Entry::getKey).collect(Collectors.toCollection(ArrayList::new));
     }
-    public class Issue{
+    public class Issue implements NumericVal {
 
         LocalDateTime lastStartTime;
         LocalDateTime lastEndTime;
@@ -271,9 +272,17 @@ public class IssuePool implements Commandable{
 
         CheckBlock activate;
         CheckBlock resolve;
+        String name;
+        String group;
 
         /* Creation */
-        public Issue( String message ){
+        public Issue( String id, String message ){
+            if( id.contains("_")){
+                name = id.substring(0,id.indexOf("_"));
+                group = id.substring(id.indexOf("_")+1);
+            }else{
+                name=id;
+            }
             this.message=message;
         }
 
@@ -399,6 +408,36 @@ public class IssuePool implements Commandable{
         }
         public String getMessage(){
             return message;
+        }
+
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public String group() {
+            return group;
+        }
+
+        @Override
+        public String id() {
+            return name+"_"+group;
+        }
+
+        @Override
+        public BigDecimal toBigDecimal() {
+            return active?BigDecimal.ONE:BigDecimal.ZERO;
+        }
+
+        @Override
+        public double value() {
+            return active?1.0:0.0;
+        }
+
+        @Override
+        public void updateValue(double val) {
+
         }
     }
 }

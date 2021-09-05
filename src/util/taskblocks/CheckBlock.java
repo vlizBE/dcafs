@@ -61,6 +61,10 @@ public class CheckBlock extends AbstractBlock{
 
         String exp = ori.toLowerCase();
 
+        if( ori.isEmpty()) {
+            Logger.error("Ori is empty");
+            return false;
+        }
         // Fix the flag/issue and diff?
         Pattern words = Pattern.compile("[!a-zA-Z]+[_:0-9]*[a-zA-Z0-9]+\\d*");
         var found = words.matcher(ori).results().map(MatchResult::group).collect(Collectors.toList());
@@ -72,9 +76,11 @@ public class CheckBlock extends AbstractBlock{
             if( comp.contains("flag:")){
                 String val = comp.split(":")[1];
                 exp = exp.replace(comp,"{f:"+val+"}=="+(comp.startsWith("!")?"0":"1"));
-            }else if( comp.startsWith("issue")){
+            }else if( comp.startsWith("issue:")){
                 String val = comp.split(":")[1];
                 exp = exp.replace(comp,"{i:"+val+"}=="+(comp.startsWith("!")?"0":"1"));
+            }else if( comp.toLowerCase().startsWith("d:") || comp.toLowerCase().startsWith("f:")){
+                exp = exp.replace(comp,"{"+comp+"}");
             }
         }
         //Figure out brackets?
@@ -82,6 +88,10 @@ public class CheckBlock extends AbstractBlock{
 
         // Figure out the realtime stuff
         exp = dp.buildNumericalMem(exp,sharedMem,0);
+        if( exp.isEmpty() ){
+            Logger.error( "Couldn't process "+ori+", vals missing");
+            return false;
+        }
 
         if( exp.isEmpty() ){
             Logger.error("Failed to build numerical mem for "+ori);
@@ -94,7 +104,8 @@ public class CheckBlock extends AbstractBlock{
         if( opens!=closes)
             return false;
 
-        exp = MathUtils.checkBrackets(exp); // Then make sure it has surrounding brackets
+        if( exp.charAt(0)!='(') // Make sure it has surrounding brackets
+            exp= "("+exp+")";
 
         // Next go through the brackets from left to right (inner)
         var subFormulas = new ArrayList<String>(); // List to contain all the sub-formulas
@@ -119,7 +130,6 @@ public class CheckBlock extends AbstractBlock{
 
                 var and_ors = part.split("[&|!]{2}",0);
                 for( var and_or : and_ors) {
-                    boolean reverse = and_or.startsWith("!");
                     var comps = MathUtils.extractCompare(and_or);
                     for (var c : comps) {
                         if( c.isEmpty()) {

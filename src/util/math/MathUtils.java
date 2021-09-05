@@ -5,7 +5,6 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import util.tools.Tools;
 
-import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -83,6 +82,7 @@ public class MathUtils {
         }
         return result;
     }
+
     private static int getIndexOfOperand( List<String> data, String op1, String op2){
         int op1Index = data.indexOf(op1);
         int op2Index = data.indexOf(op2);
@@ -96,29 +96,38 @@ public class MathUtils {
             return Math.min( op1Index,op2Index);
         }
     }
+
+    /**
+     * Chop a formula into processable parts splitting it according to operators fe. i1+5-> i1,+,5
+     * The most error prone are scientific notations
+     * @param formula The formula to chop into parts
+     * @return The resulting pieces
+     */
     public static List<String> extractParts( String formula ){
 
         if( formula.isEmpty() ) {
             Logger.warn("Tried to extract parts from empty formula");
             return new ArrayList<>();
         }
-        var ee = es.matcher(formula)
+        // The problem with scientific notation is that they can be mistaken for a combination of a word and numbers
+        // especially the negative one can be seen as an operation instead
+        var ee = es.matcher(formula) // find the numbers with scientific notation
                 .results()
                 .map(MatchResult::group)
                 .distinct()
                 .collect(Collectors.toList());
 
-        for( String el : ee ){
+        for( String el : ee ){ // Replace those with uppercase so they all use the same format
             formula = formula.replace(el,el.toUpperCase());
         }
-
+        // Replace the negative ones with a e and the positive ones with E to remove the sign
         String alt = formula.replace("E-","e");
         alt = alt.replace("E+","E");
 
-        String[] spl = alt.split(OPS_REGEX);
+        String[] spl = alt.split(OPS_REGEX); // now split the string base on operands, this now won't split scientific
 
-        String ops = alt.replaceAll("[a-zA-Z0-9_:]", "");
-        ops=ops.replace(".","");
+        String ops = alt.replaceAll("[a-zA-Z0-9_:]", "");// To get the ops, just remove all other characters
+        ops=ops.replace(".","");// and the dots (special regex character)
         // The above replace all doesn't handle it properly if the formula starts with a - (fe. -5*i1)
         // So if this is the case, remove it from the ops line
         if( ops.startsWith("-")&&formula.startsWith("-"))
@@ -130,19 +139,19 @@ public class MathUtils {
             if (spl[a].isEmpty() && !formula.startsWith("!")) {
                 spl[a + 1] = "-" + spl[a + 1];
             } else {
-                var m = es.matcher(spl[a]);
-                if( m.find() ){
+                var m = es.matcher(spl[a]); // now check if it matches a scientific one
+                if( m.find() ){ // if so, replace the lowercase e back to uppercase with minus, for uppercase + is redundant
                     full.add(spl[a].replace("e","E-"));
-                }else{
+                }else{ // if not, just add as is
                     full.add(spl[a]);
                 }
 
                 // add the op
                 if( b<ops.length()) {
-                    if( ops.charAt(b)=='=') {
+                    if( ops.charAt(b)=='=') { // == doesn't get processed properly, so fix this
                         full.add("==");
                         b++;
-                    }else {
+                    }else {// if not == just add it
                         full.add("" + ops.charAt(b));
                     }
                 }
@@ -151,6 +160,12 @@ public class MathUtils {
         }
         return full;
     }
+
+    /**
+     * Convert the comparison sign to a compare function that accepts a double array
+     * @param comp The comparison fe. < or >= etc
+     * @return The function or null if an invalid comp was given
+     */
     public static Function<double[],Boolean> getCompareFunction( String comp ){
         Function<double[],Boolean> proc=null;
         switch( comp ){
@@ -160,9 +175,19 @@ public class MathUtils {
             case ">=": proc = x -> Double.compare(x[0],x[1])>=0; break;
             case "==": proc = x -> Double.compare(x[0],x[1])==0; break;
             case "!=": proc = x -> Double.compare(x[0],x[1])!=0; break;
+            default:
+                Logger.error( "Tried to convert an unknown compare to a function: "+comp);
         }
         return proc;
     }
+
+    /**
+     * Combine two function that return a double into a single one the compares the result of the two
+     * @param comp The kind of comparison fe. < or >= etc
+     * @param f1 The left function
+     * @param f2 The right function
+     * @return The resulting function
+     */
     public static Function<Double[],Boolean> getCompareFunction( String comp, Function<Double[],Double> f1, Function<Double[],Double> f2 ){
         Function<Double[],Boolean> proc=null;
         switch( comp ){
@@ -172,15 +197,21 @@ public class MathUtils {
             case ">=": proc = x -> Double.compare(f1.apply(x),f2.apply(x))>=0; break;
             case "==": proc = x -> Double.compare(f1.apply(x),f2.apply(x))==0; break;
             case "!=": proc = x -> Double.compare(f1.apply(x),f2.apply(x))!=0; break;
-
+            default:
+                Logger.error( "Tried to convert an unknown compare to a function: "+comp);
         }
-
         return proc;
     }
+
+    /**
+     * Split a compare into subparts so left>right will become left,>,right
+     * @param comparison The comparison to split
+     * @return The resulting string
+     */
     public static String[] splitCompare( String comparison ){
-        var results = Pattern.compile("[><=!][=]?");
+        var compOps = Pattern.compile("[><=!][=]?");
         var full = new String[3];
-        full[1] = results.matcher(comparison)
+        full[1] = compOps.matcher(comparison)
                 .results()
                 .map(MatchResult::group)
                 .collect(Collectors.joining());
@@ -189,10 +220,15 @@ public class MathUtils {
         full[2]=split[1];
         return full;
     }
+
+    /**
+     *
+     * @param comparison
+     * @return
+     */
     public static String[] extractCompare( String comparison ){
-        var results = Pattern.compile("[><=!][=]?");
-        var full = new String[3];
-        var l = results.matcher(comparison)
+        var compOps = Pattern.compile("[><=!][=]?");
+        var l = compOps.matcher(comparison)
                 .results()
                 .map(MatchResult::group)
                 .distinct()
@@ -519,6 +555,14 @@ public class MathUtils {
         }
         return proc;
     }
+
+    /**
+     * Process a simple formula that only contains numbers and no references
+     * @param formula The formula to parse and calculate
+     * @param error The value to return on an error
+     * @param debug True will return extra debug information
+     * @return The result or the error if something went wrong
+     */
     public static double simpleCalculation( String formula,double error, boolean debug ){
         ArrayList<Function<Double[],Double>> steps = new ArrayList<>();
 
@@ -531,8 +575,9 @@ public class MathUtils {
             Logger.error("Brackets don't match, (="+opens+" and )="+closes);
             return error;
         }
+        if( formula.charAt(0)!='(') // Then make sure it has surrounding brackets
+            formula= "("+formula+")";
 
-        formula = checkBrackets(formula); // Then make sure it has surrounding brackets
         formula=formula.replace(" ",""); // But doesn't contain any spaces
 
         // Next go through the brackets from left to right (inner)
@@ -560,6 +605,7 @@ public class MathUtils {
                     Logger.info("=>Formula: "+formula);
             }else{
                 Logger.error("Didn't find opening bracket");
+                return error;
             }
         }
 
@@ -567,7 +613,7 @@ public class MathUtils {
             var x = MathUtils.decodeDoublesOp(sub[0],sub[1],sub[2],0);
             if( x==null ){
                 Logger.error("Failed to convert "+formula);
-                continue;
+                return error;
             }
             steps.add( x ); // and add it to the steps list
         }
@@ -584,6 +630,13 @@ public class MathUtils {
         }
         return result[i-1];
     }
+
+    /**
+     * Check if the brackets used in the formula are correct (meaning same amount of opening as closing and no closing
+     * if there wasn't an opening one before
+     * @param formula The formula to check
+     * @return The formula with enclosing brackets added if none were present or an empty string if there's an error
+     */
     public static String checkBrackets( String formula ){
 
         // No total enclosing brackets
@@ -594,10 +647,16 @@ public class MathUtils {
             }else if( formula.charAt(a)==')' ){
                 cnt--;
             }
-            if( cnt == 0)
-                break;
+            if( cnt < 0 ) { // if this goes below zero, an opening bracket is missing
+                Logger.error("Found closing bracket without opening in "+formula+" at "+a);
+                return "";
+            }
         }
-        if( cnt==0)
+        if( cnt != 0 ) {
+            Logger.error("Unclosed bracket in "+formula);
+            return "";
+        }
+        if( formula.charAt(0)!='(') // Add enclosing brackets
             formula="("+formula+")";
         return formula;
     }
@@ -1088,7 +1147,7 @@ public class MathUtils {
             md = MessageDigest.getInstance("MD5");
             md.update(Files.readAllBytes(file));
             byte[] digest = md.digest();
-            return DatatypeConverter.printHexBinary(digest);
+            return Tools.fromBytesToHexString(digest);
         } catch (NoSuchAlgorithmException | IOException e) {
             Logger.error(e);
             return "";

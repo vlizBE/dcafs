@@ -6,12 +6,10 @@ import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.*;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.StringJoiner;
+import java.util.*;
 import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * A collection of various often used small methods that do a variety of usefull
@@ -609,6 +607,13 @@ public class Tools {
             pairs.forEach(p -> splits.add(p.split(":")));
         }
         return splits;
+    }
+    public static List<String[]> parseKeyValueNoBrackets( String data ){
+        return Arrays.stream(data.split(" ")) // simple split on spaces
+                        .distinct() // remove duplicates
+                        .filter(w -> !w.startsWith("{")&&!w.contains(":")) // igore those that start with { or don't contain :
+                        .map( w -> new String[]{ w.substring(0,w.indexOf(":")),w.substring(w.indexOf(":")+1)})
+                        .collect(Collectors.toList()); // gather them in a list
     }
     public static String parseExpression( String op ){
         op=op.replace("->"," through");

@@ -59,6 +59,12 @@ public abstract class Database{
         lastError="";
         return l;
     }
+
+    /**
+     * Read the part of the node that contains the information on records flushing
+     * @param set The element that contains the info
+     * @return True if flush info was read
+     */
     protected boolean readFlushSetup(Element set){
         if( set != null ){
             String age = XMLtools.getStringAttribute( set, "age", "30s");	    // How many time before data is flushed (if not reached batch size)
@@ -73,30 +79,127 @@ public abstract class Database{
     }
 
     /* Abstract Methods */
-    public abstract boolean connect(boolean force);
-    public abstract boolean disconnect();
-    public abstract boolean isValid(int timeout);
 
+    /**
+     * Connect to the database
+     * @param force If true and already connected, disconnect first
+     * @return True if connection was established
+     */
+    public abstract boolean connect(boolean force); // Connect to the database
+
+    /**
+     * Disconnect from the database
+     * @return True if disconnected
+     */
+    public abstract boolean disconnect(); // Disconnect from the database
+
+    /**
+     * Check if the connection to the database is still valid
+     * @param timeout How long to wait for a reply to the connection test in seconds
+     * @return True is valid
+     */
+    public abstract boolean isValid(int timeout); // Check if the connection is still valid
+
+    /**
+     * Get the amount of records currently buffered
+     * @return Get the amount of bufferd records
+     */
     public abstract int getRecordsCount() ;
+
+    /**
+     * Check if there are buffered records
+     * @return True if there's at least one buffered record
+     */
     public abstract boolean hasRecords();
 
+    /**
+     * Write the current settings to xml
+     * @param fab The fab that points to the parent to insert the database node in
+     */
     public abstract void writeToXml(XMLfab fab);
 
+    /**
+     * Retrieve the current tables from the data
+     * @param clear True means clearing the local tables first
+     * @return True if successful
+     */
     public abstract boolean getCurrentTables(boolean clear);
+
+    /**
+     * Create the local tables and views in the database
+     * @param keepConnection True if the established connection should be kept
+     * @return
+     */
     public abstract String createContent(boolean keepConnection);
+
+    /**
+     * Get all the information on the local tables
+     * @param eol The eol sequence to use
+     * @return The gathered information
+     */
     public abstract String getTableInfo(String eol);
-    public abstract boolean buildGenericFromTable( XMLfab fab, String tableName, String genID, String delim);
-    public abstract int buildGenericFromTables( XMLfab fab,boolean overwrite, String delim);
 
+    /**
+     * Build a generic based on the information of the chosen table
+     * @param fab The xmlfab used
+     * @param tableName The name of the table
+     * @param genID The id for the new generic
+     * @param delimiter The delimiter to use in the generic
+     * @return True if this worked
+     */
+    public abstract boolean buildGenericFromTable( XMLfab fab, String tableName, String genID, String delimiter);
+
+    /**
+     * Build a generic for each local table of this database
+     * @param fab The xmlfab to use
+     * @param overwrite If true will overwrite existing generics
+     * @param delim The delimiter for the generics
+     * @return The amount of generics build
+     */
+    public abstract int buildGenericsFromTables(XMLfab fab, boolean overwrite, String delim);
+
+    /**
+     * Check and update the current state of the database
+     * @param secondsPassed How many seconds passed since the last check (interval so fixed)
+     * @throws Exception Catch any exception so the thread doesn't get killed
+     */
     public abstract void checkState( int secondsPassed ) throws Exception;
-
-    public abstract int doDirectInsert(String table, Object... values);
-
+    /**
+     * Insert into database without checking the type of values
+     * @param table  The table to insert into
+     * @param values The values to insert
+     * @return -2=No such table, -1=No such statement,0=bad amount of values,1=ok
+     */
+    public abstract int addDirectInsert(String table, Object... values);
+    /**
+     * Write a select query and then retrieve the content of a single column from it base on the (case insensitive) name
+     * @param query The query to execute
+     * @return ArrayList with the data or an empty list if nothing found/something went wrong
+     */
     public abstract Optional<List<List<Object>>> doSelect(String query, boolean includeNames );
+
+    /**
+     * Run a select query and return the result but don't include columnnames in top index
+     * @param query The query to execute
+     * @return ArrayList with the data or an empty list if nothing found/something went wrong
+     */
     public Optional<List<List<Object>>> doSelect(String query ){
         return doSelect(query,false);
     }
+
+    /**
+     * Add a query to the buffer
+     * @param query The query to add to the buffer
+     */
     public abstract void addQuery(String query);
+
+    /**
+     * Build the insert for the given table based on current data and add it to the buffer
+     * @param table The name of the table
+     * @param dp Instance that holds the data
+     * @param macro The macro argument to fill in
+     * @return True If successful
+     */
     public abstract boolean buildInsert(String table, DataProviding dp, String macro);
 
 }

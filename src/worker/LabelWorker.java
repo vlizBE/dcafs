@@ -189,6 +189,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 
 	public String getGenericInfo() {
 		StringJoiner join = new StringJoiner("\r\n", "Generics:\r\n", "\r\n");
+		join.setEmptyValue("None yet");
 		for (Generic gen : generics.values()) {
 			join.add(gen.toString() + "\r\n");
 		}
@@ -436,7 +437,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 									if (!gen.getTable().isEmpty() && gen.writesInDB()) {
 										if (gen.isTableMatch()) {
 											for( String id : gen.getDBID() )
-												queryWriting.doDirectInsert( id, gen.getTable(), data);
+												queryWriting.addDirectInsert( id, gen.getTable(), data);
 										} else {
 											for( String id : gen.getDBID() ){
 												if (!queryWriting.buildInsert(id, gen.getTable(), dp, gen.macro)) {
@@ -483,7 +484,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				join.add("").add(TelnetCodes.TEXT_GREEN+"Create a Generic"+TelnetCodes.TEXT_YELLOW)
 						.add("  gens:fromtable,dbid,dbtable,gen id[,delimiter] -> Create a generic according to a table, delim is optional, def is ','")
 						.add("  gens:fromdb,dbid,delimiter -> Create a generic with chosen delimiter for each table if there's no such generic yet")
-						.add("  gens:addblank,id,format,delimiter -> Create a blank generic with the given id and format")
+						.add("  gens:addblank,id,group,format,delimiter -> Create a blank generic with the given id, group and format")
 						.add("      The format consists of a letter, followed by a number and then a word and this is repeated with , as delimiter")
 						.add("      The letter is the type of value, the number the index in the array of received data and the word is the name/id of the value")
 						.add("      So for example: i2temp,r5offset  -> integer on index 2 with name temp, real on 5 with name offset")
@@ -510,9 +511,10 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				if(cmds.length < 4 )
 					return "To few parameters, gens:fromtable,dbid,table,gen id,delimiter";
 				var db = queryWriting.getDatabase(cmds[1]);
-				if( db ==null)
+				if( db.isEmpty())
 					return "No such database found "+cmds[1];
-				if( db.buildGenericFromTable(XMLfab.withRoot(settingsPath, "dcafs","generics"),cmds[2],cmds[3],cmds.length>4?cmds[4]:",") ){
+				if( db.get().buildGenericFromTable(XMLfab.withRoot(settingsPath, "dcafs","generics"),cmds[2],cmds[3],cmds.length>4?cmds[4]:",") ){
+					loadGenerics();
 					return "Generic written";
 				}else{
 					return "Failed to write to xml";
@@ -521,21 +523,22 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				if(cmds.length < 3 )
 					return "To few parameters, gens:fromdb,dbid,delimiter";
 				var dbs = queryWriting.getDatabase(cmds[1]);
-				if( dbs ==null)
+				if( dbs.isEmpty())
 					return "No such database found "+cmds[1];
 
-				if( dbs.buildGenericFromTables(XMLfab.withRoot(settingsPath, "dcafs","generics"),false,cmds.length>2?cmds[2]:",") >0 ){
+				if( dbs.get().buildGenericsFromTables(XMLfab.withRoot(settingsPath, "dcafs","generics"),false,cmds.length>2?cmds[2]:",") >0 ){
+					loadGenerics();
 					return "Generic(s) written";
 				}else{
 					return "No generics written";
 				}
 			case "addblank":
-				if( cmds.length < 3 )
-					return "Not enough arguments, must be generics:addblank,id,format,delimiter";
+				if( cmds.length < 4 )
+					return "Not enough arguments, must be generics:addblank,id,group,format,delimiter";
 
 				var delimiter=request[1].endsWith(",")?",":cmds[cmds.length-1];
-				if( Generic.addBlankToXML(XMLfab.withRoot(settingsPath, "dcafs","generics"), cmds[1],
-					ArrayUtils.subarray(cmds,2,cmds.length>3?cmds.length-1:cmds.length),delimiter)){
+				if( Generic.addBlankToXML(XMLfab.withRoot(settingsPath, "dcafs","generics"), cmds[1], cmds[2],
+					ArrayUtils.subarray(cmds,3,cmds.length>3?cmds.length-1:cmds.length),delimiter)){
 					loadGenerics();
 					return "Generic added & reloaded";
 				}
@@ -569,9 +572,9 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 								loadGenerics();
 								return "Names set, generics reloaded";
 							}
-						case "dbid":
+						case "db":
 						case "delimiter":
-						case "table":
+						case "group":
 						case "id":
 							fab.get().attr(attr,val).build();
 							break;

@@ -53,6 +53,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 
 	/* Other */
 	private final BlockingQueue<Datagram> dQueue; // Used to issue triggered cmd's
+	private ArrayList<String> errorLog = new ArrayList<>();
 
 	public RealtimeValues( Path settingsPath,BlockingQueue<Datagram> dQueue ){
 		this.settingsPath=settingsPath;
@@ -310,7 +311,9 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			nums = new ArrayList<>();
 
 		// Find all the double/flag pairs
-		var pairs = Tools.parseKeyValue(exp,true);
+		var pairs = Tools.parseKeyValue(exp,true); // Add those of the format {d:id}
+		//pairs.addAll( Tools.parseKeyValueNoBrackets(exp) ); // Add those of the format d:id
+
 		for( var p : pairs ) {
 			boolean ok=false;
 			if (p.length == 2) {
@@ -318,6 +321,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					var d = nums.get(pos);
 					if( d.id().equalsIgnoreCase(p[1])) { // If a match is found
 						exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + (offset + pos));
+						exp = exp.replace(p[0] + ":" + p[1], "i" + (offset + pos));
 						ok=true;
 						break;
 					}
@@ -338,11 +342,12 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 							exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + index);
 						}else{
 							Logger.error("Couldn't find a doubleval with id "+p[1]);
+							errorLog.add("Couldn't find a doubleval with id "+p[1]);
 							return "";
 						}
 						break;
 					case "f": case "flag": case "b": case "F":
-						var f = getFlagVal(p[1]);
+						var f = p[0].equalsIgnoreCase("F")?Optional.of(getOrAddFlagVal(p[1])):getFlagVal(p[1]);
 						if( f.isPresent() ){
 							index = nums.indexOf(f.get());
 							if(index==-1){
@@ -353,15 +358,34 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 							exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + index);
 						}else{
 							Logger.error("Couldn't find a FlagVal with id "+p[1]);
+							errorLog.add("Couldn't find a FlagVal  with id "+p[1]);
+							return "";
+						}
+						break;
+					case "i": // issues
+						var i = issuePool.getIssue(p[1]);
+						if( i.isPresent() ){
+							index = nums.indexOf(i.get());
+							if(index==-1){
+								nums.add( i.get() );
+								index = nums.size()-1;
+							}
+							index += offset;
+							exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + index);
+						}else{
+							Logger.error("Couldn't find an Issue with id "+p[1]);
+							errorLog.add("Couldn't find a Issue with id "+p[1]);
 							return "";
 						}
 						break;
 					default:
 						Logger.error("Operation containing unknown pair: "+p[0]+":"+p[1]);
+						errorLog.add("Operation containing unknown pair: "+p[0]+":"+p[1]);
 						return "";
 				}
 			}else{
 				Logger.error( "Pair containing odd amount of elements: "+String.join(":",p));
+				errorLog.add("Pair containing odd amount of elements: "+String.join(":",p));
 			}
 		}
 		// Figure out the rest?
@@ -382,6 +406,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					exp = exp.replace(fl, "i" + index);
 				}else{
 					Logger.error("Couldn't find a FlagVal with id "+fl);
+					errorLog.add("Couldn't find a FlagVal  with id "+fl);
 					return "";
 				}
 			}else{
@@ -406,6 +431,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 						exp = exp.replace(fl, "i" + index);
 					}else{
 						Logger.error("Couldn't find a doubleval with id "+fl);
+						errorLog.add("Couldn't find a DoubleVal  with id "+fl);
 						return "";
 					}
 					return exp;
@@ -415,7 +441,11 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		nums.trimToSize();
 		return exp;
 	}
-
+	public String getErrrorLog(){
+		var j = String.join("\r\n",errorLog);
+		errorLog.clear();;
+		return j;
+	}
 	/**
 	 * Look for a numerical val (i.e. DoubleVal or FlagVal) with the given id
 	 * @param id The id to look for
@@ -1289,6 +1319,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	public IssuePool getIssuePool(){
 		return issuePool;
 	}
+
 	/* ******************************** W A Y P O I N T S *********************************************************** */
 	/**
 	 * Enable tracking/storing waypoints
