@@ -484,7 +484,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				join.add("").add(TelnetCodes.TEXT_GREEN+"Create a Generic"+TelnetCodes.TEXT_YELLOW)
 						.add("  gens:fromtable,dbid,dbtable,gen id[,delimiter] -> Create a generic according to a table, delim is optional, def is ','")
 						.add("  gens:fromdb,dbid,delimiter -> Create a generic with chosen delimiter for each table if there's no such generic yet")
-						.add("  gens:addblank,id,format,delimiter -> Create a blank generic with the given id and format")
+						.add("  gens:addblank,id,group,format,delimiter -> Create a blank generic with the given id, group and format")
 						.add("      The format consists of a letter, followed by a number and then a word and this is repeated with , as delimiter")
 						.add("      The letter is the type of value, the number the index in the array of received data and the word is the name/id of the value")
 						.add("      So for example: i2temp,r5offset  -> integer on index 2 with name temp, real on 5 with name offset")
@@ -533,12 +533,12 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 					return "No generics written";
 				}
 			case "addblank":
-				if( cmds.length < 3 )
-					return "Not enough arguments, must be generics:addblank,id,format,delimiter";
+				if( cmds.length < 4 )
+					return "Not enough arguments, must be generics:addblank,id,group,format,delimiter";
 
 				var delimiter=request[1].endsWith(",")?",":cmds[cmds.length-1];
-				if( Generic.addBlankToXML(XMLfab.withRoot(settingsPath, "dcafs","generics"), cmds[1],
-					ArrayUtils.subarray(cmds,2,cmds.length>3?cmds.length-1:cmds.length),delimiter)){
+				if( Generic.addBlankToXML(XMLfab.withRoot(settingsPath, "dcafs","generics"), cmds[1], cmds[2],
+					ArrayUtils.subarray(cmds,3,cmds.length>3?cmds.length-1:cmds.length),delimiter)){
 					loadGenerics();
 					return "Generic added & reloaded";
 				}

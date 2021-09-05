@@ -835,9 +835,9 @@ public class ForwardPool implements Commandable {
                 .add("                             f* -> filter with one sub per f fe. ff = two subnodes")
                 .add("                             Same applies for M(ath),m(op),E(ditor),e(edit)")
                 .add("                             Generic also has paths:addgen but G(eneric) and i(nt), r(eal),t(ext) work")
-                .add(" paths:addgen,pathid<:genid>,format -> genid is optional, default is same as pathid format is the same ")
-                .add("                                       as gens:addblank fe. i2temp -> integer on index 2 named temp")
-                .add("                                       multiple with , delimiting is possible");
+                .add(" paths:addgen,pathid<:genid>,group,format -> genid is optional, default is same as pathid format is the same ")
+                .add("                                             as gens:addblank fe. i2temp -> integer on index 2 named temp")
+                .add("                                             multiple with , delimiting is possible");
                 help.add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW)
                 .add(" paths:reload,id -> reload the path with the given id")
                 .add(" paths:list -> List all the currently loaded paths")
@@ -854,6 +854,9 @@ public class ForwardPool implements Commandable {
                 return "Path reloaded";
             case "addblank":
                 blank=true;
+                if( cmds.length<5 )
+                    return "Not enough arguments need atleast five: pf:addblank,id,src,node_format,delimiter";
+
                 XMLfab.withRoot(settingsPath,"dcafs","datapaths")
                         .selectOrAddChildAsParent("path","id",cmds[1])
                             .attr("src",cmds.length>2?cmds[2]:"")
@@ -923,16 +926,23 @@ public class ForwardPool implements Commandable {
                     return "XML altered";
                 return "Failed to alter XML";
             case "addgen":
-                if(cmds.length<3)
-                    return "Not enough arguments: path:addgen,pathid<:genid>,format";
+                if(cmds.length<5)
+                    return "Not enough arguments: path:addgen,pathid<:genid>,group,format,delimiter";
 
                 var ids = cmds[1].split(":");
 
                 var fabOpt = XMLfab.withRoot(settingsPath,"dcafs","datapaths").selectChildAsParent("path","id",ids[0]);
                 if(fabOpt.isEmpty())
                     return "No such path: "+ids[0];
+                fab = fabOpt.get();
 
-                if(Generic.addBlankToXML( fabOpt.get(),ids.length==2?ids[1]:ids[0],ArrayUtils.subarray(cmds,2,cmds.length),"") ){
+                // Compare the path and generic delimiter if they are the same, no need to add it to the xml
+                var deli = fab.getCurrentElement().getAttribute("delimiter"); // Get the path default delimiter
+                var delimiter=cmd.endsWith(",")?",":cmds[cmds.length-1]; // get the generic delimiter
+                if( deli.equalsIgnoreCase(delimiter))
+                    delimiter="";
+
+                if(Generic.addBlankToXML( fab,ids.length==2?ids[1]:ids[0],cmds[2],ArrayUtils.subarray(cmds,3,cmds.length-1),delimiter) ){
                     return "Generic added & reloaded";
                 }
                 return "Failed to write generic";

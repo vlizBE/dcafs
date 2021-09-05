@@ -408,9 +408,9 @@ public class Generic {
         }
         return generic;
     }
-    public static boolean addBlankToXML( XMLfab fab, String id, String[] format,String delimiter ){
+    public static boolean addBlankToXML( XMLfab fab, String id, String group, String[] format,String delimiter ){
 
-        fab.addParentToRoot("generic").attr("id",id).attr("group");
+        fab.addParentToRoot("generic").attr("id",id).attr("group",group);
 
         if( !delimiter.isEmpty())
             fab.attr("delimiter",delimiter);
