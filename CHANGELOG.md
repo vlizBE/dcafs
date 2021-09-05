@@ -27,7 +27,15 @@ From 0.5.0 onwards, this should be better documented...
 - Removed Jaxb, not sure why it was in there in the first place...
 - Removed tinylog impl, only using api package
 
-
+### Breaking changes to generics
+- They now have a group attribute instead of using the table attribute to set a prefix. Group is chosen
+  because this matches the group part of a doubleval etc.
+- The dbid and table attributes are now combined in a single db attribute `db="dbid:tablename` multiple
+  dbid's are still allowed (',' delimited).
+- To update settings.xml to use these changes:
+  * replace table= with group=
+  * replace dbid= with db= and append the content of table= to it with a : inbetween
+    *  So dbid="datas,datalite" table="ctd" -> db="datas,datalite:ctd"  group="ctd"
 
 ## 0.10.13 (04/09/21)
 
