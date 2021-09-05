@@ -21,11 +21,13 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (might be trigger for 0.11.0)
 
-## 0.10.14 (work in progress)  
+## 0.11.0 (work in progress)  
 
 ### Dependencies
 - Removed Jaxb, not sure why it was in there in the first place...
 - Removed tinylog impl, only using api package
+
+
 
 ## 0.10.13 (04/09/21)
 
