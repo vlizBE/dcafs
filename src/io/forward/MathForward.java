@@ -636,18 +636,20 @@ public class MathForward extends AbstractForward {
             this.ori=ori;
             this.index=index;
 
-            String sub = ori.substring(ori.indexOf(":")+1,ori.indexOf("}"));
-            if( ori.startsWith("{d")){
-                dataProviding.getDoubleVal(sub)
-                                .ifPresent( dv-> {
-                                    update=dv;
-                                    doUpdate=true;
-                                } );
-                if( !doUpdate )
-                    Logger.warn("Asking to update {d:"+ori.substring(ori.indexOf(":")+1,ori.indexOf("}")+1)+" but doesn't exist");
-            }else if( ori.startsWith("{D:")){
-                update=dataProviding.getOrAddDoubleVal(sub);
-                doUpdate=true;
+            if( ori.contains(":") && ori.indexOf(":")<ori.indexOf("=") ) { // If this contains : it means it has a reference
+                String sub = ori.substring(ori.indexOf(":") + 1, ori.indexOf("}"));
+                if (ori.startsWith("{d")) {
+                    dataProviding.getDoubleVal(sub)
+                            .ifPresent(dv -> {
+                                update = dv;
+                                doUpdate = true;
+                            });
+                    if (!doUpdate)
+                        Logger.warn("Asking to update {d:" + ori.substring(ori.indexOf(":") + 1, ori.indexOf("}") + 1) + " but doesn't exist");
+                } else if (ori.startsWith("{D:")) {
+                    update = dataProviding.getOrAddDoubleVal(sub);
+                    doUpdate = true;
+                }
             }
         }
         public Operation(String ori, Function<BigDecimal[],BigDecimal> op, int index ){
