@@ -47,7 +47,7 @@ public class CheckBlock extends AbstractBlock{
         if( pass ) {
             doNext();
             parentBlock.ifPresent( TaskBlock::nextOk );
-        }else{
+        }else if( parentBlock.isPresent() ){
             Logger.debug( "Check failed : "+ori );
             if( parentBlock.get() instanceof TriggerBlock ) // needs to know because of while/waitfor
                 parentBlock.get().nextFailed(this);
@@ -82,7 +82,13 @@ public class CheckBlock extends AbstractBlock{
         exp=Tools.parseExpression(exp); // rewrite to math symbols
 
         // Figure out the realtime stuff
+        if( sharedMem == null) // If it didn't receive a shared Mem
+            sharedMem=new ArrayList<>(); // make it
         exp = dp.buildNumericalMem(exp,sharedMem,0);
+
+        if( sharedMem.isEmpty()) // Remove the reference if it remained empty
+            sharedMem=null;
+
         if( exp.isEmpty() ){
             Logger.error( "Couldn't process "+ori+", vals missing");
             return false;
@@ -156,7 +162,7 @@ public class CheckBlock extends AbstractBlock{
             subFormulas.add(exp);
         resultIndex=subFormulas.size()-1;
 
-        // Convert the subformulas to functions
+        // Convert the sub formulas to functions
         subFormulas.forEach( x -> {
             x=x.startsWith("!")?x.substring(1)+"==0":x;
             var parts = MathUtils.extractParts(x);
@@ -172,4 +178,5 @@ public class CheckBlock extends AbstractBlock{
     public String toString(){
         return "Check if "+ori;
     }
+
 }
