@@ -148,8 +148,8 @@ public class MathUtils {
 
                 // add the op
                 if( b<ops.length()) {
-                    if( ops.charAt(b)=='=') { // == doesn't get processed properly, so fix this
-                        full.add("==");
+                    if( ops.length()>b+1 && ops.charAt(b+1)=='=') { // == doesn't get processed properly, so fix this
+                        full.add("" + ops.substring(b,b+2));
                         b++;
                     }else {// if not == just add it
                         full.add("" + ops.charAt(b));
