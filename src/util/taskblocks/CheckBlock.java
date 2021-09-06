@@ -63,7 +63,7 @@ public class CheckBlock extends AbstractBlock{
             return false;
         }
         // Fix the flag/issue and diff?
-        Pattern words = Pattern.compile("[!a-zA-Z]+[_:0-9]*[a-zA-Z]+\\d*");
+        Pattern words = Pattern.compile("\\{?[!a-zA-Z]+[_:0-9]*[a-zA-Z]+\\d*}?");
         var found = words.matcher(ori).results().map(MatchResult::group).collect(Collectors.toList());
 
         for( var comp : found ) {
