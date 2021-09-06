@@ -637,18 +637,22 @@ public class MathForward extends AbstractForward {
             this.index=index;
 
             if( ori.contains(":") && ori.indexOf(":")<ori.indexOf("=") ) { // If this contains : it means it has a reference
-                String sub = ori.substring(ori.indexOf(":") + 1, ori.indexOf("}"));
-                if (ori.startsWith("{d")) {
-                    dataProviding.getDoubleVal(sub)
-                            .ifPresent(dv -> {
-                                update = dv;
-                                doUpdate = true;
-                            });
-                    if (!doUpdate)
-                        Logger.warn("Asking to update {d:" + ori.substring(ori.indexOf(":") + 1, ori.indexOf("}") + 1) + " but doesn't exist");
-                } else if (ori.startsWith("{D:")) {
-                    update = dataProviding.getOrAddDoubleVal(sub);
-                    doUpdate = true;
+                try {
+                    String sub = ori.substring(ori.indexOf(":") + 1, ori.indexOf("}"));
+                    if (ori.startsWith("{d")) {
+                        dataProviding.getDoubleVal(sub)
+                                .ifPresent(dv -> {
+                                    update = dv;
+                                    doUpdate = true;
+                                });
+                        if (!doUpdate)
+                            Logger.warn("Asking to update {d:" + ori.substring(ori.indexOf(":") + 1, ori.indexOf("}") + 1) + " but doesn't exist");
+                    } else if (ori.startsWith("{D:")) {
+                        update = dataProviding.getOrAddDoubleVal(sub);
+                        doUpdate = true;
+                    }
+                }catch(IndexOutOfBoundsException e ){
+                    Logger.error( id+" (mf) -> Index out of bounds: "+e.getMessage());
                 }
             }
         }
