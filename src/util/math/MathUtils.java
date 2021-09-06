@@ -222,26 +222,6 @@ public class MathUtils {
     }
 
     /**
-     *
-     * @param comparison
-     * @return
-     */
-    public static String[] extractCompare( String comparison ){
-        var compOps = Pattern.compile("[><=!][=]?");
-        var l = compOps.matcher(comparison)
-                .results()
-                .map(MatchResult::group)
-                .distinct()
-                .collect(Collectors.toList());
-        for( var c : l){
-            comparison=comparison.replace(c,",");
-        }
-        comparison=comparison.replace(",,",",");
-
-        return comparison.split(",");
-    }
-
-    /**
      * Parse a comparator operation with a single variable to a function, allowed formats:
      * - Using <,>,=,!= so : <50,>30,x<25,y==65,z<=125.2 etc
      * - Combining two like 1 < x < 10
