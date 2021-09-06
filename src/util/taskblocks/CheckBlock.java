@@ -127,13 +127,13 @@ public class CheckBlock extends AbstractBlock{
 
                 var and_ors = part.split("[&|!]{2}",0);
                 for( var and_or : and_ors) {
-                    var comps = MathUtils.extractCompare(and_or);
-                    for (var c : comps) {
+                    var comps = and_or.split("[><=!][=]?"); // Split on the compare ops
+                    for (var c : comps) { // Go through the elements
                         if( c.isEmpty()) {
-                            Logger.info("Found !?");
+                            Logger.info("Found '!' ?");
                         }else if(c.matches("[io]+\\d+")||c.matches("\\d*[.]?\\d*")){
-                                // just copy these?
-                        }else {
+                                // If ix,ox or a number, just keep as is
+                        }else { // forgot when this happens...
                             int index = subFormulas.indexOf(c);
                             if (index == -1) {
                                 subFormulas.add(c);    // split that part in the sub-formulas
