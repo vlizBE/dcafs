@@ -597,6 +597,9 @@ public class Tools {
             b = data.indexOf("}");
             if (a != -1 && b != -1) {
                 pairs.add(data.substring(a+1, b));
+            }else if( b<a){
+                Logger.error("Error trying to find the : pairs, closing bracket earlier than opening one");
+                break;
             }
             data=data.substring(b+1);
         }
