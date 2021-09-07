@@ -94,6 +94,9 @@ public class DAS implements DeadThreadListener {
             System.out.println("Path found: "+ p);
             if (!p.toString().endsWith(".jar")) { //meaning from ide
                 p = p.getParent();
+            }else{
+                TinyWrapErr.install();
+                System.setProperty("tinylog.stream","out");
             }
             workPath = p.getParent().toString();
             if( workPath.matches(".*lib$")) { // Meaning used as a lib
