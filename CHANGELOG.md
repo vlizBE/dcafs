@@ -37,6 +37,31 @@ From 0.5.0 onwards, this should be better documented...
   * replace dbid= with db= and append the content of table= to it with a : inbetween
     *  So dbid="datas,datalite" table="ctd" -> db="datas,datalite:ctd"  group="ctd"
 
+### Workshop prep
+- Added option to give an id to the current telnet session
+- Allow sessions to send messages to eachother
+- Allow to 'spy' on a session, only one spy allowed. This wil send all the cmds and responsed issued by the session
+spied on to be send to the spy. Can be used to (remotely) follow what someone else is doing (wrong)
+
+### Tinylog
+- An issue is that uncaught exceptions also don't end up in the generated errorlog. Which makes it rather hard to
+debug issues like that when using dcafs outside of an ide (it happens). Made a wrapper for the system.err that
+also writes to the errorlog. This isn't active when working in an ide because it no longer allows tinylog to 
+write to err (otherwise this would be a loop). Which only matters in an ide (coloring).
+
+### SQLTable
+- If trying to build an insert and a val is missing, the insert is aborted instead of substituting a null
+
+### RealtimeValues
+- The store command now store all setup instead of just name/group/id/unit
+
+## MathUtils
+- fixed, extractparts wasn't made for double character comparisons (>= etc) altered to check this
+
+## CheckBlock
+- The word regex didn't check for brackets but did add if not found...
+- fixes for standalone use (no parent nor sharedmem)
+
 ## 0.10.13 (04/09/21)
 
 Cleanup release, added comments/javadoc moved stuff around in the .java files etc etc etc
