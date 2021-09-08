@@ -412,6 +412,10 @@ public class Generic {
 
         fab.addParentToRoot("generic").attr("id",id).attr("group",group);
 
+        if( fab.hasChild("generic","id",id).isPresent()) {
+            Logger.error("Tried to add a generic with an id already in use. ("+id+")");
+            return false;
+        }
         if( !delimiter.isEmpty())
             fab.attr("delimiter",delimiter);
 
