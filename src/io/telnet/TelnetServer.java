@@ -26,6 +26,7 @@ import worker.Datagram;
 import java.util.ArrayList;
 import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
+import java.util.stream.Collectors;
 
 /**
  * Simplistic telnet server.
@@ -173,6 +174,13 @@ public class TelnetServer implements Commandable {
 
                     writables.removeIf(w -> !w.writeLine(send+TelnetCodes.TEXT_YELLOW));
                     return "";
+                case "write":
+                    var wrs = writables.stream().filter( w -> w.getID().equalsIgnoreCase(cmds[1])).collect(Collectors.toList());
+                    if( wrs.isEmpty())
+                        return "No such id";
+                    var mes = TelnetCodes.TEXT_MAGENTA+wr.getID()+": "+request[1].substring(7+cmds[1].length())+TelnetCodes.TEXT_YELLOW;
+                    wrs.forEach( w->w.writeLine(mes));
+                    return mes.replace(TelnetCodes.TEXT_MAGENTA,TelnetCodes.TEXT_ORANGE);
                 case "bt":
                     return "Currently has " + writables.size() + " broadcast targets.";
 
