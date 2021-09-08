@@ -538,7 +538,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 
 				var delimiter=request[1].endsWith(",")?",":cmds[cmds.length-1];
 				if( Generic.addBlankToXML(XMLfab.withRoot(settingsPath, "dcafs","generics"), cmds[1], cmds[2],
-					ArrayUtils.subarray(cmds,3,cmds.length>3?cmds.length-1:cmds.length),delimiter)){
+					ArrayUtils.subarray(cmds,3,cmds.length),delimiter)){
 					loadGenerics();
 					return "Generic added & reloaded";
 				}
