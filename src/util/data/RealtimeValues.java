@@ -290,7 +290,6 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		}
 		if( line.contains("{")){
 			Logger.error("Found a {, this means couldn't parse a section of "+line);
-			return "";
 		}
 		return line;
 	}
