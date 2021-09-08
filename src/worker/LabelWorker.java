@@ -68,6 +68,9 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 	int readCount=0;
 	int oldReadCount=0;
 	String lastOrigin="";
+
+	Writable spy;
+	String spyingon="";
 	/* ***************************** C O N S T R U C T O R **************************************/
 
 	/**
@@ -334,6 +337,18 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 	}
 	public void checkTelnet(Datagram d) {
 		Writable dt = d.getWritable();
+
+		if( d.getData().equalsIgnoreCase("spy:off")||d.getData().equalsIgnoreCase("spy:stop")){
+			spy.writeLine("Stopped spying...");
+			spy=null;
+			return;
+		}else if( d.getData().startsWith("spy:")){
+			spyingon=d.getData().split(":")[1];
+			spy=d.getWritable();
+			spy.writeLine("Started spying on "+spyingon);
+			return;
+		}
+
 		if (!d.getData().equals("status")) {
 			String from = " for ";
 
@@ -343,12 +358,22 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 			if (!d.getData().isBlank())
 				Logger.info("Executing telnet command [" + d.getData() + "]" + from);
 		}
+
 		String response = reqData.createResponse(d.getData(), dt, false);
+		if( spy!=null && d.getWritable()!=spy && (d.getWritable().getID().equalsIgnoreCase(spyingon)||spyingon.equalsIgnoreCase("all"))){
+			spy.writeLine(TelnetCodes.TEXT_ORANGE+"Cmd: "+d.getData()+TelnetCodes.TEXT_YELLOW);
+			spy.writeLine(response);
+		}
 		String[] split = d.getLabel().split(":");
 		if (dt != null) {
 			if (!d.isSilent()) {
-				dt.writeLine(response);
-				dt.writeString((split.length >= 2 ? "<" + split[1] : "") + ">");
+				if( d.getData().startsWith("telnet:write")){
+					dt.writeString(TelnetCodes.PREV_LINE+TelnetCodes.CLEAR_LINE+response);
+				}else{
+					dt.writeLine(response);
+					dt.writeString((split.length >= 2 ? "<" + split[1] : "") + ">");
+				}
+
 			}
 		} else {
 			Logger.info(response);
