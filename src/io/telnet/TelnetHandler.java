@@ -35,6 +35,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 	String title = "dcafs";
 	String mode ="";
 	byte[] last={'s','t'};
+	String id="";
 	/* ****************************************** C O N S T R U C T O R S ********************************************/
 	/**
 	 * Constructor that requires both the BaseWorker queue and the TransServer queue
@@ -120,8 +121,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 		if( d.getData().endsWith("!!") ) {
 			if( d.getData().length()>2) {
 				repeat = d.getData().replace("!!", "");
-				d.label( "telnet:"+repeat);
-				writeString("Mode changed to '"+repeat+"'\r\n");
+				writeString("Mode changed to '"+repeat+"'\r\n>");
 				return;
 			}else {
 				d.label(LABEL);
@@ -129,7 +129,19 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 				writeString("Mode cleared!\r\n>");
 				return;
 			}
-		}else {
+		}else if( d.getData().startsWith(">>")) {
+			var split = d.getData().substring(2).split(":");
+			switch( split[0] ){
+				case "id":
+					id=split[1];
+					writeString("ID changed to "+id+"\r\n>");
+					return;
+				case "talkto":
+					writeString("Talking to "+split[1]+", send !! to stop\r\n>");
+					repeat = "telnet:write,"+split[1]+",";
+					return;
+			}
+		}else{
 			d.setData(repeat+d.getData());
 		}
 		
@@ -250,7 +262,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 	}
 	@Override
 	public String getID() {
-		return LABEL;
+		return id.isEmpty()?LABEL:id;
 	}
 
 
