@@ -1,15 +1,19 @@
 package io.forward;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import util.data.DataProviding;
 import io.Writable;
 import io.netty.channel.EventLoopGroup;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Optional;
@@ -31,15 +35,24 @@ public class PathForward {
 
     String id;
     ArrayList<AbstractForward> stepsForward;
-    enum SRCTYPE {REG,PLAIN,RTVALS,CMD}
+    enum SRCTYPE {REG,PLAIN,RTVALS,CMD,FILE}
+    Path workPath;
+    static int READ_BUFFER_SIZE=500;
 
     public PathForward(DataProviding dataProviding, BlockingQueue<Datagram> dQueue, EventLoopGroup nettyGroup ){
         this.dataProviding = dataProviding;
         this.dQueue=dQueue;
         this.nettyGroup=nettyGroup;
     }
+    public void setWorkPath( Path wp){
+        workPath=wp;
+    }
     public String getID(){
         return id;
+    }
+    public PathForward src( String src){
+        this.src=src;
+        return this;
     }
     public void readFromXML( Element pathEle ){
 
@@ -286,14 +299,38 @@ public class PathForward {
         SRCTYPE srcType;
         long intervalMillis;
         ScheduledFuture future;
+        ArrayList<String> buffer;
+        ArrayList<Path> files;
+        int lineCount=1;
+        int multiLine=1;
 
         public CustomSrc( String data, String type, long intervalMillis){
             this.data =data;
             this.intervalMillis=intervalMillis;
-            switch(type){
+            var spl = type.split(":");
+            switch(spl[0]){
                 case "rtvals": srcType=SRCTYPE.RTVALS; break;
                 case "cmd": srcType=SRCTYPE.CMD; break;
                 case "plain": srcType=SRCTYPE.PLAIN; break;
+                case "file":
+                    srcType=SRCTYPE.FILE;
+                    files=new ArrayList<>();
+                    if( !Path.of(data).isAbsolute()) {
+                        this.data = workPath.resolve(data).toString();
+                    }
+                    if( Files.isDirectory( Path.of(this.data))){
+                        try{
+                            Files.list(Path.of(this.data)).forEach(files::add);
+                        } catch (IOException e) {
+                            Logger.error(e);
+                        }
+                    }else{
+                        files.add(Path.of(this.data));
+                    }
+                    buffer=new ArrayList<>();
+                    if(spl.length==2)
+                        multiLine = NumberUtils.toInt(spl[1]);
+                    break;
                 default:
                     Logger.error(id+ "(pf) -> no valid srctype '"+type+"'");
             }
@@ -319,6 +356,33 @@ public class PathForward {
                     break;
                 default:
                 case PLAIN: targets.forEach( x -> x.writeLine(data)); break;
+                case FILE:
+                    try {
+                        for( int a=0;a<multiLine;a++){
+                            if (buffer.isEmpty()) {
+                                buffer.addAll(FileTools.readLines(files.get(0), lineCount, READ_BUFFER_SIZE));
+                                lineCount += buffer.size();
+                                if( buffer.size() < READ_BUFFER_SIZE ){
+                                    files.remove(0);
+                                    if( buffer.isEmpty()) {
+                                        if (!files.isEmpty()) {
+                                            lineCount = 1;
+                                            buffer.addAll(FileTools.readLines(files.get(0), lineCount, READ_BUFFER_SIZE));
+                                        }else{
+                                            future.cancel(true);
+                                            Logger.info("Last line of last file read");
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
+                            String line = buffer.remove(0);
+                            targets.forEach( wr-> wr.writeLine(line));
+                        }
+                    }catch(Exception e){
+                        Logger.error(e);
+                    }
+                    break;
             }
         }
         public String toString(){

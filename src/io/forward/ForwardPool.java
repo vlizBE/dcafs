@@ -62,6 +62,7 @@ public class ForwardPool implements Commandable {
         XMLfab.getRootChildren(settingsPath,"dcafs","datapaths","path").forEach(
                 pathEle -> {
                     PathForward path = new PathForward(dataProviding,dQueue,nettyGroup);
+                    path.setWorkPath(settingsPath.getParent());
                     path.readFromXML(pathEle);
                     paths.put(path.getID(),path);
                 }
@@ -819,6 +820,7 @@ public class ForwardPool implements Commandable {
     public String replyToPathCmd(String cmd, Writable wr, boolean html ){
         var cmds =cmd.split(",");
         boolean blank=false;
+        XMLfab fab;
         switch(cmds[0]){
             case "?":
                 StringJoiner help = new StringJoiner("\r\n");
@@ -853,18 +855,35 @@ public class ForwardPool implements Commandable {
                     return "No such path "+cmds[1];
                 paths.get(cmds[1]).readFromXML(ele.get());
                 return "Path reloaded";
+            case "readfile":
+                if( cmds.length<2)
+                    return "No enough arguments: pf:readfile,id,path";
+                fab = XMLfab.withRoot(settingsPath,"dcafs","datapaths")
+                        .selectOrAddChildAsParent("path","id",cmds[1])
+                        .addChild("customsrc",cmds[2]).attr("type","file").attr("interval","1s");
+                fab.build();
+                PathForward path = new PathForward(dataProviding,dQueue,nettyGroup);
+                path.setWorkPath(settingsPath.getParent());
+                path.readFromXML( fab.getCurrentElement());
+                paths.put(cmds[1],path);
+
+                return "File reading added";
             case "addblank":
                 blank=true;
-
 
                 XMLfab.withRoot(settingsPath,"dcafs","datapaths")
                         .selectOrAddChildAsParent("path","id",cmds[1])
                             .attr("src",cmds.length>2?cmds[2]:"")
                             .attr("delimiter",",")
-                        .build();
-                if( cmds.length<=3)
-                    return "Blank added";
+                            .build();
 
+                if( cmds.length<=3) {
+                    PathForward p = new PathForward(dataProviding,dQueue,nettyGroup);
+                    p.setWorkPath(settingsPath.getParent());
+
+                    paths.put(cmds[1],p);
+                    return "Blank added";
+                }
                 if( cmds.length<5 )
                     return "Not enough arguments need atleast five: pf:addblank,id,src,node_format,delimiter";
             case "addnodes": case "addnode":
@@ -872,7 +891,7 @@ public class ForwardPool implements Commandable {
                     if (paths.get(cmds[1]) == null)
                         return "No such path " + cmds[1];
                 }
-                var fab = XMLfab.withRoot(settingsPath,"dcafs","datapaths")
+                fab = XMLfab.withRoot(settingsPath,"dcafs","datapaths")
                         .selectOrAddChildAsParent("path","id",cmds[1]);
 
                 int index;
