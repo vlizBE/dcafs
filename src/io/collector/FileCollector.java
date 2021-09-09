@@ -10,7 +10,6 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -24,7 +23,6 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Queue;
 import java.util.StringJoiner;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -34,7 +32,8 @@ public class FileCollector extends AbstractCollector{
 
     ScheduledExecutorService scheduler;
 
-    Queue<String> dataBuffer = new ConcurrentLinkedQueue<String>();
+   // Queue<String> dataBuffer = new ConcurrentLinkedQueue<String>();
+    BlockingQueue<String> dataBuffer = new LinkedBlockingQueue<>();
     private BlockingQueue<Datagram> dQueue;                        // Queue to send commands
 
     private int byteCount=0;
@@ -67,6 +66,8 @@ public class FileCollector extends AbstractCollector{
     long maxBytes=-1;
     boolean zipMaxBytes=false;
     private boolean headerChanged=false;
+
+    private Future<?> flushFuture;
 
     public FileCollector(String id, String timeoutPeriod, ScheduledExecutorService scheduler,BlockingQueue<Datagram> dQueue) {
         super(id);
@@ -347,16 +348,19 @@ public class FileCollector extends AbstractCollector{
 
         if( dataBuffer.size() > batchSize && batchSize !=-1){
             Logger.debug(id+ "(fc) -> Buffer matches batchsize");
-            scheduler.submit(()->appendData(getPath()));
+            flushNow();
         }
         return true;
     }
 
     /**
      * Force the collector to flush the data, used in case of urgent flushing
+     * @return
      */
     public void flushNow(){
-        scheduler.submit(()->appendData(getPath()));
+        if( flushFuture==null||flushFuture.isCancelled() || flushFuture.isDone()) {
+            flushFuture = scheduler.submit(() -> appendData(getPath()));
+        }
     }
     @Override
     protected void timedOut() {
@@ -373,7 +377,7 @@ public class FileCollector extends AbstractCollector{
                 dif = Instant.now().getEpochSecond() - firstData; // if there's no batchsize
 
             if( dif >= secondsTimeout-1 ) {
-                scheduler.submit(() -> appendData(getPath()));
+                flushNow();
                 timeoutFuture = scheduler.schedule(new TimeOut(), secondsTimeout, TimeUnit.SECONDS );
             }else{
                 long next = secondsTimeout - dif;
@@ -393,7 +397,7 @@ public class FileCollector extends AbstractCollector{
             return;
         }
 
-        if(Files.notExists(dest) || headerChanged){ // the file doesn't exist yet
+        if( !headers.isEmpty() && (Files.notExists(dest) || headerChanged) ){ // the file doesn't exist yet
             try { // So first create the dir structure
                 Files.createDirectories(dest.toAbsolutePath().getParent());
             } catch (IOException e) {
@@ -402,12 +406,14 @@ public class FileCollector extends AbstractCollector{
             join = new StringJoiner( lineSeparator );
             headers.forEach( hdr -> join.add(hdr.replace("{file}",dest.getFileName().toString()))); // Add the headers
         }else{
-            join = new StringJoiner( lineSeparator,lineSeparator,"" );
+            join = new StringJoiner( lineSeparator,"",lineSeparator );
         }
         String line;
-        while((line=dataBuffer.poll()) != null )
+        int cnt=dataBuffer.size()*4; // At maximum write 4 times the buffer
+        while((line=dataBuffer.poll()) != null && cnt !=0) {
             join.add(line);
-
+            cnt--;
+        }
         byteCount=0;
         try {
             if(headerChanged) {
@@ -458,7 +464,6 @@ public class FileCollector extends AbstractCollector{
 
         } catch (IOException e) {
             Logger.error(id + "(fc) -> Failed to write to "+ dest+" because "+e.getMessage());
-
         }
     }
     /* ***************************** Overrides  ******************************************************************* */
@@ -519,7 +524,7 @@ public class FileCollector extends AbstractCollector{
         return true;
     }
     private class DoRollOver implements Runnable {
-        boolean renew=true;
+        boolean renew;
 
         public DoRollOver( boolean renew ){
             this.renew=renew;
@@ -529,7 +534,7 @@ public class FileCollector extends AbstractCollector{
             Logger.info(id+"(fc) -> Doing rollover");
 
             Path old = getPath();
-            var fut = scheduler.submit(()->appendData(getPath())); // First flush the data
+            flushNow();
 
             if(renew)
                 updateFileName(rolloverTimestamp); // first update the filename
@@ -545,7 +550,7 @@ public class FileCollector extends AbstractCollector{
             try {
                 String path;
                 if( zippedRoll ){
-                    var res = fut.get(5,TimeUnit.SECONDS); // Writing should be done in 5 seconds...
+                    var res = flushFuture.get(5,TimeUnit.SECONDS); // Writing should be done in 5 seconds...
                     if( res==null) { // if zipping and append is finished
                         Path zip = FileTools.zipFile(old);
                         if (zip != null) {
