@@ -101,7 +101,10 @@ public class FileTools {
      */
     public static ArrayList<String> readLines( Path path, int start, int amount) {
         var read = new ArrayList<String>();
-
+        if( start==0) {
+            Logger.error( "Readlines should start at 1, not 0");
+            return read;
+        }
         if( Files.notExists(path)){
             Logger.error("Tried to read lines from "+path+" but no such file");
             return read;
@@ -112,7 +115,7 @@ public class FileTools {
              
         try( var lines = Files.lines((path)) ){
             lines.skip(start-1)
-                 .limit(start+amount-1)
+                 .limit( amount )
                  .forEach( read::add );
             return read;     
         } catch (IOException ex) {
