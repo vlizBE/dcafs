@@ -95,7 +95,7 @@ public class TelnetServer implements Commandable {
                         // delimiter
                         pipeline.addLast("decoder", new ByteArrayDecoder())
                                 .addLast("encoder", new ByteArrayEncoder())
-                                .addLast( new ReadTimeoutHandler(600) );// close connection after set time without traffic
+                                .addLast( new ReadTimeoutHandler(1800) );// close connection after set time without traffic
 
                         // and then business logic.
                         TelnetHandler handler = new TelnetHandler( dQueue,ignore,settingsPath ) ;
