@@ -5,11 +5,17 @@ import io.netty.channel.*;
 import io.netty.handler.codec.TooLongFrameException;
 import org.tinylog.Logger;
 import util.tools.Tools;
+import util.xml.XMLfab;
 import worker.Datagram;
 
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetSocketAddress;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.concurrent.BlockingQueue;
 
 public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implements Writable {
@@ -20,6 +26,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 	protected static final String LABEL = "telnet";			// The label that determines what needs to be done with a message
 	protected Channel channel;	// The channel that is handled
 	protected String remoteIP = "";		// The ip of the handler
+	private InetSocketAddress remote;
 
 	protected String newLine = "\r\n";			// The string to end the messages send with		
 	protected String lastSendMessage="";			// The last message that was send
@@ -30,12 +37,15 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 	protected boolean log=true;	// Flag that determines if raw data needs to be logged
 	
 	protected static final byte[] EOL = new byte[]{13,10};
+	private Path settingsPath;
+	private HashMap<String,String> macros = new HashMap<>();
 
-	String repeat = "";
+ 	String repeat = "";
 	String title = "dcafs";
 	String mode ="";
 	byte[] last={'s','t'};
 	String id="";
+	String start="";
 	/* ****************************************** C O N S T R U C T O R S ********************************************/
 	/**
 	 * Constructor that requires both the BaseWorker queue and the TransServer queue
@@ -43,10 +53,11 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 	 * @param dQueue the queue from the @see BaseWorker
 	 * @param ignoreIPlist list of ip's to ignore (meaning no logging)
 	 */
-    public TelnetHandler(BlockingQueue<Datagram> dQueue, String ignoreIPlist){
+    public TelnetHandler(BlockingQueue<Datagram> dQueue, String ignoreIPlist, Path settingsPath){
 		this.dQueue = dQueue;
 		ignoreIP.addAll(Arrays.asList(ignoreIPlist.split(";")));
 		ignoreIP.trimToSize();
+		this.settingsPath=settingsPath;
 	}
 
 	/* ************************************** N E T T Y  O V E R R I D E S ********************************************/
@@ -61,16 +72,46 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 		channel = ctx.channel();			// Store the channel for future use
 		
 		if( channel.remoteAddress() != null){					// Incase the remote address is not null
-			remoteIP = ctx.channel().remoteAddress().toString();	// Store this as remote address
+			remote = (InetSocketAddress)ctx.channel().remoteAddress();;	// Store this as remote address
+			remoteIP = remote.getAddress().getHostAddress();
+			if( remote.getAddress() instanceof Inet4Address){
+				Logger.info("IPv4: "+((Inet4Address)remote.getAddress()));
+			}else{
+				Logger.info("IPv6: "+((Inet6Address)remote.getAddress()));
+			}
+			String host = remote.getHostString();
+			if(host.equalsIgnoreCase("0:0:0:0:0:0:0:1"))
+				host = "localhost";
+
+			XMLfab.withRoot(settingsPath,"dcafs","settings","telnet")
+					.selectChildAsParent( "client","host",remote.getHostName())
+					.ifPresent( f -> {
+						id = f.getCurrentElement().getAttribute("id");
+						start = f.getChild("start").map(c -> c.getTextContent()).orElse("");
+						for( var c : f.getChildren("macro")){
+							macros.put( c.getAttribute("ref"),c.getTextContent());
+						}
+					});
+
+			id = XMLfab.withRoot(settingsPath,"dcafs","settings","telnet")
+					.selectChildAsParent( "client","host",remote.getHostName())
+					.map( f -> f.getCurrentElement().getAttribute("id")).orElse("");
+
 		}else{
 			Logger.error( "Channel.remoteAddress is null in channelActive method");
 		}   
-		
-		writeString( TelnetCodes.TEXT_RED + "Welcome to "+title+"!\r\n"+TelnetCodes.TEXT_RESET);
+		if( id.isEmpty()) {
+			writeString(TelnetCodes.TEXT_RED + "Welcome to " + title + "!\r\n" + TelnetCodes.TEXT_RESET);
+		}else{
+			writeString(TelnetCodes.TEXT_RED + "Welcome back " + id + "!\r\n" + TelnetCodes.TEXT_RESET);
+		}
 		writeString( TelnetCodes.TEXT_GREEN + "It is " + new Date() + " now.\r\n"+TelnetCodes.TEXT_RESET);
 		writeString( TelnetCodes.TEXT_BRIGHT_BLUE+"> Common Commands: [h]elp,[st]atus, rtvals, exit...\r\n");
 		writeString( TelnetCodes.TEXT_YELLOW +">");
 		channel.flush();
+		if( !start.isEmpty() ){
+			dQueue.add( Datagram.build(start).label(LABEL).writable(this).origin("telnet:"+channel.remoteAddress().toString()));
+		}
 	}    
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) {   
@@ -130,21 +171,68 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 				return;
 			}
 		}else if( d.getData().startsWith(">>")) {
-			var split = d.getData().substring(2).split(":");
+			var split = new String[2];
+			if( !d.getData().contains(":")){
+				writeLine("Missing :");
+				return;
+			}
+			String cmd = d.getData().substring(2);
+			split[0] = cmd.substring( 0,cmd.indexOf(":"));
+			split[1] = cmd.substring(split[0].length()+1);
+
 			switch( split[0] ){
 				case "id":
 					id=split[1];
-					writeString("ID changed to "+id+"\r\n>");
+					writeString(
+						XMLfab.withRoot(settingsPath,"dcafs","settings","telnet").noChild("client","id",id)
+							.map( f -> {
+										f.alterChild("client","host",remote.getHostName())
+										.attr("id",id).build();
+										return "ID changed to "+id+"\r\n>";
+									}).orElse("ID already in use")
+						);
 					return;
 				case "talkto":
 					writeString("Talking to "+split[1]+", send !! to stop\r\n>");
 					repeat = "telnet:write,"+split[1]+",";
 					return;
+				case "start":
+					if( id.isEmpty() ){
+						writeLine("Please set an id first with >>id:newid");
+						return;
+					}
+					start = split[1];
+					writeString("Startup command has been set to '"+start+"'");
+
+					writeLine( XMLfab.withRoot(settingsPath,"dcafs","settings","telnet").selectChildAsParent("client","id",id)
+							.map( f -> {
+								f.addChild("start",split[1]);
+								return "Start set to "+id+"\r\n>";
+							}).orElse("Couldn't find the node"));
+					return;
+				case "macro":
+					if( !split[1].contains("->")) {
+						writeLine("Missing ->");
+						return;
+					}
+					var ma = split[1].split("->");
+					writeString( XMLfab.withRoot(settingsPath,"dcafs","settings","telnet").selectChildAsParent("client","id",id)
+							.map( f -> {
+								f.addChild("macro",ma[1]).attr("ref",ma[0]).build();
+								macros.put(ma[0],ma[1]);
+								return "Macro "+ma[0]+" replaced with "+ma[1]+"\r\n>";
+							}).orElse("Couldn't find the node\r\n>"));
+					return;
+				default:
+					writeLine( "Unknown telnet command: "+d.getData());
+					return;
 			}
 		}else{
 			d.setData(repeat+d.getData());
 		}
-		
+		var macro = macros.get(d.getData());
+		if( macro!=null)
+			d.setData(macro);
 		if ( d.getData().equalsIgnoreCase("bye")||d.getData().equalsIgnoreCase("exit")) {
 			// Close the connection after sending 'Have a good day!' if the client has sent 'bye' or 'exit'.
 			ChannelFuture future = channel.writeAndFlush( "Have a good day!\r\n");   			
