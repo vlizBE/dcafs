@@ -490,7 +490,7 @@ public class DAS implements DeadThreadListener {
      * Create the telnetserver
      */
     public void addTelnetServer() {
-        telnet = new TelnetServer(this.getDataQueue(), settingsDoc, nettyGroup);
+        telnet = new TelnetServer(this.getDataQueue(), settingsPath, nettyGroup);
         addCommandable(telnet,"telnet","nb");
     }
 
