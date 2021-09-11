@@ -362,17 +362,24 @@ public class PathForward {
                     try {
                         for( int a=0;a<multiLine;a++){
                             if (buffer.isEmpty()) {
+                                if( files.isEmpty()){
+                                    future.cancel(true);
+                                    dQueue.add( Datagram.system("telnet:broadcast,info,"+id+" finished."));
+                                    return;
+                                }
                                 buffer.addAll(FileTools.readLines(files.get(0), lineCount, READ_BUFFER_SIZE));
                                 lineCount += buffer.size();
                                 if( buffer.size() < READ_BUFFER_SIZE ){
+                                    dQueue.add( Datagram.system("telnet:broadcast,info,"+id+" processed "+files.get(0)));
                                     files.remove(0);
+                                    lineCount = 1;
                                     if( buffer.isEmpty()) {
                                         if (!files.isEmpty()) {
-                                            lineCount = 1;
                                             buffer.addAll(FileTools.readLines(files.get(0), lineCount, READ_BUFFER_SIZE));
+                                            lineCount += buffer.size();
                                         }else{
                                             future.cancel(true);
-                                            Logger.info("Last line of last file read");
+                                            dQueue.add( Datagram.system("telnet:broadcast,info,"+id+" finished."));
                                             return;
                                         }
                                     }
