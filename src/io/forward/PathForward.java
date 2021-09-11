@@ -144,7 +144,9 @@ public class PathForward {
             switch( step.getTagName() ){
                 case "filter":
                     FilterForward ff = new FilterForward( step, dQueue );
-                    if( lastff != null && (!(lastStep().get() instanceof FilterForward) || lastGenMap)) {
+                    if( !src.isEmpty()){
+                        addAsTarget(ff,src);
+                    }else if( lastff != null && (!(lastStep().get() instanceof FilterForward) || lastGenMap)) {
                         lastff.addReverseTarget(ff);
                     }else if( !stepsForward.isEmpty() ){
                         lastStep().get().addTarget(ff);
