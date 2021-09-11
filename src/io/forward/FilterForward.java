@@ -2,9 +2,11 @@ package io.forward;
 
 import io.Writable;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.math.MathUtils;
+import util.taskblocks.CheckBlock;
 import util.tools.Tools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
@@ -14,12 +16,17 @@ import java.util.ArrayList;
 import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
 import java.util.function.Predicate;
+import java.util.regex.MatchResult;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 public class FilterForward extends AbstractForward {
 
     protected ArrayList<Predicate<String>> rules = new ArrayList<>();// Rules that define the filters
-    protected final ArrayList<Writable> reversed = new ArrayList<>();
+    private final ArrayList<Writable> reversed = new ArrayList<>();
+    private String delimiter = "";
+    private int ignoreFalse =0;
+    private int freePasses=0;
 
     public FilterForward(String id, String source, BlockingQueue<Datagram> dQueue ){
         super(id,source,dQueue,null);
@@ -136,6 +143,8 @@ public class FilterForward extends AbstractForward {
         if( !readBasicsFromXml(filter) )
             return false;
 
+        delimiter = XMLtools.getStringAttribute(filter,"delimiter",""); // Allow for global delimiter
+        ignoreFalse = XMLtools.getIntAttribute(filter,"ignores",0);
         rules.clear();
 
         if( XMLtools.hasChildByTag(filter,"rule") ){ // if rules are defined as nodes
@@ -143,7 +152,10 @@ public class FilterForward extends AbstractForward {
             XMLtools.getChildElements(filter, "rule")
                     .stream()
                     .filter( rule -> !rule.getAttribute("type").equalsIgnoreCase("start"))
-                    .forEach( rule -> addRule( rule.getAttribute("type"), rule.getTextContent()) );
+                    .forEach( rule -> {
+                        String delimiter = XMLtools.getStringAttribute(rule,"delimiter",this.delimiter);
+                        addRule( rule.getAttribute("type"), rule.getTextContent(),delimiter);
+                    } );
 
             ArrayList<String> starts = new ArrayList<>();
 
@@ -175,7 +187,7 @@ public class FilterForward extends AbstractForward {
      * @param value The value for the type eg. start:$GPGGA to start with $GPGGA
      * @return -1 -> unknown type, 1 if ok
      */
-    public int addRule( String type, String value ){
+    public int addRule( String type, String value, String delimiter ){
         String[] values = value.split(",");
         rulesString.add( new String[]{"",type,value} );
 
@@ -193,11 +205,15 @@ public class FilterForward extends AbstractForward {
             case "maxlength": addMaximumLength(Tools.parseInt(value,-1)); break;
             case "nmea":      addNMEAcheck( Tools.parseBool(value,true));break;
             case "regex":     addRegex( value ); break;
+            case "math":      addCheckBlock( delimiter, value); break;
             default: 
                 Logger.error(id+" -> Unknown type chosen "+type);
                 return -1;
         }
         return 1;
+    }
+    public int addRule( String type, String value){
+        return addRule(type,value,"");
     }
     public static String getHelp(String eol){
         StringJoiner join = new StringJoiner(eol);
@@ -221,6 +237,8 @@ public class FilterForward extends AbstractForward {
             .add("    fe. <filter type='nmea'>true</filter> --> The data must end be a valid nmea string");
         join.add("regex -> Matches the given regex")
             .add("    fe. <filter type='regex'>\\s[a,A]</filter> --> The data must contain an empty character followed by a in any case");
+        join.add("math -> Checks a mathematical comparison")
+            .add("    fe. <filter type='math' delimiter=','>i1 below 2500 and i1 above 10</filter>" );
         return join.toString();
     }
     /**
@@ -285,22 +303,62 @@ public class FilterForward extends AbstractForward {
     public void addMaximumLength( int length ){ rules.add( p -> p.length() <= length); }
 
     public void addNMEAcheck( boolean ok ){ rules.add( p -> (/*p.startsWith("$")&&*/MathUtils.doNMEAChecksum(p))==ok ); }
+    /* Complicated ones? */
+    public boolean addCheckBlock( String delimiter, String value){
+
+        var is = Pattern.compile("[i][0-9]{1,2}")// Extract all the references
+                .matcher(value)
+                .results()
+                .distinct()
+                .map(MatchResult::group)
+                .map( s-> NumberUtils.toInt(s.substring(1)))
+                .sorted() // so the highest one is at the bottom
+                .toArray(Integer[]::new);
+
+        var block = CheckBlock.prepBlock(null,value);
+        if( !block.build() )
+            return false;
+        rules.add( p -> {
+            try {
+                String[] vals = p.split(delimiter);
+                for( int index : is) {
+                    if( !block.alterSharedMem(index, NumberUtils.toDouble(vals[index])) ){
+                        Logger.error(id+" (ff) -> Tried to add a NaN to shared mem");
+                        return false;
+                    }
+                }
+                return block.start(null);
+            } catch (ArrayIndexOutOfBoundsException e) {
+                Logger.error(id + "(ff) -> Index out of bounds when trying to find the number in "+p+" for math check.");
+                return false;
+            }
+        });
+        return true;
+    }
 
     @Override
     public boolean writeLine(String data) {
         return writeString(data);
     }
     public boolean doFilter( String data ){
-        
+
         for( Predicate<String> check : rules ){
             if( !check.test(data) ){
-                if( debug )
-                    Logger.info(id+" -> "+data + " -> Failed");
-                return false;
+                if( freePasses==0 ) {
+                    if( debug )
+                        Logger.info(id+" -> "+data + " -> Failed");
+                    return false;
+                }else{
+                    freePasses--;
+                    if( debug )
+                        Logger.info(id+" -> "+data + " -> Free Pass");
+                    return true;
+                }
             }
         }
         if( debug )
             Logger.info(id+" -> "+data + " -> Ok");
+        freePasses = ignoreFalse;
         return true;
     }
 }
