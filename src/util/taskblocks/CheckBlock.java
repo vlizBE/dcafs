@@ -3,6 +3,7 @@ package util.taskblocks;
 import org.apache.commons.lang3.StringUtils;
 import org.tinylog.Logger;
 import util.data.DataProviding;
+import util.data.DoubleVal;
 import util.math.MathUtils;
 import util.tools.Tools;
 
@@ -33,7 +34,16 @@ public class CheckBlock extends AbstractBlock{
     public void nextOk(){
 
     }
-
+    public boolean alterSharedMem( int index, double val ){
+        if( Double.isNaN(val))
+            return false;
+        if( sharedMem==null)
+            sharedMem = new ArrayList<>();
+        while( sharedMem.size()<=index)
+            sharedMem.add(DoubleVal.newVal("i"+sharedMem.size()).value(0));
+        sharedMem.get(index).updateValue(val);
+        return true;
+    }
     @Override
     public boolean start(TaskBlock starter) {
         Double[] work= new Double[steps.size()+sharedMem.size()];
@@ -43,7 +53,7 @@ public class CheckBlock extends AbstractBlock{
         for( int a=0;a<steps.size();a++)
             work[a]=steps.get(a).apply(work);
         var pass = Double.compare(work[resultIndex],0.0)>0;
-        pass = negate?!pass:pass;
+        pass = negate ? !pass : pass;
         if( pass ) {
             doNext();
             parentBlock.ifPresent( TaskBlock::nextOk );
@@ -82,12 +92,15 @@ public class CheckBlock extends AbstractBlock{
         exp=Tools.parseExpression(exp); // rewrite to math symbols
 
         // Figure out the realtime stuff
-        if( sharedMem == null) // If it didn't receive a shared Mem
-            sharedMem=new ArrayList<>(); // make it
-        exp = dp.buildNumericalMem(exp,sharedMem,0);
-
-        if( sharedMem.isEmpty()) // Remove the reference if it remained empty
-            sharedMem=null;
+        if( dp != null ) {
+            if (sharedMem == null) // If it didn't receive a shared Mem
+                sharedMem = new ArrayList<>(); // make it
+            exp = dp.buildNumericalMem(exp, sharedMem, 0);
+            if( sharedMem.isEmpty()) // Remove the reference if it remained empty
+                sharedMem=null;
+        }else{
+            Logger.warn("No dp, skipping numerical mem");
+        }
 
         if( exp.isEmpty() ){
             Logger.error( "Couldn't process "+ori+", vals missing");
