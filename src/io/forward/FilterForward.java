@@ -27,6 +27,7 @@ public class FilterForward extends AbstractForward {
     private String delimiter = "";
     private int ignoreFalse =0;
     private int freePasses=0;
+    private boolean negate=false;
 
     public FilterForward(String id, String source, BlockingQueue<Datagram> dQueue ){
         super(id,source,dQueue,null);
@@ -145,6 +146,8 @@ public class FilterForward extends AbstractForward {
 
         delimiter = XMLtools.getStringAttribute(filter,"delimiter",""); // Allow for global delimiter
         ignoreFalse = XMLtools.getIntAttribute(filter,"ignores",0);
+        negate = XMLtools.getBooleanAttribute(filter,"negate",false);
+
         rules.clear();
 
         if( XMLtools.hasChildByTag(filter,"rule") ){ // if rules are defined as nodes
@@ -343,7 +346,8 @@ public class FilterForward extends AbstractForward {
     public boolean doFilter( String data ){
 
         for( Predicate<String> check : rules ){
-            if( !check.test(data) ){
+            boolean result = check.test(data);
+            if( !result || (result&&negate) ){
                 if( freePasses==0 ) {
                     if( debug )
                         Logger.info(id+" -> "+data + " -> Failed");
