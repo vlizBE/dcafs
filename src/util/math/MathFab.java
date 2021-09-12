@@ -59,13 +59,54 @@ public class MathFab {
             Logger.error("Brackets count doesn't match, (="+opens+" and )="+closes);
             return null;
         }
-        if( formula.charAt(0)!='(') // Then make sure it has surrounding brackets
-            formula= "("+formula+")";
+
+
+        if( !formula.startsWith("(") || !formula.endsWith(")")) { // Then make sure it has surrounding brackets
+            formula = "(" + formula + ")";
+        }else{ // So on both sides, but unsure if enclosing
+             int cnt=0;
+
+             for( int pos=0; pos<formula.length();pos++ ){
+                 if(formula.charAt(pos)=='(')
+                     cnt++;
+                 if(formula.charAt(pos)==')')
+                     cnt--;
+                 if( cnt==0 && pos!=formula.length()-1){
+                     formula = "(" + formula + ")";
+                     break;
+                 }
+             }
+        }
+
+        // Replace to enable geometric stuf?
+        formula = formula.replace("cos(","1°(");
+        formula = formula.replace("cosd(","1°(");
+        formula = formula.replace("cosr(","2°(");
+
+        formula = formula.replace("sin(","3°(");
+        formula = formula.replace("sind(","3°(");
+        formula = formula.replace("sinr(","4°(");
+        formula = formula.replace("abs(","5°(");
+
+        // Remove unneeded brackets?
+        int dot=formula.indexOf("°(");
+        String cleanup;
+        while( dot !=-1 ){
+            cleanup=formula.substring(dot+2); // Get the formula without found °(
+            int close = cleanup.indexOf(")"); // find a closing bracket
+            String content = cleanup.substring(0,close);// Get te content of the bracket
+            if( NumberUtils.isCreatable(content) || content.matches("i\\d+")){ // If it's just a number or index
+                formula=formula.replace("°("+content+")","°"+content);
+            }
+            dot = cleanup.indexOf("°(");
+        }
+
 
         var is = Pattern.compile("[i][0-9]{1,2}")// Extract all the references
                 .matcher(formula)
                 .results()
                 .map(MatchResult::group)
+                .distinct()
                 .sorted() // so the highest one is at the bottom
                 .toArray(String[]::new);
         if( is.length==0 ){ // if there aren't any, then no inputs are required
@@ -99,12 +140,14 @@ public class MathFab {
                     Logger.error("Failed to build because of issues during "+part);
                     return null;
                 }
-                subFormulas.addAll( res );    // split that part in the sub-formulas
                 String piece = formula.substring(open,close+1); // includes the brackets
-                // replace the sub part in the original formula with a reference to the last sub-formula
-                formula=formula.replace(piece,"o"+(subFormulas.size()-1));
-                if( debug )
-                    Logger.info("=>Formula: "+formula);
+                if( res.size()==1 && res.get(0)[1].equalsIgnoreCase("0")&& res.get(0)[2].equalsIgnoreCase("+")){
+                    formula=formula.replace(piece,res.get(0)[0]);
+                }else{
+                    subFormulas.addAll( res );    // split that part in the sub-formulas
+                    // replace the sub part in the original formula with a reference to the last sub-formula
+                    formula=formula.replace(piece,"o"+(subFormulas.size()-1));
+                }
             }else{
                 Logger.error("Didn't find opening bracket");
             }
