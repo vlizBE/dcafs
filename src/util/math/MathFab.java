@@ -2,6 +2,7 @@ package util.math;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 
 import java.math.BigDecimal;
@@ -201,7 +202,7 @@ public class MathFab {
             Logger.error("No valid formula present");
             return null;
         }
-        if( data == null ){
+        if( data == null && requiredInputs!=0 ){
             Logger.error("Source data is null");
             return null;
         }
