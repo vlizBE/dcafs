@@ -47,10 +47,17 @@ public class MathUtils {
         indexOffset++;
         try {
             if (parts.size() == 3) {
-                if (debug) {
-                    Logger.info("  Sub: " + "o" + indexOffset + "=" + expression);
+                if( NumberUtils.isCreatable(parts.get(0))&&NumberUtils.isCreatable(parts.get(2))){
+                    var bd1 = NumberUtils.createBigDecimal(parts.get(0));
+                    var bd2 = NumberUtils.createBigDecimal(parts.get(2));
+                    var bd3 = calcBigDecimalsOp(bd1,bd2,parts.get(1));
+                    result.add(new String[]{bd3.toPlainString(),"0","+"});
+                }else {
+                    if (debug) {
+                        Logger.info("  Sub: " + "o" + indexOffset + "=" + expression);
+                    }
+                    result.add(new String[]{parts.get(0), parts.get(2), parts.get(1)});
                 }
-                result.add(new String[]{parts.get(0), parts.get(2), parts.get(1)});
             } else {
                 int oIndex = indexOffset;
                 for (int a = 0; a < ORDERED_OPS.length; a += 2) {
@@ -62,6 +69,18 @@ public class MathUtils {
                             Logger.error("Not enough data in parts -> Expression'"+expression+"' Parts:"+parts.size()+" needed "+(opIndex+1) );
                             return result;
                         }
+                        // Check if this isn't a formula that can already be processed
+                        if( NumberUtils.isCreatable(parts.get(opIndex-1))&&NumberUtils.isCreatable(parts.get(opIndex+1))){
+                            var bd1 = NumberUtils.createBigDecimal(parts.get(opIndex-1));
+                            var bd2 = NumberUtils.createBigDecimal(parts.get(opIndex+1));
+                            var bd3 = calcBigDecimalsOp(bd1,bd2,parts.get(opIndex));
+
+                            parts.remove(opIndex);  // remove the operand
+                            parts.remove(opIndex);  // remove the top part
+                            parts.set(opIndex - 1, bd3.toPlainString()); // replace the bottom one
+                            continue;
+                        }
+
                         String res = parts.get(opIndex - 1) + parts.get(opIndex) + parts.get(opIndex + 1);
                         result.add(new String[]{parts.get(opIndex - 1), parts.get(opIndex + 1), parts.get(opIndex)});
                         parts.remove(opIndex);  // remove the operand
