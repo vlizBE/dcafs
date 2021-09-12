@@ -19,7 +19,7 @@ From 0.5.0 onwards, this should be better documented...
   * Code cleanup
     * Bring javadoc up to date
     * Decide on final class structure (mainly StreamManager)   
-  * Rework the TaskManager (might be trigger for 0.11.0)
+  * Rework the TaskManager (might be trigger for 0.12.0)
 
 ## 0.11.0 (work in progress)  
 
@@ -39,8 +39,8 @@ From 0.5.0 onwards, this should be better documented...
 
 ### Workshop prep
 - Added option to give an id to the current telnet session
-- Allow sessions to send messages to eachother
-- Allow to 'spy' on a session, only one spy allowed. This wil send all the cmds and responsed issued by the session
+- Allow sessions to send exchange messages
+- Allow to 'spy' on a session, only one spy allowed. This wil send all the cmds and responses issued by the session
 spied on to be send to the spy. Can be used to (remotely) follow what someone else is doing (wrong)
 
 ### Tinylog
@@ -55,12 +55,19 @@ write to err (otherwise this would be a loop). Which only matters in an ide (col
 ### RealtimeValues
 - The store command now store all setup instead of just name/group/id/unit
 
-## MathUtils
+## Math
 - fixed, extractparts wasn't made for double character comparisons (>= etc) altered to check this
+- Added support for cosr(adian),cosd(egrees),sinr,sind and abs
+- fixed, missing global surrounding brackets should be better detected
+- Added op type utm and gdc, converts the two references to either utm or gdc
 
 ## CheckBlock
 - The word regex didn't check for brackets but did add if not found...
 - fixes for standalone use (no parent nor sharedmem)
+
+## FileCollector
+- fixed, didn't make folders when the file is new and no headers needed
+- fixed, sometimes empty lines were added when writing for the first time
 
 ## 0.10.13 (04/09/21)
 
