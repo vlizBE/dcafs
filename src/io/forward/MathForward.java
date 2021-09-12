@@ -7,6 +7,7 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.data.NumericVal;
+import util.gis.GisTools;
 import util.math.Calculations;
 import util.math.MathFab;
 import util.math.MathUtils;
@@ -22,6 +23,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.function.Function;
 import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class MathForward extends AbstractForward {
 
@@ -33,7 +35,7 @@ public class MathForward extends AbstractForward {
     private boolean doUpdate=false;
     HashMap<String,String> defines = new HashMap<>();
 
-    public enum OP_TYPE{COMPLEX, SCALE, LN, SALINITY, SVC,TRUEWINDSPEED,TRUEWINDDIR}
+    public enum OP_TYPE{COMPLEX, SCALE, LN, SALINITY, SVC,TRUEWINDSPEED,TRUEWINDDIR,UTM,GDC}
     private ArrayList<NumericVal> referencedNums = new ArrayList<>();
     private int highestI=-1;
 
@@ -143,9 +145,9 @@ public class MathForward extends AbstractForward {
                                         XMLtools.getStringAttribute(ops, "cmd", "")
                                     );
                                 break;
-                            case LN: case SALINITY:case SVC:case TRUEWINDSPEED:case TRUEWINDDIR:
+                            case LN: case SALINITY:case SVC:case TRUEWINDSPEED:case TRUEWINDDIR: case UTM: case GDC:
                                 addOperation(
-                                        XMLtools.getIntAttribute(ops,"index",-1),
+                                        XMLtools.getStringAttribute(ops,"index","-1"),
                                         XMLtools.getIntAttribute(ops,"scale",-1),
                                         type,
                                         XMLtools.getStringAttribute(ops, "cmd", ""),
@@ -358,8 +360,7 @@ public class MathForward extends AbstractForward {
         exp = split[1];
 
         if( index == -1 ){
-            Logger.error(id + " -> Bad/No index given");
-            return Optional.empty();
+            Logger.warn(id + " -> Bad/No index given");
         }
 
         Operation op;
@@ -391,15 +392,14 @@ public class MathForward extends AbstractForward {
         return Optional.ofNullable(ops.get(ops.size()-1)); // return the one that was added last
     }
 
-    public Optional<Operation> addOperation( int index, int scale, OP_TYPE type, String cmd , String expression  ){
+    public Optional<Operation> addOperation( String index, int scale, OP_TYPE type, String cmd , String expression  ){
 
         expression=expression.replace(" ",""); //remove spaces
 
         String exp = expression;
 
-        if( index == -1 ){
-            Logger.error(id + " -> Bad/No index given");
-            return Optional.empty();
+        if( index.equalsIgnoreCase("-1") ){
+            Logger.warn(id + " -> Bad/No index given");
         }
 
         exp=replaceReferences(exp);
@@ -411,45 +411,53 @@ public class MathForward extends AbstractForward {
 
         switch( type ){
             case LN:
-                op = new Operation( expression, MathUtils.decodeBigDecimalsOp("i"+index,exp,"ln",0),index);
+                op = new Operation( expression, MathUtils.decodeBigDecimalsOp("i"+index,exp,"ln",0),NumberUtils.toInt(index));
                 break;
             case SALINITY:
                 if( indexes.length != 3 ){
                     Logger.error(id+" (mf)-> Not enough args for salinity calculation");
                     return Optional.empty();
                 }
-                op = new Operation(expression, Calculations.procSalinity(indexes[0],indexes[1],indexes[2]), index);
+                op = new Operation(expression, Calculations.procSalinity(indexes[0],indexes[1],indexes[2]), NumberUtils.toInt(index));
                 break;
             case SVC:
                 if( indexes.length != 3 ){
                     Logger.error(id+" (mf)-> Not enough args for soundvelocity calculation");
                     return Optional.empty();
                 }
-                op = new Operation(expression, Calculations.procSoundVelocity(indexes[0],indexes[1],indexes[2]), index);
+                op = new Operation(expression, Calculations.procSoundVelocity(indexes[0],indexes[1],indexes[2]), NumberUtils.toInt(index));
                 break;
             case TRUEWINDSPEED:
                 if( indexes.length != 5 ){
                     Logger.error(id+" (mf)-> Not enough args for True wind speed calculation");
                     return Optional.empty();
                 }
-                op = new Operation(expression, Calculations.procTrueWindSpeed(indexes[0],indexes[1],indexes[2],indexes[3],indexes[4]), index);
+                op = new Operation(expression, Calculations.procTrueWindSpeed(indexes[0],indexes[1],indexes[2],indexes[3],indexes[4]), NumberUtils.toInt(index));
                 break;
             case TRUEWINDDIR:
                 if( indexes.length != 5 ){
                     Logger.error(id+" (mf)-> Not enough args for True wind direction calculation");
                     return Optional.empty();
                 }
-                op = new Operation(expression, Calculations.procTrueWindDirection(indexes[0],indexes[1],indexes[2],indexes[3],indexes[4]), index);
+                op = new Operation(expression, Calculations.procTrueWindDirection(indexes[0],indexes[1],indexes[2],indexes[3],indexes[4]), NumberUtils.toInt(index));
+                break;
+            case UTM:
+                var res =
+                op = new Operation(expression, GisTools.procToUTM(indexes[0],indexes[1],
+                        Arrays.stream(index.split(",")).map(i -> NumberUtils.toInt(i)).toArray( Integer[]::new)),-1);
+                break;
+            case GDC:
+                op = new Operation(expression, GisTools.procToGDC(indexes[0],indexes[1],
+                        Arrays.stream(index.split(",")).map(i -> NumberUtils.toInt(i)).toArray( Integer[]::new)),-1);
                 break;
             default:
                 return Optional.empty();
         }
-
         ops.add(op);
 
         if( scale != -1){ // Check if there's a scale op needed
-            Function<BigDecimal[],BigDecimal> proc = x -> x[index].setScale(scale, RoundingMode.HALF_UP);
-            var p = new Operation( expression, proc,index);
+            Function<BigDecimal[],BigDecimal> proc = x -> x[NumberUtils.toInt(index)].setScale(scale, RoundingMode.HALF_UP);
+            var p = new Operation( expression, proc,NumberUtils.toInt(index));
             p.setCmd(cmd);  // this is the operation that should get the command
             ops.add( p );
             rulesString.add(new String[]{type.toString().toLowerCase(),""+index,"scale("+expression+", "+scale+")"});
@@ -464,7 +472,7 @@ public class MathForward extends AbstractForward {
      * @return The resulting enum value
      */
     private OP_TYPE fromStringToOPTYPE(String optype) {
-        switch(optype){
+        switch(optype.toLowerCase()){
             case "complex": return OP_TYPE.COMPLEX;
             case "scale": return OP_TYPE.SCALE;
             case "ln": return OP_TYPE.LN;
@@ -472,6 +480,8 @@ public class MathForward extends AbstractForward {
             case "svc": return OP_TYPE.SVC;
             case "truewinddir": return OP_TYPE.TRUEWINDDIR;
             case "truewindspeed": return OP_TYPE.TRUEWINDSPEED;
+            case "utm": return OP_TYPE.UTM;
+            case "gdc": return OP_TYPE.GDC;
         }
         Logger.error("Invalid op type given, valid ones complex,scale");
         return null;
