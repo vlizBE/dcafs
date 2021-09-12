@@ -21,6 +21,8 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (might be trigger for 0.12.0)
 
+## 0.11.1 (work in progress)
+  
 ## 0.11.0 (12/09/21)  
 
 ### Dependencies
@@ -64,6 +66,7 @@ write to err (otherwise this would be a loop). Which only matters in an ide (col
 ## CheckBlock
 - The word regex didn't check for brackets but did add if not found...
 - fixes for standalone use (no parent nor sharedmem)
+- Is now used in the FilterForward for the type 'math'
 
 ## FileCollector
 - fixed, didn't make folders when the file is new and no headers needed

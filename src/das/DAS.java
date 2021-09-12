@@ -26,7 +26,6 @@ import util.data.RealtimeValues;
 import util.database.*;
 import util.task.TaskManager;
 import util.task.TaskManagerPool;
-import util.taskblocks.CheckBlock;
 import util.tools.TinyWrapErr;
 import util.tools.TimeTools;
 import util.tools.Tools;
@@ -46,7 +45,7 @@ import java.util.stream.Collectors;
 
 public class DAS implements DeadThreadListener {
 
-    private static final String version = "0.11.0";
+    private static final String version = "0.11.1";
 
     private Path settingsPath = Path.of("settings.xml");
     private String workPath=Path.of("").toString();
@@ -829,13 +828,7 @@ public class DAS implements DeadThreadListener {
             das.addTelnetServer();
         }
         das.startAll();
-/*
-        BlockPool bp = new BlockPool(das.getCommandPool(),das.getDataProvider(),das.getStreamPool());
-        bp.setTransServer(das.trans);
 
-        bp.readFromXML(Path.of(das.workPath,"tmscripts","pump.xml"));
-        bp.runStartBlock("startpump");
-*/
         Logger.info("Dcafs "+version+" boot finished!");
     }
 }
