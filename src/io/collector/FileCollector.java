@@ -391,18 +391,21 @@ public class FileCollector extends AbstractCollector{
      * @param dest The path to write to
      */
     private void appendData( Path dest ){
-       StringJoiner join;
+
         if( dest ==null) {
             Logger.error(id+"(fc) -> No valid destination path");
             return;
         }
-
-        if( !headers.isEmpty() && (Files.notExists(dest) || headerChanged) ){ // the file doesn't exist yet
+        if( Files.notExists(dest) ){
             try { // So first create the dir structure
                 Files.createDirectories(dest.toAbsolutePath().getParent());
             } catch (IOException e) {
                 Logger.error(e);
             }
+        }
+
+        StringJoiner join;
+        if( !headers.isEmpty() && (Files.notExists(dest) || headerChanged) ){ // the file doesn't exist yet
             join = new StringJoiner( lineSeparator );
             headers.forEach( hdr -> join.add(hdr.replace("{file}",dest.getFileName().toString()))); // Add the headers
         }else{
@@ -416,9 +419,8 @@ public class FileCollector extends AbstractCollector{
         }
         byteCount=0;
         try {
-            if(headerChanged) {
+            if(headerChanged && Files.exists(dest)) {
                 Path renamed=null;
-                headerChanged=false;
                 for( int a=1;a<1000;a++){
                     renamed = Path.of(dest.toString().replace(".", "."+a+"."));
                     // Check if the desired name or zipped version already is available
@@ -427,6 +429,7 @@ public class FileCollector extends AbstractCollector{
                 }
                 Files.move(dest, dest.resolveSibling(renamed));
             }
+            headerChanged=false;
 
             Files.write(dest, join.toString().getBytes(charSet), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
             Logger.debug("Written " + join.toString().length() + " bytes to " + dest.getFileName().toString());
@@ -463,7 +466,7 @@ public class FileCollector extends AbstractCollector{
             }
 
         } catch (IOException e) {
-            Logger.error(id + "(fc) -> Failed to write to "+ dest+" because "+e.getMessage());
+            Logger.error(id + "(fc) -> Failed to write to "+ dest+" because "+e);
         }
     }
     /* ***************************** Overrides  ******************************************************************* */
