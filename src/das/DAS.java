@@ -625,7 +625,7 @@ public class DAS implements DeadThreadListener {
                 Logger.info("Not in debug mode, not starting debugworker...");
             }
         }
-        if (trans != null) {
+        if (trans != null && trans.isActive()) {
             trans.run(); // Start the server
         }
         if (telnet != null) {
