@@ -389,7 +389,7 @@ public class DAS implements DeadThreadListener {
                 .forEach( ele ->  labelWorker.addValMap( ValMap.readFromXML(ele) ) );
 
         // Find the path ones?
-        XMLfab.getRootChildren(settingsPath, "dcafs","datapaths","path")
+        XMLfab.getRootChildren(settingsPath, "dcafs","paths","path")
                 .forEach( ele -> {
                         String imp = ele.getAttribute("import");
 
@@ -398,7 +398,7 @@ public class DAS implements DeadThreadListener {
                             String file = Path.of(imp).getFileName().toString();
                             file = file.substring(0,file.length()-4);//remove the .xml
 
-                            for( Element vm : XMLfab.getRootChildren(Path.of(imp), "dcafs","path","valmap").collect(Collectors.toList())){
+                            for( Element vm : XMLfab.getRootChildren(Path.of(imp), "dcafs","paths","path","valmap").collect(Collectors.toList())){
                                 if( !vm.hasAttribute("id")){ //if it hasn't got an id, give it one
                                     vm.setAttribute("id",file+"_vm"+a);
                                     a++;

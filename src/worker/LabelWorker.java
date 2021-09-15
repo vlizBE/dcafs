@@ -635,7 +635,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 		XMLfab.getRootChildren(settingsPath, "dcafs","generics","generic")
 				.forEach( ele ->  addGeneric( Generic.readFromXML(ele) ) );
 		// Find the path ones?
-		XMLfab.getRootChildren(settingsPath, "dcafs","datapaths","path")
+		XMLfab.getRootChildren(settingsPath, "dcafs","paths","path")
 				.forEach( ele -> {
 							String imp = ele.getAttribute("import");
 

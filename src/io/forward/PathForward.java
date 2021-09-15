@@ -77,7 +77,7 @@ public class PathForward {
         this.src = XMLtools.getStringAttribute(pathEle,"src","");
 
         if( !imp.isEmpty() ) {
-            var p = XMLfab.getRootChildren(Path.of(imp),"dcafs","path").findFirst();
+            var p = XMLfab.getRootChildren(Path.of(imp),"dcafs","paths","path").findFirst();
             if(p.isPresent()) {
                 pathEle = p.get();
                 delimiter = XMLtools.getStringAttribute(pathEle,"delimiter","");

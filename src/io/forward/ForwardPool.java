@@ -58,8 +58,8 @@ public class ForwardPool implements Commandable {
         if (editorsEle != null)
             readEditorsFromXML(XMLtools.getChildElements(editorsEle, "editor"));
 
-        /* Figure out the datapath? */
-        XMLfab.getRootChildren(settingsPath,"dcafs","datapaths","path").forEach(
+        /* Figure out the paths? */
+        XMLfab.getRootChildren(settingsPath,"dcafs","paths","path").forEach(
                 pathEle -> {
                     PathForward path = new PathForward(dataProviding,dQueue,nettyGroup);
                     path.setWorkPath(settingsPath.getParent());
@@ -849,7 +849,7 @@ public class ForwardPool implements Commandable {
             case "reload":
                 if( cmds.length==1)
                     return "No id specified";
-                var ele = XMLfab.withRoot(settingsPath,"dcafs","datapaths")
+                var ele = XMLfab.withRoot(settingsPath,"dcafs","paths")
                         .getChild("path","id",cmds[1]);
                 if(ele.isEmpty())
                     return "No such path "+cmds[1];
@@ -858,7 +858,7 @@ public class ForwardPool implements Commandable {
             case "readfile":
                 if( cmds.length<2)
                     return "No enough arguments: pf:readfile,id,path";
-                fab = XMLfab.withRoot(settingsPath,"dcafs","datapaths")
+                fab = XMLfab.withRoot(settingsPath,"dcafs","paths")
                         .selectOrAddChildAsParent("path","id",cmds[1])
                         .addChild("customsrc",cmds[2]).attr("type","file").attr("interval","1s");
                 fab.build();
@@ -871,7 +871,7 @@ public class ForwardPool implements Commandable {
             case "addblank":
                 blank=true;
 
-                XMLfab.withRoot(settingsPath,"dcafs","datapaths")
+                XMLfab.withRoot(settingsPath,"dcafs","paths")
                         .selectOrAddChildAsParent("path","id",cmds[1])
                             .attr("src",cmds.length>2?cmds[2]:"")
                             .attr("delimiter",",")
@@ -891,7 +891,7 @@ public class ForwardPool implements Commandable {
                     if (paths.get(cmds[1]) == null)
                         return "No such path " + cmds[1];
                 }
-                fab = XMLfab.withRoot(settingsPath,"dcafs","datapaths")
+                fab = XMLfab.withRoot(settingsPath,"dcafs","paths")
                         .selectOrAddChildAsParent("path","id",cmds[1]);
 
                 int index;
@@ -953,7 +953,7 @@ public class ForwardPool implements Commandable {
 
                 var ids = cmds[1].split(":");
 
-                var fabOpt = XMLfab.withRoot(settingsPath,"dcafs","datapaths").selectChildAsParent("path","id",ids[0]);
+                var fabOpt = XMLfab.withRoot(settingsPath,"dcafs","paths").selectChildAsParent("path","id",ids[0]);
                 if(fabOpt.isEmpty())
                     return "No such path: "+ids[0];
                 fab = fabOpt.get();
