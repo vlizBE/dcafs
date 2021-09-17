@@ -264,7 +264,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 					}
 				}else {
 					switch (label) {
-						case "system":
+						case "system": case "cmd":
 							executor.execute(() -> reqData.createResponse(d.getData(), d.getWritable(), false));
 							break;
 						case "void":
