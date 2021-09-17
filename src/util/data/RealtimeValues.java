@@ -363,6 +363,14 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 							return "";
 						}
 						break;
+					case "t": case "text": case "T":
+						String text = texts.get(p[1]);
+						if( text != null){
+							Logger.info("Texts aren't numerical...");
+						}else{
+							Logger.info("No such text yet: "+p[1]);
+						}
+						break;
 					case "i": // issues
 						var i = issuePool.getIssue(p[1]);
 						if( i.isPresent() ){
@@ -433,7 +441,6 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					}else{
 						Logger.error("Couldn't find a doubleval with id "+fl);
 						errorLog.add("Couldn't find a DoubleVal  with id "+fl);
-						return "";
 					}
 					return exp;
 				}
