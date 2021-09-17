@@ -12,17 +12,25 @@ From 0.5.0 onwards, this should be better documented...
 - Trans as output in taskmanager?
 - Trans command >>>signin:id to claim to be a certain id and pass the ip test
 
-
 ## Work in progress
-## 0.10.x
-- Goals for this version series (removed when as they are done)
+## 0.11.x
+- Goals for this version series (removed when they are done)
   * Code cleanup
     * Bring javadoc up to date
     * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (might be trigger for 0.12.0)
 
 ## 0.11.1 (work in progress)
-  
+
+### Breaking
+- Refactored datapaths to paths in xml to be consistent with filters,editors,maths
+
+### StreamManager
+- stream:id has been added as alternative to raw:id
+
+### Fixes
+- Trans was always started instead of only if defined in xml
+
 ## 0.11.0 (12/09/21)  
 
 ### Dependencies
