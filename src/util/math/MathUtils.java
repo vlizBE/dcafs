@@ -23,9 +23,9 @@ import java.util.stream.Collectors;
 
 public class MathUtils {
     final static int DIV_SCALE = 8;
-    static final String[] ORDERED_OPS={"^","^","*","/","%","%","+","-"};
+    static final String[] ORDERED_OPS={"°","°","^","^","*","/","%","%","+","-"};
     static final String[] COMPARES={"<","<=","==","!=",">=",">"};
-    static final String OPS_REGEX="[+\\-\\/*<>^=%~!]+[=]?";
+    static final String OPS_REGEX="[+\\-\\/*<>^=%~!°]+[=]?";
     static final Pattern es = Pattern.compile("\\de[+-]?\\d");
     /**
      * Splits a simple expression of the type i1+125 etc into distinct parts i1,+,125
@@ -47,10 +47,17 @@ public class MathUtils {
         indexOffset++;
         try {
             if (parts.size() == 3) {
-                if (debug) {
-                    Logger.info("  Sub: " + "o" + indexOffset + "=" + expression);
+                if( NumberUtils.isCreatable(parts.get(0))&&NumberUtils.isCreatable(parts.get(2))){
+                    var bd1 = NumberUtils.createBigDecimal(parts.get(0));
+                    var bd2 = NumberUtils.createBigDecimal(parts.get(2));
+                    var bd3 = calcBigDecimalsOp(bd1,bd2,parts.get(1));
+                    result.add(new String[]{bd3.toPlainString(),"0","+"});
+                }else {
+                    if (debug) {
+                        Logger.info("  Sub: " + "o" + indexOffset + "=" + expression);
+                    }
+                    result.add(new String[]{parts.get(0), parts.get(2), parts.get(1)});
                 }
-                result.add(new String[]{parts.get(0), parts.get(2), parts.get(1)});
             } else {
                 int oIndex = indexOffset;
                 for (int a = 0; a < ORDERED_OPS.length; a += 2) {
@@ -62,6 +69,18 @@ public class MathUtils {
                             Logger.error("Not enough data in parts -> Expression'"+expression+"' Parts:"+parts.size()+" needed "+(opIndex+1) );
                             return result;
                         }
+                        // Check if this isn't a formula that can already be processed
+                        if( NumberUtils.isCreatable(parts.get(opIndex-1))&&NumberUtils.isCreatable(parts.get(opIndex+1))){
+                            var bd1 = NumberUtils.createBigDecimal(parts.get(opIndex-1));
+                            var bd2 = NumberUtils.createBigDecimal(parts.get(opIndex+1));
+                            var bd3 = calcBigDecimalsOp(bd1,bd2,parts.get(opIndex));
+
+                            parts.remove(opIndex);  // remove the operand
+                            parts.remove(opIndex);  // remove the top part
+                            parts.set(opIndex - 1, bd3.toPlainString()); // replace the bottom one
+                            continue;
+                        }
+
                         String res = parts.get(opIndex - 1) + parts.get(opIndex) + parts.get(opIndex + 1);
                         result.add(new String[]{parts.get(opIndex - 1), parts.get(opIndex + 1), parts.get(opIndex)});
                         parts.remove(opIndex);  // remove the operand
@@ -80,6 +99,8 @@ public class MathUtils {
             Logger.error("Index issue while processing "+expression);
             Logger.error(e);
         }
+        if( result.isEmpty())
+            result.add(new String[]{parts.get(0),"0","+"});
         return result;
     }
 
@@ -148,8 +169,8 @@ public class MathUtils {
 
                 // add the op
                 if( b<ops.length()) {
-                    if( ops.charAt(b)=='=') { // == doesn't get processed properly, so fix this
-                        full.add("==");
+                    if( ops.length()>b+1 && ops.charAt(b+1)=='=') { // == doesn't get processed properly, so fix this
+                        full.add("" + ops.substring(b,b+2));
                         b++;
                     }else {// if not == just add it
                         full.add("" + ops.charAt(b));
@@ -219,26 +240,6 @@ public class MathUtils {
         full[0]=split[0];
         full[2]=split[1];
         return full;
-    }
-
-    /**
-     *
-     * @param comparison
-     * @return
-     */
-    public static String[] extractCompare( String comparison ){
-        var compOps = Pattern.compile("[><=!][=]?");
-        var l = compOps.matcher(comparison)
-                .results()
-                .map(MatchResult::group)
-                .distinct()
-                .collect(Collectors.toList());
-        for( var c : l){
-            comparison=comparison.replace(c,",");
-        }
-        comparison=comparison.replace(",,",",");
-
-        return comparison.split(",");
     }
 
     /**
@@ -403,7 +404,8 @@ public class MathUtils {
             case "+":
                 try {
                     if (bd1 != null && bd2 != null) { // meaning both numbers
-                        proc = x -> bd1.add(bd2);
+                        var p = bd1.add(bd2);
+                        proc = x -> p;
                     } else if (bd1 == null && bd2 != null) { // meaning first is an index and second a number
                         proc = x -> x[i1].add(bd2);
                     } else if (bd1 != null) { // meaning first is a number and second an index
@@ -419,7 +421,8 @@ public class MathUtils {
             case "-":
                 try{
                     if( bd1!=null && bd2!=null ){ // meaning both numbers
-                        proc = x -> bd1.subtract(bd2);
+                        var p = bd1.subtract(bd2);
+                        proc = x -> p;
                     }else if( bd1==null && bd2!=null){ // meaning first is an index and second a number
                         proc = x -> x[i1].subtract(bd2);
                     }else if(bd1 != null){ // meaning first is a number and second an index
@@ -551,11 +554,92 @@ public class MathUtils {
                     Logger.error(e);
                 }
                 break;
+            case "°":
+                switch( bd1.intValue() ){
+                    case 1: //cosd,sin
+                        if( bd2==null) {
+                            proc = x -> BigDecimal.valueOf(Math.cos(Math.toRadians(x[i2].doubleValue())));
+                        }else {
+                            var rad = BigDecimal.valueOf(Math.cos(Math.toRadians(bd2.doubleValue())));
+                            proc = x -> rad;
+                        }
+                        break;
+                    case 2: //cosr
+                        if( bd2==null) {
+                            proc = x -> BigDecimal.valueOf(Math.sin(x[i2].doubleValue()));
+                        }else {
+                            var res = BigDecimal.valueOf(Math.cos(bd2.doubleValue()));
+                            proc = x -> res;
+                        }
+                        break;
+                    case 3: //sind,sin
+                        if( bd2==null) {
+                            proc = x -> BigDecimal.valueOf(Math.sin(Math.toRadians(x[i2].doubleValue())));
+                        }else {
+                            var rad = BigDecimal.valueOf(Math.sin(Math.toRadians(bd2.doubleValue())));
+                            proc = x -> rad;
+                        }
+                        break;
+                    case 4: //sinr
+                        if( bd2==null) {
+                            proc = x -> BigDecimal.valueOf(Math.sin(x[i2].doubleValue()));
+                        }else {
+                            var res = BigDecimal.valueOf(Math.sin(bd2.doubleValue()));
+                            proc = x -> res;
+                        }
+                        break;
+                    case 5: //abs
+                        if( bd2==null) {
+                            proc = x -> x[i2].abs();
+                        }else {
+                            proc = x -> bd2.abs();
+                        }
+                        break;
+                }
+                break;
             default:Logger.error("Unknown operand: "+op); break;
         }
         return proc;
     }
+    public static BigDecimal calcBigDecimalsOp(BigDecimal bd1, BigDecimal bd2, String op ){
 
+        Function<BigDecimal[],BigDecimal> proc=null;
+        switch( op ){
+            case "+":
+                return bd1.add(bd2);
+            case "-":
+                return bd1.subtract(bd2);
+            case "*":
+                return bd1.multiply(bd2);
+
+            case "/": // i0/25
+                return bd1.divide(bd2, DIV_SCALE, RoundingMode.HALF_UP);
+            case "%": // i0%25
+                return bd1.remainder(bd2);
+            case "^": // i0/25
+                return bd1.pow(bd2.intValue());
+            case "~": // i0~25 -> ABS(i0-25)
+                return bd1.min(bd2).abs();
+            case "scale": // i0/25
+                return bd1.setScale(bd2.intValue(),RoundingMode.HALF_UP);
+            case "°":
+                switch( bd1.intValue() ){
+                    case 1: //cosd,sin
+                        return BigDecimal.valueOf(Math.cos(Math.toRadians(bd2.doubleValue())));
+                    case 2: //cosr
+                        return BigDecimal.valueOf(Math.cos(bd2.doubleValue()));
+                    case 3: //sind,sin
+                        return BigDecimal.valueOf(Math.sin(Math.toRadians(bd2.doubleValue())));
+                    case 4: //sinr
+                        return BigDecimal.valueOf(Math.sin(bd2.doubleValue()));
+                    case 5: //abs
+                        return bd2.abs();
+                }
+                break;
+            default:Logger.error("Unknown operand: "+op); break;
+        }
+        return null;
+    }
     /**
      * Process a simple formula that only contains numbers and no references
      * @param formula The formula to parse and calculate

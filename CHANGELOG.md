@@ -12,16 +12,26 @@ From 0.5.0 onwards, this should be better documented...
 - Trans as output in taskmanager?
 - Trans command >>>signin:id to claim to be a certain id and pass the ip test
 
-
 ## Work in progress
-## 0.10.x
-- Goals for this version series (removed when as they are done)
+## 0.11.x
+- Goals for this version series (removed when they are done)
   * Code cleanup
     * Bring javadoc up to date
     * Decide on final class structure (mainly StreamManager)   
-  * Rework the TaskManager (might be trigger for 0.11.0)
+  * Rework the TaskManager (might be trigger for 0.12.0)
 
-## 0.11.0 (work in progress)  
+## 0.11.1 (work in progress)
+
+### Breaking
+- Refactored datapaths to paths in xml to be consistent with filters,editors,maths
+
+### StreamManager
+- stream:id has been added as alternative to raw:id
+
+### Fixes
+- Trans was always started instead of only if defined in xml
+
+## 0.11.0 (12/09/21)  
 
 ### Dependencies
 - Removed Jaxb, not sure why it was in there in the first place...
@@ -36,6 +46,39 @@ From 0.5.0 onwards, this should be better documented...
   * replace table= with group=
   * replace dbid= with db= and append the content of table= to it with a : inbetween
     *  So dbid="datas,datalite" table="ctd" -> db="datas,datalite:ctd"  group="ctd"
+
+### Workshop prep
+- Added option to give an id to the current telnet session
+- Allow sessions to send exchange messages
+- Allow to 'spy' on a session, only one spy allowed. This wil send all the cmds and responses issued by the session
+spied on to be send to the spy. Can be used to (remotely) follow what someone else is doing (wrong)
+
+### Tinylog
+- An issue is that uncaught exceptions also don't end up in the generated errorlog. Which makes it rather hard to
+debug issues like that when using dcafs outside of an ide (it happens). Made a wrapper for the system.err that
+also writes to the errorlog. This isn't active when working in an ide because it no longer allows tinylog to 
+write to err (otherwise this would be a loop). Which only matters in an ide (coloring).
+
+### SQLTable
+- If trying to build an insert and a val is missing, the insert is aborted instead of substituting a null
+
+### RealtimeValues
+- The store command now store all setup instead of just name/group/id/unit
+
+## Math
+- fixed, extractparts wasn't made for double character comparisons (>= etc) altered to check this
+- Added support for cosr(adian),cosd(egrees),sinr,sind and abs
+- fixed, missing global surrounding brackets should be better detected
+- Added op type utm and gdc, converts the two references to either utm or gdc
+
+## CheckBlock
+- The word regex didn't check for brackets but did add if not found...
+- fixes for standalone use (no parent nor sharedmem)
+- Is now used in the FilterForward for the type 'math'
+
+## FileCollector
+- fixed, didn't make folders when the file is new and no headers needed
+- fixed, sometimes empty lines were added when writing for the first time
 
 ## 0.10.13 (04/09/21)
 

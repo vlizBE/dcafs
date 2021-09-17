@@ -26,7 +26,7 @@ import util.data.RealtimeValues;
 import util.database.*;
 import util.task.TaskManager;
 import util.task.TaskManagerPool;
-import util.taskblocks.BlockPool;
+import util.tools.TinyWrapErr;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
@@ -45,7 +45,7 @@ import java.util.stream.Collectors;
 
 public class DAS implements DeadThreadListener {
 
-    private static final String version = "0.11.0";
+    private static final String version = "0.11.1";
 
     private Path settingsPath = Path.of("settings.xml");
     private String workPath=Path.of("").toString();
@@ -94,6 +94,9 @@ public class DAS implements DeadThreadListener {
             System.out.println("Path found: "+ p);
             if (!p.toString().endsWith(".jar")) { //meaning from ide
                 p = p.getParent();
+            }else{
+                TinyWrapErr.install();
+                System.setProperty("tinylog.stream","out");
             }
             workPath = p.getParent().toString();
             if( workPath.matches(".*lib$")) { // Meaning used as a lib
@@ -386,7 +389,7 @@ public class DAS implements DeadThreadListener {
                 .forEach( ele ->  labelWorker.addValMap( ValMap.readFromXML(ele) ) );
 
         // Find the path ones?
-        XMLfab.getRootChildren(settingsPath, "dcafs","datapaths","path")
+        XMLfab.getRootChildren(settingsPath, "dcafs","paths","path")
                 .forEach( ele -> {
                         String imp = ele.getAttribute("import");
 
@@ -395,7 +398,7 @@ public class DAS implements DeadThreadListener {
                             String file = Path.of(imp).getFileName().toString();
                             file = file.substring(0,file.length()-4);//remove the .xml
 
-                            for( Element vm : XMLfab.getRootChildren(Path.of(imp), "dcafs","path","valmap").collect(Collectors.toList())){
+                            for( Element vm : XMLfab.getRootChildren(Path.of(imp), "dcafs","paths","path","valmap").collect(Collectors.toList())){
                                 if( !vm.hasAttribute("id")){ //if it hasn't got an id, give it one
                                     vm.setAttribute("id",file+"_vm"+a);
                                     a++;
@@ -486,7 +489,7 @@ public class DAS implements DeadThreadListener {
      * Create the telnetserver
      */
     public void addTelnetServer() {
-        telnet = new TelnetServer(this.getDataQueue(), settingsDoc, nettyGroup);
+        telnet = new TelnetServer(this.getDataQueue(), settingsPath, nettyGroup);
         addCommandable(telnet,"telnet","nb");
     }
 
@@ -622,7 +625,7 @@ public class DAS implements DeadThreadListener {
                 Logger.info("Not in debug mode, not starting debugworker...");
             }
         }
-        if (trans != null) {
+        if (trans != null && trans.isActive()) {
             trans.run(); // Start the server
         }
         if (telnet != null) {
@@ -825,13 +828,7 @@ public class DAS implements DeadThreadListener {
             das.addTelnetServer();
         }
         das.startAll();
-/*
-        BlockPool bp = new BlockPool(das.getCommandPool(),das.getDataProvider(),das.getStreamPool());
-        bp.setTransServer(das.trans);
 
-        bp.readFromXML(Path.of(das.workPath,"tmscripts","pump.xml"));
-        bp.runStartBlock("startpump");
-*/
         Logger.info("Dcafs "+version+" boot finished!");
     }
 }

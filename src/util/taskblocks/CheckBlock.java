@@ -3,6 +3,7 @@ package util.taskblocks;
 import org.apache.commons.lang3.StringUtils;
 import org.tinylog.Logger;
 import util.data.DataProviding;
+import util.data.DoubleVal;
 import util.math.MathUtils;
 import util.tools.Tools;
 
@@ -33,7 +34,16 @@ public class CheckBlock extends AbstractBlock{
     public void nextOk(){
 
     }
-
+    public boolean alterSharedMem( int index, double val ){
+        if( Double.isNaN(val))
+            return false;
+        if( sharedMem==null)
+            sharedMem = new ArrayList<>();
+        while( sharedMem.size()<=index)
+            sharedMem.add(DoubleVal.newVal("i"+sharedMem.size()).value(0));
+        sharedMem.get(index).updateValue(val);
+        return true;
+    }
     @Override
     public boolean start(TaskBlock starter) {
         Double[] work= new Double[steps.size()+sharedMem.size()];
@@ -43,11 +53,11 @@ public class CheckBlock extends AbstractBlock{
         for( int a=0;a<steps.size();a++)
             work[a]=steps.get(a).apply(work);
         var pass = Double.compare(work[resultIndex],0.0)>0;
-        pass = negate?!pass:pass;
+        pass = negate ? !pass : pass;
         if( pass ) {
             doNext();
             parentBlock.ifPresent( TaskBlock::nextOk );
-        }else{
+        }else if( parentBlock.isPresent() ){
             Logger.debug( "Check failed : "+ori );
             if( parentBlock.map( pb -> pb instanceof TriggerBlock ).orElse(false) ) // needs to know because of while/waitfor
                 parentBlock.get().nextFailed(this);
@@ -56,23 +66,18 @@ public class CheckBlock extends AbstractBlock{
     }
 
     public boolean build(){
-        if( sharedMem==null)
-            sharedMem=new ArrayList<>();
-
-        String exp = ori.toLowerCase();
+        String exp = ori;
 
         if( ori.isEmpty()) {
             Logger.error("Ori is empty");
             return false;
         }
         // Fix the flag/issue and diff?
-        Pattern words = Pattern.compile("[!a-zA-Z]+[_:0-9]*[a-zA-Z0-9]+\\d*");
+        Pattern words = Pattern.compile("\\{?[!a-zA-Z]+[_:0-9]*[a-zA-Z]+\\d*}?");
         var found = words.matcher(ori).results().map(MatchResult::group).collect(Collectors.toList());
 
         for( var comp : found ) {
-            if( comp.matches("^i\\d+") )
-                continue;
-            // Alters flag:, !flag and issue:/!issue:
+            // Fixes flag:, !flag and issue:/!issue:
             if( comp.contains("flag:")){
                 String val = comp.split(":")[1];
                 exp = exp.replace(comp,"{f:"+val+"}=="+(comp.startsWith("!")?"0":"1"));
@@ -87,16 +92,21 @@ public class CheckBlock extends AbstractBlock{
         exp=Tools.parseExpression(exp); // rewrite to math symbols
 
         // Figure out the realtime stuff
-        exp = dp.buildNumericalMem(exp,sharedMem,0);
+        if( dp != null ) {
+            if (sharedMem == null) // If it didn't receive a shared Mem
+                sharedMem = new ArrayList<>(); // make it
+            exp = dp.buildNumericalMem(exp, sharedMem, 0);
+            if( sharedMem.isEmpty()) // Remove the reference if it remained empty
+                sharedMem=null;
+        }else{
+            Logger.warn("No dp, skipping numerical mem");
+        }
+
         if( exp.isEmpty() ){
             Logger.error( "Couldn't process "+ori+", vals missing");
             return false;
         }
 
-        if( exp.isEmpty() ){
-            Logger.error("Failed to build numerical mem for "+ori);
-            return false;
-        }
         // Figure out the brackets?
         // First check if the amount of brackets is correct
         int opens = StringUtils.countMatches(exp,"(");
@@ -130,13 +140,13 @@ public class CheckBlock extends AbstractBlock{
 
                 var and_ors = part.split("[&|!]{2}",0);
                 for( var and_or : and_ors) {
-                    var comps = MathUtils.extractCompare(and_or);
-                    for (var c : comps) {
+                    var comps = and_or.split("[><=!][=]?"); // Split on the compare ops
+                    for (var c : comps) { // Go through the elements
                         if( c.isEmpty()) {
-                            Logger.info("Found !?");
+                            Logger.info("Found '!' ?");
                         }else if(c.matches("[io]+\\d+")||c.matches("\\d*[.]?\\d*")){
-                                // just copy these?
-                        }else {
+                                // If ix,ox or a number, just keep as is
+                        }else { // forgot when this happens...
                             int index = subFormulas.indexOf(c);
                             if (index == -1) {
                                 subFormulas.add(c);    // split that part in the sub-formulas
@@ -165,7 +175,7 @@ public class CheckBlock extends AbstractBlock{
             subFormulas.add(exp);
         resultIndex=subFormulas.size()-1;
 
-        // Convert the subformulas to functions
+        // Convert the sub formulas to functions
         subFormulas.forEach( x -> {
            // x=x.startsWith("!")?x.substring(1)+"==0":x;
             var parts = MathUtils.extractParts(x);

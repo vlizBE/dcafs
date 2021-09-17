@@ -68,6 +68,9 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 	int readCount=0;
 	int oldReadCount=0;
 	String lastOrigin="";
+
+	Writable spy;
+	String spyingon="";
 	/* ***************************** C O N S T R U C T O R **************************************/
 
 	/**
@@ -261,7 +264,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 					}
 				}else {
 					switch (label) {
-						case "system":
+						case "system": case "cmd":
 							executor.execute(() -> reqData.createResponse(d.getData(), d.getWritable(), false));
 							break;
 						case "void":
@@ -334,6 +337,18 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 	}
 	public void checkTelnet(Datagram d) {
 		Writable dt = d.getWritable();
+
+		if( d.getData().equalsIgnoreCase("spy:off")||d.getData().equalsIgnoreCase("spy:stop")){
+			spy.writeLine("Stopped spying...");
+			spy=null;
+			return;
+		}else if( d.getData().startsWith("spy:")){
+			spyingon=d.getData().split(":")[1];
+			spy=d.getWritable();
+			spy.writeLine("Started spying on "+spyingon);
+			return;
+		}
+
 		if (!d.getData().equals("status")) {
 			String from = " for ";
 
@@ -343,12 +358,22 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 			if (!d.getData().isBlank())
 				Logger.info("Executing telnet command [" + d.getData() + "]" + from);
 		}
+
 		String response = reqData.createResponse(d.getData(), dt, false);
+		if( spy!=null && d.getWritable()!=spy && (d.getWritable().getID().equalsIgnoreCase(spyingon)||spyingon.equalsIgnoreCase("all"))){
+			spy.writeLine(TelnetCodes.TEXT_ORANGE+"Cmd: "+d.getData()+TelnetCodes.TEXT_YELLOW);
+			spy.writeLine(response);
+		}
 		String[] split = d.getLabel().split(":");
 		if (dt != null) {
 			if (!d.isSilent()) {
-				dt.writeLine(response);
-				dt.writeString((split.length >= 2 ? "<" + split[1] : "") + ">");
+				if( d.getData().startsWith("telnet:write")){
+					dt.writeString(TelnetCodes.PREV_LINE+TelnetCodes.CLEAR_LINE+response);
+				}else{
+					dt.writeLine(response);
+					dt.writeString((split.length >= 2 ? "<" + split[1] : "") + ">");
+				}
+
 			}
 		} else {
 			Logger.info(response);
@@ -538,7 +563,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 
 				var delimiter=request[1].endsWith(",")?",":cmds[cmds.length-1];
 				if( Generic.addBlankToXML(XMLfab.withRoot(settingsPath, "dcafs","generics"), cmds[1], cmds[2],
-					ArrayUtils.subarray(cmds,3,cmds.length>3?cmds.length-1:cmds.length),delimiter)){
+					ArrayUtils.subarray(cmds,3,cmds.length),delimiter)){
 					loadGenerics();
 					return "Generic added & reloaded";
 				}
@@ -563,18 +588,26 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 							int i=0;
 							for( var f : fab.get().getChildren("*")){
 								if( cmds.length-2>i){
-									if( !cmds[i+2].equalsIgnoreCase("."))
-										f.setTextContent(cmds[i+2]);
+									if( !cmds[i+2].equalsIgnoreCase(".")) {
+										var gr = f.getAttribute("group");
+										gr=(gr.isEmpty()?"":gr+"_");
+										if( !dp.hasDouble(gr+cmds[i + 2])){
+											dp.renameDouble( gr+f.getTextContent(),gr+cmds[i + 2],false );
+											f.setTextContent(cmds[i + 2]);
+										}else{
+											return "Failed to rename to already existing one";
+										}
+									}
 								}
 								i++;
 							}
-							if( fab.get().build()!=null) {
-								loadGenerics();
-								return "Names set, generics reloaded";
-							}
+							fab.get().build();
+							dp.storeValsInXml(true);
+							loadGenerics();
+							return "Names set, generics reloaded";
+						case "group": // if
 						case "db":
 						case "delimiter":
-						case "group":
 						case "id":
 							fab.get().attr(attr,val).build();
 							break;
@@ -602,7 +635,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 		XMLfab.getRootChildren(settingsPath, "dcafs","generics","generic")
 				.forEach( ele ->  addGeneric( Generic.readFromXML(ele) ) );
 		// Find the path ones?
-		XMLfab.getRootChildren(settingsPath, "dcafs","datapaths","path")
+		XMLfab.getRootChildren(settingsPath, "dcafs","paths","path")
 				.forEach( ele -> {
 							String imp = ele.getAttribute("import");
 

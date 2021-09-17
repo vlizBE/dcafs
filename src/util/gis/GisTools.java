@@ -1,5 +1,6 @@
 package util.gis;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import util.tools.Tools;
@@ -9,6 +10,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.function.Function;
 
 public class GisTools {
 
@@ -277,12 +279,13 @@ public class GisTools {
     /**
      * Convert coordinates in GDC to UTM equivalent
      * 
-     * @param lon Longitude to convert
      * @param lat Latitude to convert
-     * @return UTM coordinates
+     * @param lon Longitude to convert
+     * @return UTM coordinates East, North
      */
-    public static double[] GDC_To_UTM(double lon, double lat) {
+    public static double[] GDC_To_UTM(double lat, double lon) {
         double N;
+
         double E;
 
         double A = 6367449.145882298;
@@ -290,9 +293,9 @@ public class GisTools {
         double C = 16.832627271237083;
         double D = -0.0219809069203086;
 
-        double fi = Math.toRadians(lon);
+        double fi = Math.toRadians(lat);
         double cos_fi = Math.cos(fi);
-        double dlambda = Math.toRadians(lat) - LAMBDA_0;
+        double dlambda = Math.toRadians(lon) - LAMBDA_0;
 
         double eta_2 = ea_2 * Math.pow(Math.cos(fi), 2);
         double R = cc / Math.sqrt(1 + eta_2);
@@ -308,7 +311,31 @@ public class GisTools {
 
         return new double[]{ Tools.roundDouble(E, 2), Tools.roundDouble(N, 2) };
     }
+    public static Function<BigDecimal[],BigDecimal> procToUTM( String lat, String lon, Integer[] indexes ){
+        int latIndex = lat.startsWith("i")?  NumberUtils.toInt(lat.substring(1), -1) : -1;
+        int lonIndex = lon.startsWith("i")?  NumberUtils.toInt(lon.substring(1), -1) : -1;
 
+        var latVal = lat.startsWith("i")? 0 : NumberUtils.toDouble(lat);
+        var lonVal = lon.startsWith("i")? 0 : NumberUtils.toDouble(lon);
+
+        int eastIndex,northIndex;
+        if(indexes.length==2){
+            eastIndex=indexes[0]==-1?latIndex:indexes[0];
+            northIndex=indexes[1]==-1?lonIndex:indexes[1];
+        }else{
+            eastIndex = latIndex;
+            northIndex = lonIndex;
+        }
+
+        return arr -> {
+            var d = GDC_To_UTM( latIndex==-1?latVal:arr[latIndex].doubleValue(),lonIndex==-1?lonVal:arr[lonIndex].doubleValue());
+            if( latIndex!=-1)
+                arr[eastIndex]=BigDecimal.valueOf(d[0]);
+            if( lonIndex!=-1)
+                arr[northIndex]=BigDecimal.valueOf(d[1]);
+            return BigDecimal.ZERO;
+        };
+    }
     /**
      * Converts UTM coordinates to GDC equivalent
      * 
@@ -342,7 +369,31 @@ public class GisTools {
 
         return new double[]{ Tools.roundDouble(Math.toDegrees(lat), 7), Tools.roundDouble(Math.toDegrees(lon), 7) };
     }
+    public static Function<BigDecimal[],BigDecimal> procToGDC( String east, String northing, Integer[] indexes ){
+        int eastIndex = east.startsWith("i")?  NumberUtils.toInt(east.substring(1), -1) : -1;
+        int northIndex = northing.startsWith("i")?  NumberUtils.toInt(northing.substring(1), -1) : -1;
 
+        var eastVal = east.startsWith("i")? 0 : NumberUtils.toDouble(east);
+        var northVal = northing.startsWith("i")? 0 : NumberUtils.toDouble(northing);
+
+        int latIndex,lonIndex;
+        if(indexes.length==2){
+            latIndex=indexes[0]==-1?eastIndex:indexes[0];
+            lonIndex=indexes[1]==-1?northIndex:indexes[1];
+        }else{
+            latIndex = eastIndex;
+            lonIndex = northIndex;
+        }
+
+        return arr -> {
+            var d = UTM_To_GDC( eastIndex==-1?eastVal:arr[eastIndex].doubleValue(),northIndex==-1?northVal:arr[northIndex].doubleValue());
+            if( latIndex!=-1)
+                arr[latIndex]=BigDecimal.valueOf(d[0]);
+            if( lonIndex!=-1)
+                arr[lonIndex]=BigDecimal.valueOf(d[1]);
+            return BigDecimal.ZERO;
+        };
+    }
     /* ******************************** U N I T  C O N V E R S I O N *********************************************/
     /**
      * Convert the double degrees to degrees , minutes

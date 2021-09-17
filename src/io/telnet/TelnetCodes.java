@@ -47,6 +47,9 @@ public class TelnetCodes {
 	public static final String HIDE_SCREEN = ESCAPE + "[2J";//Hides everything up to the cursor, doesn't reset the cursor
 	public static final String CURSOR_LINESTART = ESCAPE + "[0;0F";
 
+	public static final String PREV_LINE = ESCAPE + "[F"; // works
+	public static final String CLEAR_LINE = ESCAPE + "[2K"; // works
+
 	public static String colorNumbers( String defaultTextColor, String s) {
     	StringBuilder b = new StringBuilder();
     	for( String line : s.split("\r\n")) {

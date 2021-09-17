@@ -23,9 +23,11 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
+import java.util.stream.Collectors;
 
 /**
  * Simplistic telnet server.
@@ -45,23 +47,13 @@ public class TelnetServer implements Commandable {
     static final String XML_PARENT_TAG = "telnet";
     ArrayList<Writable> writables = new ArrayList<>();
     private final SslContext sslCtx=null;
+    private Path settingsPath;
 
-    public TelnetServer( String title, String ignore, BlockingQueue<Datagram> dQueue, int port ) {
-        this.title=title;
-        this.ignore=ignore;
-        this.dQueue=dQueue;
-        this.port=port;
-        workerGroup = new NioEventLoopGroup();
-        run();
-    }
-    public TelnetServer( String title, String ignore, BlockingQueue<Datagram> dQueue ) { 
-        this( title,ignore,dQueue,23);        
-    }
-
-    public TelnetServer( BlockingQueue<Datagram> dQueue, Document xml, EventLoopGroup eventGroup ) { 
+    public TelnetServer( BlockingQueue<Datagram> dQueue, Path settingsPath, EventLoopGroup eventGroup ) {
         this.dQueue=dQueue;
         this.workerGroup = eventGroup;
-        this.readSettingsFromXML(xml);
+        this.settingsPath=settingsPath;
+        this.readSettingsFromXML();
     }
     public String getTitle(){
         return this.title;
@@ -69,7 +61,9 @@ public class TelnetServer implements Commandable {
     public static boolean inXML(Document xml) {
 		return XMLtools.getFirstElementByTag(xml, XML_PARENT_TAG) != null;
 	}
-    public boolean readSettingsFromXML( Document xml ) {
+    public boolean readSettingsFromXML(  ) {
+
+        var xml = XMLtools.readXML(settingsPath);
         Element settings = XMLtools.getFirstElementByTag( xml, XML_PARENT_TAG );
         if( settings != null ){
             port = XMLtools.getIntAttribute(settings, "port", 23 );
@@ -101,10 +95,10 @@ public class TelnetServer implements Commandable {
                         // delimiter
                         pipeline.addLast("decoder", new ByteArrayDecoder())
                                 .addLast("encoder", new ByteArrayEncoder())
-                                .addLast( new ReadTimeoutHandler(600) );// close connection after set time without traffic
+                                .addLast( new ReadTimeoutHandler(1800) );// close connection after set time without traffic
 
                         // and then business logic.
-                        TelnetHandler handler = new TelnetHandler( dQueue,ignore ) ;
+                        TelnetHandler handler = new TelnetHandler( dQueue,ignore,settingsPath ) ;
                         handler.setTitle(title);
                         writables.add(handler.getWritable());
                         pipeline.addLast( handler );
@@ -173,6 +167,13 @@ public class TelnetServer implements Commandable {
 
                     writables.removeIf(w -> !w.writeLine(send+TelnetCodes.TEXT_YELLOW));
                     return "";
+                case "write":
+                    var wrs = writables.stream().filter( w -> w.getID().equalsIgnoreCase(cmds[1])).collect(Collectors.toList());
+                    if( wrs.isEmpty())
+                        return "No such id";
+                    var mes = TelnetCodes.TEXT_MAGENTA+wr.getID()+": "+request[1].substring(7+cmds[1].length())+TelnetCodes.TEXT_YELLOW;
+                    wrs.forEach( w->w.writeLine(mes));
+                    return mes.replace(TelnetCodes.TEXT_MAGENTA,TelnetCodes.TEXT_ORANGE);
                 case "bt":
                     return "Currently has " + writables.size() + " broadcast targets.";
 

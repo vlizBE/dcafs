@@ -369,7 +369,7 @@ public class EditorForward extends AbstractForward{
                 .map(MatchResult::group)
                 .toArray(String[]::new);
 
-        String[] filler = resplit.split("[i][0-9]{1,3}");
+        var filler = resplit.split("[i][0-9]{1,3}");
 
         if(is.length==0) {
             Logger.warn(id+"(ef)-> No original data referenced in the resplit");
@@ -392,7 +392,8 @@ public class EditorForward extends AbstractForward{
         Function<String,String> edit = input ->
         {
             String[] inputEles = input.split(deli); // Get the source data
-            StringJoiner join = new StringJoiner("",filler[0].isEmpty()?"":dataProviding.parseRTline(filler[0],error),"");
+
+            StringJoiner join = new StringJoiner("",filler.length==0?"":dataProviding.parseRTline(filler[0],error),"");
             for( int a=0;a<indexes.length;a++){
                 try {
                     join.add(inputEles[indexes[a]]);

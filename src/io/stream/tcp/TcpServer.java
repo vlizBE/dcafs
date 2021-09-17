@@ -52,7 +52,9 @@ public class TcpServer implements StreamListener, Commandable {
 
 		active = readSettingsFromXML(XMLtools.readXML(xmlPath), false);
 	}
-
+	public boolean isActive(){
+		return active;
+	}
 	public TcpServer(Path xml) {
 		this(xml, new NioEventLoopGroup());
 	}
