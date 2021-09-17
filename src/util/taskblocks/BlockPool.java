@@ -128,10 +128,10 @@ public class BlockPool {
         var data = t.getTextContent();
         var values = data.split(";");
 
-        AbstractBlock outblock=null;
+        AbstractBlock outBlock=null;
         switch(output[0]){
-            case "":case "system":
-                outblock = CmdBlock.prepBlock(cp, t.getTextContent());
+            case "":case "system": case "cmd":
+                outBlock = CmdBlock.prepBlock(cp, t.getTextContent());
                 break;
             case "email":
                 String attachment = XMLtools.getStringAttribute(t,"attachment","");
@@ -148,7 +148,7 @@ public class BlockPool {
                     if( !reply.isEmpty()) {
                         bl.addReply(reply, scheduler);
                     }
-                    outblock=bl;
+                    outBlock=bl;
                 }else{
                     Logger.error("No such Base stream: "+output[1]);
                     return;
@@ -158,7 +158,7 @@ public class BlockPool {
                 if( ts!=null ){
                     var h = ts.getClientWritable(output[1]);
                     if( h.isPresent()){
-                        outblock=WritableBlock.prepBlock( h.get(), t.getTextContent());
+                        outBlock=WritableBlock.prepBlock( h.get(),dp, t.getTextContent());
                     }else{
                         Logger.error("No such client connected: "+output[1]);
                     }
@@ -171,28 +171,28 @@ public class BlockPool {
                 var text = t.getTextContent().split(":");
                 switch( text[0]){
                     case "taskset":
-                        outblock = getStartBlock(text[1],true).get() ;
+                        outBlock = getStartBlock(text[1],true).get() ;
                         break;
                     case "stop":
                         var b = getStartBlock(text[1],false);
                         if( b.isPresent() ){
-                            outblock = ControlBlock.prepBlock(b.get(),"stop");
+                            outBlock = ControlBlock.prepBlock(b.get(),"stop");
                         }else{
                             var mb=new MetaBlock(text[1],"");
                             startBlocks.put(text[1],mb);
-                            outblock = ControlBlock.prepBlock(mb,"stop");
+                            outBlock = ControlBlock.prepBlock(mb,"stop");
                         }
                         break;
                 }
                 break;
         }
-        // If an outblock was created
-        if( outblock!=null) {
+        // If an outBlock was created
+        if( outBlock!=null) {
             // and a check isn't requested
             if (check.isEmpty()) {
-                tree.addTwig(outblock);
+                tree.addTwig(outBlock);
             }else{// and a check needs to be done
-                tree.branchOut(outblock);
+                tree.branchOut(outBlock);
                 tree.addTwig(CheckBlock.prepBlock(dp,check));
                 tree.branchIn();
             }
