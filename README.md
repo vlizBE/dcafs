@@ -6,7 +6,7 @@ A Java tool (or can also be used as a library) that takes care of all the nitty-
 That is in broad terms what it is capable of.
 
 ## Main features
-* Collect data from TCP, UDP, MQTT broker, serial/tty, I2C, SPI, email
+* Collect data from TCP, UDP, MQTT broker, serial/tty, I2C, SPI, email, ascii files
 * Alter with string and math operations, or filter out lines
 * Forward back to source/origin, to any other source, a hosted TCP server or email (ie. create a serial to tcp converter)
 * Store processed data in SQLite (dcafs will create the db), MariaDB, MySQL, InfluxDB, PostgreSQL and MSSQL (dcafs can create/read the table structure) while additionally raw/altered data can be kept in (timestamped) .log files
@@ -15,7 +15,7 @@ That is in broad terms what it is capable of.
 * Update itself via email (linux only for now)
 
 ## Installation
-* Make sure you have _at least_ java11 installed. If not, [download and install java 16](https://adoptopenjdk.net/releases.html?variant=openjdk16&jvmVariant=hotspot)  
+* Make sure you have _at least_ java11 installed. If not, [download and install java 16](https://adoptopenjdk.net/releases.html?variant=openjdk16&jvmVariant=hotspot) ([win](https://github.com/AdoptOpenJDK/openjdk16-binaries/releases/download/jdk-16.0.1%2B9/OpenJDK16U-jre_x64_windows_hotspot_16.0.1_9.msi))
 * Either download the most recent (pre)release [here](https://github.com/vlizBE/dcafs/releases)
   * Unpack to the working folder  
 * Or clone the repo and compile it in an IDE
