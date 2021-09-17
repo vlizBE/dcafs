@@ -53,6 +53,11 @@ public class BlockPool {
     public void readFromXML( Path script){
 
         var fab=XMLfab.withRoot(script,"tasklist");
+
+        // Go through the rtvals
+        if ( XMLfab.hasRoot(script,"tasklist","rtvals") )
+            dp.readFromXML( XMLfab.withRoot(script,"tasklist","rtvals") );
+
         // Go through the sets
         fab.selectChildAsParent("tasksets");
 
