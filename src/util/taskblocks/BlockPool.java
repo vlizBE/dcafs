@@ -143,7 +143,7 @@ public class BlockPool {
             case "stream":
                 var bsOpt = ss.getStream(output[1]);
                 if( bsOpt.isPresent() && bsOpt.get() instanceof Writable ) {
-                    var bl = WritableBlock.prepBlock( bsOpt.get(), t.getTextContent());
+                    var bl = WritableBlock.prepBlock( bsOpt.get(),dp, t.getTextContent());
                     var reply = XMLtools.getStringAttribute(t,"reply","");
                     if( !reply.isEmpty()) {
                         bl.addReply(reply, scheduler);
