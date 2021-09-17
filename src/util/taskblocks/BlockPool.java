@@ -84,6 +84,7 @@ public class BlockPool {
                 readTask(t,tree);
             }
         }
+        fab.up();
         fab.selectChildAsParent("tasks");
 
         for( var t : fab.getChildren("task")){
