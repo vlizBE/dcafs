@@ -209,7 +209,7 @@ public class CommandPool {
 
 			case "lt": result=doListThread(split); break;
 			case "nothing": result=doNOTHING(split,wr); break;
-			case "raw": result=doRAW(split, wr); break;
+			case "raw": case "stream": result=doRAW(split, wr); break;
 			case "read": result=doREAD(split, wr ); break;
 			case "retrieve": result=doRETRIEVE(split, wr,html); break;
 			case "reqtasks": result=doREQTASKS(split); break;
