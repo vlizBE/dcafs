@@ -55,26 +55,27 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	private final BlockingQueue<Datagram> dQueue; // Used to issue triggered cmd's
 	private ArrayList<String> errorLog = new ArrayList<>();
 
+	boolean readingXML=false;
+
 	public RealtimeValues( Path settingsPath,BlockingQueue<Datagram> dQueue ){
 		this.settingsPath=settingsPath;
 		this.dQueue=dQueue;
 
-		readFromXML();
+		readFromXML( XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals") );
 
 		issuePool = new IssuePool(dQueue, settingsPath,this);
-
 	}
 
 	/* ************************************ X M L ****************************************************************** */
 	/**
 	 * Read the rtvals node in the settings.xml
 	 */
-	public void readFromXML(){
-		var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
+	public void readFromXML( XMLfab fab ){
+
 		double defDouble = XMLtools.getDoubleAttribute(fab.getCurrentElement(),"doubledefault",Double.NaN);
 		String defText = XMLtools.getStringAttribute(fab.getCurrentElement(),"textdefault","");
 		boolean defFlag = XMLtools.getBooleanAttribute(fab.getCurrentElement(),"flagdefault",false);
-
+		readingXML=true;
 		fab.getChildren("*").forEach( // The tag * is special and acts as wildcard
 				rtval -> {
 					String id = XMLtools.getStringAttribute(rtval,"id",""); // get the id of the node
@@ -96,6 +97,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					}
 				}
 		);
+		readingXML=false;
 	}
 
 	/**
@@ -490,30 +492,31 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		if( val==null){
 			val = DoubleVal.newVal(id);
 			doubleVals.put(id,val);
+			if( !readingXML ){
+				var fab = XMLfab.withRoot(settingsPath, "dcafs","settings","rtvals");
 
-			var fab = XMLfab.withRoot(settingsPath, "dcafs","settings","rtvals");
-
-			if( fab.hasChild("double","id",id).isEmpty()){
-				if( val.group().isEmpty()) {
-					if( fab.hasChild("double","id",id).isEmpty()) {
-						Logger.info("doubleval new, adding to xml :"+id);
-						fab.addChild("double").attr("id", id).attr("unit", val.unit()).build();
-					}
-				}else{
-					if( fab.hasChild("group","id",val.group()).isEmpty() ){
-						fab.addChild("group").attr("id",val.group()).down();
-						if( fab.hasChild("double","id",val.name()).isEmpty() )
-							fab.addChild("double").attr("name", val.name()).attr("unit", val.unit()).build();
+				if( fab.hasChild("double","id",id).isEmpty()){
+					if( val.group().isEmpty()) {
+						if( fab.hasChild("double","id",id).isEmpty()) {
+							Logger.info("doubleval new, adding to xml :"+id);
+							fab.addChild("double").attr("id", id).attr("unit", val.unit()).build();
+						}
 					}else{
-						String name = val.name();
-						String unit = val.unit();
-						fab.selectChildAsParent("group","id",val.group())
-								.ifPresent( f->{
-									if( f.hasChild("double","name",name).isEmpty()) {
-										Logger.info("doubleval new, adding to xml :"+id);
-										fab.addChild("double").attr("name", name).attr("unit", unit).build();
-									}
-								});
+						if( fab.hasChild("group","id",val.group()).isEmpty() ){
+							fab.addChild("group").attr("id",val.group()).down();
+							if( fab.hasChild("double","id",val.name()).isEmpty() )
+								fab.addChild("double").attr("name", val.name()).attr("unit", val.unit()).build();
+						}else{
+							String name = val.name();
+							String unit = val.unit();
+							fab.selectChildAsParent("group","id",val.group())
+									.ifPresent( f->{
+										if( f.hasChild("double","name",name).isEmpty()) {
+											Logger.info("doubleval new, adding to xml :"+id);
+											fab.addChild("double").attr("name", name).attr("unit", unit).build();
+										}
+									});
+						}
 					}
 				}
 			}
@@ -682,20 +685,22 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			val = FlagVal.newVal(id);
 			flagVals.put(id,val);
 
-			var fab = XMLfab.withRoot(settingsPath, "dcafs", "settings", "rtvals");
+			if( !readingXML ) { // Only add to xml if not reading from xml
+				var fab = XMLfab.withRoot(settingsPath, "dcafs", "settings", "rtvals");
 
-			if( fab.hasChild("flag","id",id).isPresent() )
-				return val;
+				if (fab.hasChild("flag", "id", id).isPresent())
+					return val;
 
-			if( val.group().isEmpty()) {
-				fab.alterChild("flag", "id", id).build();
-			}else{
-				if( fab.hasChild("group","id",val.group()).isEmpty() ) {
-					fab.addChild("group").attr("id", val.group()).down();
-				}else{
-					fab.selectChildAsParent("group","id",val.group());
+				if (val.group().isEmpty()) {
+					fab.alterChild("flag", "id", id).build();
+				} else {
+					if (fab.hasChild("group", "id", val.group()).isEmpty()) {
+						fab.addChild("group").attr("id", val.group()).down();
+					} else {
+						fab.selectChildAsParent("group", "id", val.group());
+					}
+					fab.alterChild("flag").attr("name", val.name()).build();
 				}
-				fab.alterChild("flag").attr("name",val.name()).build();
 			}
 		}
 		return val;
@@ -1169,7 +1174,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					return join.toString();
 				case "store": return  storeValsInXml(false)?"Written in xml":"Failed to write to xml";
 				case "reload":
-					readFromXML();
+					readFromXML( XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals") );
 					return "Reloaded rtvals";
 				default:
 					if( addRequest(wr,request) ){
