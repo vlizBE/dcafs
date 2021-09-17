@@ -140,6 +140,8 @@ public class TriggerBlock extends AbstractBlock{
             case RETRY: // Got an ok within the amount of retries
                 Logger.info("Retry successful");
                 break;
+            case INTERVAL:
+                return;
         }
         future.cancel(true);
         super.nextOk();
@@ -175,8 +177,11 @@ public class TriggerBlock extends AbstractBlock{
 
     @Override
     public void doNext(){
-        next.forEach( n -> scheduler.submit(()->n.start(this)));
-
+        try {
+            next.forEach(n -> scheduler.submit(() -> n.start(this)));
+        }catch(Exception e){
+            Logger.error(e);
+        }
         if( time!=null )
             start(this);
     }
