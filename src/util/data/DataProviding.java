@@ -3,6 +3,7 @@ package util.data;
 import das.IssuePool;
 import util.gis.Waypoint;
 import util.gis.Waypoints;
+import util.xml.XMLfab;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -10,6 +11,7 @@ import java.util.Optional;
 public interface DataProviding {
     /* Global */
     boolean storeValsInXml( boolean clearFirst );
+    void readFromXML(XMLfab fab);
     /* Parsing */
     String simpleParseRT( String line, String error );
     String parseRTline( String line, String error );
