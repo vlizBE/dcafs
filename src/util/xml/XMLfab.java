@@ -210,6 +210,7 @@ public class XMLfab {
      * @return True if found
      */
     private boolean hasRoots( String... roots ){
+        root = XMLtools.getFirstElementByTag(xmlDoc, roots[0]);
         for( int a=1; a<roots.length;a++){
             Element ele = XMLtools.getFirstChildByTag(root, roots[a]);
 
