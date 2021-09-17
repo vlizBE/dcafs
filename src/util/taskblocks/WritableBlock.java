@@ -5,7 +5,9 @@ import io.collector.CollectorFuture;
 import io.collector.ConfirmCollector;
 import io.stream.BaseStream;
 import org.tinylog.Logger;
+import util.data.DataProviding;
 
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -16,22 +18,24 @@ public class WritableBlock extends AbstractBlock implements CollectorFuture {
     String data;
     ConfirmCollector cc;
     BaseStream target;
+    DataProviding dp;
+    boolean hasRT=false;
+    String delimiter="";
 
-    public WritableBlock(Writable wr, String set){
+    public WritableBlock(Writable wr, DataProviding dp, String set){
         this.wr=wr;
-        this.data=set;
-        ori = wr.getID()+"->"+set;
+        this.ori=set;
+        this.dp=dp;
+      //  ori = wr.getID()+"->"+set;
     }
-    public WritableBlock(BaseStream target, String set){
-        this.target=target;
-        wr = (Writable) target;
-        this.data=set;
+    public WritableBlock(BaseStream target,DataProviding dp, String set){
+        this( (Writable) target,dp,set);
     }
-    public static WritableBlock prepBlock(Writable wr, String data){
-        return new WritableBlock(wr,data);
+    public static WritableBlock prepBlock( Writable wr,DataProviding dp, String data ){
+        return new WritableBlock(wr,dp,data);
     }
-    public static WritableBlock prepBlock( BaseStream target, String data){
-        return new WritableBlock(target,data);
+    public static WritableBlock prepBlock( BaseStream target, DataProviding dp, String data ){
+        return new WritableBlock(target,dp,data);
     }
     public Optional<Writable> addReply(String reply, ScheduledExecutorService scheduler){
         if( !reply.isEmpty() && target!=null ){
@@ -42,35 +46,61 @@ public class WritableBlock extends AbstractBlock implements CollectorFuture {
         }
         return Optional.empty();
     }
+    public void addDelimiter( String deli ){
+        delimiter=deli;
+    }
     @Override
     public boolean build() {
+        if( dp != null ) {
+            if (sharedMem == null) // If it didn't receive a shared Mem
+                sharedMem = new ArrayList<>(); // make it
+            data = dp.buildNumericalMem(ori, sharedMem, 0);
+            if( sharedMem.isEmpty()) { // Remove the reference if it remained empty
+                sharedMem = null;
+            }else{
+                hasRT=true;
+            }
+        }else{
+            Logger.warn("No dp, skipping numerical mem");
+        }
         return true;
     }
-
+    public boolean addData(String data){
+        return wr.writeLine(data);
+    }
     @Override
     public boolean start(TaskBlock starter) {
-        if( !data.isEmpty()){
-            if( cc!=null){
-                for( var p : data.split(";"))
-                    cc.addConfirm(p,reply);
-                target.addTarget(cc);
-            }else {
-                if( wr.writeLine(data) ) {
-                    doNext();
-                }else{
-                    if( parentBlock.get() instanceof TriggerBlock ) // needs to know because of while/waitfor
-                        parentBlock.get().nextFailed(this);
-                    return false;
-                }
+        try {
+            String send=data;
+            if( hasRT ){
+                for( int a=sharedMem.size()-1;a>=0;a--)
+                    send = send.replace("i"+a,""+sharedMem.get(a).value());
+                send = dp.parseRTline(send,"???");
             }
-            if( parentBlock.get() instanceof TriggerBlock ) // needs to know because of while/waitfor
-                parentBlock.get().nextOk();
-            return true;
+            if (!send.isEmpty()) {
+                if (cc != null) {
+                    if( !delimiter.isEmpty()){
+                        for (var p : send.split(delimiter))
+                            cc.addConfirm(p, reply);
+                    }else{
+                        cc.addConfirm(send,reply);
+                    }
+                    target.addTarget(cc);
+                } else {
+                    if (wr.writeLine(send)) {
+                        doNext();
+                    } else {
+                        parentBlock.filter(pb -> pb instanceof TriggerBlock).ifPresent(pb -> pb.nextFailed(this));
+                        return false;
+                    }
+                }
+                parentBlock.filter(pb -> pb instanceof TriggerBlock).ifPresent(TaskBlock::nextOk);// needs to know because of while/waitfor
+                return true;
+            }
+            parentBlock.filter(pb -> pb instanceof TriggerBlock).ifPresent(pb -> pb.nextFailed(this));
+        }catch (Exception e){
+            Logger.error(e);
         }
-
-        if( parentBlock.get() instanceof TriggerBlock ) // needs to know because of while/waitfor
-            parentBlock.get().nextFailed(this);
-
         return false;
     }
     @Override
