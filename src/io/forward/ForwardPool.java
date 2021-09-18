@@ -59,14 +59,7 @@ public class ForwardPool implements Commandable {
             readEditorsFromXML(XMLtools.getChildElements(editorsEle, "editor"));
 
         /* Figure out the paths? */
-        XMLfab.getRootChildren(settingsPath,"dcafs","paths","path").forEach(
-                pathEle -> {
-                    PathForward path = new PathForward(dataProviding,dQueue,nettyGroup);
-                    path.setWorkPath(settingsPath.getParent());
-                    path.readFromXML(pathEle);
-                    paths.put(path.getID(),path);
-                }
-        );
+        readPathsFromXML();
     }
 
     @Override
@@ -847,8 +840,10 @@ public class ForwardPool implements Commandable {
                 .add(" paths:debug,id,stepnr -> Request the data from a single step in the path (0=first; -1=custom src)");
                 return help.toString();
             case "reload":
-                if( cmds.length==1)
-                    return "No id specified";
+                if( cmds.length==1) {
+                    readPathsFromXML();
+                    return "All paths reloaded.";
+                }
                 var ele = XMLfab.withRoot(settingsPath,"dcafs","paths")
                         .getChild("path","id",cmds[1]);
                 if(ele.isEmpty())
@@ -988,5 +983,15 @@ public class ForwardPool implements Commandable {
             default:
                 return "unknown command: paths:"+cmd;
         }
+    }
+    public void readPathsFromXML(){
+        XMLfab.getRootChildren(settingsPath,"dcafs","paths","path").forEach(
+                pathEle -> {
+                    PathForward path = new PathForward(dataProviding,dQueue,nettyGroup);
+                    path.setWorkPath(settingsPath.getParent());
+                    path.readFromXML(pathEle);
+                    paths.put(path.getID(),path);
+                }
+        );
     }
 }
