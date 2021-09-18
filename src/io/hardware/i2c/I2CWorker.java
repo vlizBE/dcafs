@@ -558,6 +558,7 @@ public class I2CWorker implements Runnable, Commandable {
                             .add("i2c:reload -> Reload the command file(s)")
                             .add("i2c:forward,device -> Show the data received from the given device")
                             .add("i2c:adddevice,id,bus,address,script -> Add a device on bus at hex addres that uses script")
+                            .add("i2c:addblank,scriptname -> Adds a blank i2c script to the default folder")
                             .add("i2c:<device>,<command> -> Send the given command to the given device");
                     return join.toString();
                 case "list": return getDeviceList(false);
@@ -573,9 +574,31 @@ public class I2CWorker implements Runnable, Commandable {
                     }else{
                         return "Incorrect number of variables: i2c:debug,on/off";
                     }
+                case "addblank":
+                    if( cmd.length != 2)
+                        return "Incorrect number of variables: i2c:addblank,scriptname";
+                    if( !Files.isDirectory(scriptsPath)) {
+                        try {
+                            Files.createDirectories(scriptsPath);
+                        }catch( IOException e){
+                            Logger.error(e);
+                        }
+                    }
+                    XMLfab.withRoot(scriptsPath.resolve(cmd[1]+".xml"),"commandset").attr("script",cmd[1])
+                            .addParentToRoot("command","An empty command to start with")
+                            .attr("id","cmdname").attr("info","what this does")
+                            .build();
+                    return "Blank added";
                 case "adddevice":
                     if( cmd.length != 5)
                         return "Incorrect number of variables: i2c:adddevice,id,bus,address,script";
+                    if( !Files.isDirectory(scriptsPath)) {
+                        try {
+                            Files.createDirectories(scriptsPath);
+                        }catch( IOException e){
+                            Logger.error(e);
+                        }
+                    }
                     if( I2CWorker.addDeviceToXML(XMLfab.withRoot(scriptsPath.getParent().resolve("settings.xml"),"dcafs","settings"),
                             cmd[1], //id
                             Integer.parseInt(cmd[2]), //bus
