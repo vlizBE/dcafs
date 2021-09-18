@@ -26,6 +26,7 @@ import util.data.RealtimeValues;
 import util.database.*;
 import util.task.TaskManager;
 import util.task.TaskManagerPool;
+import util.taskblocks.BlockPool;
 import util.tools.TinyWrapErr;
 import util.tools.TimeTools;
 import util.tools.Tools;
@@ -53,6 +54,7 @@ public class DAS implements DeadThreadListener {
     private Document settingsDoc;
 
     private final LocalDateTime bootupTimestamp = LocalDateTime.now(); // Store timestamp at boot up to calculate uptime
+    private HashMap<String,BlockPool> blockPools = new HashMap<>();
 
     /* Workers */
     private EmailWorker emailWorker;
@@ -193,7 +195,8 @@ public class DAS implements DeadThreadListener {
             addTelnetServer();
 
             /* TaskManagerPool */
-            addTaskManager();
+            //addTaskManager();
+
 
             /* Forwards */
             ForwardPool forwardPool = new ForwardPool(dQueue, settingsPath, rtvals, nettyGroup);
@@ -221,6 +224,7 @@ public class DAS implements DeadThreadListener {
                     }
             );
         }
+        addBlockPools();
         commandPool.setDAS(this);
         this.attachShutDownHook();
     }
@@ -332,7 +336,27 @@ public class DAS implements DeadThreadListener {
     public Optional<TaskManager> getTaskManager( String id){
         return taskManagerPool.getTaskList(id);
     }
+    public void addBlockPools(){
+        XMLfab.getRootChildren(settingsPath,"dcafs","settings","taskmanager").forEach(
+                e -> {
+                        Logger.info("Found reference to TaskManager in xml.");
+                        var p = Path.of(e.getTextContent());
+                        if( !p.isAbsolute())
+                            p = Path.of(workPath).resolve(p);
 
+                        if (Files.exists(p)) {
+                            var blockPool = new BlockPool(commandPool,rtvals,streampool);
+                            if( emailWorker!=null )
+                                blockPool.addEmailSending(emailWorker.getSender());
+                            if( trans != null )
+                                blockPool.setTransServer(trans);
+                            blockPool.readFromXML(p);
+                            blockPools.put(e.getAttribute("id"),blockPool);
+                        } else {
+                            Logger.error("No such task xml: " + p);
+                        }
+                });
+    }
     /* ******************************************  S T R E A M P O O L ***********************************************/
     /**
      * Adds the streampool
@@ -550,7 +574,8 @@ public class DAS implements DeadThreadListener {
                 telnet.replyToCommand(new String[]{"telnet","broadcast,error,Dcafs shutting down!"},null,false);
 
                 // Run shutdown tasks
-                taskManagerPool.startTaskset("shutdown");
+                if( taskManagerPool!=null)
+                    taskManagerPool.startTaskset("shutdown");
 
                 // SQLite & SQLDB
                 Logger.info("Flushing database buffers");
@@ -637,8 +662,10 @@ public class DAS implements DeadThreadListener {
         }
 
         // TaskManager
-        taskManagerPool.reloadAll();
+        if( taskManagerPool!=null)
+            taskManagerPool.reloadAll();
 
+        blockPools.values().forEach( bp->bp.runStartBlock("init") );
 
         Logger.debug("Finished");
     }
