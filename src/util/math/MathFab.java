@@ -36,7 +36,9 @@ public class MathFab {
     public void setDebug( boolean debug ){
         this.debug=debug;
     }
-
+    public String getOri(){
+        return ori;
+    }
     /**
      * Check if this mathfab is valid or failed the formula parsing
      * @return True if valid
@@ -182,7 +184,7 @@ public class MathFab {
      * @param val The values to use
      * @return The result
      */
-    public double solveFor( double... val){
+    public double solveFor(Double[] val){
         var bds = new BigDecimal[val.length];
         for(int a=0;a<val.length;a++)
             bds[a]=BigDecimal.valueOf(val[a]);
@@ -246,17 +248,17 @@ public class MathFab {
         }
     }
     public static void test(){
-        double d1 = MathFab.newFormula("(15*i0)/65+3*i1").solveFor(10.0,3.5);
+        double d1 = MathFab.newFormula("(15*i0)/65+3*i1").solveFor(new Double[]{10.0,3.5});
         if( d1 != 12.80769231 ) {
             Logger.error("Not received expected result from first formula, got "+d1+" instead of 12.80769231")   ;
             return;
         }
-        d1 = MathFab.newFormula("(15+i0)^2-16*i1+16+25+36+58+i2/5").solveFor(5,65,86);
+        d1 = MathFab.newFormula("(15+i0)^2-16*i1+16+25+36+58+i2/5").solveFor(new Double[]{5.0,65.0,86.0});
         if( d1 != -487.8 ) {
             Logger.error("Not received expected result from second formula, got " + d1+" instead of -487.8");
             return;
         }
-        d1 = MathFab.newFormula("i0*-5").solveFor(5,65,86);
+        d1 = MathFab.newFormula("i0*-5").solveFor(new Double[]{5.0,65.0,86.0});
         if( d1 != -25 ) {
             Logger.error("Not received expected result from third formula, got " + d1+" instead of -25");
             return;
