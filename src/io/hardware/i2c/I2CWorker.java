@@ -242,7 +242,6 @@ public class I2CWorker implements Runnable, Commandable {
                         
                         String reg = XMLtools.getStringAttribute( ele , "reg", "" );
 
-
                         boolean ok=false;
                         switch( ele.getNodeName() ){
                             case "read":
@@ -277,10 +276,15 @@ public class I2CWorker implements Runnable, Commandable {
                                         ok=false;
                                     }
                                 }
-                                
                             break;
+                            case "math":
+                                if( !ele.getTextContent().isEmpty() ){
+                                    cmd.addMath(ele.getTextContent());
+                                    ok=true;
+                                }
+                                break;
                             default:
-                                Logger.error("Unkown command: "+ele.getNodeName());
+                                Logger.error("Unknown command: "+ele.getNodeName());
                                 break;
                         }
                         if(!ok ){
@@ -324,7 +328,7 @@ public class I2CWorker implements Runnable, Commandable {
                 altRes.forEach( x -> output.add(""+x));
 
                 if( !device.getLabel().equalsIgnoreCase("void") ){
-                    dQueue.add( Datagram.build(output.toString()).label(label).origin(job.getLeft()) );
+                    dQueue.add( Datagram.build(output.toString()).label(label).origin(job.getLeft()).payload(altRes) );
                 }
                  try {
                      device.getTargets().forEach(wr -> wr.writeLine(output.toString()));
@@ -426,9 +430,9 @@ public class I2CWorker implements Runnable, Commandable {
      * @param com The command to send
      * @return The bytes received as reply to the command
      */
-    private synchronized List<Integer> doCommand(ExtI2CDevice device, I2CCommand com  ){
+    private synchronized List<Double> doCommand(ExtI2CDevice device, I2CCommand com  ){
 
-        var result = new ArrayList<Integer>();
+        var result = new ArrayList<Double>();
 
         if( com != null ){
                 for( I2CCommand.CommandStep cmd : com.getAll() ){ // Run te steps, one by one (in order)
@@ -456,7 +460,8 @@ public class I2CWorker implements Runnable, Commandable {
                             if( debug ){
                                 Logger.info( "Read: "+Tools.fromBytesToHexString(b));
                             }
-                            result.addAll( convertBytesToInt(b,cmd.bits,cmd.isMsbFirst(),cmd.isSigned()));
+                            convertBytesToInt(b,cmd.bits,cmd.isMsbFirst(),cmd.isSigned()).forEach(
+                                    x -> result.add(Tools.roundDouble((double)x,0)) );
                             break;
                         case WRITE: device.writeBytes( toWrite ) ; break;
                         case ALTER_OR: // Read the register, alter it and write it again
@@ -483,20 +488,25 @@ public class I2CWorker implements Runnable, Commandable {
                             break;
                         case WAIT_ACK: // Wait for an ack to be received up to x attempts
                             boolean ok=false;
-                            int tries;
+                            double tries;
                             int max = Tools.toUnsigned(toWrite[0]);
                             Logger.info("Max attempts for ACK: "+max);
-                            for( tries=1;tries<max&&!ok;tries++)
+                            for( tries=1;tries<max&&!ok;tries+=1)
                                 ok=device.probe(I2CDevice.ProbeMode.AUTO);
 
                             if(ok){
                                 Logger.info("Wait ack ok after "+tries+" attempts of "+max);
                                 result.add(tries);
                             }else{
-                                result.add(0);
+                                result.add(0.0);
                                 Logger.info("Wait ack failed after "+tries+" attempts of "+max);
                                 return result;
                             }
+                            break;
+                        case MATH:
+                            var ar = result.toArray( new Double[0] );
+                            Logger.info("Result before:"+result.get(cmd.index));
+                            result.set(cmd.index,cmd.fab.solveFor(ar));
                             break;
                         default:
                             Logger.error("Somehow managed to use an none existing type...");
@@ -556,6 +566,7 @@ public class I2CWorker implements Runnable, Commandable {
                             .add("i2c:list -> List all registered devices and their commands")
                             .add("i2c:cmds -> List all registered devices and their commands including comms")
                             .add("i2c:reload -> Reload the command file(s)")
+                            .add("i2c:debug,on/off -> Enable or disable extra debug feedback in logs")
                             .add("i2c:forward,device -> Show the data received from the given device")
                             .add("i2c:adddevice,id,bus,address,script -> Add a device on bus at hex addres that uses script")
                             .add("i2c:addblank,scriptname -> Adds a blank i2c script to the default folder")

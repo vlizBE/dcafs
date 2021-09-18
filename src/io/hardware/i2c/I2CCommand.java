@@ -1,5 +1,9 @@
 package io.hardware.i2c;
 
+import org.apache.commons.lang3.math.NumberUtils;
+import org.tinylog.Logger;
+import util.math.MathFab;
+import util.math.MathUtils;
 import util.tools.Tools;
 
 import java.util.ArrayList;
@@ -11,7 +15,7 @@ import java.util.StringJoiner;
  */
 public class I2CCommand{
     
-    enum CMD_TYPE {READ,WRITE,ALTER_OR,ALTER_AND,ALTER_XOR,ALTER_NOT, WAIT_ACK}
+    enum CMD_TYPE {READ,WRITE,ALTER_OR,ALTER_AND,ALTER_XOR,ALTER_NOT, WAIT_ACK,MATH}
 
     private final ArrayList<CommandStep> steps = new ArrayList<>(); // The various steps in the command
 
@@ -125,6 +129,18 @@ public class I2CCommand{
         steps.add(new CommandStep(data, 0, cmdType));
         return this;
     }
+    public I2CCommand addMath( String op ){
+        var ops = op.split("=");
+        var fab = MathFab.newFormula(ops[1]);
+        if( fab.isValid() ){
+            steps.add( new CommandStep( NumberUtils.toInt(ops[0].substring(1)), fab));
+            Logger.info("Parsed "+op+" in a fab");
+        }else{
+            Logger.error("Failed to parse "+op+" to a mathfab");
+        }
+
+        return this;
+    }
     public I2CCommand setReadBits( int bits ){
         this.bits=bits;
         return this;
@@ -177,6 +193,7 @@ public class I2CCommand{
                 case READ:     b.add("Read "+(cmd.readCount==1?"a single byte":cmd.readCount+" bytes")+" from reg "+Tools.fromBytesToHexString(cmd.write) ); break;
                 case WRITE:    b.add("Write "+Tools.fromBytesToHexString(cmd.write,1, cmd.write.length)+" to reg 0x"+Integer.toHexString(cmd.write[0]) ); break;
                 case WAIT_ACK: b.add("Do "+cmd.write[0]+" attempts at addressing the device."); break;
+                case MATH:     b.add("Solve "+cmd.fab.getOri()); break;
      //           case PING:      break;
                 default:
                     break;
@@ -191,11 +208,18 @@ public class I2CCommand{
         int bits=8;
         boolean signed = false;
         boolean msbFirst = true;
+        MathFab fab;
+        int index=-1;
 
         public CommandStep( byte[] write, int readCount, CMD_TYPE type){
             this.type=type;
             this.write=write;
             this.readCount=readCount;
+        }
+        public CommandStep(int index,MathFab fab){
+            this.fab=fab;
+            type=CMD_TYPE.MATH;
+            this.index=index;
         }
         public void setBits( int bits ){this.bits=bits;}
         public void setSigned(boolean signed){ this.signed=signed;}
