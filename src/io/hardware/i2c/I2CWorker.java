@@ -203,7 +203,7 @@ public class I2CWorker implements Runnable, Commandable {
         return reloadCommands();
     }
     public static boolean addDeviceToXML(XMLfab fab, String id, int bus, String address,String script){
-        return fab.digRoot("i2c").selectOrAddChildAsParent("bus","controller","0")
+        return fab.digRoot("i2c").selectOrAddChildAsParent("bus","controller",""+bus)
                 .selectOrAddChildAsParent("device","id",id).attr("address",address).attr("script",script)
                 .build() != null;
     }
