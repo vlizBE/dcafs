@@ -98,7 +98,8 @@ public class PathForward {
 
         FilterForward lastff=null;
         boolean hasLabel=false;
-
+        int gens=1;
+        int vals=1;
         for( int a=0;a<steps.size();a++  ){
             Element step = steps.get(a);
 
@@ -113,12 +114,20 @@ public class PathForward {
             if( a<steps.size()-1 ){
                 var next = steps.get(a+1);
                 if(next.getTagName().equalsIgnoreCase("generic")){
-                    if( !step.hasAttribute("label"))
-                        step.setAttribute("label","generic:"+next.getAttribute("id"));
+                    if( !step.hasAttribute("label")) {
+                        var genid = next.getAttribute("id");
+                        genid = genid.isEmpty()?id+"_gen"+gens:genid;
+                        gens++;
+                        step.setAttribute("label", "generic:" + genid);
+                    }
                 }
                 if(next.getTagName().equalsIgnoreCase("valmap")){
-                    if( !step.hasAttribute("label"))
-                        step.setAttribute("label","valmap:"+next.getAttribute("id"));
+                    if( !step.hasAttribute("label")){
+                        var valid = next.getAttribute("id");
+                        valid = valid.isEmpty()?id+"_vm"+vals:valid;
+                        vals++;
+                        step.setAttribute("label","valmap:"+valid);
+                    }
                 }
             }
             if( step.hasAttribute("label"))
