@@ -38,6 +38,9 @@ public class ExtI2CDevice extends I2CDevice {
 		this.script=script;
 		Logger.info("Connecting to controller:"+controller +" and address:"+address+" with label: "+label);
 	}
+	public String getID(){
+		return id;
+	}
 	public boolean probeIt() throws RuntimeIOException{
 		failedProbe = !this.probe();
 		if( failedProbe )

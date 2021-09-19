@@ -486,7 +486,7 @@ public class DAS implements DeadThreadListener {
 
     /* ***************************************  T E L N E T S E R V E R ******************************************/
     /**
-     * Create the telnetserver
+     * Create the telnet server
      */
     public void addTelnetServer() {
         telnet = new TelnetServer(this.getDataQueue(), settingsPath, nettyGroup);
@@ -507,7 +507,7 @@ public class DAS implements DeadThreadListener {
             return;
         }
 
-        i2cWorker = new I2CWorker(settingsDoc, dQueue, workPath);
+        i2cWorker = new I2CWorker(settingsPath, dQueue);
         addCommandable("i2c",i2cWorker);
     }
     /* *************************************** F I L E C O L L E C T O R ************************************ */
@@ -630,10 +630,6 @@ public class DAS implements DeadThreadListener {
         }
         if (telnet != null) {
             telnet.run(); // Start the server
-        }
-        if (i2cWorker != null) {
-            Logger.info("Starting I2CWorker...");
-            new Thread(i2cWorker, "i2cWorker").start();// Start the thread
         }
 
         // TaskManager
