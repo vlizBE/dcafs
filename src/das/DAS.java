@@ -705,6 +705,11 @@ public class DAS implements DeadThreadListener {
             }
         }
         if( i2cWorker !=null ){
+            if (html) {
+                b.append("<br><b>Devices</b><br>");
+            } else {
+                b.append(TEXT_YELLOW).append(TEXT_CYAN).append("\r\n").append("Devices").append("\r\n").append(UNDERLINE_OFF).append(TEXT_YELLOW);
+            }
             for( String s : i2cWorker.getStatus("\r\n").split("\r\n") ){
                 if (s.startsWith("!!")) {
                     b.append(TEXT_RED).append(s).append(TEXT_YELLOW).append(UNDERLINE_OFF);
