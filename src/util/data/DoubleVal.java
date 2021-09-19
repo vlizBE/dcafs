@@ -99,7 +99,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * @param val The new value
      * @return This object after updating the value etc
      */
-    public DoubleVal value( double val){
+    public DoubleVal value( double val ){
 
         /* Keep history of passed values */
         if( keepHistory!=0 ) {
@@ -125,6 +125,9 @@ public class DoubleVal extends AbstractVal implements NumericVal{
             value = Tools.roundDouble(val, digits);
         }else{
             value=val;
+        }
+        if( targets!=null ){
+            targets.forEach( wr -> wr.writeLine(id()+":"+val));
         }
         return this;
     }

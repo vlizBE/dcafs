@@ -42,7 +42,6 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	private final IssuePool issuePool;
 
 	/* Data update requests */
-	private final HashMap<String, List<Writable>> doubleRequest = new HashMap<>();
 	private final HashMap<String, List<Writable>> textRequest = new HashMap<>();
 
 	/* General settings */
@@ -586,11 +585,6 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			return false;
 		}
 		d.updateValue(value);
-		if( !doubleRequest.isEmpty()){
-			var res = doubleRequest.get(id);
-			if( res != null)
-				res.forEach( wr -> wr.writeLine(id + " : " + value));
-		}
 		return true;
 	}
 	public boolean setDouble(String id, double value){
@@ -656,8 +650,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 
 		boolean created = texts.put(parameter, value)==null;
 
-		if( !doubleRequest.isEmpty()){
-			var res = doubleRequest.get(param);
+		if( !textRequest.isEmpty()){
+			var res = textRequest.get(param);
 			if( res != null)
 				res.forEach( wr -> wr.writeLine(param + " : " + value));
 		}
@@ -806,40 +800,34 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 
 	/* ******************************************************************************************************/
 
-	public boolean addRequest(Writable writable, String[] req) {
+	public int addRequest(Writable writable, String type, String req) {
 
-		switch (req[0]) {
+		switch (type) {
 			case "rtval": case "double":
-				var r = doubleRequest.get(req[1]);
-				if( r == null) {
-					doubleRequest.put(req[1], new ArrayList<>());
-					Logger.info("Created new request for: " + req[1]);
-				}else{
-					Logger.info("Appended existing request to: " + r + "," + req[1]);
-				}
-				if( !doubleRequest.get(req[1]).contains(writable)) {
-					doubleRequest.get(req[1]).add(writable);
-					return true;
-				}
-				break;
+				var list = doubleVals.entrySet().stream()
+							.filter(e -> e.getKey().matches(req)) // matches the req
+							.map( e->e.getValue()) // Only care about the values
+							.collect(Collectors.toList());
+				list.forEach( dv -> dv.addTarget(writable));
+				return list.size();
 			case "text":
-				var t = textRequest.get(req[1]);
+				var t = textRequest.get(req);
 				if( t == null) {
-					textRequest.put(req[1], new ArrayList<>());
-					Logger.info("Created new request for: " + req[1]);
+					textRequest.put(req, new ArrayList<>());
+					Logger.info("Created new request for: " + req);
 				}else{
-					Logger.info("Appended existing request to: " + t + "," + req[1]);
+					Logger.info("Appended existing request to: " + t + "," + req);
 				}
-				if( !textRequest.get(req[1]).contains(writable)) {
-					textRequest.get(req[1]).add(writable);
-					return true;
+				if( !textRequest.get(req).contains(writable)) {
+					textRequest.get(req).add(writable);
+					return 1;
 				}
 				break;
 			default:
-				Logger.warn("Requested unknown type: "+req[0]);
+				Logger.warn("Requested unknown type: "+type);
 				break;
 		}
-		return false;
+		return 0;
 	}
 	/* **************************** MATH COLLECTOR ********************************************** */
 	public void addMathCollector( MathCollector mc ){
@@ -865,7 +853,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			case "flags": case "fv":
 				return replyToFlagsCmd(request,html);
 			case "rtval": case "double":
-				return addRequest(wr,request)?"Request added":"Failed request";
+				int s = addRequest(wr,request[0],request[1]);
+				return s!=0?"Request added to "+s+" doublevals":"Request failed";
 			case "rtvals":
 				return replyToRtvalsCmd(request,wr,html);
 			default:
@@ -873,10 +862,9 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		}
 	}
 	public boolean removeWritable(Writable writable ) {
-		int size = doubleRequest.size()+textRequest.size();
-		doubleRequest.forEach( (key, list) -> list.remove(writable));
+		doubleVals.values().forEach( dv -> dv.removeTarget(writable));
 		textRequest.forEach( (key, list) -> list.remove(writable));
-		return size - (doubleRequest.size()+textRequest.size())!=0;
+		return true;
 	}
 	public String replyToTextsCmd( String[] request,  boolean html ){
 
@@ -1085,7 +1073,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				return "Cmd added";
 			case "reqs":
 				join.setEmptyValue("None yet");
-				doubleRequest.forEach((rq, list) -> join.add(rq +" -> "+list.size()+" requesters"));
+				doubleVals.forEach((id, d) -> join.add(id +" -> "+d.getTargets()));
 				return join.toString();
 			default:
 				return "unknown command: "+request[0]+":"+request[1];
@@ -1178,10 +1166,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					readFromXML( XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals") );
 					return "Reloaded rtvals";
 				default:
-					if( addRequest(wr,request) ){
-						return "Request added";
-					}
-					return "Request failed";
+					int s =addRequest(wr,request[0],request[1]);
+					return s!=0?"Request added to "+s+" doublevals":"Request failed";
 			}
 		}else if(cmds.length==2){
 			switch(cmds[0]){

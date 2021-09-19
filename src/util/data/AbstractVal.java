@@ -1,9 +1,12 @@
 package util.data;
 
+import io.Writable;
 import util.xml.XMLfab;
 import worker.Datagram;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
 
 public abstract class AbstractVal {
@@ -23,6 +26,8 @@ public abstract class AbstractVal {
 
     protected BlockingQueue<Datagram> dQueue;
 
+    /* Requests */
+    ArrayList<Writable> targets;
 
     /* ************************************* Options ******************************************************** */
     public void reset(){
@@ -100,6 +105,27 @@ public abstract class AbstractVal {
     public String name(){
         return name;
     }
-
+    /* ********************************* Requests/Targets ********************************************************** */
+    public void addTarget( Writable wr){
+        if( targets==null)
+            targets=new ArrayList<>();
+        if( !targets.contains(wr))
+            targets.add(wr);
+    }
+    public boolean removeTarget( Writable wr){
+        if( targets==null)
+            return false;
+        return targets.remove(wr);
+    }
+    public int getTargetCount(){
+        return targets==null?0:targets.size();
+    }
+    public String getTargets(){
+        if( targets==null)
+            return "";
+        var join = new StringJoiner(",");
+        targets.forEach( wr -> join.add(wr.getID()));
+        return join.toString();
+    }
     abstract boolean storeInXml(XMLfab fab);
 }
