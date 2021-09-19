@@ -132,6 +132,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 						switch( arg[0]){
 							case "minmax":  dv.keepMinMax(); break;
 							case "time":    dv.keepTime();   break;
+							case "scale":	dv.fractionDigits( NumberUtils.toInt(arg[1],-1)); break;
 							case "order":   dv.order( NumberUtils.toInt(arg[1],-1)); break;
 							case "history": dv.enableHistory( NumberUtils.toInt(arg[1],-1)); break;
 						}
