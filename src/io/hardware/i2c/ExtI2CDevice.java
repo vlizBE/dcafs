@@ -90,6 +90,6 @@ public class ExtI2CDevice extends I2CDevice {
 	public long getAge(){
 		if( timestamp==null)
 			return -1;
-		return Duration.between(Instant.now(),timestamp).getSeconds();
+		return Duration.between(timestamp,Instant.now()).getSeconds();
 	}
 }
