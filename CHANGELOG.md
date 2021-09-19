@@ -28,8 +28,20 @@ From 0.5.0 onwards, this should be better documented...
 ### StreamManager
 - stream:id has been added as alternative to raw:id
 
+### I2C
+- fixed, adddevice didn't create directories
+- fixed, adddevice always used bus 0 instead of the one given in the command
+- Added math as possible commandstep to apply operations on the result of a read
+- default label is now void
+
+### rtvals
+- scale is now both attribute and option for double
+
 ### Fixes
 - Trans was always started instead of only if defined in xml
+- PathForward, generic and valmap id's weren't generated inside the path
+
+
 
 ## 0.11.0 (12/09/21)  
 
