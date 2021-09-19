@@ -15,7 +15,7 @@ import java.util.StringJoiner;
  */
 public class I2CCommand{
     
-    enum CMD_TYPE {READ,WRITE,ALTER_OR,ALTER_AND,ALTER_XOR,ALTER_NOT, WAIT_ACK,MATH}
+    enum CMD_TYPE {READ,WRITE,ALTER_OR,ALTER_AND,ALTER_XOR,ALTER_NOT, WAIT_ACK,MATH,WAIT}
 
     private final ArrayList<CommandStep> steps = new ArrayList<>(); // The various steps in the command
 
@@ -60,6 +60,10 @@ public class I2CCommand{
         bytes += bits%8==0?0:1;
         totalIntReturn += replies/bytes;
 
+        return this;
+    }
+    public I2CCommand addWait( long millis ){
+        steps.add(new CommandStep((int)millis, CMD_TYPE.WAIT));
         return this;
     }
     /**
@@ -214,6 +218,10 @@ public class I2CCommand{
         public CommandStep( byte[] write, int readCount, CMD_TYPE type){
             this.type=type;
             this.write=write;
+            this.readCount=readCount;
+        }
+        public CommandStep( int readCount, CMD_TYPE type){
+            this.type=type;
             this.readCount=readCount;
         }
         public CommandStep(int index,MathFab fab){

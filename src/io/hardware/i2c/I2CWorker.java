@@ -14,6 +14,7 @@ import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import util.math.MathUtils;
+import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
@@ -26,6 +27,7 @@ import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -270,6 +272,16 @@ public class I2CWorker implements Commandable {
                                     ok=true;
                                 }
                                 break;
+                            case "wait":
+                                if( !ele.getTextContent().isEmpty() ) {
+                                    cmd.addWait(TimeTools.parsePeriodStringToMillis(ele.getTextContent()));
+                                    ok = true;
+                                }
+                                break;
+                            case "repeat":
+
+                            case "discard":
+
                             default:
                                 Logger.error("Unknown command: "+ele.getNodeName());
                                 break;
@@ -436,6 +448,15 @@ public class I2CWorker implements Commandable {
                             device.writeByte(toWrite[0]);
                             toWrite[1] ^= device.readByte();
                             device.writeBytes(toWrite);
+                            break;
+                        case WAIT:
+                            try {
+                                Logger.info("Started waiting: "+cmd.readCount+"ms");
+                                TimeUnit.MILLISECONDS.sleep(cmd.readCount);
+                                Logger.info("Finished waiting");
+                            } catch (InterruptedException e) {
+                                Logger.error(e);
+                            }
                             break;
                         case WAIT_ACK: // Wait for an ack to be received up to x attempts
                             boolean ok=false;
