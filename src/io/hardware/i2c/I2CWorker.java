@@ -596,7 +596,6 @@ public class I2CWorker implements Runnable, Commandable {
                 case "list": return getDeviceList(false);
                 case "cmds": return getDeviceList(true);
                 case "reload": return reloadCommands();
-                case "forward": return registerWritable(cmd[1],wr)?"Added forward":"No such device";
                 case "listeners": return getListeners();
                 case "debug":
                     if( cmd.length == 2){
