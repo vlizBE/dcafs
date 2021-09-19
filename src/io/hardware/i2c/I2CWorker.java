@@ -195,7 +195,6 @@ public class I2CWorker implements Commandable {
             return;
         }                            
         reloadSets();
-
     }
 
     private String reloadSets( ){
@@ -222,80 +221,22 @@ public class I2CWorker implements Commandable {
                 for( Element command : XMLtools.getChildElements( set, "command")){
                     I2CCommand cmd = new I2CCommand();
 
-                    String cmdID = XMLtools.getStringAttribute( command, "id", "");                    
-
+                    String cmdID = XMLtools.getStringAttribute( command, "id", "");
                     cmd.setInfo( XMLtools.getStringAttribute( command, "info", "") );
-                    int bits = XMLtools.getIntAttribute( command, "bits", 8);
-                    boolean msb = XMLtools.getBooleanAttribute( command, "msbfirst",true);
-                    cmd.setReadBits( bits );
+                    cmd.setReadBits( XMLtools.getIntAttribute( command, "bits", 8) );
+                    cmd.setMsbFirst( XMLtools.getBooleanAttribute( command, "msbfirst",true) );
 
-                    for( Element ele : XMLtools.getChildElements( command, "*") ){
-                        
-                        String reg = XMLtools.getStringAttribute( ele , "reg", "" );
-
-                        boolean ok=false;
-                        switch( ele.getNodeName() ){
-                            case "read":
-                                boolean signed = XMLtools.getBooleanAttribute(ele, "signed",false);
-                                ok = cmd.addRead( Tools.fromHexStringToBytes( reg ) // register address
-                                                , XMLtools.getIntAttribute( ele , "return", 0 ) // how many bytes
-                                                , XMLtools.getIntAttribute(ele,"bits",bits) //how many bits to combine
-                                                , XMLtools.getBooleanAttribute( ele, "msbfirst",msb)
-                                                , signed) != null;
-                            break;
-                            case "write":
-                                if( ele.getTextContent().isEmpty() && !reg.isEmpty()){
-                                    ok = cmd.addWrite( Tools.fromHexStringToBytes( reg ) ) != null;
-                                }else if( reg.isEmpty() && !ele.getTextContent().isEmpty() ){
-                                    ok = cmd.addWrite( Tools.fromHexStringToBytes( ele.getTextContent() )) != null;
-                                }else{
-                                    ok = cmd.addWrite( ArrayUtils.addAll( Tools.fromHexStringToBytes( reg ),
-                                                            Tools.fromHexStringToBytes( ele.getTextContent() )) ) != null;
-                                }                                                                
-                            break;
-                            case "alter":
-                                byte[] d = ArrayUtils.addAll( Tools.fromHexStringToBytes( reg ),
-                                        Tools.fromHexStringToBytes( ele.getTextContent() ));                                    
-                                ok = cmd.addAlter( d, XMLtools.getStringAttribute( ele , "operand", "or" ) ) != null;
-                            break;
-                            case "wait_ack":
-                                if( !ele.getTextContent().isEmpty() ){
-                                    int cnt = Tools.parseInt(ele.getTextContent(), -1);
-                                    if( cnt != -1){
-                                        ok = cmd.addWaitAck(cnt) != null;
-                                    }
-                                }
-                            break;
-                            case "math":
-                                if( !ele.getTextContent().isEmpty() ){
-                                    cmd.addMath(ele.getTextContent());
-                                    ok=true;
-                                }
-                                break;
-                            case "wait":
-                                if( !ele.getTextContent().isEmpty() ) {
-                                    cmd.addWait(TimeTools.parsePeriodStringToMillis(ele.getTextContent()));
-                                    ok = true;
-                                }
-                                break;
-                            case "repeat":
-
-                            case "discard":
-
-                            default:
-                                Logger.error("Unknown command: "+ele.getNodeName());
-                                break;
+                    for( Element step : XMLtools.getChildElements(command)){
+                        if( step.getTagName().equalsIgnoreCase("repeat")){
+                            cmd.addRepeat( NumberUtils.toInt(step.getAttribute("cnt")));
+                            for(Element sub : XMLtools.getChildElements(step))
+                                cmd.addStep(sub);
+                            cmd.addReturn();
+                        }else{
+                            cmd.addStep(step);
                         }
-                        if(!ok ){
-                            Logger.error("Invalid data received for command");
-                            continue;
-                        }
-                        if(debug)
-                            Logger.info("Added "+cmdID +" to "+script+" which does: "+ cmd);
                     }
-                    
-                    commands.put( script+":"+cmdID,cmd);                            
-                    Logger.info("Total bytes received during this command: "+cmd.getTotalReturn());
+                    commands.put( script+":"+cmdID,cmd);
                 }     
             }
         }
@@ -393,25 +334,26 @@ public class I2CWorker implements Commandable {
 
         var result = new ArrayList<Double>();
         device.probeIt();
+        device.updateTimestamp();
+        int repeat = 0;
 
         if( com != null ){
-                for( I2CCommand.CommandStep cmd : com.getAll() ){ // Run te steps, one by one (in order)
+                var coms = com.getAll();
+                for( int a=0;a<coms.size();a++){ // Run te steps, one by one (in order)
+                    var cmd = coms.get(a);
                     byte[] toWrite = cmd.write;
 
                     switch( cmd.type ){ // Type of subcommand
                         case READ:
                             byte[] b;
                             try {
-                                if( toWrite.length==0){
-                                    // read readCount bytes and put in readBuffer
-                                    b = device.readBytes( cmd.readCount );
-                                }else if(toWrite.length==1){
+                                if(toWrite.length==1){
                                     // after writing the first byte, read readCount bytes and put in readBuffer
                                     b = new byte[cmd.readCount];
                                     device.readI2CBlockData(toWrite[0], b);
-                                    device.updateTimestamp();
                                 }else{
-                                    device.writeBytes( toWrite ); // write all the bytes in the array
+                                    if( toWrite.length!=0)
+                                        device.writeBytes( toWrite ); // write all the bytes in the array
                                     b = device.readBytes( cmd.readCount );
                                 }
                             }catch( RuntimeIOException e ){
@@ -428,10 +370,8 @@ public class I2CWorker implements Commandable {
                             device.writeBytes( toWrite ) ;
                             break;
                         case ALTER_OR: // Read the register, alter it and write it again
-                            byte[] sub = {toWrite[0]};
-                            device.writeBytes(sub);
-                            sub[0]=device.readByte();
-                            toWrite[1] |= sub[0];
+                            device.writeBytes(toWrite[0]);
+                            toWrite[1] |= device.readByte();
                             device.writeBytes(toWrite);
                             break;
                         case ALTER_AND:
@@ -441,6 +381,7 @@ public class I2CWorker implements Commandable {
                             break;
                         case ALTER_NOT:
                             device.writeByte(toWrite[0]);
+                            toWrite[1] = device.readByte();
                             toWrite[1] ^= 0xFF;
                             device.writeBytes(toWrite);
                             break;
@@ -451,9 +392,7 @@ public class I2CWorker implements Commandable {
                             break;
                         case WAIT:
                             try {
-                                Logger.info("Started waiting: "+cmd.readCount+"ms");
                                 TimeUnit.MILLISECONDS.sleep(cmd.readCount);
-                                Logger.info("Finished waiting");
                             } catch (InterruptedException e) {
                                 Logger.error(e);
                             }
@@ -476,11 +415,24 @@ public class I2CWorker implements Commandable {
                             }
                             break;
                         case MATH:
-                            var ar = result.toArray( new Double[0] );
-                            result.set(cmd.index,cmd.fab.solveFor(ar));
+                            result.set( cmd.index,cmd.fab.solveFor(result.toArray( new Double[0] )));
+                            break;
+                        case DISCARD:
+                            while( result.size() > cmd.readCount) {
+                                result.remove(cmd.readCount);
+                            }
+                            break;
+                        case REPEAT:
+                            repeat = cmd.readCount;
+                            break;
+                        case RETURN:
+                            if( repeat > 0){
+                                a=cmd.readCount;
+                                repeat --;
+                            }
                             break;
                         default:
-                            Logger.error("Somehow managed to use an none existing type...");
+                            Logger.error("Somehow managed to use an none existing type: "+cmd.type);
                             break;
                     }
                 }

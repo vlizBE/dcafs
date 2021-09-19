@@ -1,21 +1,25 @@
 package io.hardware.i2c;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
+import org.w3c.dom.Element;
 import util.math.MathFab;
-import util.math.MathUtils;
+import util.tools.TimeTools;
 import util.tools.Tools;
+import util.xml.XMLtools;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Storage class for a command.
  */
 public class I2CCommand{
     
-    enum CMD_TYPE {READ,WRITE,ALTER_OR,ALTER_AND,ALTER_XOR,ALTER_NOT, WAIT_ACK,MATH,WAIT}
+    enum CMD_TYPE {READ,WRITE,ALTER_OR,ALTER_AND,ALTER_XOR,ALTER_NOT, WAIT_ACK,MATH,WAIT,DISCARD,REPEAT,RETURN}
 
     private final ArrayList<CommandStep> steps = new ArrayList<>(); // The various steps in the command
 
@@ -23,20 +27,102 @@ public class I2CCommand{
     private int totalIntReturn=0;
     String info=""; // Descriptive text about this command
     int bits = 8;   // How many bits are in the returned data fe. 16 means combine two bytes etc
-
+    int lastRepeat=-1;
     private boolean runOnce=false; // Flag that removes this command if it has run
+    private boolean msbFirst=true;
 
     public I2CCommand(){}
-
-    public I2CCommand(boolean runOnce){
-        this.runOnce=runOnce;
-    }
 
     public void setInfo( String info ){
         this.info=info;
     }
+    public void setMsbFirst( boolean msb){
+        this.msbFirst=msb;
+    }
+    public I2CCommand setReadBits( int bits ){
+        this.bits=bits;
+        return this;
+    }
     public String getInfo(){
         return info;
+    }
+    public boolean addStep( Element ele ){
+
+        String reg = XMLtools.getStringAttribute( ele , "reg", "" );
+
+        boolean ok=false;
+        switch( ele.getNodeName() ){
+            case "read":
+                boolean msb = XMLtools.getBooleanAttribute( ele, "msbfirst",msbFirst);
+                boolean signed = XMLtools.getBooleanAttribute(ele, "signed",false);
+                ok = addRead( Tools.fromHexStringToBytes( reg ) // register address
+                        , XMLtools.getIntAttribute( ele , "return", 0 ) // how many bytes
+                        , XMLtools.getIntAttribute(ele,"bits",bits) //how many bits to combine
+                        , XMLtools.getBooleanAttribute( ele, "msbfirst",msb)
+                        , signed) != null;
+                break;
+            case "write":
+                if( ele.getTextContent().isEmpty() && !reg.isEmpty()){
+                    ok = addWrite( Tools.fromHexStringToBytes( reg ) ) != null;
+                }else if( reg.isEmpty() && !ele.getTextContent().isEmpty() ){
+                    ok = addWrite( Tools.fromHexStringToBytes( ele.getTextContent() )) != null;
+                }else{
+                    ok = addWrite( ArrayUtils.addAll( Tools.fromHexStringToBytes( reg ),
+                            Tools.fromHexStringToBytes( ele.getTextContent() )) ) != null;
+                }
+                break;
+            case "alter":
+                byte[] d = ArrayUtils.addAll( Tools.fromHexStringToBytes( reg ),
+                        Tools.fromHexStringToBytes( ele.getTextContent() ));
+                ok = addAlter( d, XMLtools.getStringAttribute( ele , "operand", "or" ) ) != null;
+                break;
+            case "wait_ack":
+                if( !ele.getTextContent().isEmpty() ){
+                    int cnt = Tools.parseInt(ele.getTextContent(), -1);
+                    if( cnt != -1){
+                        ok = addWaitAck(cnt) != null;
+                    }
+                }
+                break;
+            case "math":
+                if( !ele.getTextContent().isEmpty() ){
+                    addMath(ele.getTextContent());
+                    ok=true;
+                }
+                break;
+            case "wait":
+                if( !ele.getTextContent().isEmpty() ) {
+                    steps.add( new CommandStep((int)TimeTools.parsePeriodStringToMillis(ele.getTextContent()), CMD_TYPE.WAIT));
+                    ok = true;
+                }
+                break;
+            case "repeat":
+                Logger.info("Repeat '"+ele.getAttribute("cnt"));
+                if( ele.hasAttribute("cnt") ) {
+                    steps.add( new CommandStep( NumberUtils.toInt(ele.getAttribute("cnt") ), CMD_TYPE.REPEAT));
+                    lastRepeat=steps.size();
+                    ok = true;
+                }
+                break;
+            case "return":
+                steps.add( new CommandStep(lastRepeat, CMD_TYPE.RETURN));
+                ok = true;
+                break;
+            case "discard":
+                if( !ele.getTextContent().isEmpty() ) {
+                    steps.add( new CommandStep(NumberUtils.toInt(ele.getTextContent()), CMD_TYPE.DISCARD));
+                    ok = true;
+                }
+                break;
+            default:
+                Logger.error("Unknown command: "+ele.getNodeName());
+                break;
+        }
+        if(!ok ){
+            Logger.error("Invalid data received for command");
+        }
+        return ok;
+
     }
      /* ******************************************************************************* */
      /**
@@ -62,41 +148,20 @@ public class I2CCommand{
 
         return this;
     }
-    public I2CCommand addWait( long millis ){
-        steps.add(new CommandStep((int)millis, CMD_TYPE.WAIT));
-        return this;
-    }
     /**
      * Adds a write step to this command
-     * 
+     *
      * @param write The data to write in order to get the replies
      * @return this command
      */
     public I2CCommand addWrite( byte[] write ){
-        if( write.length==0 )
+       if( write.length==0 )
             return null;
-            
+
         steps.add(new CommandStep(write, 0, CMD_TYPE.WRITE));
         return this;
     }
-    /**
-     * Adds a write step to this command but these are ints because you can't use bytes in this fashion
-     * 
-     * @param write The individual bytes tot write, will be given as a array to the method
-     * @return this command
-     */
-    public I2CCommand addWrites( int... write  ){
-        if( write == null )
-            return null;
 
-        // Convert to a byte array    
-        byte[] d = new byte[write.length];
-        for( int a=0;a<write.length;a++)
-            d[a]=(byte)write[a];  
-
-        steps.add(new CommandStep(d, 0, CMD_TYPE.WRITE));
-        return this;
-    }
     public I2CCommand addWaitAck( int count ){
         byte[] b = {(byte)count};
 
@@ -129,7 +194,6 @@ public class I2CCommand{
                 cmdType = CMD_TYPE.ALTER_OR;
             break;
         }
-
         steps.add(new CommandStep(data, 0, cmdType));
         return this;
     }
@@ -145,11 +209,18 @@ public class I2CCommand{
 
         return this;
     }
-    public I2CCommand setReadBits( int bits ){
-        this.bits=bits;
-        return this;
+    public void addRepeat( int count ){
+        if( count == 0){
+            Logger.error("Invalid repeat count");
+            return;
+        }
+        lastRepeat=steps.size();
+        steps.add( new CommandStep(count, CMD_TYPE.REPEAT));
     }
-     /* ******************************************************************************* */
+    public void addReturn(){
+        steps.add( new CommandStep(lastRepeat, CMD_TYPE.RETURN));
+    }
+    /* ******************************************************************************* */
      /**
       * Get all the commands stored in this object
 
@@ -171,19 +242,6 @@ public class I2CCommand{
     }
     /* ******************************************************************************* */
     /**
-     * Mark this command for deletion after it has run once.
-     */
-    public void runOnce(){
-        this.runOnce=true;
-    }
-    /**
-     * Check is the runOnce flag is set
-     * @return True if this command should be deleted
-     */
-    public boolean removedAfterUse(){
-        return this.runOnce;
-    }
-    /**
      * Convert this command to a humanly readable format
      */
     public String toString( String prefix ){
@@ -198,9 +256,11 @@ public class I2CCommand{
                 case WRITE:    b.add("Write "+Tools.fromBytesToHexString(cmd.write,1, cmd.write.length)+" to reg 0x"+Integer.toHexString(cmd.write[0]) ); break;
                 case WAIT_ACK: b.add("Do "+cmd.write[0]+" attempts at addressing the device."); break;
                 case MATH:     b.add("Solve "+cmd.fab.getOri()); break;
-     //           case PING:      break;
-                default:
-                    break;
+                case WAIT:     b.add("Wait for "+TimeTools.convertPeriodtoString(cmd.readCount, TimeUnit.MILLISECONDS));break;
+                case DISCARD:  b.add("Discard the content of the result buffer from index "+cmd.readCount); break;
+                case REPEAT:   b.add("Repeat the section "+cmd.readCount+" times."); break;
+                case RETURN:   b.add("Repeat it up to here"); break;
+                default: break;
             }
         }
         return b.toString();
@@ -232,6 +292,7 @@ public class I2CCommand{
         public void setBits( int bits ){this.bits=bits;}
         public void setSigned(boolean signed){ this.signed=signed;}
         public void setMsbFirst( boolean msb ){ this.msbFirst=msb;}
+
         public boolean isSigned(){ return signed;}
         public boolean isMsbFirst(){ return msbFirst;}
     }
