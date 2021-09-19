@@ -317,7 +317,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 						.attr("port",inbox.port)
 					.alterChild("checkinterval",TimeTools.convertPeriodtoString(checkIntervalSeconds,TimeUnit.SECONDS));
 		}
-		if ( fab.build()!=null ){
+		if ( fab.build() ){
 			return writePermits();
 		}
 		return false;
@@ -332,7 +332,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 				if(permit.regex)
 					fab.attr("regex","yes");
 			}
-			return fab.build()!=null;
+			return fab.build();
 		}else{
 			Logger.error("Tried to write permits but no valid xml yet");
 			return false;

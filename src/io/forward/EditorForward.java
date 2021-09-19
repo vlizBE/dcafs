@@ -124,7 +124,7 @@ public class EditorForward extends AbstractForward{
         /* Attributes and nodes that are the same for all forwards fe.label and src */
         writeBasicsToXML(fab);
 
-        return fab.build()!=null;
+        return fab.build();
     }
 
     @Override

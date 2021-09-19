@@ -160,7 +160,7 @@ public class Waypoints implements Commandable {
         }
         Logger.info("Stored "+cnt+" waypoints.");
 
-        return fab.build()!=null;//overwrite the file
+        return fab.build();//overwrite the file
         
     }
     /* ******************************** G E T ********************************************/

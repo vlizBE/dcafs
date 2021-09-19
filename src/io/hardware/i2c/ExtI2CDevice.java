@@ -5,6 +5,7 @@ import com.diozero.api.RuntimeIOException;
 import io.Writable;
 import org.tinylog.Logger;
 import util.tools.TimeTools;
+import util.xml.XMLfab;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -17,7 +18,8 @@ import java.util.concurrent.TimeUnit;
  * Extension for the I2CDevice class that adds das relevant functionality
  */
 public class ExtI2CDevice extends I2CDevice {
-	
+
+	private final String id;
 	private final String label;
 	private final String script;
 	private Instant timestamp;
@@ -29,8 +31,9 @@ public class ExtI2CDevice extends I2CDevice {
 	 * @param controller The controller on which this device is connected
 	 * @param address The address of the device
 	 */
-	public ExtI2CDevice (int controller, int address, String script, String label){
+	public ExtI2CDevice (String id,int controller, int address, String script, String label){
 		super(controller,address);
+		this.id=id;
 		this.label = label;
 		this.script=script;
 		Logger.info("Connecting to controller:"+controller +" and address:"+address+" with label: "+label);
@@ -91,5 +94,11 @@ public class ExtI2CDevice extends I2CDevice {
 		if( timestamp==null)
 			return -1;
 		return Duration.between(timestamp,Instant.now()).getSeconds();
+	}
+	public boolean storeInXml(XMLfab fab){
+		return fab.selectOrAddChildAsParent("bus","controller",getController())
+				.selectOrAddChildAsParent("device","id",id)
+				.attr("address","0x"+String.format("%02x", getAddress()))
+				.attr("script",script).build();
 	}
 }

@@ -152,7 +152,7 @@ public class SqlTable {
         fab.up();
 
         if (build)
-            return fab.build()!=null;
+            return fab.build();
         return true;
     }
     /**
@@ -739,7 +739,7 @@ public class SqlTable {
                 case 'm': fab.addChild( "epochmillis","columnname"); break;
             }
         }
-        return fab.build()!=null;
+        return fab.build();
     }
 
     /**
@@ -791,7 +791,7 @@ public class SqlTable {
                     break;
             }
         }
-        return fab.build()!=null;
+        return fab.build();
     }
     /**
      * Creates a template for a prepared statement of an INSERT query

@@ -275,7 +275,7 @@ public class TcpServer implements StreamListener, Commandable {
 		for( String h : handler.getHistory() ){
 			fab.addChild("cmd",h);
 		}
-		if( fab.build() != null ){
+		if( fab.build() ){
 			wr.writeLine(handler.getID()+" Stored!");
 		}else{
 			wr.writeLine("Storing "+handler.getID()+" failed");

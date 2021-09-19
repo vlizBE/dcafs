@@ -121,7 +121,7 @@ public class FilterForward extends AbstractForward {
         writeBasicsToXML(fab);
 
         if( rules.isEmpty() )
-            return fab.build()!=null;
+            return fab.build();
 
         if( rules.size()==1 && sources.size()==1){
             fab.attr("type",rulesString.get(0)[1]).content(rulesString.get(0)[2]);
@@ -131,7 +131,7 @@ public class FilterForward extends AbstractForward {
             fab.comment("Rules go here, use ff:rules to know the types");
             rulesString.forEach( rule -> fab.addChild("rule",rule[2]).attr("type",rule[1]) );
         }
-        return fab.build()!=null;
+        return fab.build();
     }
 
     /**

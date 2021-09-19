@@ -503,7 +503,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 			return false;
 		}
 		stream.writeToXML(fab);
-		return fab.build()!=null;
+		return fab.build();
 	}
 	/* ************************************************************************************************* **/
 	/**
@@ -698,7 +698,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 
 				fab.addChild("cmd",cmd).attr("when",event);
 				stream.addTriggeredAction(event,cmd);
-				return fab.build()!=null?"Trigger added":"Altering xml failed";
+				return fab.build()?"Trigger added":"Altering xml failed";
 			case "alter":
 				stream = streams.get(cmds[1].toLowerCase());
 				if( cmds.length != 3)
@@ -746,7 +746,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 						reload=true;
 					break;
 				}
-				if( fab.build()!=null ){
+				if( fab.build() ){
 					if( reload )
 						this.reloadStream(device);	
 					return "Alteration applied";

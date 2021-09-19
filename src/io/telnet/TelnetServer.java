@@ -77,7 +77,7 @@ public class TelnetServer implements Commandable {
     public static boolean addBlankTelnetToXML( Document xmlDoc ){
         return XMLfab.withRoot(xmlDoc, "settings")                
                         .addParentToRoot(XML_PARENT_TAG,"Settings related to the telnet server").attr("title","DCAFS").attr("port",23)
-                            .build() !=null;
+                            .build();
     }
     public void run(){
             

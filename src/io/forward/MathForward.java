@@ -211,7 +211,7 @@ public class MathForward extends AbstractForward {
                     fab.attr("type",rule[0]);
             } );
         }
-        return fab.build()!=null;
+        return fab.build();
     }
     /**
      * Give data to this forward for processing

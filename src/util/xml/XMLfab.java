@@ -434,6 +434,9 @@ public class XMLfab {
     public XMLfab selectOrAddChildAsParent(String tag ){
         return selectOrAddChildAsParent(tag,"","");
     }
+    public XMLfab selectOrAddChildAsParent(String tag, String attribute, int value){
+        return selectOrAddChildAsParent(tag,attribute,""+value);
+    }
     public XMLfab selectOrAddChildAsParent(String tag, String attribute, String value){
         Optional<Element> found = getChildren(tag).stream()
                 .filter( x -> x.getAttribute(attribute).equalsIgnoreCase(value)||attribute.isEmpty()).findFirst();
@@ -621,13 +624,13 @@ public class XMLfab {
      * Build the document based on the fab
      * @return The build document or null if failed
      */
-    public Document build(){
+    public boolean build(){
         if( xmlPath == null ){
             XMLtools.updateXML(xmlDoc);
         }else{
             XMLtools.writeXML(xmlPath, xmlDoc);
         }        
-        return xmlDoc;
+        return xmlDoc!=null;
     }
 
     /**

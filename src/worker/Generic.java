@@ -447,7 +447,7 @@ public class Generic {
             }
         }
 
-        return fab.build()!=null;
+        return fab.build();
     }
     /**
      * Class to store filters that can be applied before the generic is applied
