@@ -188,7 +188,7 @@ public class I2CWorker implements Runnable, Commandable {
 
                     String id = XMLtools.getStringAttribute( device, "id", "").toLowerCase();
                     String script = XMLtools.getStringAttribute( device, "script", "").toLowerCase();
-                    String label = XMLtools.getStringAttribute( device, "label", script).toLowerCase();
+                    String label = XMLtools.getStringAttribute( device, "label", "void").toLowerCase();
                     
                     int address = Tools.parseInt( XMLtools.getStringAttribute( device , "address", "0x00" ),16);
 
@@ -505,7 +505,6 @@ public class I2CWorker implements Runnable, Commandable {
                             break;
                         case MATH:
                             var ar = result.toArray( new Double[0] );
-                            Logger.info("Result before:"+result.get(cmd.index));
                             result.set(cmd.index,cmd.fab.solveFor(ar));
                             break;
                         default:
