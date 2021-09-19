@@ -466,23 +466,28 @@ public class I2CWorker implements Commandable {
      * Search the bus of the specified controller for responsive devices
      * 
      * @param controller The index of the controller to look at
-     * @return A list of found used addresses, prepended with Busy of currently addressed by a driver
+     * @return A list of found used addresses, prepended with Busy if currently addressed by a driver or Used if by dcafs
      */
     public static String detectI2Cdevices( int controller ){
 		StringJoiner b = new StringJoiner("\r\n");
-
+        var gr = TelnetCodes.TEXT_GREEN;
+        var ye = TelnetCodes.TEXT_YELLOW;
+        var or = TelnetCodes.TEXT_ORANGE;
+        var red = TelnetCodes.TEXT_RED;
 		for (int device_address = 0; device_address < 128; device_address++) {
 			if (device_address < 0x03 || device_address > 0x77) {
 				// Out of bounds
 			} else {
 				try (I2CDevice device = new I2CDevice(controller, device_address)) {
 					if (device.probe( I2CDevice.ProbeMode.AUTO )) {
-						b.add( "0x"+String.format("%02x ", device_address) );
+						b.add( gr+"Free"+ye+" - 0x"+String.format("%02x ", device_address) );
 					}
 				} catch (DeviceBusyException e) {
-					b.add("Busy - 0x"+String.format("%02x ", device_address));
+					b.add(red+"Busy"+ye+" - 0x"+String.format("%02x ", device_address)+"(in use by another process)");
 				} catch( DeviceAlreadyOpenedException e){
-				    b.add("Controller already addressed by DAS, fix todo");
+				    b.add(or+"Used"+ye+" - 0x"+String.format("%02x ", device_address)+"(in use by dcafs)");
+                } catch( RuntimeIOException e ){
+                    return "No such bus "+controller;
                 }
 			}
 		}
