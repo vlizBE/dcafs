@@ -22,6 +22,8 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.11.1 (work in progress)
 
+This turned out to mainly fix/improve the I2C code.
+
 ### Breaking
 - Refactored datapaths to paths in xml to be consistent with filters,editors,maths
 
@@ -31,17 +33,31 @@ From 0.5.0 onwards, this should be better documented...
 ### I2C
 - fixed, adddevice didn't create directories
 - fixed, adddevice always used bus 0 instead of the one given in the command
-- Added math as possible commandstep to apply operations on the result of a read
-- default label is now void
+- New nodes added
+  - math  to apply operations on the result of a read
+  - wait to have the execution wait for a given amount of time
+  - repeat to allow sections to be repeated
+  - discard to remove data from the buffer
+- Changed default label to void
+- Added it to status in new devices section, !! in front means probing failed
+- Added data request with i2c:id (used to be i2c:forward,id), allows regex to request multiple
+- Moved from thread and blockingqueue to executor and submitting work
+- cleanup up the i2c:detect to make it prettier and return more info
 
-### rtvals
+### Rtvals
 - scale is now both attribute and option for double
+- readFromXml now takes a fab so that it can be called from other modules
+- fixed, requesting doubles now works again, and it's possible to request using regex to request multiple 
+at once. Now it returns id:value, might change or add other options in the future.
+
+### Other
+- LabelWorker, added label cmd as alternative to system because it might be more logical
+- PathForward, pf:reload now reloads all paths and generics
 
 ### Fixes
 - Trans was always started instead of only if defined in xml
 - PathForward, generic and valmap id's weren't generated inside the path
-
-
+- XMLfab, hasRoot didn't init root so always failed
 
 ## 0.11.0 (12/09/21)  
 
@@ -75,7 +91,7 @@ write to err (otherwise this would be a loop). Which only matters in an ide (col
 - If trying to build an insert and a val is missing, the insert is aborted instead of substituting a null
 
 ### RealtimeValues
-- The store command now store all setup instead of just name/group/id/unit
+- The store command now stores all setup instead of just name/group/id/unit
 
 ## Math
 - fixed, extractparts wasn't made for double character comparisons (>= etc) altered to check this
