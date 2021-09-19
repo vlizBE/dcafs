@@ -50,6 +50,11 @@ public class I2CWorker implements Runnable, Commandable {
         this.debug=debug;
         return debug;
     }
+    public String getStatus(String eol){
+        StringJoiner join = new StringJoiner(eol);
+        devices.forEach( (key,val) -> join.add( val.getStatus(key)));
+        return join.toString();
+    }
     /* ***************************************************************************************************** */
     /**
      * Adds a device to the hashmap
@@ -60,8 +65,14 @@ public class I2CWorker implements Runnable, Commandable {
      * @return The created device
      */
     public ExtI2CDevice addDevice(String id, String script, String label, int controller, int address) {
+
         ExtI2CDevice device = new ExtI2CDevice(controller, address, script, label);
         devices.put(id, device);
+        try{
+            device.probeIt();
+        }catch( RuntimeIOException e){
+            Logger.error("Probing the new device failed: "+device.getAddr());
+        }
         return device;
     }
 
@@ -319,8 +330,14 @@ public class I2CWorker implements Runnable, Commandable {
 
                 // Execute the command
                 I2CCommand com = commands.get(device.getScript()+":"+cmdID);
-                var altRes = doCommand(device,com);
-
+                List<Double> altRes=null;
+                try {
+                    altRes = doCommand(device, com);
+                    device.updateTimestamp();
+                }catch( RuntimeIOException e ){
+                    Logger.error("Failed to run command for "+device.getAddr()+":"+e.getMessage());
+                    continue;
+                }
                 // Do something with the result...
                 String label = device.getLabel()+":"+cmdID;
 
@@ -430,9 +447,10 @@ public class I2CWorker implements Runnable, Commandable {
      * @param com The command to send
      * @return The bytes received as reply to the command
      */
-    private synchronized List<Double> doCommand(ExtI2CDevice device, I2CCommand com  ){
+    private synchronized List<Double> doCommand(ExtI2CDevice device, I2CCommand com  ) throws RuntimeIOException{
 
         var result = new ArrayList<Double>();
+        device.probeIt();
 
         if( com != null ){
                 for( I2CCommand.CommandStep cmd : com.getAll() ){ // Run te steps, one by one (in order)
@@ -442,20 +460,22 @@ public class I2CWorker implements Runnable, Commandable {
                         case READ:
                             byte[] b;
                             ByteBuffer bb;
-                            if( toWrite.length==0){
-                                // read readCount bytes and put in readBuffer
-                                b = device.readBytes( cmd.readCount );
-                            }else if(toWrite.length==1){
-                                // after writing the first byte, read readCount bytes and put in readBuffer
-                                b = new byte[cmd.readCount];
-                                try {
+                            try {
+                                if( toWrite.length==0){
+                                    // read readCount bytes and put in readBuffer
+                                    b = device.readBytes( cmd.readCount );
+                                }else if(toWrite.length==1){
+                                    // after writing the first byte, read readCount bytes and put in readBuffer
+                                    b = new byte[cmd.readCount];
                                     device.readI2CBlockData(toWrite[0], b);
-                                }catch( RuntimeIOException e ){
-                                    Logger.error(e);
+                                    device.updateTimestamp();
+                                }else{
+                                    device.writeBytes( toWrite ); // write all the bytes in the array
+                                    b = device.readBytes( cmd.readCount );
                                 }
-                            }else{
-                                device.writeBytes( toWrite ); // write all the bytes in the array
-                                b = device.readBytes( cmd.readCount );
+                            }catch( RuntimeIOException e ){
+                                Logger.error("Error trying to read from "+device.getAddr()+": "+e.getMessage());
+                                continue;
                             }
                             if( debug ){
                                 Logger.info( "Read: "+Tools.fromBytesToHexString(b));
@@ -463,7 +483,9 @@ public class I2CWorker implements Runnable, Commandable {
                             convertBytesToInt(b,cmd.bits,cmd.isMsbFirst(),cmd.isSigned()).forEach(
                                     x -> result.add(Tools.roundDouble((double)x,0)) );
                             break;
-                        case WRITE: device.writeBytes( toWrite ) ; break;
+                        case WRITE:
+                            device.writeBytes( toWrite ) ;
+                            break;
                         case ALTER_OR: // Read the register, alter it and write it again
                             byte[] sub = {toWrite[0]};
                             device.writeBytes(sub);

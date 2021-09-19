@@ -704,6 +704,16 @@ public class DAS implements DeadThreadListener {
                 }
             }
         }
+        if( i2cWorker !=null ){
+            for( String s : i2cWorker.getStatus("\r\n").split("\r\n") ){
+                if (s.startsWith("!!")) {
+                    b.append(TEXT_RED).append(s).append(TEXT_YELLOW).append(UNDERLINE_OFF);
+                } else {
+                    b.append(s);
+                }
+                b.append("\r\n");
+            }
+        }
         if (mqttPool !=null && !mqttPool.getMqttWorkerIDs().isEmpty()) {
             if (html) {
                 b.append("<br><b>MQTT</b><br>");
