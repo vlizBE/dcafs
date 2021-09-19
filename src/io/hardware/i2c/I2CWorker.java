@@ -659,9 +659,23 @@ public class I2CWorker implements Runnable, Commandable {
                         return "Incorrect number of variables: i2c:detect,<bus>";
                     }
                 default:
-                    if( cmd.length!=2)
-                        return "unknown command: "+request[0]+":"+request[1];
-
+                    if( cmd.length!=2) {
+                        String oks="";
+                        for( var dev : devices.entrySet()){
+                            if( dev.getKey().matches(cmd[0])){
+                                dev.getValue().addTarget(wr);
+                                if( !oks.isEmpty())
+                                    oks+=", ";
+                                oks += dev.getKey();
+                            }
+                        }
+                        if( !oks.isEmpty()) {
+                            return "Request for i2c:"+cmd[0]+" accepted for "+oks;
+                        }else{
+                            Logger.error("No matches for i2c:"+cmd[0]+" requested by "+wr.getID());
+                            return "No matches for i2c:"+cmd[0];
+                        }
+                    }
                     if( wr!=null && wr.getID().equalsIgnoreCase("telnet") ){
                         registerWritable(cmd[0],wr);
                     }

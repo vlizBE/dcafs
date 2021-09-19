@@ -65,7 +65,7 @@ public class ExtI2CDevice extends I2CDevice {
 	 * @param wr Where the data will be send to
 	 */
 	public void addTarget(Writable wr){
-		if( !targets.contains(wr))
+		if( wr!=null&&!targets.contains(wr))
 			targets.add(wr);
 	}
 	public boolean removeTarget(Writable wr ){
