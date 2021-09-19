@@ -841,6 +841,7 @@ public class ForwardPool implements Commandable {
                 return help.toString();
             case "reload":
                 if( cmds.length==1) {
+                    dQueue.add( Datagram.system("gens:reload") );
                     readPathsFromXML();
                     return "All paths reloaded.";
                 }
