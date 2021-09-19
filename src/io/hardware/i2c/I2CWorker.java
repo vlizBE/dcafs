@@ -84,14 +84,21 @@ public class I2CWorker implements Commandable {
             Logger.warn(id+" -> Invalid address given");
             return Optional.empty();
         }
-        ExtI2CDevice device = new ExtI2CDevice(id,controller, address, script, label);
 
+        try (I2CDevice device = new I2CDevice(controller, address)) {
+            if (!device.probe( I2CDevice.ProbeMode.AUTO )) {
+                Logger.error("Probing the new device failed: "+address);
+                return Optional.empty();
+            }
+        } catch ( RuntimeIOException e ){
+            Logger.error("Probing the new device failed: "+address);
+            return Optional.empty();
+        }
         try{
-            device.probeIt();
-            devices.put(id, device);
-            return Optional.of(device);
+            devices.put(id, new ExtI2CDevice(id,controller, address, script, label));
+            return Optional.of(devices.get(id));
         }catch( RuntimeIOException e){
-            Logger.error("Probing the new device failed: "+device.getAddr());
+            Logger.error("Probing the new device failed: "+address);
             return Optional.empty();
         }
     }
