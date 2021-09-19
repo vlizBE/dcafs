@@ -332,7 +332,7 @@ public class XMLtools {
 	 * 
 	 * @param element The element to look in to
 	 * @param child   The name of the child-elements to look for
-	 * @return An arrayliet with the child-elements or an empty one if none were found
+	 * @return An arraylist with the child-elements or an empty one if none were found
 	 */
 	public static List<Element> getChildElements(Element element, String child) {
 		if( child.isEmpty() )
