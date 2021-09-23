@@ -157,8 +157,8 @@ public class PathForward {
                         addAsTarget(ff,src);
                     }else if( lastff != null && (!(lastStep().get() instanceof FilterForward) || lastGenMap)) {
                         lastff.addReverseTarget(ff);
-                    }else if( !stepsForward.isEmpty() ){
-                        lastStep().get().addTarget(ff);
+                    }else{
+                        addAsTarget(ff,src);
                     }
                     lastff=ff;
                     stepsForward.add(ff);
@@ -182,9 +182,11 @@ public class PathForward {
             oldTargets.forEach( wr->addTarget(wr) );
         }
         if( !lastStep().map(AbstractForward::noTargets).orElse(false) || hasLabel) {
-            if (customs == null || customs.isEmpty()) {
+            if (customs == null || customs.isEmpty()) { // If no custom sources
                 dQueue.add(Datagram.system(this.src).writable(stepsForward.get(0)));
-            } else {
+            } else {// If custom sources
+                if( !stepsForward.isEmpty()) // and there are steps
+                    targets.add(stepsForward.get(0));
                 customs.forEach(CustomSrc::start);
             }
         }
