@@ -251,7 +251,8 @@ public class CommandPool {
 					if (split[1].equals("?") || split[1].equals("list")) {
 						var nl = html ? "<br>" : "\r\n";
 						res = doCmd("tm", split[0] + ",sets", wr) + nl + doCmd("tm", split[0] + ",tasks", wr);
-
+					}else if( split[1].equalsIgnoreCase("reload")){
+						res = doCmd("tm","reload,"+split[0],wr);
 					} else {
 						res = doCmd("tm", "run," + split[0] + ":" + split[1], wr);
 					}
