@@ -1150,6 +1150,8 @@ public class TaskManager implements CollectorFuture {
 				Logger.tag(TINY_TAG).info("["+ id +"] Tasks File ["+ref+"] found!");
 			}
 
+			dp.readFromXML(XMLfab.withRoot(path,"tasklist","rtvals"));
+
 			Element ss = XMLtools.getFirstElementByTag( doc, "tasklist" );
 			if( ss==null) {
 				Logger.error("No valid taskmanager script, need the node tasklist");
