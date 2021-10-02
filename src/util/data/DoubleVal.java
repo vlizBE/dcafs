@@ -288,7 +288,12 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * @return The BigDecimal value of this object
      */
     public BigDecimal toBigDecimal(){
-        return BigDecimal.valueOf(value);
+        try {
+            return BigDecimal.valueOf(value);
+        }catch(NumberFormatException e){
+            Logger.warn(id()+" hasn't got a valid value yet to convert to BigDecimal");
+            return null;
+        }
     }
 
     /**

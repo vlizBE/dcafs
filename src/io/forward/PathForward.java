@@ -77,7 +77,7 @@ public class PathForward {
         this.src = XMLtools.getStringAttribute(pathEle,"src","");
 
         if( !imp.isEmpty() ) {
-            var p = XMLfab.getRootChildren(Path.of(imp),"dcafs","paths","path").findFirst();
+            var p = XMLfab.getRootChildren(Path.of(imp),"dcafs","path").findFirst();
             if(p.isPresent()) {
                 pathEle = p.get();
                 delimiter = XMLtools.getStringAttribute(pathEle,"delimiter","");
@@ -251,17 +251,17 @@ public class PathForward {
 
     public String toString(){
         if( customs.isEmpty() ){
-            if( stepsForward.isEmpty())
+            if( stepsForward==null||stepsForward.isEmpty())
                 return "Nothing in the path yet";
             return " gives the data from "+stepsForward.get(stepsForward.size()-1).getID();
         }
         var join = new StringJoiner("\r\n");
         customs.forEach(c->join.add(c.toString()));
-
-        for( int a=0;a<stepsForward.size();a++){
-            join.add("   -> "+stepsForward.get(a).toString());
+        if(stepsForward!=null) {
+            for (int a = 0; a < stepsForward.size(); a++) {
+                join.add("   -> " + stepsForward.get(a).toString());
+            }
         }
-
         return join.toString();
     }
     public void addTarget(Writable wr){

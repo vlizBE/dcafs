@@ -78,6 +78,7 @@ public class MathUtils {
                             parts.remove(opIndex);  // remove the operand
                             parts.remove(opIndex);  // remove the top part
                             parts.set(opIndex - 1, bd3.toPlainString()); // replace the bottom one
+                            opIndex = getIndexOfOperand(parts, ORDERED_OPS[a], ORDERED_OPS[a + 1]);
                             continue;
                         }
 
@@ -681,7 +682,11 @@ public class MathUtils {
             }
             if( open !=-1 ){ // if the opening bracket was found
                 String part = formula.substring(open+1,close); // get the part between the brackets
+                int s = subFormulas.size();
                 subFormulas.addAll( MathUtils.splitExpression( part, subFormulas.size(),debug) );    // split that part in the subformulas
+                if( s==subFormulas.size() ){
+                    Logger.warn("SplitExpression of "+part+" from "+formula +" failed");
+                }
                 String piece = formula.substring(open,close+1); // includes the brackets
                 // replace the sub part in the original formula with a reference to the last subformula
                 formula=formula.replace(piece,"o"+(subFormulas.size()));
@@ -1075,7 +1080,7 @@ public class MathUtils {
 
         int nulls=0;
         for( int a=0;a<=maxIndex;a++){
-            if( a<split.length&&NumberUtils.isCreatable(split[a]) ) {
+            if( a<split.length&&(NumberUtils.isCreatable(split[a])||NumberUtils.isParsable(split[a])) ) {
                 try {
                     bds[a] = NumberUtils.createBigDecimal(split[a]);
                 }catch(NumberFormatException e) {

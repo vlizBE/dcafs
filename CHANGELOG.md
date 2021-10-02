@@ -19,8 +19,14 @@ From 0.5.0 onwards, this should be better documented...
     * Bring javadoc up to date
     * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (might be trigger for 0.12.0)
-
-## 0.11.1 (work in progress)
+## 0.11.2 (work in progress)
+### Fixes
+- PathForward, node structure for the import wasn't correct
+- DoubleVal, catch numberformat on toBigDecimal because NaN doesn't exist as BD
+- MathUtils, simpleCalculation didn't handle to simple calculations well
+- MathUtils, makeBDArray failed on decimal numbers starting with 0. NumberUtils.isCreatable returned false.
+But NumberUtils.createBigDecimal did work... Added NumberUtils.isParsable as extra check.
+## 0.11.1 (23/09/21)
 
 This turned out to mainly fix/improve the I2C code.
 

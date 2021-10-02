@@ -898,6 +898,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 					return "No such port on this system. Options: "+ SerialStream.portList();
 				
 				SerialStream serial = new SerialStream( port, dQueue, serLabel, 1);
+				serial.setEventLoopGroup(eventLoopGroup);
 				serial.alterSerialSettings(baud+",8,1,none");
 
 				serial.setID(cmds[1]);

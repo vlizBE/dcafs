@@ -101,7 +101,7 @@ public class ConfirmCollector extends AbstractCollector {
         if( confirms.isEmpty())
             return false;
 
-        Logger.info("Comparing '"+confirms.get(0).reply+"' to received '"+msg+"'");
+        Logger.debug("Comparing '"+confirms.get(0).reply+"' to received '"+msg+"'");
         
         if( msg.equalsIgnoreCase(confirms.get(0).reply)){ // matches
             var con = confirms.remove(0);

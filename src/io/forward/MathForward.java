@@ -707,6 +707,9 @@ public class MathForward extends AbstractForward {
                         bd = op.apply(data);
                     }catch(NullPointerException e){
                         Logger.error(getID()+"(mf) -> Null pointer when processing for "+ori);
+                        StringJoiner join = new StringJoiner(", ");
+                        Arrays.stream(data).map( d -> ""+d).forEach(join::add);
+                        Logger.error(getID()+"(mf) -> Data: "+join);
                         return null;
                     }
                 }else{
