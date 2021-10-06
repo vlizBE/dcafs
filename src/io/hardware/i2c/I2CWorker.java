@@ -349,24 +349,38 @@ public class I2CWorker implements Commandable {
                         case READ:
                             byte[] b;
                             try {
-                                if(toWrite.length==1){
-                                    // after writing the first byte, read readCount bytes and put in readBuffer
-                                    b = new byte[cmd.readCount];
-                                    device.readI2CBlockData(toWrite[0], b);
-                                }else{
-                                    if( toWrite.length!=0)
-                                        device.writeBytes( toWrite ); // write all the bytes in the array
-                                    b = device.readBytes( cmd.readCount );
+                                int rd = cmd.readCount;
+                                if( rd < 1 ){
+                                    rd *= -1; // index is stored as a negative number
+                                    if( rd < result.size()) {
+                                        rd = result.get(rd).intValue();
+                                    }else{
+                                        Logger.warn("Used invalid index of "+rd+" because result size "+result.size());
+                                        break;
+                                    }
+                                }
+                                while( rd > 0 ) {
+                                    if (toWrite.length == 1) {
+                                        // after writing the first byte, read readCount bytes and put in readBuffer
+                                        b = new byte[rd>32?32:rd];
+                                        device.readI2CBlockData(toWrite[0], b);
+                                    } else {
+                                        if (toWrite.length != 0)
+                                            device.writeBytes(toWrite); // write all the bytes in the array
+                                        b = device.readBytes(rd>32?32:rd);
+                                    }
+                                    if( debug ){
+                                        Logger.info( "Read: "+Tools.fromBytesToHexString(b));
+                                    }
+                                    rd-=b.length;
+                                    convertBytesToInt(b,cmd.bits,cmd.isMsbFirst(),cmd.isSigned()).forEach(
+                                            x -> result.add(Tools.roundDouble((double)x,0)) );
                                 }
                             }catch( RuntimeIOException e ){
                                 Logger.error("Error trying to read from "+device.getAddr()+": "+e.getMessage());
                                 continue;
                             }
-                            if( debug ){
-                                Logger.info( "Read: "+Tools.fromBytesToHexString(b));
-                            }
-                            convertBytesToInt(b,cmd.bits,cmd.isMsbFirst(),cmd.isSigned()).forEach(
-                                    x -> result.add(Tools.roundDouble((double)x,0)) );
+
                             break;
                         case WRITE:
                             device.writeBytes( toWrite ) ;

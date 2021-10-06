@@ -68,8 +68,14 @@ public class I2CCommand{
             case "read":
                 boolean msb = XMLtools.getBooleanAttribute( ele, "msbfirst",msbFirst);
                 boolean signed = XMLtools.getBooleanAttribute(ele, "signed",false);
+                // Allow to use ix to refer to received values
+                String retu = XMLtools.getStringAttribute( ele , "return", "0" ).replace("i","-");
+                if( retu.equalsIgnoreCase("0")) {
+                    Logger.warn("No use reading 0 bytes");
+                    break;
+                }
                 ok = addRead( Tools.fromHexStringToBytes( reg ) // register address
-                        , XMLtools.getIntAttribute( ele , "return", 0 ) // how many bytes
+                        , NumberUtils.toInt(retu) // how many bytes
                         , XMLtools.getIntAttribute(ele,"bits",bits) //how many bits to combine
                         , XMLtools.getBooleanAttribute( ele, "msbfirst",msb)
                         , signed) != null;
