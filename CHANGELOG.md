@@ -19,13 +19,27 @@ From 0.5.0 onwards, this should be better documented...
     * Bring javadoc up to date
     * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (might be trigger for 0.12.0)
+
 ## 0.11.2 (work in progress)
+
+### I2C
+- Added the option to use ix (fe. i0) to refer to an earlier read result in the
+return attribute of a read.
+- The format of the read bytes was in decimal, now it can be chosen (dec,bin,hex,char)
+
+### GPIO
+- Newly added, option to trigger cmd's on a hardware gpio interrupt
+
+### Other
+- Updated dependencies
+
 ### Fixes
 - PathForward, node structure for the import wasn't correct
 - DoubleVal, catch numberformat on toBigDecimal because NaN doesn't exist as BD
 - MathUtils, simpleCalculation didn't handle to simple calculations well
 - MathUtils, makeBDArray failed on decimal numbers starting with 0. NumberUtils.isCreatable returned false.
 But NumberUtils.createBigDecimal did work... Added NumberUtils.isParsable as extra check.
+
 ## 0.11.1 (23/09/21)
 
 This turned out to mainly fix/improve the I2C code.
@@ -59,11 +73,14 @@ at once. Now it returns id:value, might change or add other options in the futur
 ### Other
 - LabelWorker, added label cmd as alternative to system because it might be more logical
 - PathForward, pf:reload now reloads all paths and generics
+- TaskManager, tmid:reload now reloads the taskmanager (in addition to tm:reload,tmid)
 
 ### Fixes
 - Trans was always started instead of only if defined in xml
 - PathForward, generic and valmap id's weren't generated inside the path
+- PathForward, customsrc wasn't targeted by the first step (if any)
 - XMLfab, hasRoot didn't init root so always failed
+- SQLiteDB, should now always generate parent dir
 
 ## 0.11.0 (12/09/21)  
 
