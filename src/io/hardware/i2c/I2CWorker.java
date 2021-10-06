@@ -216,12 +216,14 @@ public class I2CWorker implements Commandable {
             }
             for( Element set : XMLtools.getAllElementsByTag(  doc , "commandset") ){
             
-                String script = XMLtools.getStringAttribute( set,"script",""); 
+                String script = XMLtools.getStringAttribute( set,"script","");
+                String defOut = XMLtools.getStringAttribute( set,"output","dec");
 
                 for( Element command : XMLtools.getChildElements( set, "command")){
                     I2CCommand cmd = new I2CCommand();
 
                     String cmdID = XMLtools.getStringAttribute( command, "id", "");
+                    cmd.setOutType( XMLtools.getStringAttribute( command,"output",defOut) );
                     cmd.setInfo( XMLtools.getStringAttribute( command, "info", "") );
                     cmd.setReadBits( XMLtools.getIntAttribute( command, "bits", 8) );
                     cmd.setMsbFirst( XMLtools.getBooleanAttribute( command, "msbfirst",true) );
@@ -627,8 +629,19 @@ public class I2CWorker implements Commandable {
         }
         // Do something with the result...
         StringJoiner output = new StringJoiner(";",device.getID()+";"+cmdID+";","");
-        altRes.forEach( x -> output.add(""+x));
-
+        switch( com.getOutType() ){
+            case DEC: altRes.forEach( x -> output.add( Integer.toString(x.intValue())) ); break;
+            case HEX: altRes.forEach( x -> {
+                String val = Integer.toHexString(x.intValue()).toUpperCase();
+                output.add( "0x"+(val.length()==1?"0":"")+val);
+            } ); break;
+            case BIN: altRes.forEach( x -> output.add("0b"+Integer.toBinaryString(x.intValue()))); break;
+            case CHAR:
+                var line = new StringJoiner("");
+                altRes.forEach( x -> line.add( ""+(char)x.intValue()) );
+                output.add(line.toString());
+                break;
+        }
         if( !device.getLabel().equalsIgnoreCase("void") ){
             dQueue.add( Datagram.build(output.toString()).label(device.getLabel()+":"+cmdID).origin(device.getID()).payload(altRes) );
         }

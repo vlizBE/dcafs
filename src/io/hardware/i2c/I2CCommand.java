@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 public class I2CCommand{
     
     enum CMD_TYPE {READ,WRITE,ALTER_OR,ALTER_AND,ALTER_XOR,ALTER_NOT, WAIT_ACK,MATH,WAIT,DISCARD,REPEAT,RETURN}
+    enum OUTPUT_TYPE{DEC,HEX,BIN,CHAR}
 
     private final ArrayList<CommandStep> steps = new ArrayList<>(); // The various steps in the command
 
@@ -30,6 +31,7 @@ public class I2CCommand{
     int lastRepeat=-1;
     private boolean runOnce=false; // Flag that removes this command if it has run
     private boolean msbFirst=true;
+    private OUTPUT_TYPE outType=OUTPUT_TYPE.DEC;
 
     public I2CCommand(){}
 
@@ -45,6 +47,17 @@ public class I2CCommand{
     }
     public String getInfo(){
         return info;
+    }
+    public void setOutType( String type ){
+        switch(type.toLowerCase()){
+            case "dec": outType=OUTPUT_TYPE.DEC; break;
+            case "hex": outType=OUTPUT_TYPE.HEX; break;
+            case "bin": outType=OUTPUT_TYPE.BIN; break;
+            case "char": outType=OUTPUT_TYPE.CHAR; break;
+        }
+    }
+    public OUTPUT_TYPE getOutType(){
+        return outType;
     }
     public boolean addStep( Element ele ){
 
