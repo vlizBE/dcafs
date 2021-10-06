@@ -1,6 +1,5 @@
 package io.forward;
 
-import org.apache.commons.lang3.ArrayUtils;
 import util.data.DataProviding;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
@@ -239,6 +238,9 @@ public class EditorForward extends AbstractForward{
                     Logger.warn(id + " -> Invalid number given to cut from end "+content);
                 }
                 break;
+            case "toascii":
+                converToAscii(deli);
+                Logger.info(id + " -> Added conversion to char");
             default:
                 Logger.error(id+" -> Unknown type used : "+edit.getAttribute("type"));
                 break;
@@ -461,6 +463,16 @@ public class EditorForward extends AbstractForward{
     public void addCutEnd( int characters ){
         rulesString.add( new String[]{"","cutend","remove "+characters+" chars from end of data"} );
         edits.add( input -> input.length()>characters?input.substring(0,input.length()-characters):"" );
+    }
+    public void converToAscii(String delimiter){
+        rulesString.add( new String[]{"","tochar","convert delimited data to char's"} );
+        edits.add( input -> {
+            var join = new StringJoiner("");
+            Arrays.stream(input.split(delimiter)).forEach( x -> {
+                join.add( ""+(char)NumberUtils.createInteger(x).intValue());
+            });
+            return join.toString();
+        } );
     }
     /**
      *
