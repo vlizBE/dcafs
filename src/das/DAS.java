@@ -3,6 +3,7 @@ package das;
 import io.email.Email;
 import io.email.EmailSending;
 import io.email.EmailWorker;
+import io.hardware.gpio.InterruptPins;
 import io.hardware.i2c.I2CWorker;
 import io.mqtt.MqttPool;
 import io.sms.DigiWorker;
@@ -83,6 +84,7 @@ public class DAS implements DeadThreadListener {
 
     BlockingQueue<Datagram> dQueue = new LinkedBlockingQueue<>();
     boolean rebootOnShutDown = false;
+    private InterruptPins isrs;
 
     /* Threading */
     EventLoopGroup nettyGroup = new NioEventLoopGroup(); // Single group so telnet,trans and streampool can share it
@@ -220,6 +222,14 @@ public class DAS implements DeadThreadListener {
                         dQueue.add( Datagram.system(fc.getSource()).writable(fc) ); // request the data
                     }
             );
+
+            /* GPIO's */
+            if( XMLfab.hasRoot(settingsPath,"dcafs","gpio") ){
+                Logger.info("Reading interrupt gpio's from settings.xml");
+                isrs = new InterruptPins(dQueue,settingsPath);
+            }else{
+                Logger.info("No gpios defined in settings.xml");
+            }
         }
         commandPool.setDAS(this);
         this.attachShutDownHook();
@@ -841,5 +851,6 @@ public class DAS implements DeadThreadListener {
         das.startAll();
 
         Logger.info("Dcafs "+version+" boot finished!");
+
     }
 }
