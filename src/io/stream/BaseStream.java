@@ -316,7 +316,7 @@ public abstract class BaseStream {
             case "idle":   return TRIGGER.IDLE;
             case "!idle":  return TRIGGER.IDLE_END;
             case "hello":  return TRIGGER.HELLO;
-            case "wakeup": return TRIGGER.WAKEUP;
+            case "wakeup": case "asleep": return TRIGGER.WAKEUP;
             default : Logger.error("Unknown trigger requested : "+trigger); return null;
         }
     }
