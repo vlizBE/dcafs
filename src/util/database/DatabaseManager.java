@@ -449,7 +449,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
                         .add("  dbm:addinfluxdb,id,db name,ip:port,user:pass -> Adds a Influxdb server on given ip:port with user:pass")
                         .add("").add(TelnetCodes.TEXT_GREEN+"Working with tables"+TelnetCodes.TEXT_YELLOW)
                         .add("  dbm:addtable,id,tablename,format (format eg. tirc timestamp(auto filled system time),int,real,char/text)")
-                        .add("  dbm:addcol,<dbid:>tablename,columntype:columnname<,alias (columntypes r(eal),t(ime)s(tamp),i(nteger),t(ext)")
+                        .add("  dbm:addcol,<dbid:>tablename,columntype:columnname<:alias>,... (columntypes r(eal),t(ime)s(tamp),i(nteger),t(ext)")
                         .add("  dbm:tablexml,id,tablename -> Write the table in memory to the xml file, use * as tablename for all")
                         .add("  dbm:tables,id -> Get info about the given id (tables etc)")
                         .add("  dbm:fetch,id -> Read the tables from the database directly, not overwriting stored ones.")
@@ -586,7 +586,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
                 return "No such database found nor influxDB.";
             case "addcolumn": case "addcol":
                 if( cmds.length < 3 )
-                    return "Not enough arguments, needs to be dbm:addcolumn,<dbId:>tablename,columntype:columnname<,alias>";
+                    return "Not enough arguments, needs to be dbm:addcolumn,<dbId:>tablename,columntype:columnname<:alias>";
                 if(!cmds[2].contains(":"))
                     return "Needs to be columtype:columnname";
                 String dbid =  cmds[1].contains(":")?cmds[1].split(":")[0]:"";
@@ -594,14 +594,8 @@ public class DatabaseManager implements QueryWriting, Commandable {
                 String[] col = cmds[2].split(":");
                 String alias = cmds.length==4?cmds[3]:"";
 
-                switch(col[0]){
-                    case "ts":col[0]="timestamp";break;
-                    case "i":col[0]="integer";break;
-                    case "r":col[0]="real";break;
-                    case "text":col[0]="text";break;
-                }
-
                 fab = XMLfab.withRoot(settingsPath,"settings","databases");
+
                 for( var dbtype : new String[]{"database","sqlite"}) {
                     for (var ele : fab.getChildren(dbtype)) {
                         if (!dbid.isEmpty() && !dbid.equalsIgnoreCase(ele.getAttribute("id")))
@@ -609,19 +603,29 @@ public class DatabaseManager implements QueryWriting, Commandable {
                         for (var tbl : XMLtools.getChildElements(ele, "table")) {
                             if (tbl.getAttribute("name").equalsIgnoreCase(table)) {
                                 fab.selectOrAddChildAsParent(dbtype, "id", ele.getAttribute("id"))
-                                        .selectOrAddChildAsParent("table", "name", table)
-                                        .addChild(col[0], col[1]);
-                                if( !alias.isEmpty()) {
-                                    fab.attr("alias", alias).build();
-                                }else{
-                                    fab.build();
+                                        .selectOrAddChildAsParent("table", "name", table);
+                                for( int a=2;a<cmds.length;a++){
+                                    var spl = cmds[a].split(":");
+                                    switch(spl[0]){
+                                        case "ts":spl[0]="timestamp";break;
+                                        case "i":spl[0]="integer";break;
+                                        case "r": case "d":spl[0]="real";break;
+                                        case "t":spl[0]="text";break;
+                                        case "udt":spl[0]="utcdatetime";break;
+                                        case "ldt":spl[0]="localdatetime";break;
+                                        case "dt":spl[0]="datetime";break;
+                                    }
+                                    fab.addChild(spl[0], spl[1]);
+                                    if( spl.length==3)
+                                        fab.attr("alias",spl[2]);
                                 }
-                                return "Column added: " + col[0] + "->" + col[1] + (alias.isEmpty() ? "" : " with alias " + alias);
+                                fab.build();
+                                return "Column(s) added";
                             }
                         }
                     }
                 }
-                return "Nothing added";
+                return "Nothing added, unknown table?";
             case "fetch":
                 if( cmds.length < 2 )
                     return "Not enough arguments, needs to be dbm:fetch,dbId";
