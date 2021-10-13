@@ -64,7 +64,7 @@ public class InterruptPins implements DeviceEventConsumer<DigitalInputEvent> {
                 var isr = new InterruptCmd(device);
                 pinCmds.add(isr);
                 return Optional.of(isr);
-            }catch( NoSuchDeviceException e ){
+            }catch( RuntimeIOException e  ){
                 Logger.error(e);
                 return Optional.empty();
             }
