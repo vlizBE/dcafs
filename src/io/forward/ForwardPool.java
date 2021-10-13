@@ -650,15 +650,15 @@ public class ForwardPool implements Commandable {
             case "addrule":
                 if( cmds.length < 3)
                     return "Bad amount of arguments, should be ff:addrule,id,type:value";
-                String step = cmds.length==4?cmds[2]+","+cmds[3]:cmds[2]; // step might contain a ,
+                String rule = cmds.length==4?cmds[2]+","+cmds[3]:cmds[2]; // step might contain a ,
                 var fOpt = getFilterForward(cmds[1].toLowerCase());
                 Logger.info("Filter exists?"+fOpt.isPresent());
-                switch( fOpt.map( f -> f.addRule(step) ).orElse(0) ){
+                switch( fOpt.map( f -> f.addRule(rule) ).orElse(0) ){
                     case 1:
                         fOpt.get().writeToXML(XMLfab.withRoot(settingsPath, "dcafs"));
                         return "Rule added to "+cmds[1];
                     case 0:  return "Failed to add rule, no such filter called "+cmds[1];
-                    case -1: return "Unknown type in "+step+", try ff:types for a list";
+                    case -1: return "Unknown type in "+rule+", try ff:types for a list";
                     case -2: return "Bad rule syntax, should be type:value";
                     default: return "Wrong response from getFilter";
                 }
@@ -696,7 +696,7 @@ public class ForwardPool implements Commandable {
                 if( getFilterForward(cmds[1]).isPresent() )
                     return "Already filter with that id";
 
-                ff = addFilter(cmds[1].toLowerCase(),cmds[2],cmds[3]);
+                ff = addFilter(cmds[1].toLowerCase(),cmds[2],cmds.length==4?cmds[3]:cmds[3]+","+cmds[4]);
                 if( ff == null )
                     return "Something wrong with the command, filter not created";
 
@@ -729,10 +729,14 @@ public class ForwardPool implements Commandable {
                 if( fab.selectChildAsParent("filter","id",cmds[1]).isEmpty() )
                     return "No such filter node '"+cmds[1]+"'";
 
-                if (param.equals("label")) {
-                    ff.setLabel(value);
-                    fab.attr("label", value);
-                    return fab.build() ? "Label changed" : "Label change failed";
+                switch( param ){
+                    case "label":
+                        ff.setLabel(value);
+                        fab.attr("label", value);
+                        return fab.build() ? "Label changed" : "Label change failed";
+                    case "delim": case "delimiter":
+                        fab.attr("delimiter", value);
+                        return fab.build() ? "Delimiter changed" : "Delimiter change failed";
                 }
                 return "No valid alter target: " + param;
             case "swaprawsrc":
