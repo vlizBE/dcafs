@@ -514,14 +514,13 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 						.add("      The letter is the type of value, the number the index in the array of received data and the word is the name/id of the value")
 						.add("      So for example: i2temp,r5offset  -> integer on index 2 with name temp, real on 5 with name offset")
 						.add("      Options for the letter:")
-						.add("       r = a real number" )
+						.add("       r/d = a real/double number" )
 						.add("       i = an integer number")
 						.add("       t = a piece of text")
 						.add("       m = macro, this value can be used as part as the rtval")
-						.add("       s = skip, this won't show up in the xml but will increase the index counter")
 						.add("       eg. 1234,temp,19.2,hum,55 ( with 1234 = serial number")
 						.add("           -> serial number,title,temperature reading,title,humidity reading")
-						.add("           -> msrsi -> macro,skip,real,skip,integer");
+						.add("           -> m0,r2temp,i4hum");
 				join.add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW);
 				join.add("  gens:? -> Show this info")
 						.add("  gens:reload -> Reloads all generics")

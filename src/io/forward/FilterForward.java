@@ -125,11 +125,18 @@ public class FilterForward extends AbstractForward {
 
         if( rules.size()==1 && sources.size()==1){
             fab.attr("type",rulesString.get(0)[1]).content(rulesString.get(0)[2]);
+            if( !rulesString.get(0)[3].isEmpty() )
+                fab.attr("delimiter",rulesString.get(0)[3]);
+
         }else{
             fab.content("");
             fab.removeAttr("type");
             fab.comment("Rules go here, use ff:rules to know the types");
-            rulesString.forEach( rule -> fab.addChild("rule",rule[2]).attr("type",rule[1]) );
+            rulesString.forEach( rule -> {
+                fab.addChild("rule",rule[2]).attr("type",rule[1]);
+                if( !rule[3].isEmpty() )
+                    fab.attr("delimiter",rule[3]);
+            } );
         }
         return fab.build();
     }
@@ -175,8 +182,9 @@ public class FilterForward extends AbstractForward {
             }
         }else if( filter.getTextContent() != null ){ // If only a single rule is defined
             String type = XMLtools.getStringAttribute(filter,"type","");
+            String delim = XMLtools.getStringAttribute(filter,"delimiter",this.delimiter);
             if( !type.isEmpty()){
-                addRule(type,filter.getTextContent());
+                addRule(type,filter.getTextContent(),delim);
             }
         }
         return true;
@@ -192,7 +200,7 @@ public class FilterForward extends AbstractForward {
      */
     public int addRule( String type, String value, String delimiter ){
         String[] values = value.split(",");
-        rulesString.add( new String[]{"",type,value} );
+        rulesString.add( new String[]{"",type,value,delimiter} );
 
         value = Tools.fromEscapedStringToBytes(value);
         Logger.info(id+" -> Adding rule "+type+" > "+value);
@@ -271,8 +279,12 @@ public class FilterForward extends AbstractForward {
         }
         String type=combined.substring(0, combined.indexOf(":"));
         String val=combined.substring(combined.indexOf(":")+1);
-
-        return addRule(type,val);
+        String delim="";
+        if( type.equalsIgnoreCase("math")) {
+            delim = val.substring(val.indexOf(",")+1);
+            val = val.substring(0, val.indexOf(","));
+        }
+        return addRule(type,val,delim);
     }
 
     /* Filters */
