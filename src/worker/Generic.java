@@ -27,7 +27,7 @@ public class Generic {
 
     ArrayList<Entry> entries = new ArrayList<>();
     ArrayList<Filter> filters = new ArrayList<>();
-    String delimiter="";
+    String delimiter=",";
     String id;
     private String[] dbid;
     private String table="";
@@ -353,7 +353,7 @@ public class Generic {
 
         Generic generic = Generic.create(gen.getAttribute("id"));
         generic.setDefaultGroup(gen.getAttribute("group"));
-        generic.setDelimiter(gen.getAttribute("delimiter"));
+        generic.setDelimiter(XMLtools.getStringAttribute(gen,"delimiter",","));
         generic.setStartsWith(gen.getAttribute("startswith"));
         generic.setMQTTID(gen.getAttribute("mqtt"));
         generic.setInfluxID(gen.getAttribute("influx"));
