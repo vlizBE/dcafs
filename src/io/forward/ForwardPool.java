@@ -178,6 +178,8 @@ public class ForwardPool implements Commandable {
                     if( !cmds[a].contains("="))
                         src.add(cmds[a]);
                 }
+                if(!src.toString().contains(":"))
+                    return "Invalid source format, needs to be type:id";
                 var mm = addMath(cmds[1],src.toString());
                 if( cmds[cmds.length-1].contains("=")){
                     mm.addStdOperation(cmds[cmds.length-1], -1,"");
@@ -349,7 +351,8 @@ public class ForwardPool implements Commandable {
                 for( int a=2;a<cmds.length;a++){
                     src.add(cmds[a]);
                 }
-
+                if(!src.toString().contains(":"))
+                    return "Invalid source format, needs to be type:id";
                 ef = addEditor(cmds[1].toLowerCase(),src.toString());
                 if( ef == null)
                     return "Something wrong with the command, filter not created";
@@ -684,7 +687,8 @@ public class ForwardPool implements Commandable {
                 for( int a=2;a<cmds.length;a++){
                     src.add(cmds[a]);
                 }
-
+                if(!src.toString().contains(":"))
+                    return "Invalid source format, needs to be type:id";
                 ff = addFilter(cmds[1].toLowerCase(),src.toString(),"");
                 if( ff == null)
                     return "Something wrong with the command, filter not created";
