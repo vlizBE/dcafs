@@ -20,7 +20,18 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (might be trigger for 0.12.0)
 
-## 0.11.2 (work in progress)
+## 0.11.3 (work in progress)
+
+### Forwards
+- A src is now checked for the presence of ':' because a valid src should always have it
+- Math and filter now use ',' as default delimiter
+
+### Fixes
+- Mathforward, wasn't updating references etc when adding blank or op only on reload
+- MathFab, didn't process op's of the form i2=i2 well
+- 
+
+## 0.11.2 (14/10/2021)
 
 ### I2C
 - Added the option to use ix (fe. i0) to refer to an earlier read result in the
