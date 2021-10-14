@@ -24,7 +24,7 @@ public class FilterForward extends AbstractForward {
 
     protected ArrayList<Predicate<String>> rules = new ArrayList<>();// Rules that define the filters
     private final ArrayList<Writable> reversed = new ArrayList<>();
-    private String delimiter = "";
+    private String delimiter = ",";
     private int ignoreFalse =0;
     private int freePasses=0;
     private boolean negate=false;
@@ -151,7 +151,7 @@ public class FilterForward extends AbstractForward {
         if( !readBasicsFromXml(filter) )
             return false;
 
-        delimiter = XMLtools.getStringAttribute(filter,"delimiter",""); // Allow for global delimiter
+        delimiter = XMLtools.getStringAttribute(filter,"delimiter",delimiter); // Allow for global delimiter
         ignoreFalse = XMLtools.getIntAttribute(filter,"ignores",0);
         negate = XMLtools.getBooleanAttribute(filter,"negate",false);
 
@@ -229,7 +229,7 @@ public class FilterForward extends AbstractForward {
     public static String getHelp(String eol){
         StringJoiner join = new StringJoiner(eol);
         join.add("start   -> Which text the data should start with" )
-            .add("    fe. <filter type='star'>$</filter> --> The data must start with $");
+            .add("    fe. <filter type='start'>$</filter> --> The data must start with $");
         join.add("nostart -> Which text the data can't start with")
             .add("    fe. <filter type='nostart'>$</filter> --> The data can't start with $");
         join.add("end     -> Which text the data should end with")

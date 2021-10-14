@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 
 public class MathForward extends AbstractForward {
 
-    private String delimiter = ";";
+    private String delimiter = ",";
     private String suffix="";
 
     private final ArrayList<Operation> ops = new ArrayList<>();
@@ -153,6 +153,9 @@ public class MathForward extends AbstractForward {
                                         XMLtools.getStringAttribute(ops, "cmd", ""),
                                         ops.getTextContent());
                                 break;
+                            default:
+                                Logger.error("Bad type "+type);
+                                break;
                         }
 
                     }catch( NumberFormatException e){
@@ -229,8 +232,12 @@ public class MathForward extends AbstractForward {
         if( bds == null ){
             badDataCount++;
             Logger.error(id+" (mf)-> No valid numbers in the data: "+data+" after split on "+delimiter+ " "+badDataCount+"/"+MAX_BAD_COUNT);
+            targets.stream().filter( wr -> wr.getID().contains("telnet"))
+                    .forEach( wr -> wr.writeLine(id+"'mf) No valid numbers in data after split on '"+delimiter+"'"));
             if( badDataCount>=MAX_BAD_COUNT) {
                 Logger.error(id+"(mf)-> Too many bad data received, no longer accepting data");
+                targets.stream().filter( wr -> wr.getID().contains("telnet"))
+                        .forEach( wr -> wr.writeLine(id+"'mf) Stopped requesting data"));
                 valid=false;
                 return false;
             }
@@ -243,15 +250,26 @@ public class MathForward extends AbstractForward {
                 if (res == null) {
                     badDataCount++;
                     Logger.error(id + "(mf) -> Failed to process " + data + " ("+badDataCount+"/"+MAX_BAD_COUNT+")");
+                    targets.stream().filter( wr -> wr.getID().contains("telnet"))
+                            .forEach( wr -> wr.writeLine(id+"(mf) -> Failed to process "+ data));
+
                 }
             }else{
                 badDataCount++;
                 Logger.error(id + "(mf) -> Invalid op " + data+ " ("+badDataCount+"/"+MAX_BAD_COUNT+")");
+                targets.stream().filter( wr -> wr.getID().contains("telnet"))
+                        .forEach( wr -> wr.writeLine(id+"(mf) -> Invalid op "+ data));
             }
         } ); // Solve the operations with the converted data
         if( oldBad == badDataCount )
             badDataCount=0;
 
+        if( badDataCount >=MAX_BAD_COUNT) {
+            targets.stream().filter( wr -> wr.getID().contains("telnet"))
+                    .forEach( wr -> wr.writeLine(id+"(mf) -> To many fails, giving up"));
+            valid=false;
+            return false;
+        }
         if( badDataCount > 0 || bds == null)
             return true;
 
@@ -316,12 +334,14 @@ public class MathForward extends AbstractForward {
         expression=expression.replace("--","-=1");
         expression=expression.replace(" ",""); //remove spaces
 
+        findReferences(expression);
+
         if( !expression.contains("=") ) {// If this doesn't contain a '=' it's no good
             if(expression.matches("[i][0-9]{1,3}")){
                 var op = new Operation( expression, NumberUtils.toInt(expression.substring(1),-1));
                 op.setCmd(cmd);
                 op.setScale(scale);
-                rulesString.add(new String[]{"std",""+NumberUtils.toInt(expression.substring(1)),expression});
+                rulesString.add(new String[]{"complex",""+NumberUtils.toInt(expression.substring(1)),expression});
                 ops.add(op);
                 return Optional.of(op);
             }else {
@@ -349,7 +369,7 @@ public class MathForward extends AbstractForward {
                 var op = new Operation( expression, NumberUtils.toInt(split[1].substring(1),-1));
                 op.setCmd(cmd);
                 op.setScale(scale);
-                rulesString.add(new String[]{"std",""+NumberUtils.toInt(split[1].substring(1)),expression});
+                rulesString.add(new String[]{"complex",""+NumberUtils.toInt(split[1].substring(1)),expression});
                 ops.add(op);
                 return Optional.of(op);
             }else{
@@ -388,7 +408,7 @@ public class MathForward extends AbstractForward {
         op.setScale(scale);
         op.setCmd(cmd);
 
-        rulesString.add(new String[]{"std",""+index,expression});
+        rulesString.add(new String[]{"complex",""+index,expression});
         return Optional.ofNullable(ops.get(ops.size()-1)); // return the one that was added last
     }
 
@@ -473,7 +493,7 @@ public class MathForward extends AbstractForward {
      */
     private OP_TYPE fromStringToOPTYPE(String optype) {
         switch(optype.toLowerCase()){
-            case "complex": return OP_TYPE.COMPLEX;
+
             case "scale": return OP_TYPE.SCALE;
             case "ln": return OP_TYPE.LN;
             case "salinity": return OP_TYPE.SALINITY;
@@ -482,9 +502,10 @@ public class MathForward extends AbstractForward {
             case "truewindspeed": return OP_TYPE.TRUEWINDSPEED;
             case "utm": return OP_TYPE.UTM;
             case "gdc": return OP_TYPE.GDC;
+            default:
+                Logger.error(id+"(mf) Invalid op type given, using default complex");
+            case "complex": return OP_TYPE.COMPLEX;
         }
-        Logger.error("Invalid op type given, valid ones complex,scale");
-        return null;
     }
 
     /**
