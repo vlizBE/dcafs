@@ -81,7 +81,7 @@ public class MathFab {
              }
         }
 
-        // Replace to enable geometric stuf?
+        // Replace to enable geometric stuff?
         formula = formula.replace("cos(","1°(");
         formula = formula.replace("cosd(","1°(");
         formula = formula.replace("cosr(","2°(");
@@ -144,13 +144,14 @@ public class MathFab {
                     return null;
                 }
                 String piece = formula.substring(open,close+1); // includes the brackets
-                if( res.size()==1 && res.get(0)[1].equalsIgnoreCase("0")&& res.get(0)[2].equalsIgnoreCase("+")){
-                    formula=formula.replace(piece,res.get(0)[0]);
-                }else{
+                //if( res.size()==1 && res.get(0)[1].equalsIgnoreCase("0")&& res.get(0)[2].equalsIgnoreCase("+")){
+                  //  formula=formula.replace(piece,res.get(0)[0]);
+
+               // }else{
                     subFormulas.addAll( res );    // split that part in the sub-formulas
                     // replace the sub part in the original formula with a reference to the last sub-formula
                     formula=formula.replace(piece,"o"+(subFormulas.size()-1));
-                }
+                //}
             }else{
                 Logger.error("Didn't find opening bracket");
             }
