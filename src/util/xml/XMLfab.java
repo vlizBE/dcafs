@@ -330,6 +330,22 @@ public class XMLfab {
         return this;
     }
     /**
+     * Remove a single child node from the current parent node
+     * @param tag The tag of the childnode to remove
+     * @return This fab
+     */
+    public boolean removeChild( String tag, String attr, String value ){
+        var child = getChild(tag,attr,value);
+        if( child.isPresent() ) {
+            parent.removeChild(child.get());
+            build();
+            return true;
+        }else{
+            Logger.warn("Tried to remove a none-existing childnode "+tag);
+            return false;
+        }
+    }
+    /**
      * Get the first child node with the given tag and attribute
      * @param tag The tag of the childnode
      * @param attr The attribute of the childnode
