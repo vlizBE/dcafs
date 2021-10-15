@@ -199,10 +199,10 @@ public class DAS implements DeadThreadListener {
 
             /* Forwards */
             ForwardPool forwardPool = new ForwardPool(dQueue, settingsPath, rtvals, nettyGroup);
-            addCommandable(forwardPool,"filter","ff");
-            addCommandable(forwardPool,"math","mf");
-            addCommandable(forwardPool,"editor","ef");
-            addCommandable(forwardPool,"paths","path","pf");
+            addCommandable(forwardPool,"filter","ff","filters");
+            addCommandable(forwardPool,"math","mf","maths");
+            addCommandable(forwardPool,"editor","ef","editors");
+            addCommandable(forwardPool,"paths","path","pf","paths");
 
             /* Math Collectors */
             MathCollector.createFromXml( XMLfab.getRootChildren(settingsDoc,"dcafs","maths","*") ).forEach(

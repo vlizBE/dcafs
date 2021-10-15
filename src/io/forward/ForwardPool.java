@@ -77,7 +77,7 @@ public class ForwardPool implements Commandable {
                 p.addTarget(wr);
                 return "Request received.";
             // Filter
-            case "ff": return replyToFilterCmd(request[1],wr,html);
+            case "ff": case "filters": return replyToFilterCmd(request[1],wr,html);
             case "filter":
                 if( request[1].startsWith("!")){
                     ok = getFilterForward(request[1].substring(1)).map(ff -> {ff.addReverseTarget(wr);return true;} ).orElse(false);
@@ -87,11 +87,11 @@ public class ForwardPool implements Commandable {
                 break;
 
             // Editor
-            case "ef": return replyToEditorCmd(request[1],html);
+            case "ef": case "editors": return replyToEditorCmd(request[1],html);
             case "editor": ok = getEditorForward(request[1]).map(tf -> { tf.addTarget(wr); return true;} ).orElse(false); break;
 
             // Math
-            case "mf": return replyToMathCmd(request[1],html);
+            case "mf": case "maths": return replyToMathCmd(request[1],html);
             case "math": ok = getMathForward(request[1]).map(mf -> { mf.addTarget(wr); return true;} ).orElse(false); break;
             default:
                 return "unknown command: "+request[0]+":"+request[1];
@@ -137,21 +137,28 @@ public class ForwardPool implements Commandable {
         switch( cmds[0] ) {
             case "?":
                 join.add(TelnetCodes.TEXT_RED+"Purpose"+TelnetCodes.TEXT_YELLOW)
-                        .add("  MathForwards can be used to alter data received from any source using mathematics.")
+                        .add("  Maths can be used to alter data received from any source using mathematics.")
                         .add("  eg. receive the raw data from a sensor and convert it to engineering values")
                         .add("  Furthermore, the altered data is considered a source and can thus be used in further steps.")
-                        .add("  eg. pass it to a generic that stores it in a database").add("");
+                        .add("  fe. pass it to a generic that stores it in a database")
+                        .add("");
+                join.add(TelnetCodes.TEXT_BLUE+"Notes"+TelnetCodes.TEXT_YELLOW)
+                        .add("  - Maths don't do anything if it doesn't have a target (label counts as target)")
+                        .add("  - Commands can start with mf: instead of maths:")
+                        .add("  - ...");
                 join.add(TelnetCodes.TEXT_GREEN+"Create a MathForward"+TelnetCodes.TEXT_YELLOW)
-                        .add("  mf:addblank,id,source<,op> -> Add a blank math to the xml with the given id, source and optional op")
-                        .add("  mf:addsource,id,source -> Add the source to the given mathf")
-                        .add("  mf:addop,id,op -> Add the operation fe. i1=i2+50 to the mathf with the id")
-                        .add("  mf:alter,id,param:value -> Change a setting, currently delim(eter),label");
+                        .add("  maths:addmath/add,id,source<,op> -> Add a blank math to the xml with the given id, source and optional op")
+                        .add("  maths:addsource,id,source -> Add the source to the given math")
+                        .add("  maths:addop,id,op -> Add the operation fe. i1=i2+50 to the math with the id")
+                        .add("  maths:alter,id,param:value -> Change a setting, currently delim(eter),label");
                 join.add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW)
-                        .add("  mf:debug,on/off -> Turn debug on/off")
-                        .add("  mf:list -> Get a listing of all the present mathforwards")
-                        .add("  mf:scratchpad,id,value -> Add the given value to the scratchpad of mathf id (or * for all)")
-                        .add("  mf:reload,id -> reloads the given id")
-                        .add("  mf:test,id,variables -> Test the given id with the variables (with the correct delimiter)")
+                        .add("  maths:debug,on/off -> Turn debug on/off")
+                        .add("  maths:list -> Get a listing of all the present maths")
+                        .add("  maths:scratchpad,id,value -> Add the given value to the scratchpad of mathf id (or * for all)")
+                        .add("  maths:reload,id -> reloads the given id")
+                        .add("  maths:remove,id -> remove the given id")
+                        .add("  maths:clear -> remove all maths")
+                        .add("  maths:test,id,variables -> Test the given id with the variables (with the correct delimiter)")
                         .add("  math:id -> Receive the data in the telnet window, also the source reference");
                 return join.toString();
             case "debug":
@@ -162,13 +169,9 @@ public class ForwardPool implements Commandable {
                     maths.values().forEach(MathForward::disableDebug);
                     return "Debug disabled";
                 }
-            case "addcomplex":
-                complex=true;
-                if( cmds.length<4 && !cmds[cmds.length-1].startsWith("i"))
-                    return "Incorrect amount of arguments, expected mf:addcomplex,id,source,op";
-            case "addblank":
+            case "addblank":case "addmath": case "add":
                 if( cmds.length<3)
-                    return "Incorrect amount of arguments, expected mf:addblank,id,source<,op>";
+                    return "Incorrect amount of arguments, expected mf/maths:"+cmds[0]+",id,source<,op> (op is optional)";
                 if( getMathForward(cmds[1]).isPresent() )
                     return "Already math with that id";
                 cmds[1]=cmds[1].toLowerCase();
@@ -189,7 +192,7 @@ public class ForwardPool implements Commandable {
             case "alter":
                 var mf = maths.get(cmds[1]);
                 if( cmds.length < 3)
-                    return "Bad amount of arguments, should be mf:alter,id,param:value";
+                    return "Bad amount of arguments, should be mf/maths:alter,id,param:value";
                 if( mf == null )
                     return "No such mathforward: "+cmds[1];
 
@@ -203,7 +206,7 @@ public class ForwardPool implements Commandable {
                 XMLfab fab = XMLfab.withRoot(settingsPath,"dcafs","maths"); // get a fab pointing to the maths node
 
                 if( fab.selectChildAsParent("math","id",cmds[1]).isEmpty() )
-                    return "No such math node '"+cmds[1]+"'";
+                    return "No such math '"+cmds[1]+"'";
 
                 switch( param ){
                     case "delim": case "delimiter": case "split":
@@ -216,8 +219,18 @@ public class ForwardPool implements Commandable {
                         return fab.build()?"Label changed":"Label change failed";
                     default:return "No valid alter target: "+param;
                 }
-            case "reset":
+            case "remove":
+                if( cmds.length!=2)
+                    return "Missing id";
+                if( XMLfab.withRoot(settingsPath, "dcafs", "maths").removeChild("math","id",cmds[1]) ){
+                    maths.remove(cmds[1]);
+                    return "Math removed";
+                }
+                return "No such math "+cmds[1];
+            case "clear":
                 XMLfab.withRoot(settingsPath, "dcafs", "maths").clearChildren().build();
+                maths.clear();
+                return "Maths cleared";
             case "reload":
                 if( cmds.length==2) {
                     if(getMathForward(cmds[1]).isEmpty())
@@ -260,6 +273,8 @@ public class ForwardPool implements Commandable {
                 return join.toString();
             case "addsource": case "addsrc":
                 String source = cmds[2].startsWith("i2c:")?cmds[2]+","+cmds[3]:cmds[2];
+                if( !source.contains(":"))
+                    return "Base source given, needs to contain a :";
                 if( getMathForward(cmds[1]).map(m -> m.addSource(source) ).orElse(false) )
                     return "Source added";
                 return "Failed to add source, no such math.";
@@ -268,8 +283,6 @@ public class ForwardPool implements Commandable {
                     return "Bad amount of arguments, should be mf:addop,id,inputIndex(fe. i1)=formula";
 
                 cmds[1]=cmds[1].toLowerCase();
-
-                Logger.info("Math "+cmds[1]+" exists?"+ getMathForward(cmds[1]).isPresent());
 
                 String[] split = cmds[2].split("=");
                 if( split.length!=2){
@@ -329,21 +342,24 @@ public class ForwardPool implements Commandable {
             case "?":
                 join.add(TelnetCodes.TEXT_RED+"Purpose"+TelnetCodes.TEXT_YELLOW)
                         .add("  If a next step in the processing needs something altered to the format or layout of the data")
-                        .add("  an editorforward can do this.");
+                        .add("  an editor can do this.");
                 join.add(TelnetCodes.TEXT_BLUE+"Notes"+TelnetCodes.TEXT_YELLOW)
-                        .add("  - Forward doesn't do anything if it doesn't have a target (label counts as target)")
+                        .add("  - Editors don't do anything if it doesn't have a target (label counts as target)")
+                        .add("  - Commands can start with ef:, instead of filters:")
                         .add("  - ...");
                 join.add("").add(TelnetCodes.TEXT_GREEN+"Create a EditorForward"+TelnetCodes.TEXT_YELLOW);
-                join.add( "  ef:addblank,id<,source> -> Add a blank filter with an optional source, gets stored in xml.")
+                join.add( "  ef/editors:addeditor/add,id<,source> -> Add a blank filter with an optional source.")
                     .add( "  ef:reload<,id> -> Reload the editor with the given id or all if no id was given.");
                 join.add("").add(TelnetCodes.TEXT_GREEN+"Other commands"+TelnetCodes.TEXT_YELLOW)
                         .add("  ef:list -> Get a list of all editors")
+                        .add("  ef:remove,id -> Remove the given editor")
+                        .add("  ef:clear -> Remove all editors")
                         .add("  ef:edits -> Get a list of all possible edit operations")
                         .add("  ef:addedit,id,type:value -> Add an edit of the given value, use type:? for format");
                 return join.toString();
-            case "addblank":
+            case "addblank": case "addeditor": case "add":
                 if( cmds.length<2)
-                    return "Not enough arguments, needs to be ef:addblank,id<,src,>";
+                    return "Not enough arguments, needs to be ef:addeditor,id<,src,>";
                 if( getEditorForward(cmds[1]).isPresent() )
                     return "Already editor with that id";
 
@@ -358,8 +374,18 @@ public class ForwardPool implements Commandable {
                     return "Something wrong with the command, filter not created";
                 ef.writeToXML( XMLfab.withRoot(settingsPath, "dcafs") );
                 return "Blank editor with id "+cmds[1]+ " created"+(cmds.length>2?", with source "+cmds[2]:"")+".";
-            case "reset":
+            case "remove":
+                if( cmds.length!=2)
+                    return "Missing id";
+                if( XMLfab.withRoot(settingsPath, "dcafs", "editors").removeChild("editor","id",cmds[1]) ){
+                    maths.remove(cmds[1]);
+                    return "Editor removed";
+                }
+                return "No such editor "+cmds[1];
+            case "clear":
                 XMLfab.withRoot(settingsPath, "dcafs", "editors").clearChildren().build();
+                editors.clear();
+                return "Maths cleared";
             case "reload":
                 if( cmds.length == 2) {
                     Optional<Element> x = XMLfab.withRoot(settingsPath, "dcafs", "editors").getChild("editor", "id", cmds[1]);
@@ -424,7 +450,7 @@ public class ForwardPool implements Commandable {
             case "edits": return EditorForward.getHelp(html?"<br>":"\r\n");
             case "addedit":
                 if( cmds.length < 3) // might be larger if the value contains  a ,
-                    return "Bad amount of arguments, should be ef:addedit,id,type:value";
+                    return "Bad amount of arguments, should be ef/editors:addedit,id,type:value";
                 var eOpt = getEditorForward(cmds[1]);
                 if( eOpt.isEmpty())
                     return "No such editor";
@@ -432,7 +458,7 @@ public class ForwardPool implements Commandable {
                 var e = eOpt.get();
                 int x = cmd.indexOf(":");
                 if( x==-1)
-                    return "Incorrect format, needs to be ef:addedit,id,type:value(s)";
+                    return "Incorrect format, needs to be ef/editors:addedit,id,type:value(s)";
                 // The value might contain , so make sure to split properly
                 String type = cmds[2].substring(0,cmds[2].indexOf(":"));
                 String value = cmd.substring(x+1);
@@ -609,24 +635,24 @@ public class ForwardPool implements Commandable {
                 join.add(TelnetCodes.TEXT_BLUE+"Notes"+TelnetCodes.TEXT_YELLOW)
                         .add("  - Filter works based on exclusion, meaning no rules = all data goes through")
                         .add("  - Filter doesn't do anything if it doesn't have a target (label counts as target)")
+                        .add("  - Commands can start with ff: instead of filters:")
                         .add("  - ...");
                 join.add("").add(TelnetCodes.TEXT_GREEN+"Create a FilterForward"+TelnetCodes.TEXT_YELLOW);
-                join.add( "  ff:addblank,id<,source> -> Add a blank filter with an optional source, is stored in xml.");
-                join.add( "  ff:rules -> Get a list of all the possible rules with a short explanation");
-                join.add( "  ff:addshort,id,src,rule:value -> Adds a filter with the given source and rule (type:value)");
-                join.add( "  ff:addtemp,id<,source> -> Add a temp filter with an optional source with the issuer as target. Not stored in xml.");
-                join.add( "  ff:addsource,id,source -> Add a source to the given filter");
-                join.add( "  ff:addrule,id,rule:value -> Add a rule to the given filter");
+                join.add( "  filters:addfilter/add,id<,source> -> Add a filter without rules and optional source.");
+                join.add( "  filters:rules -> Get a list of all the possible rules with a short explanation");
+                join.add( "  filters:addshort,id,src,rule:value -> Adds a filter with the given source and rule (type:value)");
+                join.add( "  filters:addsource,id,source -> Add a source to the given filter");
+                join.add( "  filters:addrule,id,rule:value -> Add a rule to the given filter");
 
                 join.add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW);
-                join.add( "  ff:alter,id,param:value -> Alter a parameter, for now only altering the label is possible");
-                join.add( "  ff:reload,id -> Reload the filter with the given id");
-                join.add( "  ff:reload -> Clear the list and reload all the filters");
-                join.add( "  ff:remove,id -> Remove the filter with the given id");
-                join.add( "  ff:test,id,data -> Test if the data would pass the filter");
-                join.add( "  ff:list or ff -> Get a list of all the currently existing filters.");
-                join.add( "  ff:delrule,id,index -> Remove a rule from the filter based on the index given in ff:list");
-                join.add( "  ff:swaprawsrc,id,ori,new -> Swap the raw ori source of the given filter with the new raw one, mimick redundancy");
+                join.add( "  filters:alter,id,param:value -> Alter a parameter, for now only altering the label is possible");
+                join.add( "  filters:reload,id -> Reload the filter with the given id");
+                join.add( "  filters:reload -> Clear the list and reload all the filters");
+                join.add( "  filters:remove,id -> Remove the filter with the given id");
+                join.add( "  filters:test,id,data -> Test if the data would pass the filter");
+                join.add( "  filters:list or ff -> Get a list of all the currently existing filters.");
+                join.add( "  filters:delrule,id,index -> Remove a rule from the filter based on the index given in ff:list");
+                join.add( "  filters:swaprawsrc,id,ori,new -> Swap the raw ori source of the given filter with the new raw one, mimick redundancy");
                 join.add( "  filter:id -> Receive the data in the telnet window, also the source reference");
 
                 return join.toString();
@@ -644,12 +670,6 @@ public class ForwardPool implements Commandable {
                 return join.toString();
             case "rules":
                 return FilterForward.getHelp(html?"<br>":"\r\n");
-            case "remove":
-                if( cmds.length < 2 )
-                    return "Not enough arguments: ff:remove,id";
-                if( filters.remove(cmds[1]) != null )
-                    return "Filter removed";
-                return "No such filter";
             case "addrule":
                 if( cmds.length < 3)
                     return "Bad amount of arguments, should be ff:addrule,id,type:value";
@@ -674,12 +694,14 @@ public class ForwardPool implements Commandable {
                 return "Failed to remove rule, no such filter or rule.";
             case "addsource": case "addsrc":
                 String source = cmds[2].startsWith("i2c:")?cmds[2]+","+cmds[3]:cmds[2];
+                if( !source.contains(":"))
+                    return "No valid source, missing : ";
                 if( getFilterForward(cmds[1]).map(f -> f.addSource(source) ).orElse(false) )
                     return "Source added";
                 return "Failed to add source, no such filter.";
-            case "addblank":
+            case "addblank": case "addfilter": case "add":
                 if( cmds.length<2)
-                    return "Not enough arguments, needs to be ff:addblank,id<,src,>";
+                    return "Not enough arguments, needs to be ff/filters:addfilter,id<,src,>";
                 if( getFilterForward(cmds[1]).isPresent() )
                     return "Already filter with that id";
 
@@ -763,8 +785,18 @@ public class ForwardPool implements Commandable {
                 ff.removeSource("raw:"+cmds[2]);
                 ff.addSource("raw:"+cmds[3]);
                 return "Swapped source of "+cmds[1]+" from "+cmds[2]+" to "+cmds[3];
-            case "reset":
+            case "remove":
+                if( cmds.length!=2)
+                    return "Missing id";
+                if( XMLfab.withRoot(settingsPath, "dcafs", "filters").removeChild("filter","id",cmds[1]) ){
+                    filters.remove(cmds[1]);
+                    return "Filter removed";
+                }
+                return "No such filter "+cmds[1];
+            case "clear":
                 XMLfab.withRoot(settingsPath, "dcafs", "filters").clearChildren().build();
+                filters.clear();
+                return "Filters cleared";
             case "reload":
                 if( cmds.length == 2) {
                     Optional<Element> x = XMLfab.withRoot(settingsPath, "dcafs", "filters").getChild("filter", "id", cmds[1]);
@@ -830,10 +862,8 @@ public class ForwardPool implements Commandable {
                 .add(" lot of attributes to be either generated by dcafs fe. src,label or omitted (id's) which reduces")
                 .add(" the amount of xml the user needs to write.");
                 help.add("").add(TelnetCodes.TEXT_GREEN+"Add/build new paths"+TelnetCodes.TEXT_YELLOW)
-                .add(" paths:addblank,id,src -> Add a blank id with the given src")
-                .add(" paths:addblank,id,src,node_format,delimiter -> Add a blank id with the given src, format,delimiter, ")
-                .add("                                                see addnode for format")
-                .add(" paths:addnodes,id,format -> Add empty nodes to the path")
+                .add(" paths:addpath/add,id,src -> Add a path with the given id and src")
+                .add(" paths:addsteps,id,format -> Add empty steps to the path")
                 .add("                             Format options are:")
                 .add("                             F -> filter without subs")
                 .add("                             f* -> filter with one sub per f fe. ff = two subnodes")
@@ -844,6 +874,7 @@ public class ForwardPool implements Commandable {
                 .add("                                             multiple with , delimiting is possible");
                 help.add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW)
                 .add(" paths:reload,id -> reload the path with the given id")
+                .add(" paths:readpath,id,path -> Add a path using a path xml")
                 .add(" paths:list -> List all the currently loaded paths")
                 .add(" paths:debug,id,stepnr -> Request the data from a single step in the path (0=first; -1=custom src)");
                 return help.toString();
@@ -860,19 +891,9 @@ public class ForwardPool implements Commandable {
                 paths.get(cmds[1]).readFromXML(ele.get());
                 return "Path reloaded";
             case "readfile":
-                if( cmds.length<2)
-                    return "No enough arguments: pf:readfile,id,path";
-                fab = XMLfab.withRoot(settingsPath,"dcafs","paths")
-                        .selectOrAddChildAsParent("path","id",cmds[1])
-                        .addChild("customsrc",cmds[2]).attr("type","file").attr("interval","1s");
-                fab.build();
-                PathForward path = new PathForward(dataProviding,dQueue,nettyGroup);
-                path.setWorkPath(settingsPath.getParent());
-                path.readFromXML( fab.getCurrentElement());
-                paths.put(cmds[1],path);
 
                 return "File reading added";
-            case "addblank":
+            case "addblank": case "addpath": case "add":
                 blank=true;
 
                 XMLfab.withRoot(settingsPath,"dcafs","paths")
@@ -881,16 +902,27 @@ public class ForwardPool implements Commandable {
                             .attr("delimiter",",")
                             .build();
 
-                if( cmds.length<=3) {
-                    PathForward p = new PathForward(dataProviding,dQueue,nettyGroup);
-                    p.setWorkPath(settingsPath.getParent());
-
-                    paths.put(cmds[1],p);
-                    return "Blank added";
+                if( cmds.length==3) {
+                    if( !cmds[2].contains(":")){
+                        return "No valid source  given, need to contain a :";
+                    }
+                    PathForward path = new PathForward(dataProviding,dQueue,nettyGroup);
+                    path.setWorkPath(settingsPath.getParent());
+                    if( cmds[2].startsWith("file:")) {
+                        fab = XMLfab.withRoot(settingsPath, "dcafs", "paths")
+                                .selectOrAddChildAsParent("path", "id", cmds[1])
+                                .addChild("customsrc", cmds[2]).attr("type", "file").attr("interval", "1s");
+                        fab.build();
+                        path.readFromXML( fab.getCurrentElement());
+                    }else{
+                        path.setSrc(cmds[2]);
+                    }
+                    paths.put(cmds[1],path);
+                    return "Path added";
+                }else if( cmds.length<3){
+                    return "Not enough arguments, need paths:addpath,id,src";
                 }
-                if( cmds.length<5 )
-                    return "Not enough arguments need atleast five: pf:addblank,id,src,node_format,delimiter";
-            case "addnodes": case "addnode":
+            case "addnodes": case "addnode": case "addstep": case "addsteps":
                 if( !blank ) {
                     if (paths.get(cmds[1]) == null)
                         return "No such path " + cmds[1];
@@ -972,6 +1004,18 @@ public class ForwardPool implements Commandable {
                     return "Generic added & reloaded";
                 }
                 return "Failed to write generic";
+            case "remove":
+                if( cmds.length!=2)
+                    return "Missing id";
+                if( XMLfab.withRoot(settingsPath, "dcafs", "paths").removeChild("path","id",cmds[1]) ){
+                    filters.remove(cmds[1]);
+                    return "Path removed";
+                }
+                return "No such path "+cmds[1];
+            case "clear":
+                XMLfab.withRoot(settingsPath, "dcafs", "paths").clearChildren().build();
+                filters.clear();
+                return "Paths cleared";
             case "list":
                 StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
                 join.setEmptyValue("No paths yet");
