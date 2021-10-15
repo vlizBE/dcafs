@@ -204,7 +204,7 @@ public class CommandPool {
 
 			case "email": result=doEMAIL(split, wr,html); break;
 			case "fc": result=doFileCollector(split, html); break;
-			case "help": case "h": result=doHelp(split,html); break;
+			case "help": case "h": case "?": result=doHelp(split,html); break;
 			case "h_": result=doH_(split); break;
 
 			case "lt": result=doListThread(split); break;
