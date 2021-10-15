@@ -54,6 +54,9 @@ public class PathForward {
         this.src=src;
         return this;
     }
+    public void setSrc( String src ){
+        this.src=src;
+    }
     public void readFromXML( Element pathEle ){
 
         var oldTargets = new ArrayList<Writable>();
