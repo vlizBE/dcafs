@@ -20,16 +20,23 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (might be trigger for 0.12.0)
 
-## 0.11.3 (work in progress)
+## 0.11.4 (work in progress)
+## 0.11.3 (15/10/21)
+
+Quick release because of the mf:addop/addblank bug.
 
 ### Forwards
 - A src is now checked for the presence of ':' because a valid src should always have it
 - Math and filter now use ',' as default delimiter
+- Can now use maths,filters,editors as alternatives to mf,ff,ef
+- Replaced addblank with addmath,addfilter,addeditor
 
 ### Fixes
 - Mathforward, wasn't updating references etc when adding blank or op only on reload
+because of that the highestI was wrong and this determines with indexes are converted to
+bigdecimal so that stayed at -1 meaning none were converted => nullpointer.
 - MathFab, didn't process op's of the form i2=i2 well
-- 
+- Generic wasn't handling not receiving a delimiter in the addblank (now addgen) well
 
 ## 0.11.2 (14/10/2021)
 
