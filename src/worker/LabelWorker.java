@@ -17,6 +17,7 @@ import util.tools.TimeTools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 
+import javax.xml.crypto.Data;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
@@ -509,7 +510,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				join.add("").add(TelnetCodes.TEXT_GREEN+"Create a Generic"+TelnetCodes.TEXT_YELLOW)
 						.add("  gens:fromtable,dbid,dbtable,gen id[,delimiter] -> Create a generic according to a table, delim is optional, def is ','")
 						.add("  gens:fromdb,dbid,delimiter -> Create a generic with chosen delimiter for each table if there's no such generic yet")
-						.add("  gens:addblank,id,group,format,delimiter -> Create a blank generic with the given id, group and format")
+						.add("  gens:addgen,id,group,format,delimiter -> Create a blank generic with the given id, group and format")
 						.add("      The format consists of a letter, followed by a number and then a word and this is repeated with , as delimiter")
 						.add("      The letter is the type of value, the number the index in the array of received data and the word is the name/id of the value")
 						.add("      So for example: i2temp,r5offset  -> integer on index 2 with name temp, real on 5 with name offset")
@@ -556,9 +557,9 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				}else{
 					return "No generics written";
 				}
-			case "addblank":
+			case "addblank": case "addgen": case "add":
 				if( cmds.length < 4 )
-					return "Not enough arguments, must be gens:addblank,id,group,format,delimiter";
+					return "Not enough arguments, must be gens:addgen,id,src,format,delimiter";
 
 				var delimiter=request[1].endsWith(",")?",":cmds[cmds.length-1];
 				int forms=cmds.length-1;
@@ -566,10 +567,17 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 					delimiter = ",";
 					forms++;
 				}
-				if( Generic.addBlankToXML(XMLfab.withRoot(settingsPath, "dcafs","generics"), cmds[1], cmds[2],
+				if( Generic.addBlankToXML(XMLfab.withRoot(settingsPath, "dcafs","generics"), cmds[1],"",
 					ArrayUtils.subarray(cmds,3,forms),delimiter)){
 					loadGenerics();
-					return "Generic added & reloaded";
+					var ps = cmds[2].split(":");
+					switch( ps[0]){
+						case "raw":
+							ps[0]="stream";
+						case "filter": case "editor": case "math": case "stream": case "path":
+							dQueue.add(Datagram.system(ps[0]+"s:alter,"+ps[1]+",label:generic:"+cmds[1]).writable(wr));
+					}
+					return "Generic added, to set the group use gens:alter,"+cmds[1]+",group:";
 				}
 				return "Failed to write generic";
 			case "alter":
@@ -614,6 +622,18 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 						case "delimiter":
 						case "id":
 							fab.get().attr(attr,val).build();
+							break;
+						case "src":
+							if( !val.contains(":"))
+								return "Bad source format, needs to be type:id";
+							var ps = val.split(":");
+							switch( ps[0]){
+								case "raw":
+									ps[0]="stream";
+								case "filter": case "editor": case "math": case "stream": case "path":
+									dQueue.add(Datagram.system(ps[0]+"s:alter,"+ps[1]+",label:generic:"+cmds[1]).writable(wr));
+									return "Tried to alter src";
+							}
 							break;
 						default: return "No such attr "+attr;
 					}
