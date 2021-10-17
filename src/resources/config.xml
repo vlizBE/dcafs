@@ -2,7 +2,7 @@
 <dcafs>
     <settings>
     </settings>
-    <streams>
+    <streams hint="Connect to tcp,udp server and serial/tty devices">
         <stream id="!" type="tcp,udp">
             <address>ip:port</address>
             <label regex="void|.*:.*">void</label>
@@ -23,7 +23,7 @@
             <write cf="opt,mul" when="hello,wakeup">?</write>
         </stream>
     </streams>
-    <databases>
+    <databases hint="Connect to sqlite files and/or sql servers">
         <server id="!" type="mssql,mysql,mariadb,postgres">
             <address>!</address>
             <flush age="30s" batchsize="30"/>
@@ -42,16 +42,21 @@
             </table>
         </sqlite>
     </databases>
-    <filters>
+    <filters hint="Alter received data with filtering">
         <filter id="!" src="!">
             <rule type="start">?</rule>
             <rule type="nostart">?</rule>
         </filter>
     </filters>
-    <editors>
-        <editor id="!" src="!">
+    <editors hint="Alter received data with string operations">
+        <editor id="!" src="!" label="">
             <edit type="start">?</edit>
             <edit type="nostart">?</edit>
         </editor>
     </editors>
+    <maths hint="Alter received data with math operations">
+        <math id="!" src="!" delimiter="," label="">
+            <op cf="opt,mul" hint="Calculation with format i0=i1+5"></op>
+        </math>
+    </maths>
 </dcafs>
