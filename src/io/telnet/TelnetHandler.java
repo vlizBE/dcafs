@@ -130,7 +130,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
     public void channelRead0(ChannelHandlerContext ctx, byte[] data) throws Exception {
 
 		if( config ){
-			String reply = conf.replyTo(new String(data));
+			String reply = conf.reply(new String(data));
 			if( !reply.equalsIgnoreCase("bye") ) {
 				writeLine(reply);
 				return;
@@ -170,9 +170,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 			if( new String(data).equalsIgnoreCase("qa!")){
 				config=true;
 				if( conf == null)
-					conf = new Configurator( settingsPath );
-
-				writeLine(conf.getStartMessage(true));
+					conf = new Configurator( settingsPath,this );
 				return;
 			}
 		}

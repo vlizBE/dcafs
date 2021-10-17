@@ -9,18 +9,18 @@
             <eol>crlf</eol>
             <ttl hint="period till considered idle fe.1s (-1 is never)">-1</ttl>
             <log hint="log raw data?" regex="yes|no">yes</log>
-            <cmd when="open,!idle,idle,closed">?</cmd>
-            <write when="hello,wakeup">?</write>
+            <cmd cf="opt,mul" when="open,!idle,idle,closed">?</cmd>
+            <write cf="opt,mul" when="hello,wakeup">?</write>
         </stream>
         <stream id="!" type="serial,modbus">
-            <port hint="fe. COM5, ttyS1" regex="COM\d*|tty.*">!</port>
+            <port hint="fe. COM5, ttyS1" regex="COM\d+|tty.+">!</port>
             <label regex="void|.*:.*">void</label>
             <serialsettings hint="baudrate,db,sb,parity" regex="\d{3,},[78],[012],(none|odd|even)">19200,8,1,none</serialsettings>
-            <eol>crlf</eol>
+            <eol hint="the end of a message">crlf</eol>
             <ttl hint="period till considered idle fe.1s (-1 is never)">-1</ttl>
             <log hint="log raw data?" regex="yes|no">yes</log>
-            <cmd when="open,!idle,idle,closed">?</cmd>
-            <write when="hello,wakeup">?</write>
+            <cmd cf="opt,mul" when="open,!idle,idle,closed">?</cmd>
+            <write cf="opt,mul" when="hello,wakeup">?</write>
         </stream>
     </streams>
     <databases>

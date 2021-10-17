@@ -1,5 +1,6 @@
 package das;
 
+import io.Writable;
 import io.telnet.TelnetCodes;
 import org.tinylog.Logger;
 import util.tools.Tools;
@@ -13,25 +14,35 @@ import java.util.*;
 public class Configurator {
 
     Path settings;
-    XMLfab raw;
-    XMLfab set;
-    ArrayList<String> lvl1 = new ArrayList<>();
+    XMLfab ref;
+    XMLfab target;
     HashMap<Integer,ArrayList<String[]>>lvlx = new HashMap<>();
     int lvl=0;
     ArrayList<String[]> attr = new ArrayList<>();
-    int steps=0;
+    int steps=1;
+    Writable wr;
 
-    public Configurator( Path settings){
+    public Configurator( Path settings, Writable wr ){
 
         this.settings=settings;
-        set = XMLfab.withRoot(settings,"dcafs");
+        this.wr=wr;
+
+        target = XMLfab.withRoot(settings,"dcafs");
         Optional<Path> configOpt = getPathToResource(this.getClass(),"config.xml");
         if( configOpt.isPresent()){
-            raw = XMLfab.withRoot(configOpt.get(),"dcafs");
+            ref = XMLfab.withRoot(configOpt.get(),"dcafs");
         }
-        addChildren(lvl1);
+
+        lvlx.put(0, addChildren(false,true));
+        wr.writeLine(getStartMessage(true));
     }
-    public String getStartMessage(boolean intro){
+
+    /**
+     * Get the introduction and first selection of the parent node
+     * @param intro Add the intro or not
+     * @return The first message to the user
+     */
+    private String getStartMessage(boolean intro){
         var join = new StringJoiner("\r\n");
         if( intro ) {
             join.add(TelnetCodes.TEXT_CYAN + "Welcome to dcafs QA!");
@@ -40,58 +51,53 @@ public class Configurator {
                     .add("- If there's a default value, just pressing enter (so sending empty response) will fill that in");
             join.add("");
         }
-        join.add(TelnetCodes.TEXT_ORANGE+"Add a instance to? "+String.join(",",lvl1)+TelnetCodes.TEXT_YELLOW);
+
+        join.add(TelnetCodes.TEXT_ORANGE+"Add a instance to? ");
+        lvlx.get(0).forEach( x -> join.add(" -> "+x[0])); // Get all the tagnames
+        join.add(TelnetCodes.TEXT_YELLOW);
         return join.toString();
     }
-    private void addChildren( ArrayList<String> list ){
-        list.clear();
-        raw.getChildren("*").forEach(
-                ele -> {
-                    if( !list.contains(ele.getTagName())) {
-                        list.add(ele.getTagName());
-                    }
-                }
-        );
-        Collections.sort(list);
-    }
-    private ArrayList<String[]> addChildrenWithContent(  ){
+    private ArrayList<String[]> addChildren( boolean withContent, boolean sort){
         ArrayList<String[]> list = new ArrayList<>();
-        raw.getChildren("*").forEach(
+        ref.getChildren("*").forEach(
                 ele -> {
-                    if(list.stream().filter(l -> l[0].equalsIgnoreCase(ele.getTagName())).findFirst().isEmpty()) {
-                        list.add(new String[]{ele.getTagName(), ele.getTextContent()});
-                        Logger.info("Adding " + ele.getTagName());
+                    if( list.stream().filter(l -> l[0].equalsIgnoreCase(ele.getTagName())).findFirst().isEmpty()) {
+                        list.add( new String[]{ele.getTagName(),withContent?ele.getTextContent():""});
                     }
                 }
         );
+        if( sort ) {
+            list.sort( Comparator.comparing(a -> a[0]) );
+        }
         return list;
     }
-    public String replyTo( String input){
+    public String reply(String input){
         String match="";
         switch( lvl ){
             case 0: // Global nodes like streams,filters etc
-                match = findMatch(lvl1, input );
+                match = findMatch(lvlx.get(0), input );
                 if( !match.isEmpty()){
                     if( match.equalsIgnoreCase("bad")){
                         return TelnetCodes.TEXT_RED+ "No valid option selected!\r\n"+getStartMessage(false)
                                 +TelnetCodes.TEXT_YELLOW;
                     }else{
-                        raw.selectChildAsParent(match);
-                        lvlx.put(0,addChildrenWithContent());
-                        set.selectOrAddChildAsParent(match);
+                        ref.selectChildAsParent(match);
+                        lvlx.put(steps,addChildren(true,false));
+                        target.selectOrAddChildAsParent(match);
                         lvl++;
                         return TelnetCodes.TEXT_ORANGE+"Stepped into "+match+", new options: "
-                                + formatNodeOptions(lvlx.get(0))+TelnetCodes.TEXT_YELLOW;
+                                + formatNodeOptions(lvlx.get(1))+TelnetCodes.TEXT_YELLOW;
                     }
                 }else{
                     return "bye";
                 }
             case 1: // Figure out with childnodes are possible and merge attributes
-                match = findMatchContent(lvlx.get(0), input );
+                steps=1;
+                match = findMatchContent(lvlx.get(steps), input );
                 if( !match.isEmpty()){
-                    set.addChild(match,"").down();
-                   if(raw.getChildren(match).size()>=1){
-                        raw.getChildren(match).forEach(
+                    target.addChild(match,"").down();
+                   if(ref.getChildren(match).size()>=1){
+                        ref.getChildren(match).forEach(
                                 child -> {
                                     for( var pair : XMLfab.getAttributes(child) ){
                                         boolean found =false;
@@ -110,17 +116,17 @@ public class Configurator {
                                 }
                         );
                     }else{
-                        raw.selectChildAsParent(match);
+                        ref.selectChildAsParent(match);
                         return "dunno how i got here";
                     }
                     lvl=2;
-                    String ori = set.getName();
+                    String ori = target.getName();
                     return formatAttrQuestion(ori,attr.get(0));
                 }else{
                     lvl=0;
                     return getStartMessage(false);
                 }
-            case 2: // Fill in the child node (stream,filter) attributes
+            case 2: // Fill in the child node (stream,filter) attributes/content
                 // If there are options given, one must be chosen
                 if( input.isEmpty() ){
                     if( attr.isEmpty()){ // finish the node
@@ -136,21 +142,26 @@ public class Configurator {
                 if( !input.isEmpty()){
                     if( attr.isEmpty()){
                         String tag =  lvlx.get(steps).get(0)[0];
-                        set.alterChild(tag,input);
+
+                        String regex = getRegex(tag);
+                        if( !regex.isEmpty() && !input.matches(regex) )
+                            return TelnetCodes.TEXT_RED+"No valid input given, try again... (regex: "+regex+")"+TelnetCodes.TEXT_YELLOW;
+
+                        target.alterChild(tag, input);
                         lvlx.get(steps).remove(0);// Finished the node, go to next
                     }else {
                         if (attr.get(0)[1].matches("!\\|?") || !attr.get(0)[1].contains(",")) {
-                            set.attr(attr.get(0)[0], input);
+                            target.attr(attr.get(0)[0], input);
                             attr.remove(0);
                         } else if (attr.get(0)[1].contains(input)) {
                             for (String x : attr.get(0)[1].split(",")) {
-                                if (x.matches(".*" + input + ".*")) {
+                                if (x.matches(input + ".*")) {
                                     input = x;
                                     break;
                                 }
                             }
-                            boolean ok = raw.selectChildAsParent(set.getName(), attr.get(0)[0], ".*" + input + ".*").isPresent();
-                            set.attr(attr.get(0)[0], input);
+                            boolean ok = ref.selectChildAsParent(target.getName(), attr.get(0)[0], ".*" + input + ".*").isPresent();
+                            target.attr(attr.get(0)[0], input);
                             attr.remove(0);
                         } else {
                             return TelnetCodes.TEXT_RED + "Invalid input, try again..." + TelnetCodes.TEXT_YELLOW;
@@ -158,21 +169,21 @@ public class Configurator {
                     }
                    // Check if this is the last one
                    if( attr.isEmpty()) {
-                       String nam = set.getName();
-                       String rn = raw.getName();
-                       if( nam.equalsIgnoreCase(rn)){ // pointing to the same
-                           raw.up(); //go back up
+                       String nam = target.getName();
+                       String rn = ref.getName();
+                       if( nam.equalsIgnoreCase(rn) && ref.getChildren(target.getName()).size()>1){ // pointing to the same
+                           ref.up(); //go back up
                        }else {
-                           if (raw.getChildren(set.getName()).size() == 1) {
-                               raw.selectChildAsParent(set.getName());
-                           } else if (raw.getChildren(set.getName()).size() == 0) {
+                           if (ref.getChildren(target.getName()).size() == 1) {
+                               ref.selectChildAsParent(target.getName());
+                           } else if (ref.getChildren(target.getName()).size() == 0) {
                                // No children!
-                               String name = raw.getName();
-                               String con = raw.getContent();
+                               String name = ref.getName();
+                               String con = ref.getContent();
                                Logger.info("Got cotent:" + con);
                            }
                            steps++;
-                           lvlx.put(steps,addChildrenWithContent());
+                           lvlx.put(steps,addChildren(true,false));
                        }
                        // At this point raw is pointing to the parent
                        if( lvlx.get(steps).isEmpty() ){
@@ -186,7 +197,7 @@ public class Configurator {
                            attr=fillAttributes(lvlx.get(steps).get(0)[0]);
                            if( attr.isEmpty() ){
                                // Ask about text content
-                               raw.up().selectChildAsParent(lvlx.get(steps).get(0)[0]);
+                               ref.up().selectChildAsParent(lvlx.get(steps).get(0)[0]);
                                return formatNodeQuestion(lvlx.get(steps).get(0));
                            }else{
                                // Ask about first attribute
@@ -197,23 +208,23 @@ public class Configurator {
                                            "Want to make a "+lvlx.get(steps).get(0)[0]+" node? y/n"
                                            +TelnetCodes.TEXT_YELLOW;
                                }
-                               set.down().addChild(lvlx.get(steps).get(0)[0],"");
-                               return formatAttrQuestion(set.getName(),attr.get(0));
+                               target.down().addChild(lvlx.get(steps).get(0)[0],"");
+                               return formatAttrQuestion(target.getName(),attr.get(0));
                            }
                        }else {
                            return formatNodeQuestion(lvlx.get(steps).get(0));
                        }
                    }
-                   set.build();
-                   return formatAttrQuestion(set.getName(),attr.get(0));
+                   target.build();
+                   return formatAttrQuestion(target.getName(),attr.get(0));
                }
                break;
             case 3: // Handle optional stuff?
                 switch( input ){
                     case "y": // Execute the node
                         lvl=2;
-                        set.down().addChild(lvlx.get(steps).get(0)[0],"");
-                        return formatAttrQuestion(set.getName(),attr.get(0));
+                        target.down().addChild(lvlx.get(steps).get(0)[0],"");
+                        return formatAttrQuestion(target.getName(),attr.get(0));
                     case "n": // Skip the node
                         lvl=2;
                         lvlx.get(steps).remove(0); // remove the optional node
@@ -238,92 +249,31 @@ public class Configurator {
                     lvl=3;
                     return "Want to make a "+lvlx.get(steps).get(0)[0]+" node? y/n";
                 }
-                set.down().addChild(lvlx.get(steps).get(0)[0],"");
-                return formatAttrQuestion(set.getName(),attr.get(0));
+                target.down().addChild(lvlx.get(steps).get(0)[0],"");
+                return formatAttrQuestion(target.getName(),attr.get(0));
             }
         }else {
             steps--;
             if( steps==0 ){ // Finished the node
                 lvl=1; // Go back to node selection
-                set.build(); // Build to file so far
-                set.up(); // Step back up the settings.xml
-                raw.up(); // Step back up the config
+                target.build(); // Build to file so far
+                target.up(); // Step back up the settings.xml
+                ref.up(); // Step back up the config
 
-                return TelnetCodes.TEXT_ORANGE+"Returned to "+set.getName()+", options: "
+                return TelnetCodes.TEXT_ORANGE+"Returned to "+ target.getName()+", options: "
                         + formatNodeOptions(lvlx.get(0))+TelnetCodes.TEXT_YELLOW;
             }
             return formatNodeQuestion(lvlx.get(steps).get(0));
         }
     }
-    private String doLevel3(String input){
-
-        var lx = lvlx.get(steps);
-
-        if( input.isEmpty() && !lx.get(0)[1].isEmpty()) { // So using default?
-            input = lx.get(0)[1];
-        }
-        if( !input.isEmpty() || lx.get(0)[1].isEmpty()){
-            String reg = getRegex(lx.get(0)[0]);
-            if( !reg.isEmpty() ){
-                if( !input.matches(reg))
-                    return TelnetCodes.TEXT_RED+"No valid input given, try again... (regex: "+reg+")"+TelnetCodes.TEXT_YELLOW;
-            }
-            // Don't add node if the default is used
-            if( !input.isEmpty() && !input.equalsIgnoreCase(lx.get(0)[1]))
-                set.alterChild(lx.get(0)[0],input);
-
-            lx.remove(0); // Finished with the childnode, move to the next one
-            attr.clear(); // New node, new attributes
-            if( lx.isEmpty() ){ //No more childnodes to check
-                lvl=1; // Go back to node selection
-                set.build(); // Build to file so far
-                set.up(); // Step back up the settings.xml
-                raw.up(); // Step back up the config
-                lvlx.put(steps,addChildrenWithContent()); // Find the options
-                return TelnetCodes.TEXT_ORANGE+"Done with the node, another?\r\nOptions: "+ formatNodeOptions(lx)+TelnetCodes.TEXT_YELLOW;
-            }
-
-            raw.getChildren(lx.get(0)[0]).forEach(
-                    child -> {
-                        for( var pair : XMLfab.getAttributes(child) ){
-                            boolean found =false;
-                            for( int a=0;a<attr.size();a++ ){
-                                if( attr.get(a)[0].equalsIgnoreCase(pair[0])){
-                                    if( !attr.get(a)[1].equalsIgnoreCase(pair[1]))
-                                        attr.get(a)[1]+=","+pair[1];
-                                    found=true;
-                                    break;
-                                }
-                            }
-                            if (!found && !pair[0].equalsIgnoreCase("hint")
-                                    && !pair[0].equalsIgnoreCase("regex")) {
-                                attr.add(pair);
-                            }
-                        }
-                    }
-            );
-
-            if( attr.isEmpty() ){
-                return formatNodeQuestion(lx.get(0));
-            }else {
-                lvl = 4;
-                return formatAttrQuestion("",attr.get(0));
-            }
-        }else{
-            lvl=2;
-            set.up();
-            raw.up();
-            return "Back up a level";
-        }
-    }
-    private String findMatch( ArrayList<String> list,String input){
+    private String findMatch( ArrayList<String[]> list,String input){
         if( input.isEmpty()||list.contains(input))
             return input;
-        return list.stream().filter( l -> l.startsWith(input)).findFirst().orElse("bad");
+        return list.stream().filter( l -> l[0].startsWith(input)).map(l -> l[0]).findFirst().orElse("bad");
     }
     private ArrayList<String[]> fillAttributes( String from ){
         ArrayList<String[]> at=new ArrayList<>();
-        raw.getChildren(from).forEach(
+        ref.getChildren(from).forEach(
                 child -> {
                     for( var pair : XMLfab.getAttributes(child) ){
                         boolean found =false;
@@ -345,14 +295,7 @@ public class Configurator {
         );
         return at;
     }
-    private String formatContent( String from ){
-        switch( from ){
-            case "!": return TelnetCodes.TEXT_RED+" REQUIRED";
-            case "?": return "";
-            default:
-                return "( Default: "+from+" )";
-        }
-    }
+
 
     /**
      * Formats the given attribute options
@@ -365,7 +308,7 @@ public class Configurator {
         var list = Tools.extractMatches(from[1],"\\{.*\\}");
         list.forEach( m ->
         {
-            var at = set.getAttribute(m.substring(1,m.length()-1));
+            var at = target.getAttribute(m.substring(1,m.length()-1));
             if( !at.isEmpty())
                 from[1]=from[1].replace(m,at);
         });
@@ -392,6 +335,14 @@ public class Configurator {
                 + getHint(lvlx.get(steps).get(0)[0])
                 + TelnetCodes.TEXT_YELLOW;
     }
+    private String formatContent( String from ){
+        switch( from ){
+            case "!": return TelnetCodes.TEXT_RED+" REQUIRED";
+            case "?": return "";
+            default:
+                return "( Default: "+from+" )";
+        }
+    }
     private String getHint( String from ){
         var hint = getAttribute(from,"hint");
         return hint.isEmpty()?"":TelnetCodes.TEXT_MAGENTA+" hint:"+hint;
@@ -403,9 +354,9 @@ public class Configurator {
         return getAttribute(from,"cf");
     }
     private String getAttribute( String from, String att ){
-        var child = raw.getChild(from);
+        var child = ref.getChild(from);
         if( child.isEmpty())
-            return "";
+            return ref.getAttribute(att);
         return child.map( ch ->  ch.hasAttribute(att)?ch.getAttribute(att):"").orElse("");
     }
     private String findMatchContent( ArrayList<String[]> list,String input){
