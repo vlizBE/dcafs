@@ -679,5 +679,29 @@ public class XMLfab {
     public Element getCurrentElement(){
         return last;
     }
+    public String getAttribute( String attr ){
+        return last.getAttribute(attr);
+    }
+    public ArrayList<String[]> getAttributes(){
+        ArrayList<String[]> hash = new ArrayList<>();
 
+        var map = last.getAttributes();
+        for( int a=0;a<map.getLength();a++){
+            String val = map.item(a).getNodeValue();
+            String att = map.item(a).getNodeName();
+            hash.add(new String[]{att,val});
+        }
+        return hash;
+    }
+    public static ArrayList<String[]> getAttributes(Element ele){
+        ArrayList<String[]> hash = new ArrayList<>();
+
+        var map = ele.getAttributes();
+        for( int a=0;a<map.getLength();a++){
+            String val = map.item(a).getNodeValue();
+            String att = map.item(a).getNodeName();
+            hash.add(new String[]{att,val});
+        }
+        return hash;
+    }
 }
