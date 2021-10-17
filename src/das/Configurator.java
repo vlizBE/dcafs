@@ -21,6 +21,18 @@ public class Configurator {
     int steps=1;
     Writable wr;
 
+    /* default Base White */
+    String DEF_COLOR = TelnetCodes.TEXT_WHITE;
+
+    String HINT_COLOR = TelnetCodes.TEXT_LIGHT_GRAY;
+    String INFO_COLOR = TelnetCodes.TEXT_LIGHT_GRAY;
+    String FB_COLOR   = TelnetCodes.TEXT_GRAY + ">> ";
+
+    String Q_COLOR    = TelnetCodes.TEXT_GREEN;
+    String REQ_COLOR  = TelnetCodes.TEXT_ORANGE;
+    String ERROR_COLOR = TelnetCodes.TEXT_RED;
+    String INTRO_COLOR = ERROR_COLOR;
+
     public Configurator( Path settings, Writable wr ){
 
         this.settings=settings;
@@ -31,9 +43,49 @@ public class Configurator {
         configOpt.ifPresent(path -> ref = XMLfab.withRoot(path, "dcafs"));
 
         lvls.put(0, addChildren(false,true));
+
+        // Colors
+        baseWhiteColoring();
+
+        // Begin
         wr.writeLine(getStartMessage(true));
     }
+    private void baseWhiteColoring(){
+        DEF_COLOR = TelnetCodes.TEXT_WHITE;
 
+        HINT_COLOR = TelnetCodes.TEXT_LIGHT_GRAY;
+        INFO_COLOR = TelnetCodes.TEXT_LIGHT_GRAY;
+        FB_COLOR   = TelnetCodes.TEXT_GRAY + ">> ";
+
+        Q_COLOR    = TelnetCodes.TEXT_GREEN;
+        REQ_COLOR  = TelnetCodes.TEXT_ORANGE;
+        ERROR_COLOR = TelnetCodes.TEXT_RED;
+        INTRO_COLOR = ERROR_COLOR;
+    }
+    private void baseBlackColoring(){
+        DEF_COLOR = TelnetCodes.TEXT_BLACK;
+
+        HINT_COLOR = TelnetCodes.TEXT_GRAY;
+        INFO_COLOR = TelnetCodes.TEXT_GRAY;
+        FB_COLOR   = TelnetCodes.TEXT_LIGHT_GRAY + ">> ";
+
+        Q_COLOR    = TelnetCodes.TEXT_GREEN;
+        REQ_COLOR  = TelnetCodes.TEXT_ORANGE;
+        ERROR_COLOR = TelnetCodes.TEXT_RED;
+        INTRO_COLOR = ERROR_COLOR;
+    }
+    private void baseYellowColoring(){
+        DEF_COLOR = TelnetCodes.TEXT_BRIGHT_YELLOW;
+
+        HINT_COLOR = TelnetCodes.TEXT_YELLOW;
+        INFO_COLOR = TelnetCodes.TEXT_YELLOW;
+        FB_COLOR   = TelnetCodes.TEXT_GRAY  + ">> ";
+
+        Q_COLOR    = TelnetCodes.TEXT_GREEN;
+        REQ_COLOR  = TelnetCodes.TEXT_ORANGE;
+        ERROR_COLOR = TelnetCodes.TEXT_RED;
+        INTRO_COLOR = ERROR_COLOR;
+    }
     /**
      * Get the introduction and first selection of the parent node
      * @param intro Add the intro or not
@@ -42,15 +94,16 @@ public class Configurator {
     private String getStartMessage(boolean intro){
         var join = new StringJoiner("\r\n");
         if( intro ) {
-            join.add(TelnetCodes.TEXT_CYAN + "Welcome to dcafs QA!");
-            join.add("Hints: ")
-                    .add("- You don't have to type the full word if there are options given, just enough to pick the right one (fe. streams -> st")
-                    .add("- If there's a default value, just pressing enter (so sending empty response) will fill that in");
+            join.add(INTRO_COLOR + "Welcome to dcafs QA!"+DEF_COLOR);
+            join.add("Info: ")
+                    .add("- Typing just enough to pick the right one (fe. streams -> st) is enough")
+                    .add("- If there's a default value, just pressing enter (so sending empty response) will fill that in")
+                    .add("- Colors: "+Q_COLOR+"Not required will use default, "+REQ_COLOR+"must be filled in, "+INFO_COLOR+"info"+DEF_COLOR);
             join.add("");
         }
 
-        join.add(TelnetCodes.TEXT_ORANGE+"Add a instance to? "+TelnetCodes.TEXT_YELLOW);
-        lvls.get(0).forEach(x -> join.add(" -> "+x[0] +"\t"+ TelnetCodes.TEXT_MAGENTA+x[1]+TelnetCodes.TEXT_YELLOW )); // Get all the tag names
+        join.add(Q_COLOR+"Add a instance to? "+DEF_COLOR);
+        lvls.get(0).forEach(x -> join.add(" -> "+x[0] +"\t"+ HINT_COLOR+x[1]+DEF_COLOR )); // Get all the tag names
 
         return join.toString();
     }
@@ -74,25 +127,26 @@ public class Configurator {
                 match = findMatch(lvls.get(0), input );
                 if( !match.isEmpty()){
                     if( match.equalsIgnoreCase("bad")){
-                        return TelnetCodes.TEXT_RED+ "No valid option selected!\r\n"+getStartMessage(false)
-                                +TelnetCodes.TEXT_YELLOW;
+                        return ERROR_COLOR+ "No valid option selected!\r\n"+getStartMessage(false)
+                                +DEF_COLOR;
                     }else{
                         ref.selectChildAsParent(match);
                         lvls.put(steps,addChildren(true,false));
                         target.selectOrAddChildAsParent(match);
                         state=STATE.INSTANCES;
-                        return TelnetCodes.TEXT_ORANGE+"Stepped into "+match+", new options: "
-                                + formatNodeOptions(lvls.get(1))+TelnetCodes.TEXT_YELLOW;
+
+                        return FB_COLOR+"Stepped into "+match+"\r\n"+REQ_COLOR+"Instance?" +INFO_COLOR+" Options:"
+                                + formatNodeOptions(lvls.get(1))+DEF_COLOR;
                     }
                 }else{
-                    return "bye";
+                    return INTRO_COLOR+"bye"+DEF_COLOR;
                 }
             case INSTANCES: // Figure out with child nodes are possible and merge attributes
                 steps=1;
                 match = findMatchContent(lvls.get(steps), input );
                 if( !match.isEmpty()){
                     target.addChild(match,"").down();
-                    wr.writeLine(TelnetCodes.TEXT_BLUE+"Building "+match+TelnetCodes.TEXT_YELLOW);
+                    wr.writeLine(FB_COLOR+"Building "+match+DEF_COLOR);
                     if(ref.getChildren(match).size()>=1){
                         ref.getChildren(match).forEach(
                                 child -> {
@@ -131,7 +185,7 @@ public class Configurator {
                         // Go to next child
                     }else {
                         if (attr.get(0)[1].equalsIgnoreCase("!") || attr.get(0)[1].contains(","))
-                            return TelnetCodes.TEXT_RED + "Required field, try again..." + TelnetCodes.TEXT_YELLOW;
+                            return ERROR_COLOR + "Required field, try again..." + DEF_COLOR;
                         input = attr.get(0)[1];
                     }
                 }
@@ -143,7 +197,7 @@ public class Configurator {
                             return "";
 
                         target.alterChild(tag, input);
-                        wr.writeLine(TelnetCodes.TEXT_BLUE+"Set "+tag+" content to "+input+TelnetCodes.TEXT_YELLOW);
+                        wr.writeLine(FB_COLOR+"Set "+tag+" content to "+input+DEF_COLOR);
                         lvls.get(steps).remove(0);// Finished the node, go to next
                     }else {
                         if ( attr.get(0)[1].matches("!\\|?") || attr.get(0)[1].contains(input)) {
@@ -158,10 +212,10 @@ public class Configurator {
                                 ref.selectChildAsParent(target.getName(), attr.get(0)[0], ".*" + input + ".*");
                             }
                             target.attr(attr.get(0)[0], input);
-                            wr.writeLine(TelnetCodes.TEXT_BLUE+"Set "+attr.get(0)[0]+" attribute to "+input+TelnetCodes.TEXT_YELLOW);
+                            wr.writeLine(FB_COLOR+"Set "+attr.get(0)[0]+" attribute to "+input+DEF_COLOR);
                             attr.remove(0);
                         } else {
-                            return TelnetCodes.TEXT_RED + "Invalid input, try again..." + TelnetCodes.TEXT_YELLOW;
+                            return ERROR_COLOR + "Invalid input, try again..." + DEF_COLOR;
                         }
                     }
                    // Check if this is the last one
@@ -198,7 +252,7 @@ public class Configurator {
                                    state=STATE.YES_NO_OPT;
                                    return TelnetCodes.TEXT_ORANGE+
                                            "Want to make a "+ lvls.get(steps).get(0)[0]+" node? y/n"
-                                           +TelnetCodes.TEXT_YELLOW;
+                                           +DEF_COLOR;
                                }
                                target.down().addChild(lvls.get(steps).get(0)[0],"");
                                return formatAttrQuestion();
@@ -253,7 +307,7 @@ public class Configurator {
                 ref.up(); // Step back up the config
 
                 return TelnetCodes.TEXT_ORANGE+"Returned to "+ target.getName()+", options: "
-                        + formatNodeOptions(lvls.get(0))+TelnetCodes.TEXT_YELLOW;
+                        + formatNodeOptions(lvls.get(0))+DEF_COLOR;
             }
             return formatNodeQuestion();
         }
@@ -272,6 +326,11 @@ public class Configurator {
         if( !res.isEmpty() )
             return res;
         return list.stream().filter( l -> l[0].startsWith(input)).map(l -> l[0]).findFirst().orElse("bad");
+    }
+    private String findMatchContent( ArrayList<String[]> list, String input){
+        if( input.isEmpty())
+            return "";
+        return list.stream().filter( l -> l[0].startsWith(input)).findFirst().map(l->l[0]).orElse("");
     }
     private ArrayList<String[]> fillAttributes( String from ){
         ArrayList<String[]> at=new ArrayList<>();
@@ -297,8 +356,6 @@ public class Configurator {
         );
         return at;
     }
-
-
     /**
      * Formats the given attribute options
      * @return The formatted content
@@ -306,30 +363,25 @@ public class Configurator {
     private String formatAttrQuestion( ){
         String ori = target.getName();
         String[] from = attr.get(0);
-        String q = TelnetCodes.TEXT_GREEN+ori+"->"+from[0]+"? ";
 
         var list = Tools.extractMatches(from[1],"\\{.*\\}");
+        // Replace the {..} with values
         list.forEach( m ->
         {
             var at = target.getAttribute(m.substring(1,m.length()-1));
             if( !at.isEmpty())
                 from[1]=from[1].replace(m,at);
         });
-        switch( from[1] ){
-            case "!": q += TelnetCodes.TEXT_RED+" REQUIRED"; break;
-            case "?": return q;
-            default:
-                if( from[1].startsWith("!")) {
-                    q += TelnetCodes.TEXT_RED + "REQUIRES " + TelnetCodes.TEXT_GREEN + " Options: " + attr.get(0)[1].substring(1);
-                }else{
-                    if( from[1].contains(",")) {// options are always required
-                        q += " Options: " + from[1];
-                    }else{ // If a default, that is used if no input is given
-                        q += " Default: "+from[1];
-                    }
-                }
+
+        String q;
+        if( from[1].startsWith("!")|| from[1].contains(",") ){
+            q = REQ_COLOR+ori+"->"+from[0]+"? "+Q_COLOR;
+            if( from[1].length()==1)
+                return q+DEF_COLOR;
+        }else{
+            q = Q_COLOR+ori+"->"+from[0]+"? ";
         }
-        return q+TelnetCodes.TEXT_YELLOW;
+        return q + INFO_COLOR +(from[1].contains(",")?" Options: ":" Default: ") + from[1] + DEF_COLOR;
     }
 
     /**
@@ -338,14 +390,14 @@ public class Configurator {
      */
     private String formatNodeQuestion( ){
         String[] from = lvls.get(steps).get(0);
-        String q = TelnetCodes.TEXT_GREEN + from[0] + "?";
 
+        String q;
         if( from[1].equalsIgnoreCase("!") ) {
-            q += TelnetCodes.TEXT_RED + " REQUIRED" + TelnetCodes.TEXT_GREEN;
+            q = REQ_COLOR + from[0] + "? " + Q_COLOR;
         }else{
-            q += "( Default: "+from[1]+" )";
+            q = Q_COLOR + from[0] + "? "+ INFO_COLOR +" Default: "+from[1];
         }
-        return q + getHint(from[0]) + TelnetCodes.TEXT_YELLOW;
+        return q +" " + getHint(from[0]) + DEF_COLOR;
     }
 
     /**
@@ -355,7 +407,7 @@ public class Configurator {
      */
     private String getHint( String from ){
         var hint = getAttribute(from,"hint");
-        return hint.isEmpty()?"":TelnetCodes.TEXT_MAGENTA+" hint:"+hint;
+        return hint.isEmpty()?"":INFO_COLOR+" ("+hint+")";
     }
     /**
      * Retrieve the regex req from the active node
@@ -365,7 +417,7 @@ public class Configurator {
     private boolean regexMatches(String from, String toCheck ){
         var regex =  getAttribute(from,"regex");
         if( !regex.isEmpty() && !toCheck.matches(regex) ) {
-            wr.writeLine(TelnetCodes.TEXT_RED + "No valid input given, try again... (regex: " + regex + ")" + TelnetCodes.TEXT_YELLOW);
+            wr.writeLine(ERROR_COLOR + "No valid input given, try again... (regex: " + regex + ")" + DEF_COLOR);
             return false;
         }
         return true;
@@ -379,15 +431,10 @@ public class Configurator {
             return ref.getAttribute(att);
         return child.map( ch ->  ch.hasAttribute(att)?ch.getAttribute(att):"").orElse("");
     }
-    private String findMatchContent( ArrayList<String[]> list,String input){
-        if( input.isEmpty())
-            return "";
-        return list.stream().filter( l -> l[0].startsWith(input)).findFirst().map(l->l[0]).orElse("");
-    }
+
     private String formatNodeOptions(ArrayList<String[]> list ){
         var join = new StringJoiner(",");
         list.forEach( l -> join.add(l[0]));
         return join.toString();
     }
-
 }

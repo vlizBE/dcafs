@@ -111,7 +111,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 		}
 		writeString( TelnetCodes.TEXT_GREEN + "It is " + new Date() + " now.\r\n"+TelnetCodes.TEXT_RESET);
 		writeString( TelnetCodes.TEXT_BRIGHT_BLUE+"> Common Commands: [h]elp,[st]atus, rtvals, exit...\r\n");
-		writeString( TelnetCodes.TEXT_YELLOW +">");
+		writeString( TelnetCodes.TEXT_BRIGHT_YELLOW +">");
 		channel.flush();
 		if( !start.isEmpty() ){
 			dQueue.add( Datagram.build(start).label(LABEL).writable(this).origin("telnet:"+channel.remoteAddress().toString()));

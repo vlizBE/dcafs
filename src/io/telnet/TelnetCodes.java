@@ -19,18 +19,26 @@ public class TelnetCodes {
 
 	public static final String TEXT_BLINK = ESCAPE+"[5m";  		//NOPE
 	public static final String TEXT_STRIKETHROUGH = ESCAPE+"[9m";
-	public static final String TEXT_BLACK  = ESCAPE+"[30m";
-	public static final String TEXT_RED    = ESCAPE+"[31m";
-	public static final String TEXT_GREEN  = ESCAPE+"[32m";
-	public static final String TEXT_YELLOW = ESCAPE+"[33m";
-	public static final String TEXT_BRIGHT_YELLOW  = TEXT_BRIGHT + ESCAPE+"[33m";
-	public static final String TEXT_BLUE   		 =  ESCAPE+"[34m";
+	public static final String TEXT_BLACK  = ESCAPE+"[0;30m";
+	public static final String TEXT_GRAY  = ESCAPE+"[1;90m";
+	public static final String TEXT_RED    = ESCAPE+"[0;31m";
+	public static final String TEXT_GREEN  = ESCAPE+"[0;32m";
+	public static final String TEXT_YELLOW = ESCAPE+"[0;33m";
+	public static final String TEXT_BRIGHT_YELLOW  = ESCAPE+"[1;33m";
+	public static final String TEXT_BLUE   		 =  ESCAPE+"[0;34m";
 	public static final String TEXT_BRIGHT_BLUE    =  ESCAPE+"[1;34m";
-	public static final String TEXT_MAGENTA = ESCAPE+"[35m";
-	public static final String TEXT_CYAN    = ESCAPE+"[36m";
-	public static final String TEXT_ORANGE    = ESCAPE+"[38;5;208m";
-	public static final String TEXT_WHITE   = ESCAPE + "[37m";
+	public static final String TEXT_MAGENTA = ESCAPE+"[0;35m";
+	public static final String TEXT_BRIGHT_MAGENTA = ESCAPE+"[1;35m";
+	public static final String TEXT_CYAN    = ESCAPE+"[0;36m";
+	public static final String TEXT_BRIGHT_CYAN    = ESCAPE+"[1;36m";
+	public static final String TEXT_ORANGE  = ESCAPE+"[0;38;5;208m";
+	public static final String TEXT_LIGHT_GRAY   = ESCAPE + "[0;37m";
+	public static final String TEXT_WHITE   = ESCAPE + "[1;37m";
 
+	public static final String BG_LIGHT_GREY = ESCAPE+"[48;5;7m";
+	public static final String BG_DARK_GREY = ESCAPE+"[48;5;8m";
+
+	public static final String BACK_BLACK = ESCAPE + "[40m";
 	public static final String BACK_RED = ESCAPE + "[41m";
 	public static final String BACK_GREEN = ESCAPE + "[42m";
 	public static final String BACK_YELLOW = ESCAPE + "[43m";
@@ -38,7 +46,7 @@ public class TelnetCodes {
 	public static final String BACK_MAGENTA =  ESCAPE + "[45m";
 	public static final String BACK_CYAN =  ESCAPE + "[46m";
 	public static final String BACK_WHITE = ESCAPE + "[47m";
-	public static final String BACK_BLACK = ESCAPE + "[40m";
+
 	
 	public static final String TEXT_FRAMED = ESCAPE + "[51m";   //NOPE	
 	public static final String TEXT_ENCIRCLED = ESCAPE + "[52m";//NOPE
