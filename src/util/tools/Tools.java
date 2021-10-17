@@ -311,7 +311,20 @@ public class Tools {
                 .map(MatchResult::group)
                 .toArray(String[]::new);
     }
-
+    public static ArrayList<String> extractMatches(String txt, String regex ){
+        try {
+            var pat = Pattern.compile(regex);
+            if (pat != null) {
+                return pat.matcher(txt)
+                        .results()
+                        .map(MatchResult::group)
+                        .collect(Collectors.toCollection(ArrayList::new));
+            }
+        }catch( Exception e){
+            Logger.error(e);
+        }
+        return new ArrayList<String>();
+    }
     /**
      * Replaces all the occurrences of the byte size hex escape sequences (fe.\x10) with their respective value
      * @param txt The text in which to replace them
