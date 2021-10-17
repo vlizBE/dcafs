@@ -398,7 +398,7 @@ public class XMLfab {
      */
     public Optional<XMLfab> selectChildAsParent(String tag, String attribute, String value){
         Optional<Element> found = getChildren(tag).stream()
-                .filter( x -> x.getAttribute(attribute).equalsIgnoreCase(value)||attribute.isEmpty()).findFirst();
+                .filter( x -> x.getAttribute(attribute).matches(value)||attribute.isEmpty()).findFirst();
         if( found.isPresent() ){
             last = found.get();
             parent = last;
@@ -455,7 +455,7 @@ public class XMLfab {
     }
     public XMLfab selectOrAddChildAsParent(String tag, String attribute, String value){
         Optional<Element> found = getChildren(tag).stream()
-                .filter( x -> x.getAttribute(attribute).equalsIgnoreCase(value)||attribute.isEmpty()).findFirst();
+                .filter( x -> x.getAttribute(attribute).matches(value)||attribute.isEmpty()).findFirst();
         if( found.isPresent() ){
             last = found.get();
             parent = last;
