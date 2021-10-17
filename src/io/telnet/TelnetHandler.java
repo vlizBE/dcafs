@@ -1,5 +1,6 @@
 package io.telnet;
 
+import das.Configurator;
 import io.Writable;
 import io.netty.channel.*;
 import io.netty.handler.codec.TooLongFrameException;
@@ -46,6 +47,9 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 	byte[] last={'s','t'};
 	String id="";
 	String start="";
+
+	boolean config=false;
+	Configurator conf=null;
 	/* ****************************************** C O N S T R U C T O R S ********************************************/
 	/**
 	 * Constructor that requires both the BaseWorker queue and the TransServer queue
@@ -125,6 +129,17 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
     @Override
     public void channelRead0(ChannelHandlerContext ctx, byte[] data) throws Exception {
 
+		if( config ){
+			String reply = conf.replyTo(new String(data));
+			if( !reply.equalsIgnoreCase("bye") ) {
+				writeLine(reply);
+				return;
+			}
+			config=false;
+			writeLine( TelnetCodes.TEXT_BLUE+"Bye! Back to telnet mode..."+TelnetCodes.TEXT_YELLOW);
+			writeString(">");
+			return;
+		}
     	if( data.length!=0 ) {
 			if (data[0] == -1) { // meaning client-server negotiation -1 = 0xFF
 				int offset = 3;
@@ -151,6 +166,14 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 				}
 			} else { // keep last command if it wasn't the up arrow
 				last = data;
+			}
+			if( new String(data).equalsIgnoreCase("qa!")){
+				config=true;
+				if( conf == null)
+					conf = new Configurator( settingsPath );
+
+				writeLine(conf.getStartMessage(true));
+				return;
 			}
 		}
 
