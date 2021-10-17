@@ -3,6 +3,7 @@ package das;
 import io.Writable;
 import io.telnet.TelnetCodes;
 import org.tinylog.Logger;
+import util.tools.FileTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
 
@@ -29,7 +30,7 @@ public class Configurator {
         this.wr=wr;
 
         target = XMLfab.withRoot(settings,"dcafs");
-        Optional<Path> configOpt = getPathToResource(this.getClass(),"config.xml");
+        Optional<Path> configOpt = FileTools.getPathToResource(this.getClass(),"config.xml");
         configOpt.ifPresent(path -> ref = XMLfab.withRoot(path, "dcafs"));
 
         lvls.put(0, addChildren(false,true));
@@ -367,18 +368,5 @@ public class Configurator {
         list.forEach( l -> join.add(l[0]));
         return join.toString();
     }
-    public static Optional<Path> getPathToResource( Class origin, String res ){
-        ClassLoader classLoader = origin.getClassLoader();
-        URL resource = classLoader.getResource(res);
-        if (resource == null) {
-            throw new IllegalArgumentException("file not found! " + res);
-        } else {
-            try {
-                return Optional.of(Path.of(resource.toURI()));
-            } catch (URISyntaxException e) {
-                Logger.error(e);
-            }
-        }
-        return Optional.empty();
-    }
+
 }
