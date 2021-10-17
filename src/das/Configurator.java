@@ -2,20 +2,17 @@ package das;
 
 import io.Writable;
 import io.telnet.TelnetCodes;
-import org.tinylog.Logger;
 import util.tools.FileTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
 
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.file.Path;
 import java.util.*;
 
 public class Configurator {
 
     Path settings;
-    enum STATE {MODULES,INSTANCES, FILL_IN, YES_NO}
+    enum STATE {MODULES,INSTANCES, FILL_IN, YES_NO_OPT}
     STATE state = STATE.MODULES;
     XMLfab ref;
     XMLfab target;
@@ -61,10 +58,8 @@ public class Configurator {
         ArrayList<String[]> list = new ArrayList<>();
         ref.getChildren("*").forEach(
                 ele -> {
-                    if( list.stream().filter(l -> l[0].equalsIgnoreCase(ele.getTagName())).findFirst().isEmpty()) {
-                        if( ele.hasAttribute("hint") )
-                        list.add( new String[]{ele.getTagName(),withContent?ele.getTextContent():ele.getAttribute("hint")});
-                    }
+                    if( list.stream().filter(l -> l[0].equalsIgnoreCase(ele.getTagName())).findFirst().isEmpty())
+                       list.add( new String[]{ele.getTagName(),withContent?ele.getTextContent():ele.getAttribute("hint")});
                 }
         );
         if( sort ) {
@@ -97,7 +92,8 @@ public class Configurator {
                 match = findMatchContent(lvls.get(steps), input );
                 if( !match.isEmpty()){
                     target.addChild(match,"").down();
-                   if(ref.getChildren(match).size()>=1){
+                    wr.writeLine(TelnetCodes.TEXT_BLUE+"Building "+match+TelnetCodes.TEXT_YELLOW);
+                    if(ref.getChildren(match).size()>=1){
                         ref.getChildren(match).forEach(
                                 child -> {
                                     for( var pair : XMLfab.getAttributes(child) ){
@@ -121,8 +117,7 @@ public class Configurator {
                         return "dunno how i got here";
                     }
                     state=STATE.FILL_IN;
-                    String ori = target.getName();
-                    return formatAttrQuestion(ori,attr.get(0));
+                    return formatAttrQuestion();
                 }else{
                     state=STATE.MODULES;
                     return getStartMessage(false);
@@ -144,25 +139,26 @@ public class Configurator {
                     if( attr.isEmpty()){
                         String tag =  lvls.get(steps).get(0)[0];
 
-                        String regex = getRegex(tag);
-                        if( !regex.isEmpty() && !input.matches(regex) )
-                            return TelnetCodes.TEXT_RED+"No valid input given, try again... (regex: "+regex+")"+TelnetCodes.TEXT_YELLOW;
+                        if( !regexMatches(tag,input) )
+                            return "";
 
                         target.alterChild(tag, input);
+                        wr.writeLine(TelnetCodes.TEXT_BLUE+"Set "+tag+" content to "+input+TelnetCodes.TEXT_YELLOW);
                         lvls.get(steps).remove(0);// Finished the node, go to next
                     }else {
-                        if (attr.get(0)[1].matches("!\\|?") || !attr.get(0)[1].contains(",")) {
-                            target.attr(attr.get(0)[0], input);
-                            attr.remove(0);
-                        } else if (attr.get(0)[1].contains(input)) {
-                            for (String x : attr.get(0)[1].split(",")) {
-                                if (x.matches(input + ".*")) {
-                                    input = x;
-                                    break;
+                        if ( attr.get(0)[1].matches("!\\|?") || attr.get(0)[1].contains(input)) {
+                            if (attr.get(0)[1].contains(input)) {
+                                // if the content contains the input
+                                for (String x : attr.get(0)[1].split(",")) {
+                                    if (x.matches(input + ".*")) {
+                                        input = x;
+                                        break;
+                                    }
                                 }
+                                ref.selectChildAsParent(target.getName(), attr.get(0)[0], ".*" + input + ".*");
                             }
-                            ref.selectChildAsParent(target.getName(), attr.get(0)[0], ".*" + input + ".*");
                             target.attr(attr.get(0)[0], input);
+                            wr.writeLine(TelnetCodes.TEXT_BLUE+"Set "+attr.get(0)[0]+" attribute to "+input+TelnetCodes.TEXT_YELLOW);
                             attr.remove(0);
                         } else {
                             return TelnetCodes.TEXT_RED + "Invalid input, try again..." + TelnetCodes.TEXT_YELLOW;
@@ -194,33 +190,33 @@ public class Configurator {
                            if( attr.isEmpty() ){
                                // Ask about text content
                                ref.up().selectChildAsParent(lvls.get(steps).get(0)[0]);
-                               return formatNodeQuestion(lvls.get(steps).get(0));
+                               return formatNodeQuestion();
                            }else{
                                // Ask about first attribute
                                String cf = getCf(lvls.get(steps).get(0)[0]);
                                if( cf.contains("opt")){
-                                   state=STATE.YES_NO;
+                                   state=STATE.YES_NO_OPT;
                                    return TelnetCodes.TEXT_ORANGE+
                                            "Want to make a "+ lvls.get(steps).get(0)[0]+" node? y/n"
                                            +TelnetCodes.TEXT_YELLOW;
                                }
                                target.down().addChild(lvls.get(steps).get(0)[0],"");
-                               return formatAttrQuestion(target.getName(),attr.get(0));
+                               return formatAttrQuestion();
                            }
                        }else {
-                           return formatNodeQuestion(lvls.get(steps).get(0));
+                           return formatNodeQuestion();
                        }
                    }
                    target.build();
-                   return formatAttrQuestion(target.getName(),attr.get(0));
+                   return formatAttrQuestion();
                }
                break;
-            case YES_NO: // Handle optional stuff?
+            case YES_NO_OPT: // Handle optional stuff?
                 switch( input ){
                     case "y": // Execute the node
                         state=STATE.FILL_IN;
                         target.down().addChild(lvls.get(steps).get(0)[0],"");
-                        return formatAttrQuestion(target.getName(),attr.get(0));
+                        return formatAttrQuestion();
                     case "n": // Skip the node
                         state=STATE.FILL_IN;
                         lvls.get(steps).remove(0); // remove the optional node
@@ -237,16 +233,16 @@ public class Configurator {
             attr=fillAttributes(lvls.get(steps).get(0)[0]);
             if( attr.isEmpty() ){
                 // Ask about text content
-                return formatNodeQuestion(lvls.get(steps).get(0));
+                return formatNodeQuestion();
             }else{
                 // Ask about first attribute
                 String cf = getCf(lvls.get(steps).get(0)[0]);
                 if( cf.contains("opt")){
-                    state=STATE.YES_NO;
+                    state=STATE.YES_NO_OPT;
                     return "Want to make a "+ lvls.get(steps).get(0)[0]+" node? y/n";
                 }
                 target.down().addChild(lvls.get(steps).get(0)[0],"");
-                return formatAttrQuestion(target.getName(),attr.get(0));
+                return formatAttrQuestion();
             }
         }else {
             steps--;
@@ -259,9 +255,16 @@ public class Configurator {
                 return TelnetCodes.TEXT_ORANGE+"Returned to "+ target.getName()+", options: "
                         + formatNodeOptions(lvls.get(0))+TelnetCodes.TEXT_YELLOW;
             }
-            return formatNodeQuestion(lvls.get(steps).get(0));
+            return formatNodeQuestion();
         }
     }
+
+    /**
+     * Find a match for the given input in the list
+     * @param list
+     * @param input
+     * @return
+     */
     private String findMatch( ArrayList<String[]> list,String input){
         if( input.isEmpty())
             return input;
@@ -298,10 +301,11 @@ public class Configurator {
 
     /**
      * Formats the given attribute options
-     * @param from The content of the attribute
      * @return The formatted content
      */
-    private String formatAttrQuestion(String ori, String[] from ){
+    private String formatAttrQuestion( ){
+        String ori = target.getName();
+        String[] from = attr.get(0);
         String q = TelnetCodes.TEXT_GREEN+ori+"->"+from[0]+"? ";
 
         var list = Tools.extractMatches(from[1],"\\{.*\\}");
@@ -327,27 +331,44 @@ public class Configurator {
         }
         return q+TelnetCodes.TEXT_YELLOW;
     }
-    private String formatNodeQuestion( String[] from ){
-        return TelnetCodes.TEXT_GREEN
-                + from[0]+"?"
-                + formatContent(lvls.get(steps).get(0)[1])+TelnetCodes.TEXT_GREEN
-                + getHint(lvls.get(steps).get(0)[0])
-                + TelnetCodes.TEXT_YELLOW;
-    }
-    private String formatContent( String from ){
-        switch( from ){
-            case "!": return TelnetCodes.TEXT_RED+" REQUIRED";
-            case "?": return "";
-            default:
-                return "( Default: "+from+" )";
+
+    /**
+     * Build the question for the node content
+     * @return
+     */
+    private String formatNodeQuestion( ){
+        String[] from = lvls.get(steps).get(0);
+        String q = TelnetCodes.TEXT_GREEN + from[0] + "?";
+
+        if( from[1].equalsIgnoreCase("!") ) {
+            q += TelnetCodes.TEXT_RED + " REQUIRED" + TelnetCodes.TEXT_GREEN;
+        }else{
+            q += "( Default: "+from[1]+" )";
         }
+        return q + getHint(from[0]) + TelnetCodes.TEXT_YELLOW;
     }
+
+    /**
+     * Retrieve the hint from the active node
+     * @param from The name of the node
+     * @return The hint if found or empty if none
+     */
     private String getHint( String from ){
         var hint = getAttribute(from,"hint");
         return hint.isEmpty()?"":TelnetCodes.TEXT_MAGENTA+" hint:"+hint;
     }
-    private String getRegex( String from ){
-        return getAttribute(from,"regex");
+    /**
+     * Retrieve the regex req from the active node
+     * @param from The name of the node
+     * @return The result of the regex check
+     */
+    private boolean regexMatches(String from, String toCheck ){
+        var regex =  getAttribute(from,"regex");
+        if( !regex.isEmpty() && !toCheck.matches(regex) ) {
+            wr.writeLine(TelnetCodes.TEXT_RED + "No valid input given, try again... (regex: " + regex + ")" + TelnetCodes.TEXT_YELLOW);
+            return false;
+        }
+        return true;
     }
     public String getCf( String from ){
         return getAttribute(from,"cf");
