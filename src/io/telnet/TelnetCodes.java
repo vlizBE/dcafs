@@ -6,15 +6,20 @@ public class TelnetCodes {
 		throw new IllegalStateException("Utility class");
 	}
 
+	// IAC Options
 	public static final byte IAC = (byte) 0xFF;
-	public static final byte WILL =(byte) 0xFB;
+
+	public static final byte WILL =(byte)251;
 	public static final byte DO = (byte)252;
 	public static final byte WONT = (byte)253;
 	public static final byte DONT = (byte)254;
-	public static final byte SURPRESS_GO_AHEAD = (byte)3;
-	public static final byte[] SEND_CHARS = new byte[]{IAC,WILL,SURPRESS_GO_AHEAD};
-	public static final byte[] DONT_LOCAL_ECHO = new byte[]{IAC,WONT,1};
 
+	public static final byte ECHO = (byte)1;
+	public static final byte SURPRESS_GO_AHEAD = (byte)3;
+	public static final byte[] WILL_SGA = new byte[]{IAC,WILL,SURPRESS_GO_AHEAD};
+	public static final byte[] WILL_ECHO = new byte[]{IAC,WILL,ECHO};
+
+	// Escape Characters
 	public static final String ESCAPE = Character.toString((char)27);
 
 	public static final String TEXT_RESET = ESCAPE + "[0m";
@@ -134,7 +139,7 @@ public class TelnetCodes {
 			case (byte) 254:
 				return "DONT";
 			case (byte) 255:
-				return "\r\nIAC";
+				return "IAC";
 			// Negotiations
 			case (byte) 1:
 				return "ECHO";

@@ -7,14 +7,12 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.codec.TooLongFrameException;
 import org.tinylog.Logger;
-import util.tools.Tools;
 import util.xml.XMLfab;
 import worker.Datagram;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
@@ -109,8 +107,9 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 		}else{
 			Logger.error( "Channel.remoteAddress is null in channelActive method");
 		}
-
-		writeBytes(TelnetCodes.SEND_CHARS); // Enable sending individual characters
+		// Don't understand why it's WILL...
+		writeBytes(TelnetCodes.WILL_SGA); // Enable sending individual characters
+		writeBytes(TelnetCodes.WILL_ECHO);// Disable local echo
 
 		if( id.isEmpty()) {
 			writeString(TelnetCodes.TEXT_RED + "Welcome to " + title + "!\r\n" + TelnetCodes.TEXT_RESET);
@@ -143,9 +142,8 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 		for( int a=0;a<data.length;a++ ){
 			byte b = data[a];
 			if( b == TelnetCodes.IAC ){ // Meaning start of command sequence
-				join.add( TelnetCodes.toReadableIAC(data[a++]))
-					.add(TelnetCodes.toReadableIAC(data[a++]))
-					.add(TelnetCodes.toReadableIAC(data[a]));
+				Logger.info(TelnetCodes.toReadableIAC(data[a])+" "+TelnetCodes.toReadableIAC(data[a+1])+" "+TelnetCodes.toReadableIAC(data[a+2]));
+				a+=2;// Skip  the rest of the command
 			}else if( b == 27){ // Escape codes
 				a++;
 				Logger.info("Received: "+ (char)b+ " or " +Integer.toString(b)+" "+Integer.toString(data[a])+Integer.toString(data[a+1]));
@@ -195,6 +193,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 				buffer.writeByte(b);
 			}
 		}
+		Logger.info(join.toString());
 		if( rec==null)
 			return;
 		Logger.info("Cmd: "+new String(rec));
