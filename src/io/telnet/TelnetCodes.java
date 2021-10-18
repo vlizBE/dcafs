@@ -5,7 +5,15 @@ public class TelnetCodes {
 	private TelnetCodes() {
 		throw new IllegalStateException("Utility class");
 	}
-	
+
+	public static final byte IAC = (byte) 0xFF;
+	public static final byte WILL =(byte) 0xFB;
+	public static final byte DO = (byte)252;
+	public static final byte WONT = (byte)253;
+	public static final byte DONT = (byte)254;
+	public static final byte SURPRESS_GO_AHEAD = (byte)3;
+	public static final byte[] SEND_CHARS = new byte[]{IAC,WILL,SURPRESS_GO_AHEAD};
+
 	public static final String ESCAPE = Character.toString((char)27);
 
 	public static final String TEXT_RESET = ESCAPE + "[0m";
@@ -87,5 +95,65 @@ public class TelnetCodes {
 		}
 
 		return b.toString().replace(text, TEXT_RED+text+TEXT_GREEN)+defaultTextColor;
+	}
+	public static String toReadableIAC( byte b ) {
+		switch (b) {
+			// IAC Control
+			case (byte) 240:
+				return "SE";
+			case (byte) 241:
+				return "NOP";
+			case (byte) 242:
+				return "DM";
+			case (byte) 243:
+				return "BRK";
+			case (byte) 244:
+				return "IP";
+			case (byte) 245:
+				return "AO";
+			case (byte) 246:
+				return "AYT";
+			case (byte) 247:
+				return "EC";
+			case (byte) 248:
+				return "EL";
+			case (byte) 249:
+				return "GA";
+			case (byte) 250:
+				return "SB";
+			case (byte) 251:
+				return "WILL";
+			case (byte) 252:
+				return "WONT";
+			case (byte) 253:
+				return "DO";
+			case (byte) 254:
+				return "DONT";
+			case (byte) 255:
+				return "\r\nIAC";
+			// Negotiations
+			case (byte) 1:
+				return "ECHO";
+			case (byte) 3:
+				return "SGA";
+			case (byte) 5:
+				return "STATUS";
+			case (byte) 6:
+				return "TimingMark";
+			case (byte) 24:
+				return "TermType";
+			case (byte) 31:
+				return "Window Size";
+			case (byte) 32:
+				return "Term Speed";
+			case (byte) 33:
+				return "Rem Flow Cont";
+			case (byte) 34:
+				return "LineMode";
+			case (byte) 36:
+				return "EnvVar";
+			default:
+				return "" + (int) b;
+		}
 	}
 }

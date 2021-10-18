@@ -2,6 +2,8 @@ package io.telnet;
 
 import das.Configurator;
 import io.Writable;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.codec.TooLongFrameException;
 import org.tinylog.Logger;
@@ -12,11 +14,9 @@ import worker.Datagram;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 
 public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implements Writable {
@@ -50,6 +50,9 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 
 	boolean config=false;
 	Configurator conf=null;
+
+	//ArrayList<Byte> buffer = new ArrayList<>();
+	ByteBuf buffer = Unpooled.buffer(64);
 	/* ****************************************** C O N S T R U C T O R S ********************************************/
 	/**
 	 * Constructor that requires both the BaseWorker queue and the TransServer queue
@@ -103,7 +106,10 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 
 		}else{
 			Logger.error( "Channel.remoteAddress is null in channelActive method");
-		}   
+		}
+
+		writeBytes(TelnetCodes.SEND_CHARS); // Enable sending individual characters
+
 		if( id.isEmpty()) {
 			writeString(TelnetCodes.TEXT_RED + "Welcome to " + title + "!\r\n" + TelnetCodes.TEXT_RESET);
 		}else{
@@ -129,8 +135,55 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
     @Override
     public void channelRead0(ChannelHandlerContext ctx, byte[] data) throws Exception {
 
+		// Work with buffer
+		StringJoiner join = new StringJoiner(" ");
+		byte[] rec=null;
+		for( int a=0;a<data.length;a++ ){
+			byte b = data[a];
+			if( b == TelnetCodes.IAC ){ // Meaning start of command sequence
+				join.add( TelnetCodes.toReadableIAC(data[a++]))
+					.add(TelnetCodes.toReadableIAC(data[a++]))
+					.add(TelnetCodes.toReadableIAC(data[a]));
+			}else if( b == 27){ // Escape codes
+				a++;
+				Logger.info("Received: "+ (char)b+ " or " +Integer.toString(b)+" "+Integer.toString(data[a])+Integer.toString(data[a+1]));
+				if( data[a]==91){
+					a++;
+					switch(data[a]){
+						case 65: Logger.info("Arrow Up"); break; // Arrow Up
+						case 66: Logger.info("Arrow Down"); break; // Arrow Down
+						case 67: // Arrow Right
+							buffer.setIndex( buffer.readerIndex(),buffer.writerIndex()+1);
+							break;
+						case 68: // Arrow Left
+							buffer.setIndex( buffer.readerIndex(),buffer.writerIndex()-1);
+							break;
+					}
+				}
+			}else if( b == '\n'){ //LF
+				Logger.info("Received LF");
+				break;
+			}else if( b == '\r') { // CR
+				Logger.info("Received CR");
+				rec = new byte[buffer.readableBytes()];
+				buffer.readBytes(rec);
+				buffer.discardReadBytes();
+				Logger.info("Bytes left? " + buffer.readableBytes());
+				break;
+			}else if( b == 127){
+				Logger.info("Backspace");
+				buffer.setIndex( buffer.readerIndex(),buffer.writerIndex()-1);
+			}else{
+				Logger.info("Received: "+ (char)b+ " or " +Integer.toString(b));
+				buffer.writeByte(b);
+				return;
+			}
+		}
+		if( rec==null)
+			return;
+		Logger.info("Cmd: "+new String(rec));
 		if( config ){
-			String reply = conf.reply(new String(data));
+			String reply = conf.reply(new String(rec));
 			if( !reply.equalsIgnoreCase("bye") ) {
 				if( !reply.isEmpty())
 					writeLine(reply);
@@ -141,42 +194,18 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 			writeString(">");
 			return;
 		}
-    	if( data.length!=0 ) {
-			if (data[0] == -1) { // meaning client-server negotiation -1 = 0xFF
-				int offset = 3;
-				while (data.length > offset && data[offset] == -1) {
-					offset += 3;
-				}
-				data = Arrays.copyOfRange(data, offset, data.length);
-				Logger.debug("Removed control sets: " + offset / 3);
-			}
-			if (data.length >= 1) {
-				Logger.debug(Tools.fromBytesToHexString(data));
-			}
-			if (data.length == 3 && data[0] == 27 && data[1] == '[') { // replace up arrow with last command
-				switch (data[2]) {
-					case 'A':
-						data = last;
-						break; // Up arrow
-					case 'B':
-						break; // Down arrow
-					case 'C':
-						break; // Right arrow
-					case 'D':
-						break; // Left arrow
-				}
-			} else { // keep last command if it wasn't the up arrow
-				last = data;
-			}
-			if( new String(data).equalsIgnoreCase("qa!")){
+    	if( rec!=null ) {
+
+			last = rec;
+			if( new String(rec).equalsIgnoreCase("qa!")){
 				config=true;
 				if( conf == null)
 					conf = new Configurator( settingsPath,this );
 				return;
 			}
-		}
 
-		distributeMessage( Datagram.build(data).label(LABEL).writable(this).origin("telnet:"+channel.remoteAddress().toString()).timestamp() );	// What needs to be done with the received data
+			distributeMessage( Datagram.build(rec).label(LABEL).writable(this).origin("telnet:"+channel.remoteAddress().toString()).timestamp() );	// What needs to be done with the received data
+		}
 	}
 	public void distributeMessage( Datagram d ){
 		d.label( LABEL+":"+repeat );
