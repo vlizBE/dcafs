@@ -13,6 +13,7 @@ public class TelnetCodes {
 	public static final byte DONT = (byte)254;
 	public static final byte SURPRESS_GO_AHEAD = (byte)3;
 	public static final byte[] SEND_CHARS = new byte[]{IAC,WILL,SURPRESS_GO_AHEAD};
+	public static final byte[] DONT_LOCAL_ECHO = new byte[]{IAC,WONT,1};
 
 	public static final String ESCAPE = Character.toString((char)27);
 
@@ -65,6 +66,9 @@ public class TelnetCodes {
 
 	public static final String PREV_LINE = ESCAPE + "[F"; // works
 	public static final String CLEAR_LINE = ESCAPE + "[2K"; // works
+	public static final String CLEAR_LINE_END = ESCAPE + "[K";
+	public static final String CURSOR_LEFT = ESCAPE + "[1D";
+	public static final String CURSOR_RIGHT = ESCAPE + "[1C";
 
 	public static String colorNumbers( String defaultTextColor, String s) {
     	StringBuilder b = new StringBuilder();

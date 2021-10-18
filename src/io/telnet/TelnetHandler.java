@@ -53,6 +53,8 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 
 	//ArrayList<Byte> buffer = new ArrayList<>();
 	ByteBuf buffer = Unpooled.buffer(64);
+	private ArrayList<String> history = new ArrayList<>();
+	private int histIndex=-1;
 	/* ****************************************** C O N S T R U C T O R S ********************************************/
 	/**
 	 * Constructor that requires both the BaseWorker queue and the TransServer queue
@@ -150,33 +152,47 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 				if( data[a]==91){
 					a++;
 					switch(data[a]){
-						case 65: Logger.info("Arrow Up"); break; // Arrow Up
-						case 66: Logger.info("Arrow Down"); break; // Arrow Down
+						case 65: // Arrow Up
+							sendHistory(-1);
+							Logger.info("Arrow Up");
+							break;
+						case 66:
+							sendHistory(1);
+							Logger.info("Arrow Down"); break; // Arrow Down
 						case 67: // Arrow Right
 							buffer.setIndex( buffer.readerIndex(),buffer.writerIndex()+1);
+							writeString(TelnetCodes.CURSOR_RIGHT);
 							break;
 						case 68: // Arrow Left
+							writeString(TelnetCodes.CURSOR_LEFT);
 							buffer.setIndex( buffer.readerIndex(),buffer.writerIndex()-1);
 							break;
 					}
 				}
 			}else if( b == '\n'){ //LF
 				Logger.info("Received LF");
-				break;
+				writeByte(b); // echo LF
 			}else if( b == '\r') { // CR
 				Logger.info("Received CR");
+				writeByte(b);
 				rec = new byte[buffer.readableBytes()];
 				buffer.readBytes(rec);
+				String r = new String(rec);
+				if(!history.contains(r)) {
+					history.add(new String(rec));
+					if( history.size()>50)
+						history.remove(0);
+					histIndex = history.size();
+				}
 				buffer.discardReadBytes();
-				Logger.info("Bytes left? " + buffer.readableBytes());
-				break;
 			}else if( b == 127){
 				Logger.info("Backspace");
+				writeByte(b);
 				buffer.setIndex( buffer.readerIndex(),buffer.writerIndex()-1);
 			}else{
 				Logger.info("Received: "+ (char)b+ " or " +Integer.toString(b));
+				writeByte(b);
 				buffer.writeByte(b);
-				return;
 			}
 		}
 		if( rec==null)
@@ -206,6 +222,21 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 
 			distributeMessage( Datagram.build(rec).label(LABEL).writable(this).origin("telnet:"+channel.remoteAddress().toString()).timestamp() );	// What needs to be done with the received data
 		}
+	}
+	private void sendHistory(int adj){
+
+		histIndex += adj;
+
+		if( histIndex<0)
+			histIndex=0;
+		if (histIndex == history.size() )
+			histIndex = history.size() - 1;
+
+		Logger.info("Sending "+histIndex);
+		writeString("\r>" + history.get(histIndex));//Move cursor and send history
+		writeString(TelnetCodes.CLEAR_LINE_END); // clear the rest of the line
+		buffer.clear(); // clear the buffer
+		buffer.writeBytes(history.get(histIndex).getBytes()); // fill the buffer
 	}
 	public void distributeMessage( Datagram d ){
 		d.label( LABEL+":"+repeat );
@@ -336,6 +367,13 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 		if( channel != null && channel.isActive()){
 			channel.writeAndFlush(data);
 			lastSendMessage = new String(data);	// Store the message for future reference
+			return true;
+		}
+		return false;
+	}
+	public synchronized boolean writeByte( byte data ){
+		if( channel != null && channel.isActive()){
+			channel.writeAndFlush( new byte[]{data});
 			return true;
 		}
 		return false;
