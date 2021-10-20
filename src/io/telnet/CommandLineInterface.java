@@ -21,8 +21,8 @@ public class CommandLineInterface {
         this.channel=channel;
 
         if( channel !=null ) {
-            channel.writeAndFlush(TelnetCodes.SEND_CHARS); // Enable sending individual characters
-            channel.writeAndFlush(TelnetCodes.REMOTE_ECHO);
+            channel.writeAndFlush(TelnetCodes.WILL_SGA); // Enable sending individual characters
+            channel.writeAndFlush(TelnetCodes.WILL_ECHO);
         }
     }
     public Optional<byte[]> receiveData(byte[] data ){
