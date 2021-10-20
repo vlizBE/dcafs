@@ -7,12 +7,14 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.codec.TooLongFrameException;
 import org.tinylog.Logger;
+import util.tools.Tools;
 import util.xml.XMLfab;
 import worker.Datagram;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
@@ -34,26 +36,21 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 	protected ArrayList<String> ignoreIP= new ArrayList<>();	// List of IP's to ignore, not relevant for StreamHandler, but is for the telnet implementation
 	protected boolean clean=true;	// Flag that determines if null characters etc need to be cleaned from a received message
 	protected boolean log=true;	// Flag that determines if raw data needs to be logged
-	
-	protected static final byte[] EOL = new byte[]{13,10};
+
 	private Path settingsPath;
 	private HashMap<String,String> macros = new HashMap<>();
 
  	String repeat = "";
 	String title = "dcafs";
-	String mode ="";
-	byte[] last={'s','t'};
 	String id="";
 	String start="";
 
 	boolean config=false;
 	Configurator conf=null;
 
-	//ArrayList<Byte> buffer = new ArrayList<>();
-	ByteBuf buffer = Unpooled.buffer(64);
-	private ArrayList<String> history = new ArrayList<>();
-	private int histIndex=-1;
-	/* ****************************************** C O N S T R U C T O R S ********************************************/
+	CommandLineInterface cli;
+
+	/* ****************************************** C O N S T R U C T O R S ******************************************* */
 	/**
 	 * Constructor that requires both the BaseWorker queue and the TransServer queue
 	 * 
@@ -86,9 +83,6 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 			}else{
 				Logger.info("IPv6: "+((Inet6Address)remote.getAddress()));
 			}
-			String host = remote.getHostString();
-			if(host.equalsIgnoreCase("0:0:0:0:0:0:0:1"))
-				host = "localhost";
 
 			XMLfab.withRoot(settingsPath,"dcafs","settings","telnet")
 					.selectChildAsParent( "client","host",remote.getHostName())
@@ -107,9 +101,8 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 		}else{
 			Logger.error( "Channel.remoteAddress is null in channelActive method");
 		}
-		// Don't understand why it's WILL...
-		writeBytes(TelnetCodes.WILL_SGA); // Enable sending individual characters
-		writeBytes(TelnetCodes.WILL_ECHO);// Disable local echo
+
+		cli = new CommandLineInterface(channel); // Start the cli
 
 		if( id.isEmpty()) {
 			writeString(TelnetCodes.TEXT_RED + "Welcome to " + title + "!\r\n" + TelnetCodes.TEXT_RESET);
@@ -136,68 +129,14 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
     @Override
     public void channelRead0(ChannelHandlerContext ctx, byte[] data) throws Exception {
 
-		// Work with buffer
-		StringJoiner join = new StringJoiner(" ");
-		byte[] rec=null;
-		for( int a=0;a<data.length;a++ ){
-			byte b = data[a];
-			if( b == TelnetCodes.IAC ){ // Meaning start of command sequence
-				Logger.info(TelnetCodes.toReadableIAC(data[a])+" "+TelnetCodes.toReadableIAC(data[a+1])+" "+TelnetCodes.toReadableIAC(data[a+2]));
-				a+=2;// Skip  the rest of the command
-			}else if( b == 27){ // Escape codes
-				a++;
-				Logger.info("Received: "+ (char)b+ " or " +Integer.toString(b)+" "+Integer.toString(data[a])+Integer.toString(data[a+1]));
-				if( data[a]==91){
-					a++;
-					switch(data[a]){
-						case 65: // Arrow Up
-							sendHistory(-1);
-							Logger.info("Arrow Up");
-							break;
-						case 66:
-							sendHistory(1);
-							Logger.info("Arrow Down"); break; // Arrow Down
-						case 67: // Arrow Right
-							buffer.setIndex( buffer.readerIndex(),buffer.writerIndex()+1);
-							writeString(TelnetCodes.CURSOR_RIGHT);
-							break;
-						case 68: // Arrow Left
-							writeString(TelnetCodes.CURSOR_LEFT);
-							buffer.setIndex( buffer.readerIndex(),buffer.writerIndex()-1);
-							break;
-					}
-				}
-			}else if( b == '\n'){ //LF
-				Logger.info("Received LF");
-				writeByte(b); // echo LF
-			}else if( b == '\r') { // CR
-				Logger.info("Received CR");
-				writeByte(b);
-				rec = new byte[buffer.readableBytes()];
-				buffer.readBytes(rec);
-				String r = new String(rec);
-				if(!history.contains(r)) {
-					history.add(new String(rec));
-					if( history.size()>50)
-						history.remove(0);
-					histIndex = history.size();
-				}
-				buffer.discardReadBytes();
-			}else if( b == 127){
-				Logger.info("Backspace");
-				writeByte(b);
-				buffer.setIndex( buffer.readerIndex(),buffer.writerIndex()-1);
-			}else{
-				Logger.info("Received: "+ (char)b+ " or " +Integer.toString(b));
-				writeByte(b);
-				buffer.writeByte(b);
-			}
-		}
-		Logger.info(join.toString());
-		if( rec==null)
+		var recOpt= cli.receiveData(data);
+
+		if( recOpt.isEmpty())
 			return;
-		Logger.info("Cmd: "+new String(rec));
-		if( config ){
+
+		var rec = recOpt.get();
+
+		if( config ){ // Config mode
 			String reply = conf.reply(new String(rec));
 			if( !reply.equalsIgnoreCase("bye") ) {
 				if( !reply.isEmpty())
@@ -208,35 +147,20 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 			writeLine( TelnetCodes.TEXT_BLUE+"Bye! Back to telnet mode..."+TelnetCodes.TEXT_YELLOW);
 			writeString(">");
 			return;
+		}else if( new String(rec).equalsIgnoreCase("cfg")){
+			config=true;
+			conf = new Configurator( settingsPath,this ); // Always start with a new one
+			return;
 		}
-    	if( rec!=null ) {
 
-			last = rec;
-			if( new String(rec).equalsIgnoreCase("qa!")){
-				config=true;
-				if( conf == null)
-					conf = new Configurator( settingsPath,this );
-				return;
-			}
-
-			distributeMessage( Datagram.build(rec).label(LABEL).writable(this).origin("telnet:"+channel.remoteAddress().toString()).timestamp() );	// What needs to be done with the received data
-		}
+		distributeMessage(
+				Datagram.build(rec)
+						.label(LABEL)
+						.writable(this)
+						.origin("telnet:"+channel.remoteAddress().toString())
+						.timestamp() );
 	}
-	private void sendHistory(int adj){
 
-		histIndex += adj;
-
-		if( histIndex<0)
-			histIndex=0;
-		if (histIndex == history.size() )
-			histIndex = history.size() - 1;
-
-		Logger.info("Sending "+histIndex);
-		writeString("\r>" + history.get(histIndex));//Move cursor and send history
-		writeString(TelnetCodes.CLEAR_LINE_END); // clear the rest of the line
-		buffer.clear(); // clear the buffer
-		buffer.writeBytes(history.get(histIndex).getBytes()); // fill the buffer
-	}
 	public void distributeMessage( Datagram d ){
 		d.label( LABEL+":"+repeat );
 
@@ -370,13 +294,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 		}
 		return false;
 	}
-	public synchronized boolean writeByte( byte data ){
-		if( channel != null && channel.isActive()){
-			channel.writeAndFlush( new byte[]{data});
-			return true;
-		}
-		return false;
-	}
+
 	@Override
 	public boolean isConnectionValid() {
 		if( channel==null)
