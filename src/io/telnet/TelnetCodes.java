@@ -12,8 +12,9 @@ public class TelnetCodes {
 	public static final byte WONT = (byte)253;
 	public static final byte DONT = (byte)254;
 	public static final byte SURPRESS_GO_AHEAD = (byte)3;
+	public static final byte ECHO = (byte)1;
 	public static final byte[] SEND_CHARS = new byte[]{IAC,WILL,SURPRESS_GO_AHEAD};
-	public static final byte[] DONT_LOCAL_ECHO = new byte[]{IAC,WONT,1};
+	public static final byte[] REMOTE_ECHO = new byte[]{IAC,WILL,ECHO};
 
 	public static final String ESCAPE = Character.toString((char)27);
 
