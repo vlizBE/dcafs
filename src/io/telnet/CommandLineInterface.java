@@ -72,6 +72,10 @@ public class CommandLineInterface {
             }else if( b == '\r') { // CR
                 Logger.info("Received CR");
                 writeByte(b); // echo CR
+                int wi = buffer.writerIndex();
+                while( buffer.getByte(wi) != 0)
+                    wi++;
+                buffer.setIndex(0,wi);
                 rec = new byte[buffer.readableBytes()];
                 buffer.readBytes(rec);
                 String r = new String(rec);
