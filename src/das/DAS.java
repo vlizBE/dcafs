@@ -667,7 +667,7 @@ public class DAS implements DeadThreadListener {
         final String UNDERLINE_OFF = html?"":TelnetCodes.UNDERLINE_OFF;
         final String TEXT_YELLOW = html?"":TelnetCodes.TEXT_YELLOW;
         final String TEXT_RED = html?"":TelnetCodes.TEXT_RED;
-        final String TEXT_NB = html?"":TelnetCodes.TEXT_NOTBRIGHT;
+        final String TEXT_NB = html?"":TelnetCodes.TEXT_REGULAR;
         final String TEXT_BRIGHT = html?"":TelnetCodes.TEXT_BRIGHT;
 
         StringBuilder b = new StringBuilder();
