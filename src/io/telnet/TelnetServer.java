@@ -88,8 +88,8 @@ public class TelnetServer implements Commandable {
                     @Override
                     public void initChannel(SocketChannel ch){
                         var pipeline = ch.pipeline();
-                        pipeline.addLast("framer",
-                                new DelimiterBasedFrameDecoder(512, true, Delimiters.lineDelimiter())); // Max 512
+                       // pipeline.addLast("framer",
+                         //       new DelimiterBasedFrameDecoder(512, true, Delimiters.lineDelimiter())); // Max 512
                         // char,
                         // strip
                         // delimiter

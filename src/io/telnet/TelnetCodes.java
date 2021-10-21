@@ -54,7 +54,6 @@ public class TelnetCodes {
 
 	public static final String BG_LIGHT_GREY = ESCAPE+"[48;5;7m";
 	public static final String BG_DARK_GREY = ESCAPE+"[48;5;8m";
-
 	public static final String BACK_BLACK = ESCAPE + "[40m";
 	public static final String BACK_RED = ESCAPE + "[41m";
 	public static final String BACK_GREEN = ESCAPE + "[42m";

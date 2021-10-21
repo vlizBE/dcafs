@@ -4,16 +4,14 @@ import org.tinylog.Logger;
 
 import java.io.*;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -318,5 +316,26 @@ public class FileTools {
             Logger.error(e.getMessage());
         }
         return false;     
+    }
+
+    /**
+     * Get the path to the given resource based on the filename
+     * @param origin The class that holds the resources
+     * @param filename The file to look for
+     * @return The path to the file or an empty optional if not found
+     */
+    public static Optional<Path> getPathToResource(Class origin, String filename ){
+        ClassLoader classLoader = origin.getClassLoader();
+        URL resource = classLoader.getResource(filename);
+        if (resource == null) {
+            throw new IllegalArgumentException("file not found! " + filename);
+        } else {
+            try {
+                return Optional.of(Path.of(resource.toURI()));
+            } catch (URISyntaxException e) {
+                Logger.error(e);
+            }
+        }
+        return Optional.empty();
     }
 }

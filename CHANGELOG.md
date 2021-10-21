@@ -6,6 +6,7 @@ Note: Version numbering: x.y.z
 From 0.5.0 onwards, this should be better documented...
 
 #### Todo
+- dbm reload als er table is maar geen kolommen geeft dit foutmelding
 - db connect in separate thread
 - Writable comparable on id?
 - ConfirmCollector give ok on no reply or nok on certain reply?
