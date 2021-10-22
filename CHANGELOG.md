@@ -21,7 +21,28 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (might be trigger for 0.12.0)
 
-## 0.11.4 (work in progress)
+## 0.11.5 (work in progress)
+
+
+## 0.11.4 (22/10/2021)
+
+Mainly improvements to the (till now fairly barebone) CLI.
+
+### Command Line Interface
+- Switched from client side to server side editing
+  - Meaning everything you see in the console came from the server
+  - The use of left/right arrows is now supported
+- Arrow up/down cycles through command history (for now only of the current session), max 50 or so
+
+### Configurator
+- Initial steps for a wizard like configuration method (building the settings.xml), started with 'cfg', still work in 
+progress and limited. Not in there yet for actual use, rather for testing.
+
+### Other
+- Allow for source to be set for a generic, in reality this still alters the labels
+- '?' now works the same as 'help'
+- Extra functionality in the XMLfab
+- 
 ## 0.11.3 (15/10/21)
 
 Quick release because of the mf:addop/addblank bug.
@@ -29,7 +50,6 @@ Quick release because of the mf:addop/addblank bug.
 ### Forwards
 - A src is now checked for the presence of ':' because a valid src should always have it
 - Math and filter now use ',' as default delimiter
-- Can now use maths,filters,editors as alternatives to mf,ff,ef
 - Replaced addblank with addmath,addfilter,addeditor
 
 ### Fixes
