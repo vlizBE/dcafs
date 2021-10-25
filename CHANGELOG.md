@@ -6,7 +6,6 @@ Note: Version numbering: x.y.z
 From 0.5.0 onwards, this should be better documented...
 
 #### Todo
-- dbm reload als er table is maar geen kolommen geeft dit foutmelding
 - db connect in separate thread
 - Writable comparable on id?
 - ConfirmCollector give ok on no reply or nok on certain reply?
@@ -23,6 +22,13 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.11.5 (work in progress)
 
+### CommandLineInterface
+- Backspace should now work as intended
+- Delete button works
+- Typing in random spot inserts instead of replace
+
+### Fixes
+- SQLTable, didn't include the scenario of creating a table without columns
 
 ## 0.11.4 (22/10/2021)
 
