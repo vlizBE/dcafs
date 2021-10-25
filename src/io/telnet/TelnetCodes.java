@@ -77,6 +77,9 @@ public class TelnetCodes {
 	public static final String CURSOR_LEFT = ESCAPE + "[1D";
 	public static final String CURSOR_RIGHT = ESCAPE + "[1C";
 
+	public static String cursorLeft( int steps ){
+		return ESCAPE + "["+steps+"D";
+	}
 	public static String colorNumbers( String defaultTextColor, String s) {
     	StringBuilder b = new StringBuilder();
     	for( String line : s.split("\r\n")) {
