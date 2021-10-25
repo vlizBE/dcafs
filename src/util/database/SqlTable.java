@@ -447,6 +447,9 @@ public class SqlTable {
      * @return The CREATE statement in string format
      */
     public String toString() {
+        if( columns.isEmpty() ) {
+            return "CREATE TABLE " + (ifnotexists ? "IF NOT EXISTS" : "")+ " " + name;
+        }
         StringJoiner join = new StringJoiner(", ",
                 "CREATE TABLE " + (ifnotexists ? "IF NOT EXISTS" : "") + " " + name + " (", " );");
         columns.forEach(x -> join.add(x.toString()));
