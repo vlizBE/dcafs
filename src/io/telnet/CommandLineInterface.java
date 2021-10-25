@@ -57,14 +57,15 @@ public class CommandLineInterface {
                             }
                             break;
                         case 68: // Arrow Left
-                            Logger.info( "Value at current index:" +buffer.getByte(buffer.writerIndex()));
-                            Logger.info( "Value at current index:" +buffer.writerIndex());
+
                             if( buffer.writerIndex() != 0 ) {
                                 writeString(TelnetCodes.CURSOR_LEFT);
                                 buffer.setIndex(buffer.readerIndex(), buffer.writerIndex() - 1);
                             }
                             break;
                     }
+                    Logger.info( "Value at current index:" +buffer.getByte(buffer.writerIndex()));
+                    Logger.info( "Current writer index:" +buffer.writerIndex());
                 }
             }else if( b == '\n'){ //LF
                 Logger.info("Received LF");
@@ -88,8 +89,13 @@ public class CommandLineInterface {
                 buffer.discardReadBytes();
             }else if( b == 127){
                 Logger.info("Backspace");
-                writeByte(b);
-                buffer.setIndex( buffer.readerIndex(),buffer.writerIndex()-1);
+                if( buffer.getByte(buffer.writerIndex())!=0x00){
+                    shiftLeft();
+                }else{
+                    writeByte((byte)127);
+                    buffer.setByte(buffer.writerIndex()-1,0x00);
+                    buffer.setIndex( buffer.readerIndex(),buffer.writerIndex()-1);
+                }
             }else{
                 Logger.info("Received: "+ (char)b+ " or " +Integer.toString(b));
                 writeByte(b);
@@ -97,6 +103,28 @@ public class CommandLineInterface {
             }
         }
         return Optional.ofNullable(rec);
+    }
+    private void shiftLeft( ){
+        int old = buffer.writerIndex()-1; // index to the left
+        buffer.setIndex(buffer.readerIndex(),old); // Shift index to the left
+        writeString( TelnetCodes.CURSOR_LEFT ); // Shift cursor to the left
+
+        while( buffer.getByte(buffer.writerIndex())!=0x00 ){
+            byte tw = buffer.getByte(buffer.writerIndex()+1);
+            buffer.writeByte(tw);
+            if( tw==0){
+                writeString(TelnetCodes.CURSOR_RIGHT);
+                writeByte((byte)127);
+            }else{
+                writeByte(tw);
+            }
+
+        }
+        writeString(TelnetCodes.cursorLeft(buffer.writerIndex()-old-1));
+        buffer.setIndex(buffer.readerIndex(),old);
+    }
+    private void shiftRight( int ori ){
+
     }
     private void sendHistory(int adj){
 
