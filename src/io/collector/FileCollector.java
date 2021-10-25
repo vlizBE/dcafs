@@ -32,7 +32,6 @@ public class FileCollector extends AbstractCollector{
 
     ScheduledExecutorService scheduler;
 
-   // Queue<String> dataBuffer = new ConcurrentLinkedQueue<String>();
     BlockingQueue<String> dataBuffer = new LinkedBlockingQueue<>();
     private BlockingQueue<Datagram> dQueue;                        // Queue to send commands
 
@@ -82,7 +81,15 @@ public class FileCollector extends AbstractCollector{
     @Override
     public String getID(){ return "fc:"+id;}
     public String toString(){
-        return "Writing to "+getPath()+" buffer containing "+byteCount+"bytes";
+        String size = "";
+        if( byteCount < 10000){
+            size=byteCount+"B";
+        }else if( byteCount < 1000000){
+            size = Tools.roundDouble(byteCount/1024,1)+"KB";
+        }else{
+            size = Tools.roundDouble(byteCount/(1024*1024),1)+"MB";
+        }
+        return "Writing to "+getPath()+" buffer containing "+dataBuffer.size()+"/max"+" items for a total of "+size;
     }
     public void setScheduler( ScheduledExecutorService scheduler ){
         this.scheduler=scheduler;
