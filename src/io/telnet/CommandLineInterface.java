@@ -108,8 +108,7 @@ public class CommandLineInterface {
                 }
             }else{
                 Logger.info("Received: "+ (char)b+ " or " +Integer.toString(b));
-                writeByte(b);
-                buffer.writeByte(b);
+                insertByte(b);
             }
         }
         return Optional.ofNullable(rec);
@@ -133,8 +132,23 @@ public class CommandLineInterface {
         writeString(TelnetCodes.cursorLeft(buffer.writerIndex()-old-1));
         buffer.setIndex(buffer.readerIndex(),old);
     }
-    private void shiftRight( int ori ){
+    private void insertByte( byte b ){
 
+        byte old = buffer.getByte(buffer.writerIndex());
+        buffer.writeByte(b);
+        writeByte(b);
+        int offset=0;
+        while( old!=0) {
+            byte ol = buffer.getByte(buffer.writerIndex());
+            buffer.writeByte(old);
+            writeByte(old);
+            old=ol;
+            offset++;
+        }
+        if( offset!=0 ) {
+            buffer.setIndex(buffer.readerIndex(), buffer.writerIndex() - offset);
+            writeString(TelnetCodes.cursorLeft(offset));
+        }
     }
     private void sendHistory(int adj){
 
