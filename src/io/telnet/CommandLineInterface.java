@@ -79,6 +79,8 @@ public class CommandLineInterface {
                 buffer.setIndex(0,wi);
                 rec = new byte[buffer.readableBytes()];
                 buffer.readBytes(rec);
+                buffer.clear();
+                buffer.setZero(0,wi);
                 String r = new String(rec);
                 if(!history.contains(r)) {
                     history.add(new String(rec));
@@ -86,7 +88,7 @@ public class CommandLineInterface {
                         history.remove(0);
                     histIndex = history.size();
                 }
-                buffer.discardReadBytes();
+
             }else if( b == 126){
                 Logger.info("Delete");
                 writeString(TelnetCodes.CURSOR_RIGHT);
@@ -113,7 +115,7 @@ public class CommandLineInterface {
         }
         return Optional.ofNullable(rec);
     }
-    private void shiftLeft(  ){
+    private void shiftLeft(){
         int old = buffer.writerIndex()-1; // index to the left
         buffer.setIndex(buffer.readerIndex(),old); // Shift index to the left
         writeString( TelnetCodes.CURSOR_LEFT ); // Shift cursor to the left
