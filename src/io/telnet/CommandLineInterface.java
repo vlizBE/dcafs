@@ -38,17 +38,16 @@ public class CommandLineInterface {
                         .add(TelnetCodes.toReadableIAC(data[a]));
             }else if( b == 27){ // Escape codes
                 a++;
-                Logger.info("Received: "+ (char)b+ " or " +Integer.toString(b)+" "+Integer.toString(data[a])+Integer.toString(data[a+1]));
+                Logger.debug("Received: "+ (char)b+ " or " +Integer.toString(b)+" "+Integer.toString(data[a])+Integer.toString(data[a+1]));
                 if( data[a]==91){
                     a++;
                     switch(data[a]){
                         case 65: // Arrow Up
                             sendHistory(-1);
-                            Logger.info("Arrow Up");
                             break;
                         case 66:
                             sendHistory(1);
-                            Logger.info("Arrow Down"); break; // Arrow Down
+                            break; // Arrow Down
                         case 67: // Arrow Right
                             // Only move to the right if current space is used
                             if( buffer.getByte(buffer.writerIndex()) != 0 ) {
@@ -64,14 +63,10 @@ public class CommandLineInterface {
                             }
                             break;
                     }
-                    Logger.info( "Value at current index:" +buffer.getByte(buffer.writerIndex()));
-                    Logger.info( "Current writer index:" +buffer.writerIndex());
                 }
             }else if( b == '\n'){ //LF
-                Logger.info("Received LF");
                 writeByte(b); // echo LF
             }else if( b == '\r') { // CR
-                Logger.info("Received CR");
                 writeByte(b); // echo CR
                 int wi = buffer.writerIndex();
                 while( buffer.getByte(wi) != 0)
@@ -88,9 +83,7 @@ public class CommandLineInterface {
                         history.remove(0);
                     histIndex = history.size();
                 }
-
-            }else if( b == 126){
-                Logger.info("Delete");
+            }else if( b == 126){// delete
                 writeString(TelnetCodes.CURSOR_RIGHT);
                 if( buffer.getByte(buffer.writerIndex()+1)!=0x00){
                     buffer.setIndex( buffer.readerIndex(),buffer.writerIndex()+1);
@@ -99,8 +92,7 @@ public class CommandLineInterface {
                     writeByte((byte)127);// do backspace
                     buffer.setByte(buffer.writerIndex(),0x00); // delete current value in buffer
                 }
-            }else if( b == 127){
-                Logger.info("Backspace");
+            }else if( b == 127){ // Backspace
                 if( buffer.getByte(buffer.writerIndex())!=0x00){
                     shiftLeft();
                 }else{
@@ -109,7 +101,6 @@ public class CommandLineInterface {
                     buffer.setIndex( buffer.readerIndex(),buffer.writerIndex()-1);
                 }
             }else{
-                Logger.info("Received: "+ (char)b+ " or " +Integer.toString(b));
                 insertByte(b);
             }
         }
