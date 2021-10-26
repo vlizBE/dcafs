@@ -20,12 +20,15 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (might be trigger for 0.12.0)
 
-## 0.11.5 (work in progress)
+## 0.11.6 (work in progress)
+
+## 0.11.5 (26/10/2021)
 
 ### CommandLineInterface
 - Backspace should now work as intended
 - Delete button works
 - Typing in random spot inserts instead of replace
+- discardreadbytes didn't work as expected
 
 ### Fixes
 - SQLTable, didn't include the scenario of creating a table without columns
