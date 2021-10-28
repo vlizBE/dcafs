@@ -1,6 +1,5 @@
 package io.telnet;
 
-import io.Writable;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -11,9 +10,9 @@ import java.util.Optional;
 import java.util.StringJoiner;
 
 public class CommandLineInterface {
-    ByteBuf buffer = Unpooled.buffer(64);
-    private ArrayList<String> history = new ArrayList<>();
-    private int histIndex=-1;
+    ByteBuf buffer = Unpooled.buffer(64);       // Buffer that holds the received data
+    private ArrayList<String> cmdHistory = new ArrayList<>(); // Buffer that holds the processed commands
+    private int cmdHistoryIndex =-1; // Pointer to the last send historical cmd
 
     Channel channel;
 
@@ -25,6 +24,12 @@ public class CommandLineInterface {
             channel.writeAndFlush(TelnetCodes.WILL_ECHO);
         }
     }
+
+    /**
+     * Receive data to process
+     * @param data The data received
+     * @return And optional response
+     */
     public Optional<byte[]> receiveData(byte[] data ){
 
         // Work with buffer
@@ -77,11 +82,11 @@ public class CommandLineInterface {
                 buffer.clear();
                 buffer.setZero(0,wi);
                 String r = new String(rec);
-                if(!history.contains(r)) {
-                    history.add(new String(rec));
-                    if( history.size()>50)
-                        history.remove(0);
-                    histIndex = history.size();
+                if(!cmdHistory.contains(r)) {
+                    cmdHistory.add(new String(rec));
+                    if( cmdHistory.size()>50)
+                        cmdHistory.remove(0);
+                    cmdHistoryIndex = cmdHistory.size();
                 }
             }else if( b == 126){// delete
                 writeString(TelnetCodes.CURSOR_RIGHT);
@@ -106,6 +111,10 @@ public class CommandLineInterface {
         }
         return Optional.ofNullable(rec);
     }
+
+    /**
+     * Shift the content of the buffer left starting with the current writerindex
+     */
     private void shiftLeft(){
         int old = buffer.writerIndex()-1; // index to the left
         buffer.setIndex(buffer.readerIndex(),old); // Shift index to the left
@@ -125,6 +134,11 @@ public class CommandLineInterface {
         writeString(TelnetCodes.cursorLeft(buffer.writerIndex()-old-1));
         buffer.setIndex(buffer.readerIndex(),old);
     }
+
+    /**
+     * Insert a byte at the current writerindex, shifting everything to the right of it ... to the right
+     * @param b The byte to insert
+     */
     private void insertByte( byte b ){
 
         byte old = buffer.getByte(buffer.writerIndex());
@@ -143,26 +157,37 @@ public class CommandLineInterface {
             writeString(TelnetCodes.cursorLeft(offset));
         }
     }
+
+    /**
+     * Send the historical command referenced to by the current histindex value and alter this value
+     * @param adj The alteration to be applied to histIndex
+     */
     private void sendHistory(int adj){
 
         // Return when the history buffer is empty
-        if( history.isEmpty() )
+        if( cmdHistory.isEmpty() )
             return;
 
-        histIndex += adj; // Alter the pointer
+        cmdHistoryIndex += adj; // Alter the pointer
 
-        if( histIndex<0) // Can't go lower than 0
-            histIndex=0;
+        if( cmdHistoryIndex <0) // Can't go lower than 0
+            cmdHistoryIndex =0;
 
-        if (histIndex == history.size() ) // Shouldn't go out of bounds
-            histIndex = history.size() - 1;
+        if (cmdHistoryIndex == cmdHistory.size() ) // Shouldn't go out of bounds
+            cmdHistoryIndex = cmdHistory.size() - 1;
 
-        Logger.info("Sending "+histIndex);
-        writeString("\r>" + history.get(histIndex));//Move cursor and send history
+        Logger.info("Sending "+ cmdHistoryIndex);
+        writeString("\r>" + cmdHistory.get(cmdHistoryIndex));//Move cursor and send history
         writeString(TelnetCodes.CLEAR_LINE_END); // clear the rest of the line
         buffer.clear(); // clear the buffer
-        buffer.writeBytes(history.get(histIndex).getBytes()); // fill the buffer
+        buffer.writeBytes(cmdHistory.get(cmdHistoryIndex).getBytes()); // fill the buffer
     }
+
+    /**
+     * Write a single byte to the channel this CLI is using
+     * @param data The byte of data to send
+     * @return True if the channel was active
+     */
     public synchronized boolean writeByte( byte data ){
         if( channel != null && channel.isActive()){
             channel.writeAndFlush( new byte[]{data});
@@ -170,6 +195,12 @@ public class CommandLineInterface {
         }
         return false;
     }
+
+    /**
+     * Write a string message to the channel this CLI is using
+     * @param message The message to send
+     * @return True if the channel was active
+     */
     public synchronized boolean writeString( String message ){
         if( channel != null && channel.isActive()){
             channel.writeAndFlush(message.getBytes());
