@@ -170,6 +170,7 @@ public class CommandPool {
 	public String createResponse(String question, Writable wr, boolean remember, boolean html) {
 
 		String result = UNKNOWN_CMD;
+		question=question.trim();
 
 		if (!html) // if html is false, verify that the command doesn't imply the opposite
 			html = question.endsWith("html");
@@ -225,7 +226,7 @@ public class CommandPool {
 			case "s_": result=doS_(split); break;
 			case "upgrade": result=doUPGRADE(split, wr,html); break;
 		}	
-
+		String rep=result;
 		if( result.startsWith(UNKNOWN_CMD) ){
 			var cmdOpt = commandables.entrySet().stream()
 						.filter( ent -> {
@@ -273,6 +274,10 @@ public class CommandPool {
 		}
 		if( result.isEmpty())
 			return "";
+
+		if( result.equalsIgnoreCase(UNKNOWN_CMD))
+			return result+" >>"+question+"|"+find+"|"+split[0]+"|"+split[1]+"<<";
+
 		return result + (html ? "<br>" : "\r\n");
 	}
 	/* ****************************************** C O M M A N D A B L E ********************************************* */
