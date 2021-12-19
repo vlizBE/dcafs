@@ -22,6 +22,10 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.11.6 (work in progress)
 
+### CommandLineInterface
+ - For some reason a 0 is left after the first cmd but only on linux... trim() as workaround
+ - 
+
 ## 0.11.5 (26/10/2021)
 
 ### CommandLineInterface
