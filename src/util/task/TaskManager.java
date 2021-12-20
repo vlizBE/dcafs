@@ -1043,7 +1043,7 @@ public class TaskManager implements CollectorFuture {
 			to = Tools.getMAC( line.substring(i+5,i+end) );
 			line = line.replace(line.substring(i,i+end+1),to);
 		}
-		line=dp.parseRTline(line,"");
+		line = dp.parseRTline(line,"");
     	line = line.replace("[EOL]", "\r\n");
     	return line;
     }
