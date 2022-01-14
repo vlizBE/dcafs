@@ -411,7 +411,7 @@ public class PathForward {
             }
         }
         public String toString(){
-            return "Writes '"+data+"' every "+TimeTools.convertPeriodtoString(intervalMillis,TimeUnit.MILLISECONDS);
+            return "Reads '"+data+"' every "+TimeTools.convertPeriodtoString(intervalMillis,TimeUnit.MILLISECONDS);
         }
     }
 }
