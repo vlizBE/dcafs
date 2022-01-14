@@ -268,6 +268,8 @@ public class PathForward {
         return join.toString();
     }
     public void addTarget(Writable wr){
+        if( stepsForward == null )
+            return;
 
         if( stepsForward.isEmpty() ){ // If no steps are present
             if (!targets.contains(wr))
