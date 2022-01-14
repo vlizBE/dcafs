@@ -10,6 +10,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 
+import java.util.Locale;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
@@ -41,12 +42,22 @@ public class TimeTools {
      */
     public static String reformatDate(String date, String inputFormat, String outputFormat) {
         try{
-            LocalDateTime dt = LocalDateTime.parse(date, DateTimeFormatter.ofPattern(inputFormat));
+            LocalDateTime dt = LocalDateTime.parse(date, DateTimeFormatter.ofPattern(inputFormat).withLocale(Locale.ENGLISH));
             if (dt != null) {
                 return dt.format( DateTimeFormatter.ofPattern(outputFormat) );
             }
         }catch(DateTimeParseException e){
-            Logger.error(e);
+            if( e.getMessage().contains("Unable to obtain LocalDateTime from TemporalAccessor")){
+                try{
+                    LocalDate dt = LocalDate.parse(date, DateTimeFormatter.ofPattern(inputFormat).withLocale(Locale.ENGLISH));
+                    if (dt != null)
+                        return dt.format( DateTimeFormatter.ofPattern(outputFormat) );
+                }catch(DateTimeParseException f) {
+                    Logger.error(f);
+                }
+            }else{
+                Logger.error(e);
+            }
         }
         return "";
     }
