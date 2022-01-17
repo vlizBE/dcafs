@@ -413,7 +413,7 @@ public class FileCollector extends AbstractCollector{
 
         StringJoiner join;
         if( !headers.isEmpty() && (Files.notExists(dest) || headerChanged) ){ // the file doesn't exist yet
-            join = new StringJoiner( lineSeparator );
+            join = new StringJoiner( lineSeparator,"",lineSeparator );
             headers.forEach( hdr -> join.add(hdr.replace("{file}",dest.getFileName().toString()))); // Add the headers
         }else{
             join = new StringJoiner( lineSeparator,"",lineSeparator );
@@ -424,6 +424,7 @@ public class FileCollector extends AbstractCollector{
             join.add(line);
             cnt--;
         }
+
         byteCount=0;
         try {
             if(headerChanged && Files.exists(dest)) {
