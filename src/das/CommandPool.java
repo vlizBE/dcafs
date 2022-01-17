@@ -1045,7 +1045,7 @@ public class CommandPool {
 				if( cmds.length!=2)
 					return "Not enough arguments given: fc:reload,id";
 
-				fco = das.getFileCollector(cmds[1]);
+				fco = das.getFileCollector("fc:"+cmds[1]);
 
 				if( fco.isEmpty() )
 					return "No such fc: "+cmds[1];
