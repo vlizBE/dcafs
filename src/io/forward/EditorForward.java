@@ -75,7 +75,7 @@ public class EditorForward extends AbstractForward{
                 .add("rexsplit -> Use the value as a regex to split the data and combine again with the delimiter")
                 .add("    fe. <edit type='rexsplit' delimiter='-'>\\d*</edit>  --> 16-25-12")
                 .add("rexreplace -> Use a regex based on 'find' and replace it with the value given")
-                .add("    fe. <edit type='rexplace' find='\\d*'>x</edit>  --> x:x:x")
+                .add("    fe. <edit type='rexreplace' find='\\d*'>x</edit>  --> x:x:x")
                 .add("rexremove -> Remove all matches of the value as a regex ")
                 .add("    fe. <edit type='rexremove' >\\d*</edit>  --> ::")
                 .add("rexkeep -> Only retain the result of the regex given as value")
