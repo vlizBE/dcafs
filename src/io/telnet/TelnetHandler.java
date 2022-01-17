@@ -138,6 +138,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 
 		if( config ){ // Config mode
 			String reply = conf.reply(new String(rec));
+			reply = reply.trim();
 			if( !reply.equalsIgnoreCase("bye") ) {
 				if( !reply.isEmpty())
 					writeLine(reply);
