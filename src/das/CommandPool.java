@@ -556,15 +556,16 @@ public class CommandPool {
 	 * @return Descriptive result of the command, "Unknown command if not recognised
 	 */
 	public String doSERIALPORTS( String[] request, boolean html ){
-		StringBuilder response = new StringBuilder();
-		
+		String eol = html ? "<br>" : "\r\n";
+		StringJoiner response = new StringJoiner(eol);
+		response.setEmptyValue("No ports found");
 		if( request[1].equals("?") )
 			return " -> Get a list of available serial ports on the PC running dcafs.";
 
-		response.append("Ports found: ").append(html ? "<br>" : "\r\n");
-		for( SerialPort p : SerialPort.getCommPorts())
-			response.append(p.getSystemPortName()).append(html ? "<br>" : "\r\n");
-		response.append(html?"<br>":"\r\n");
+		response.add("Ports found: ");
+		for( SerialPort p : SerialPort.getCommPorts()) {
+			response.add(p.getSystemPortName());
+		}
 		return response.toString();
 	}
 	/**
