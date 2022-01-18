@@ -644,7 +644,15 @@ public class I2CWorker implements Commandable {
         // Do something with the result...
         StringJoiner output = new StringJoiner(";",device.getID()+";"+cmdID+";","");
         switch( com.getOutType() ){
-            case DEC: altRes.forEach( x -> output.add( Integer.toString(x.intValue())) ); break;
+            case DEC:
+                altRes.forEach( x -> {
+                    if( x.toString().endsWith(".0")) {
+                        output.add(Integer.toString(x.intValue()));
+                    }else{
+                        output.add(x.toString());
+                    }
+                } );
+                break;
             case HEX: altRes.forEach( x -> {
                 String val = Integer.toHexString(x.intValue()).toUpperCase();
                 output.add( "0x"+(val.length()==1?"0":"")+val);
