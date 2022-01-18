@@ -10,7 +10,8 @@ import java.util.Optional;
 import java.util.StringJoiner;
 
 public class CommandLineInterface {
-    ByteBuf buffer = Unpooled.buffer(128);       // Buffer that holds the received data
+    private static int BUFFER_SIZE = 128;
+    ByteBuf buffer = Unpooled.buffer(BUFFER_SIZE);       // Buffer that holds the received data
     private ArrayList<String> cmdHistory = new ArrayList<>(); // Buffer that holds the processed commands
     private int cmdHistoryIndex =-1; // Pointer to the last send historical cmd
 
@@ -179,8 +180,9 @@ public class CommandLineInterface {
         Logger.info("Sending "+ cmdHistoryIndex);
         writeString("\r>" + cmdHistory.get(cmdHistoryIndex));//Move cursor and send history
         writeString(TelnetCodes.CLEAR_LINE_END); // clear the rest of the line
-        buffer.clear(); // clear the buffer
+        buffer.clear(); // reset the reader and writer index
         buffer.writeBytes(cmdHistory.get(cmdHistoryIndex).getBytes()); // fill the buffer
+        buffer.setZero( buffer.writerIndex(),BUFFER_SIZE-1); // clear the rest of the buffer
     }
 
     /**
