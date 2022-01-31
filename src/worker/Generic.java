@@ -380,7 +380,7 @@ public class Generic {
                         generic.addFilter("replace_all", repAll, ent.getAttribute("with"));
                     }
                     break;
-                case "real":
+                case "real":case "double":
                     generic.addReal(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title,
                             XMLtools.getStringAttribute(ent, "mqtt", ""));
                     break;
