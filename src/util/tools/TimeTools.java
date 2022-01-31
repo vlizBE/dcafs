@@ -16,9 +16,17 @@ import java.util.concurrent.TimeUnit;
 
 public class TimeTools {
 
-    static final public DateTimeFormatter LONGDATE_FORMATTER_UTC = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS").withZone(ZoneOffset.UTC);
-    static final public DateTimeFormatter SHORTDATE_FORMATTER_UTC = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.UTC);
-    static final public DateTimeFormatter LONGDATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+    static final public DateTimeFormatter LONGDATE_FORMATTER_UTC = DateTimeFormatter
+                                                                        .ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
+                                                                        .withZone(ZoneOffset.UTC)
+                                                                        .withLocale(Locale.ENGLISH);
+    static final public DateTimeFormatter SHORTDATE_FORMATTER_UTC = DateTimeFormatter
+                                                                        .ofPattern("yyyy-MM-dd HH:mm:ss")
+                                                                        .withZone(ZoneOffset.UTC)
+                                                                        .withLocale(Locale.ENGLISH);
+    static final public DateTimeFormatter LONGDATE_FORMATTER = DateTimeFormatter
+                                                                    .ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
+                                                                    .withLocale(Locale.ENGLISH);
 
     static final DateTimeFormatter NMEA_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HHmmss.SS");
     static final DateTimeFormatter DAY_MIN_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -97,8 +105,7 @@ public class TimeTools {
     public static synchronized String formatLongDate(long timestamp) {
         if( timestamp <= 0)
             return "";   
-        try{                	
-            
+        try{
         	return LONGDATE_FORMATTER.format( Instant.ofEpochMilli(timestamp));
         }catch( java.lang.ArrayIndexOutOfBoundsException e ){
         	Logger.error("Error trying to format date.");
@@ -111,12 +118,10 @@ public class TimeTools {
      * @return If successful it returns the requested date, if not an empty string
      */
     public static String formatNow(String outputFormat) {
-        return formatNow(outputFormat, 0);
+        return LocalDateTime.now().format(DateTimeFormatter.ofPattern(outputFormat).withLocale(Locale.ENGLISH));
     }
     public static String formatUTCNow(String outputFormat) {
-    	 DateFormat outFormat = new SimpleDateFormat(outputFormat);
-         outFormat.setTimeZone(UTC);
-         return outFormat.format( System.currentTimeMillis() );
+        return LocalDateTime.now(ZoneId.of("UTC")).format(DateTimeFormatter.ofPattern(outputFormat).withLocale(Locale.ENGLISH));
     }
     /**
      * Gets the current UTC datetime and formats it according to the standard 'long' format yyyy-MM-dd HH:mm:ss.SSS

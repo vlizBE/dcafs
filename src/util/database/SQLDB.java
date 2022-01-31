@@ -907,6 +907,7 @@ public class SQLDB extends Database{
                                         }
                                         if( errors>10) {
                                             Logger.error(getID()+" -(db)> 10x SQL Error:"+e.getMessage() );
+                                            Logger.error( "Errorcode:" +e.getErrorCode() );
                                             Logger.error(getID()+" (db)-> "+SQLDB.this.toString());
                                             ok = false;
                                         }
