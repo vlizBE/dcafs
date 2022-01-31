@@ -386,7 +386,7 @@ public class XMLtools {
 			return def;
 		}
 		if( parent.hasAttribute(attribute))
-			return parent.getAttribute(attribute);
+			return parent.getAttribute(attribute).trim();
 		return def;
 	}
 	/**
