@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
 
 public class DAS implements DeadThreadListener {
 
-    private static final String version = "0.11.6";
+    private static final String version = "0.11.7";
 
     private Path settingsPath = Path.of("settings.xml");
     private String workPath=Path.of("").toString();
@@ -539,7 +539,7 @@ public class DAS implements DeadThreadListener {
     /**
      * Set the reason for shutting down
      * 
-     * @param reason The reason DAS is going to shutdown
+     * @param reason The reason DAS is shutting down
      */
     public void setShutdownReason(String reason) {
         this.sdReason = reason;
@@ -717,7 +717,7 @@ public class DAS implements DeadThreadListener {
                 b.append(TEXT_YELLOW).append(TEXT_CYAN).append("\r\n").append("Devices").append("\r\n").append(UNDERLINE_OFF).append(TEXT_YELLOW);
             }
             for( String s : i2cWorker.getStatus("\r\n").split("\r\n") ){
-                if (s.startsWith("!!")) {
+                if (s.startsWith("!!") || s.endsWith("false")) {
                     b.append(TEXT_RED).append(s).append(TEXT_YELLOW).append(UNDERLINE_OFF);
                 } else {
                     b.append(s);

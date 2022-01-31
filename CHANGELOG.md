@@ -20,11 +20,21 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (might be trigger for 0.12.0)
 
-## 0.11.6 (work in progress)
+## 0.11.7 (work in progress)
+
+## 0.11.6 (18/01/22)
+
+- Updated dependencies.
 
 ### CommandLineInterface
  - For some reason a 0 is left after the first cmd but only on linux... trim() as workaround
- - 
+ - Fixed history, buffer.clear only resets the indexes so data remains. So this combined with checking for data after the current
+writeindex caused commands to be mashed together when using the history function. So now when history is used, the rest
+of the buffer is overwritten with null.
+
+### Bugfixes
+- FileCollector, Changed the join to do the same if headers are added
+- TimeTools, formatter was using locale to convert month/day in text (fe. May) to number so now fixed to english
 
 ## 0.11.5 (26/10/2021)
 
@@ -688,7 +698,7 @@ var d = Datagram.system("message").writable(this);
 - BREAKING: Replaced @fillin with {fillin}
 - Moved it out of the main and renamed taskmanager to tasklist, made taskmanager that holds the main code  
 - Implemented Commandable to access it via CommandReq
-- Added the trigger 'waitfor', this can be used in a tasket to wait for a check to be correct a number of
+- Added the trigger 'waitfor', this can be used in a taskset to wait for a check to be correct a number of
 times with the given interval so trigger="waitfor:5s,5" will check 5 times with 5 seconds between each check (so 20s in total)
 - Bugfix: Not sure why the while actually worked... because fixed it. Runs never got reset
 - Added an alternative way to add while and waitfor:
