@@ -377,7 +377,7 @@ public class EditorForward extends AbstractForward{
 
         if(is.length==0) {
             Logger.warn(id+"(ef)-> No original data referenced in the resplit");
-            return;
+          //  return;
         }
 
         int[] indexes = new int[is.length];
