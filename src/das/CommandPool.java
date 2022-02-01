@@ -222,7 +222,7 @@ public class CommandPool {
 			case "stop": result=doSTOP( wr ); break;
 			case "serialports": result=doSERIALPORTS(split, html); break;
 			case "sleep": result=doSLEEP(split, wr); break;
-			case "ss": result=doStreamS(split, wr,html); break;
+			case "ss": case "streams": result=doStreamS(split, wr,html); break;
 			case "s_": result=doS_(split); break;
 			case "upgrade": result=doUPGRADE(split, wr,html); break;
 		}	
