@@ -266,6 +266,7 @@ public class Generic {
                                 dp.getOrAddDoubleVal( ref ).updateValue( val );
                             }else{
                                 data[a]=null;
+                                Logger.error(id +" -> Failed to convert "+split[entry.index]+" to real for "+ ref);
                             }
                             break;                
                     case TEXT: case TAG:
