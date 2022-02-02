@@ -518,6 +518,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			id = id.substring(1,id.length()-2);
 			var pair = id.split(":");
 			switch(pair[0].toLowerCase()) {
+				case "i": case "int": case "integer":
+					return Optional.ofNullable(integerVals.get(id));
 				case "d":case "double": case "r": case "real":
 					return Optional.ofNullable(doubleVals.get(id));
 				case "f": case "flag": case "b":

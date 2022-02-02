@@ -32,15 +32,15 @@ public interface DataProviding {
 
     /* Integer */
     Optional<IntegerVal> getIntegerVal(String param );
-    IntegerVal getOrIntegerVal( String id );
+    IntegerVal getOrAddIntegerVal( String id );
     boolean renameInteger( String from, String to, boolean alterXml);
     boolean hasInteger( String id);
-    int getInteger(String id, double defVal, boolean createIfNew);
-    int getInteger(String id, double bad);
+    int getInteger(String id, int defVal, boolean createIfNew);
+    int getInteger(String id, int bad);
 
-    boolean setInteger(String id, double value);
-    boolean updateDInteger(String id, double bad);
-    int updateIntegerGroup(String group, double value);
+    boolean setInteger(String id, int value);
+    boolean updateInteger(String id, int bad);
+    int updateIntegerGroup(String group, int value);
 
     /* Text */
     String getText(String parameter, String bad);

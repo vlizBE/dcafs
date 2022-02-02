@@ -159,7 +159,7 @@ public class Generic {
      * Add a filter that is applied before the split etc
      * @param type Which filtertype (only has replace_all, replace_first for now)
      * @param from What should be looked for
-     * @param to What the from should be replaced with
+     * @param to What the 'from' should be replaced with
      * @return this object
      */
     public Generic addFilter( String type, String from, String to ){
@@ -249,9 +249,8 @@ public class Generic {
                                 data[a] = doubles[entry.index].intValue();
                                 dp.setInteger( ref, (int)data[a] );
                             }else if( NumberUtils.isCreatable(split[entry.index])){
-                                val=NumberUtils.toInt(split[entry.index],-999);
-                                data[a]=val;
-                                dp.setInteger( ref, val );
+                                data[a]=NumberUtils.toInt(split[entry.index],-999);
+                                dp.setInteger( ref, (int)data[a] );
                             }else{
                                 data[a]=null;
                             }
