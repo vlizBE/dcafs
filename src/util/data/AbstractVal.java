@@ -13,6 +13,7 @@ public abstract class AbstractVal {
 
     protected String name;
     protected String group="";
+    protected String unit="";
 
     /* Position in lists */
     int order = -1;
@@ -105,6 +106,7 @@ public abstract class AbstractVal {
     public String name(){
         return name;
     }
+    public String unit(){ return unit; }
     /* ********************************* Requests/Targets ********************************************************** */
     public void addTarget( Writable wr){
         if( targets==null)

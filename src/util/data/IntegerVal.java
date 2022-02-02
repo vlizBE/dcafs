@@ -2,40 +2,36 @@ package util.data;
 
 import org.tinylog.Logger;
 import util.math.MathUtils;
-import util.task.Task;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
 import worker.Datagram;
 
 import java.math.BigDecimal;
-import java.time.*;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-public class DoubleVal extends AbstractVal implements NumericVal{
+public class IntegerVal extends AbstractVal implements NumericVal{
+    private int value;
 
-    private double value;
-
-    private double defVal=Double.NaN;
-
-    private int digits=-1;
+    private int defVal=0;
 
     /* Min max*/
-    private double min=Double.MAX_VALUE;
-    private double max=Double.MIN_VALUE;
+    private double min=Integer.MAX_VALUE;
+    private double max=Integer.MIN_VALUE;
     private boolean keepMinMax=false;
 
     /* History */
-    private ArrayList<Double> history;
+    private ArrayList<Integer> history;
 
     /* Triggering */
     private ArrayList<TriggeredCmd> triggered;
-    enum TRIGGERTYPE {ALWAYS,CHANGED,STDEV,COMP};
 
-    private DoubleVal(){}
+    enum TRIGGERTYPE {ALWAYS,CHANGED,STDEV,COMP};
 
     /**
      * Constructs a new DoubleVal with the given group and name
@@ -44,8 +40,8 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * @param name The name for the DoubleVal
      * @return The constructed DoubleVal
      */
-    public static DoubleVal newVal(String group, String name){
-        return new DoubleVal().group(group).name(name);
+    public static IntegerVal newVal(String group, String name){
+        return new IntegerVal().group(group).name(name);
     }
 
     /**
@@ -54,13 +50,13 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * @param combined group + underscore + name = id
      * @return the constructed DoubleVal
      */
-    public static DoubleVal newVal(String combined){
+    public static IntegerVal newVal(String combined){
         int us = combined.indexOf("_");
 
         if( us != -1) { // If this contains an underscore, split it
-            return new DoubleVal().group(combined.substring(0,us)).name(combined.substring(us+1));
+            return new IntegerVal().group(combined.substring(0,us)).name(combined.substring(us+1));
         }
-        return new DoubleVal().name(combined);// If no underscore, this means no group id given
+        return new IntegerVal().name(combined);// If no underscore, this means no group id given
     }
     /* ********************************* Constructing ************************************************************ */
 
@@ -69,7 +65,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * @param name The new name
      * @return This object with altered name
      */
-    public DoubleVal name(String name){
+    public IntegerVal name(String name){
         this.name=name;
         return this;
     }
@@ -78,7 +74,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * @param group The new group
      * @return This object with altered group
      */
-    public DoubleVal group(String group){
+    public IntegerVal group(String group){
         this.group=group;
         return this;
     }
@@ -88,7 +84,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * @param unit The unit for the value
      * @return This object with updated unit
      */
-    public DoubleVal unit(String unit){
+    public IntegerVal unit(String unit){
         this.unit=unit;
         return this;
     }
@@ -98,7 +94,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * @param val The new value
      * @return This object after updating the value etc
      */
-    public DoubleVal value( double val ){
+    public IntegerVal value( int val ){
 
         /* Keep history of passed values */
         if( keepHistory!=0 ) {
@@ -120,11 +116,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
             // Execute all the triggers, only if it's the first time
             triggered.stream().forEach(tc -> tc.apply(val));
         }
-        if( digits != -1) {
-            value = Tools.roundDouble(val, digits);
-        }else{
-            value=val;
-        }
+        value=val;
         if( targets!=null ){
             targets.forEach( wr -> wr.writeLine(id()+":"+val));
         }
@@ -136,41 +128,17 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * @param defVal The default value
      * @return This object after altering the defValue if not NaN
      */
-    public DoubleVal defValue( double defVal){
+    public IntegerVal defValue( int defVal){
         if( !Double.isNaN(defVal) ) { // If the given value isn't NaN
             this.defVal = defVal;
-            if( Double.isNaN(value))
-                value=defVal;
         }
         return this;
     }
-
-    /**
-     * Reset this DoubleVal to its default value
-     */
-    @Override
-    public void reset(){
-        keepMinMax=false;
-        digits=-1;
-        if( triggered!=null)
-            triggered.clear();
-        super.reset();
-    }
-    /**
-     * Set the amount of digits to scale to using half up rounding
-     * @param fd The amount of digits
-     * @return This object after setting the digits
-     */
-    public DoubleVal fractionDigits(int fd){
-        this.digits=fd;
-        return this;
-    }
-
     /**
      * Enable keeping track of the max and min values received since last reset
      * @return This object but with min max enabled
      */
-    public DoubleVal keepMinMax(){
+    public IntegerVal keepMinMax(){
         keepMinMax=true;
         return this;
     }
@@ -181,7 +149,16 @@ public class DoubleVal extends AbstractVal implements NumericVal{
             history=new ArrayList<>();
         return super.enableHistory(count);
     }
-
+    /**
+     * Reset this DoubleVal to its default value
+     */
+    @Override
+    public void reset(){
+        keepMinMax=false;
+        if( triggered!=null)
+            triggered.clear();
+        super.reset();
+    }
     /**
      * Tries to add a cmd with given trigger, will warn if no valid queue is present to actually execute them
      * @param cmd The cmd to trigger, $ will be replaced with the current value
@@ -228,13 +205,12 @@ public class DoubleVal extends AbstractVal implements NumericVal{
         if( !group.isEmpty()) {
             fab.alterChild("group","id",group)
                     .down(); // Go down in the group
-            fab.alterChild("real").attr("name",name);
+            fab.alterChild("integer").attr("name",name);
         }else{
-            fab.alterChild("real").attr("id",id());
+            fab.alterChild("integer").attr("id",id());
         }
         fab.attr("unit",unit);
-        if( digits !=-1)
-            fab.attr("scale",digits);
+
         var opts = getOptions();
         if( !opts.isEmpty())
             fab.attr("options",opts);
@@ -244,7 +220,6 @@ public class DoubleVal extends AbstractVal implements NumericVal{
             fab.up(); // Go back up to rtvals
         return true;
     }
-
     /**
      * Get a , delimited string with all the used options
      * @return The options in a listing or empty if none are used
@@ -261,31 +236,8 @@ public class DoubleVal extends AbstractVal implements NumericVal{
             join.add("order:"+order);
         return join.toString();
     }
-
-    /**
-     *
-     * @return The amount of digits to scale to using rounding half up
-     */
-    public int scale(){ return digits; }
-
-    /**
-     * @return Get the current value as a double
-     */
-    public double value(){ return value; }
-    public int intValue(){ return ((Double)value).intValue(); }
-    /**
-     * Update the value
-     * @param val The new value
-     */
-    public void updateValue(double val){
-        value(val);
-    }
-
-    /**
-     * Get the value but as a BigDecimal instead of double
-     * @return The BigDecimal value of this object
-     */
-    public BigDecimal toBigDecimal(){
+    @Override
+    public BigDecimal toBigDecimal() {
         try {
             return BigDecimal.valueOf(value);
         }catch(NumberFormatException e){
@@ -294,6 +246,21 @@ public class DoubleVal extends AbstractVal implements NumericVal{
         }
     }
 
+    @Override
+    public double value() {
+        return value;
+    }
+    @Override
+    public int intValue() {
+        return value;
+    }
+    @Override
+    public void updateValue(double val) {
+
+    }
+    public void updateValue(int val){
+        this.value=val;
+    }
     /**
      * Calculate the average of all the values stored in the history
      * @return The average of the stored values
@@ -308,9 +275,8 @@ public class DoubleVal extends AbstractVal implements NumericVal{
             Logger.warn(id() + "(dv)-> Asked for the average of "+(group.isEmpty()?"":group+"_")+name+" but no history kept");
             return value;
         }
-        return Tools.roundDouble(total/history.size(),digits==-1?3:digits);
+        return Tools.roundDouble(total/history.size(),3);
     }
-
     /**
      * Get the current Standard Deviation based on the history rounded to digits + 2 or 5 digits if no scale was set
      * @return The calculated standard deviation or NaN if either no history is kept or the history hasn't reached
@@ -323,28 +289,13 @@ public class DoubleVal extends AbstractVal implements NumericVal{
         }else if( history.size() != keepHistory){
             return Double.NaN;
         }
-        return MathUtils.calcStandardDeviation(history,digits==-1?5:digits+2);
-    }
-    /**
-     * Compare two DoubleVal's based on their values
-     * @param dv The DoubleVal to compare to
-     * @return True if they have the same value
-     */
-    public boolean equals( DoubleVal dv){
-        return Double.compare(value,dv.value())==0;
-    }
-
-    /**
-     * Compare with a double
-     * @param d The double to compare to
-     * @return True if they are equal
-     */
-    public boolean equals( double d){
-        return Double.compare(value,d)==0;
+        ArrayList<Double> decs = new ArrayList<Double>();
+        history.forEach( x -> decs.add((double)x));
+        return MathUtils.calcStandardDeviation( decs,3);
     }
     public String toString(){
         String line = value+unit;
-        if( keepMinMax && max!=Double.MIN_VALUE )
+        if( keepMinMax && max!=Integer.MIN_VALUE )
             line += " (Min:"+min+unit+", Max: "+max+unit+")";
         if( keepHistory>0 && !history.isEmpty()) {
             line = (line.endsWith(")") ? line.substring(0, line.length() - 1) + ", " : line + " (") + "Avg:" + getAvg() + unit + ")";
@@ -361,7 +312,6 @@ public class DoubleVal extends AbstractVal implements NumericVal{
         }
         return line;
     }
-
     /**
      * TriggeredCmd is a way to run cmd's if the new value succeeds in either the compare or meets the other options
      * Cmd: if it contains a '$' this will be replaced with the current value
@@ -373,7 +323,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
     private class TriggeredCmd{
         String cmd; // The cmd to issue
         String ori; // The compare before it was converted to a function (for toString purposes)
-        TRIGGERTYPE type;
+        DoubleVal.TRIGGERTYPE type;
         Function<Double,Boolean> comp; // The compare after it was converted to a function
         boolean triggered=false; // The last result of the comparison
 
@@ -386,16 +336,16 @@ public class DoubleVal extends AbstractVal implements NumericVal{
         public TriggeredCmd( String cmd, String trigger){
             this.cmd=cmd;
             this.ori=trigger;
-            type=TRIGGERTYPE.COMP;
+            type= DoubleVal.TRIGGERTYPE.COMP;
             switch( trigger ){
-                case "": case "always": type=TRIGGERTYPE.ALWAYS; break;
-                case "changed": type=TRIGGERTYPE.CHANGED; break;
+                case "": case "always": type= DoubleVal.TRIGGERTYPE.ALWAYS; break;
+                case "changed": type= DoubleVal.TRIGGERTYPE.CHANGED; break;
                 default:
                     if( trigger.contains("stdev")) {
-                        type = TRIGGERTYPE.STDEV;
+                        type = DoubleVal.TRIGGERTYPE.STDEV;
                         trigger=trigger.replace("stdev","");
                     }
-                    comp=MathUtils.parseSingleCompareFunction(trigger);
+                    comp= MathUtils.parseSingleCompareFunction(trigger);
                     if( comp==null){
                         this.cmd="";
                     }

@@ -10,6 +10,7 @@ public interface NumericVal {
     BigDecimal toBigDecimal(); // get the value as a BigDecimal
 
     double value(); // Get the value as a double
+    int intValue(); // Get the value as an integer
     void updateValue(double val); // update the value based on the double
 
 }
