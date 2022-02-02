@@ -147,7 +147,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					dv.addTriggeredCmd(trig,cmd);
 				}
 				break;
-			case "integer":
+			case "integer":case "int":
 				if( !hasInteger(id)) // If it doesn't exist yet
 					setInteger(id,defInteger,true); // create it
 				var iv = getIntegerVal(id).get();//
@@ -727,25 +727,25 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			if( !readingXML ){
 				var fab = XMLfab.withRoot(settingsPath, "dcafs","settings","rtvals");
 
-				if( fab.hasChild("integer","id",id).isEmpty()){
+				if( fab.hasChild("int","id",id).isEmpty()){
 					if( val.group().isEmpty()) {
-						if( fab.hasChild("integer","id",id).isEmpty()) {
-							Logger.info("integerval new, adding to xml :"+id);
-							fab.addChild("integer").attr("id", id).attr("unit", val.unit()).build();
+						if( fab.hasChild("int","id",id).isEmpty()) {
+							Logger.info("New integer, adding to xml :"+id);
+							fab.addChild("int").attr("id", id).attr("unit", val.unit()).build();
 						}
 					}else{
 						if( fab.hasChild("group","id",val.group()).isEmpty() ){
 							fab.addChild("group").attr("id",val.group()).down();
-							if( fab.hasChild("integer","id",val.name()).isEmpty() )
-								fab.addChild("integer").attr("name", val.name()).attr("unit", val.unit()).build();
+							if( fab.hasChild("int","id",val.name()).isEmpty() )
+								fab.addChild("int").attr("name", val.name()).attr("unit", val.unit()).build();
 						}else{
 							String name = val.name();
 							String unit = val.unit();
 							fab.selectChildAsParent("group","id",val.group())
 									.ifPresent( f->{
-										if( f.hasChild("integer","name",name).isEmpty()) {
-											Logger.info("integer new, adding to xml :"+id);
-											fab.addChild("integer").attr("name", name).attr("unit", unit).build();
+										if( f.hasChild("int","name",name).isEmpty()) {
+											Logger.info("New integer, adding to xml :"+id);
+											fab.addChild("int").attr("name", name).attr("unit", unit).build();
 										}
 									});
 						}
@@ -774,14 +774,14 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			// Correct the XML
 			if( alterXml ) {
 				if (name.equalsIgnoreCase(to)) { // so didn't contain a group
-					XMLfab.withRoot(settingsPath, "dcafs", "rtvals").selectChildAsParent("integer", "id", from)
+					XMLfab.withRoot(settingsPath, "dcafs", "rtvals").selectChildAsParent("int", "id", from)
 							.ifPresent(fab -> fab.attr("id", to).build());
 				} else { // If it did contain a group
 					var grOpt = XMLfab.withRoot(settingsPath, "dcafs", "rtvals").selectChildAsParent("group", "id", from.substring(0, from.indexOf("_")));
 					if (grOpt.isPresent()) { // If the group tag is already present alter it there
-						grOpt.get().selectChildAsParent("integer", "name", oriName).ifPresent(f -> f.attr("name", newName).build());
+						grOpt.get().selectChildAsParent("int", "name", oriName).ifPresent(f -> f.attr("name", newName).build());
 					} else { // If not
-						XMLfab.withRoot(settingsPath, "dcafs", "rtvals").selectChildAsParent("integer", "id", from)
+						XMLfab.withRoot(settingsPath, "dcafs", "rtvals").selectChildAsParent("int", "id", from)
 								.ifPresent(fab -> fab.attr("id", to).build());
 					}
 				}
