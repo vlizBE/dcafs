@@ -565,8 +565,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 							fab.addChild("real").attr("id", id).attr("unit", val.unit()).build();
 						}
 					}else{
-						if( fab.hasChild("real","id",val.group()).isEmpty() ){
-							fab.addChild("real").attr("id",val.group()).down();
+						if( fab.hasChild("group","id",val.group()).isEmpty() ){
+							fab.addChild("group").attr("id",val.group()).down();
 							if( fab.hasChild("real","id",val.name()).isEmpty() )
 								fab.addChild("real").attr("name", val.name()).attr("unit", val.unit()).build();
 						}else{
@@ -734,8 +734,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 							fab.addChild("integer").attr("id", id).attr("unit", val.unit()).build();
 						}
 					}else{
-						if( fab.hasChild("integer","id",val.group()).isEmpty() ){
-							fab.addChild("integer").attr("id",val.group()).down();
+						if( fab.hasChild("group","id",val.group()).isEmpty() ){
+							fab.addChild("group").attr("id",val.group()).down();
 							if( fab.hasChild("integer","id",val.name()).isEmpty() )
 								fab.addChild("integer").attr("name", val.name()).attr("unit", val.unit()).build();
 						}else{
@@ -744,7 +744,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 							fab.selectChildAsParent("group","id",val.group())
 									.ifPresent( f->{
 										if( f.hasChild("integer","name",name).isEmpty()) {
-											Logger.info("integerval new, adding to xml :"+id);
+											Logger.info("integer new, adding to xml :"+id);
 											fab.addChild("integer").attr("name", name).attr("unit", unit).build();
 										}
 									});

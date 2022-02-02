@@ -628,12 +628,9 @@ public class SqlTable {
                 }else if( col.type == COLUMN_TYPE.TEXT){
                     val = dp.getText(ref,"");
                 }else if( col.type == COLUMN_TYPE.INTEGER){
-                    var dvOpt = dp.getDoubleVal(ref);
-                    if( dvOpt.isPresent()) {
-                        val = dvOpt.get().value();
-                        if( val instanceof Double){
-                            val = ((Double)val).intValue();
-                        }
+                    var ivOpt = dp.getIntegerVal(ref);
+                    if( ivOpt.isPresent()) {
+                        val = ivOpt.get().value();
                     }else{
                         val = null;
                         if( col.hasDefault )
