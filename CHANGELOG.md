@@ -24,11 +24,15 @@ From 0.5.0 onwards, this should be better documented...
 
 ### Breaking
 - Rtvals now use 'real' just like db and generic always have
+- Rtvals now has integers, so renamed the short reference for issues to is
+
+### Forwards
+- EditorForward Resplit now allows just a filler element
+- PathForward: pf:debug,id,stepid is now also possible instead of the nr
 
 ### Other
-- EditorForward Resplit now allows just a filler element
 - Added streams as alias for ss
-- More timetools use english locale
+- More TimeTools use english locale
 - Trim is done when reading textvalue's from a node
 - Generics now give an error if the conversion failed (fe. text instead of real)
 - Added IntegerVal, same as DoubleVal but for Integers
