@@ -109,7 +109,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	 */
 	private void processRtvalElement(Element rtval, String id, double defDouble, String defText, boolean defFlag ){
 		switch( rtval.getTagName() ){
-			case "double":
+			case "double": case "real":
 				// Both attributes fractiondigits and scale are valid, so check for both
 				int scale = XMLtools.getIntAttribute(rtval,"fractiondigits",-1);
 				if( scale == -1)
@@ -181,13 +181,13 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			if( word.contains(":")){ // Check if the word contains a : with means it's {d:id} etc
 				var id = word.split(":")[1];
 				switch( word.charAt(0) ) {
-					case 'd':
+					case 'd': case 'r':
 						if( !hasDouble(id)) {
 							Logger.error("No such double "+id+", extracted from "+line);
 							if( !error.equalsIgnoreCase("ignore"))
 								return error;
 						}
-					case 'D':
+					case 'D': case 'R':
 						line = line.replace(word,""+getOrAddDoubleVal(id).value());
 						break;
 					case 'f':
@@ -260,9 +260,9 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		for( var p : pairs ){
 			if(p.length==2) {
 				switch (p[0]) {
-					case "d": case "D":
-					case "double": {
-						var d = p[0].equals("D")?getOrAddDoubleVal(p[1]).value():getDouble(p[1], Double.NaN);
+					case "d": case "D": case "r": case "R":
+					case "double": case "real": {
+						var d = p[0].equals("D")||p[0].equals("R")?getOrAddDoubleVal(p[1]).value():getDouble(p[1], Double.NaN);
 						if (!Double.isNaN(d) || !error.isEmpty())
 							line = line.replace("{" + p[0] + ":" + p[1] + "}", Double.isNaN(d) ? error : "" + d);
 						break;
@@ -331,8 +331,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					continue;
 				int index;
 				switch(p[0]){
-					case "d": case "double": case "D":
-						var d = p[0].equalsIgnoreCase("D")?Optional.of(getOrAddDoubleVal(p[1])):getDoubleVal(p[1]);
+					case "d": case "double": case "D": case "r": case "R": case "real":
+						var d = p[0].equalsIgnoreCase("D")||p[0].equalsIgnoreCase("R")?Optional.of(getOrAddDoubleVal(p[1])):getDoubleVal(p[1]);
 						if( d.isPresent() ){
 							index = nums.indexOf(d.get());
 							if(index==-1){
@@ -342,8 +342,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 							index += offset;
 							exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + index);
 						}else{
-							Logger.error("Couldn't find a doubleval with id "+p[1]);
-							errorLog.add("Couldn't find a doubleval with id "+p[1]);
+							Logger.error("Couldn't find a doubleval/real with id "+p[1]);
+							errorLog.add("Couldn't find a doubleval/real with id "+p[1]);
 							return "";
 						}
 						break;
@@ -457,7 +457,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			id = id.substring(1,id.length()-2);
 			var pair = id.split(":");
 			switch(pair[0].toLowerCase()) {
-				case "d":case "double":
+				case "d":case "double": case "r": case "real":
 					return Optional.ofNullable(doubleVals.get(id));
 				case "f": case "flag": case "b":
 					return Optional.ofNullable(flagVals.get(id));
@@ -495,25 +495,25 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			if( !readingXML ){
 				var fab = XMLfab.withRoot(settingsPath, "dcafs","settings","rtvals");
 
-				if( fab.hasChild("double","id",id).isEmpty()){
+				if( fab.hasChild("real","id",id).isEmpty()){
 					if( val.group().isEmpty()) {
-						if( fab.hasChild("double","id",id).isEmpty()) {
+						if( fab.hasChild("real","id",id).isEmpty()) {
 							Logger.info("doubleval new, adding to xml :"+id);
-							fab.addChild("double").attr("id", id).attr("unit", val.unit()).build();
+							fab.addChild("real").attr("id", id).attr("unit", val.unit()).build();
 						}
 					}else{
-						if( fab.hasChild("group","id",val.group()).isEmpty() ){
-							fab.addChild("group").attr("id",val.group()).down();
-							if( fab.hasChild("double","id",val.name()).isEmpty() )
-								fab.addChild("double").attr("name", val.name()).attr("unit", val.unit()).build();
+						if( fab.hasChild("real","id",val.group()).isEmpty() ){
+							fab.addChild("real").attr("id",val.group()).down();
+							if( fab.hasChild("real","id",val.name()).isEmpty() )
+								fab.addChild("real").attr("name", val.name()).attr("unit", val.unit()).build();
 						}else{
 							String name = val.name();
 							String unit = val.unit();
 							fab.selectChildAsParent("group","id",val.group())
 									.ifPresent( f->{
-										if( f.hasChild("double","name",name).isEmpty()) {
+										if( f.hasChild("real","name",name).isEmpty()) {
 											Logger.info("doubleval new, adding to xml :"+id);
-											fab.addChild("double").attr("name", name).attr("unit", unit).build();
+											fab.addChild("real").attr("name", name).attr("unit", unit).build();
 										}
 									});
 						}
@@ -542,14 +542,14 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			// Correct the XML
 			if( alterXml ) {
 				if (name.equalsIgnoreCase(to)) { // so didn't contain a group
-					XMLfab.withRoot(settingsPath, "dcafs", "rtvals").selectChildAsParent("double", "id", from)
+					XMLfab.withRoot(settingsPath, "dcafs", "rtvals").selectChildAsParent("real", "id", from)
 							.ifPresent(fab -> fab.attr("id", to).build());
 				} else { // If it did contain a group
 					var grOpt = XMLfab.withRoot(settingsPath, "dcafs", "rtvals").selectChildAsParent("group", "id", from.substring(0, from.indexOf("_")));
 					if (grOpt.isPresent()) { // If the group tag is already present alter it there
-						grOpt.get().selectChildAsParent("double", "name", oriName).ifPresent(f -> f.attr("name", newName).build());
+						grOpt.get().selectChildAsParent("real", "name", oriName).ifPresent(f -> f.attr("name", newName).build());
 					} else { // If not
-						XMLfab.withRoot(settingsPath, "dcafs", "rtvals").selectChildAsParent("double", "id", from)
+						XMLfab.withRoot(settingsPath, "dcafs", "rtvals").selectChildAsParent("real", "id", from)
 								.ifPresent(fab -> fab.attr("id", to).build());
 					}
 				}
@@ -803,7 +803,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	public int addRequest(Writable writable, String type, String req) {
 
 		switch (type) {
-			case "rtval": case "double":
+			case "rtval": case "double": case "real":
 				var list = doubleVals.entrySet().stream()
 							.filter(e -> e.getKey().matches(req)) // matches the req
 							.map( e->e.getValue()) // Only care about the values
@@ -852,7 +852,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				return replyToTextsCmd(request,html);
 			case "flags": case "fv":
 				return replyToFlagsCmd(request,html);
-			case "rtval": case "double":
+			case "rtval": case "double": case "real":
 				int s = addRequest(wr,request[0],request[1]);
 				return s!=0?"Request added to "+s+" doublevals":"Request failed";
 			case "rtvals":
@@ -1034,10 +1034,10 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				return getDoubleVal(cmds[1]).map( dv -> {
 					if( vals[0].equals("scale")) {
 						dv.fractionDigits(NumberUtils.toInt(vals[1]));
-						fab.alterChild("double","id",cmds[1]).attr("scale",dv.scale()).build();
+						fab.alterChild("real","id",cmds[1]).attr("scale",dv.scale()).build();
 						return "Scaling for " +cmds[1]+" set to " + dv.scale() + " digits";
 					}else if( vals[0].equals("unit")) {
-						fab.alterChild("double","id",cmds[1]).attr("unit",vals[1]).build();
+						fab.alterChild("real","id",cmds[1]).attr("unit",vals[1]).build();
 						return "Unit for "+cmds[1]+" set to "+vals[1];
 					}else{
 						return "Unknown param: "+vals[0];
@@ -1068,7 +1068,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					dv.enableTriggeredCmds(dQueue);
 				dv.addTriggeredCmd(when,cmd);
 				XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals")
-						.selectChildAsParent("double","id",cmds[1])
+						.selectChildAsParent("real","id",cmds[1])
 						.ifPresent( f -> f.addChild("cmd",cmd).attr("when",when).build());
 				return "Cmd added";
 			case "reqs":
