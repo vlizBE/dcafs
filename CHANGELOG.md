@@ -22,6 +22,17 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.11.7 (work in progress)
 
+### Breaking
+- Rtvals now use 'real' just like db and generic always have
+
+### Other
+- EditorForward Resplit now allows just a filler element
+- Added streams as alias for ss
+- More timetools use english locale
+- Trim is done when reading textvalue's from a node
+- Generics now give an error if the conversion failed (fe. text instead of real)
+- Added IntegerVal, same as DoubleVal but for Integers
+
 ## 0.11.6 (18/01/22)
 
 - Updated dependencies.
