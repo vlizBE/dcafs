@@ -248,11 +248,14 @@ public class Generic {
                             if( doubles!=null && doubles.length>entry.index && doubles[entry.index]!=null){
                                 data[a] = doubles[entry.index].intValue();
                                 dp.setInteger( ref, (int)data[a] );
-                            }else if( NumberUtils.isCreatable(split[entry.index])){
-                                data[a]=NumberUtils.toInt(split[entry.index],-999);
-                                dp.setInteger( ref, (int)data[a] );
                             }else{
-                                data[a]=null;
+                                data[a]=NumberUtils.toInt(split[entry.index],Integer.MAX_VALUE);
+                                if( (int)data[a]!=Integer.MAX_VALUE){
+                                    dp.setInteger( ref, (int)data[a] );
+                                }else{
+                                    data[a]=null;
+                                    Logger.error(id +" -> Failed to convert "+split[entry.index]+" to int for "+ ref);
+                                }
                             }
                             break;
                     case REAL:
