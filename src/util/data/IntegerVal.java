@@ -256,7 +256,7 @@ public class IntegerVal extends AbstractVal implements NumericVal{
     }
     @Override
     public void updateValue(double val) {
-
+        this.value = ((Double)val).intValue();
     }
     public void updateValue(int val){
         this.value=val;

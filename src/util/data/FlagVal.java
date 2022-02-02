@@ -158,6 +158,12 @@ public class FlagVal extends AbstractVal implements NumericVal{
     public double value(){
         return state?1:0;
     }
+
+    @Override
+    public int intValue() {
+        return state?1:0;
+    }
+
     public String toString(){
         return ""+state;
     }

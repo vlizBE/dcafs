@@ -423,7 +423,10 @@ public class IssuePool implements Commandable{
         public double value() {
             return active?1.0:0.0;
         }
-
+        @Override
+        public int intValue() {
+            return active?1:0;
+        }
         @Override
         public void updateValue(double val) {
 
