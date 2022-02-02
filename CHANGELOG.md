@@ -20,6 +20,8 @@ From 0.5.0 onwards, this should be better documented...
     * Decide on final class structure (mainly StreamManager)   
   * Rework the TaskManager (might be trigger for 0.12.0)
 
+## 0.11.8 (work in progress)
+
 ## 0.11.7 (02/02/2022)
 
 - Updated PostgreSQL dependency because of severe vulnerability
