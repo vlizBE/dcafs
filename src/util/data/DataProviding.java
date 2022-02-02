@@ -30,6 +30,18 @@ public interface DataProviding {
     boolean updateDouble(String id, double bad);
     int updateDoubleGroup(String group, double value);
 
+    /* Integer */
+    Optional<IntegerVal> getIntegerVal(String param );
+    IntegerVal getOrIntegerVal( String id );
+    boolean renameInteger( String from, String to, boolean alterXml);
+    boolean hasInteger( String id);
+    int getInteger(String id, double defVal, boolean createIfNew);
+    int getInteger(String id, double bad);
+
+    boolean setInteger(String id, double value);
+    boolean updateDInteger(String id, double bad);
+    int updateIntegerGroup(String group, double value);
+
     /* Text */
     String getText(String parameter, String bad);
     boolean setText(String param, String value );

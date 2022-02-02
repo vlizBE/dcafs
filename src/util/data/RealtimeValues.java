@@ -35,6 +35,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 
 	/* Data stores */
 	private final ConcurrentHashMap<String, DoubleVal> doubleVals = new ConcurrentHashMap<>(); // doubles
+	private final ConcurrentHashMap<String, IntegerVal> integerVals = new ConcurrentHashMap<>(); // doubles
 	private final ConcurrentHashMap<String, String> texts = new ConcurrentHashMap<>(); // strings
 	private final ConcurrentHashMap<String, FlagVal> flagVals = new ConcurrentHashMap<>(); // booleans
 	private final HashMap<String, MathCollector> mathCollectors = new HashMap<>(); // Math collectors
@@ -71,9 +72,11 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	 */
 	public void readFromXML( XMLfab fab ){
 
-		double defDouble = XMLtools.getDoubleAttribute(fab.getCurrentElement(),"doubledefault",Double.NaN);
+		double defDouble = XMLtools.getDoubleAttribute(fab.getCurrentElement(),"realdefault",Double.NaN);
 		String defText = XMLtools.getStringAttribute(fab.getCurrentElement(),"textdefault","");
 		boolean defFlag = XMLtools.getBooleanAttribute(fab.getCurrentElement(),"flagdefault",false);
+		int defInteger = XMLtools.getIntAttribute(fab.getCurrentElement(),"integerdefault",-1);
+
 		readingXML=true;
 		fab.getChildren("*").forEach( // The tag * is special and acts as wildcard
 				rtval -> {
@@ -88,11 +91,11 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 							var gid = XMLtools.getStringAttribute(groupie,"id",""); // get the node id
 							// then check if it has an attribute name and use this instead if found
 							gid = id + XMLtools.getStringAttribute(groupie,"name",gid); //
-							processRtvalElement(groupie, gid.toLowerCase(), defDouble, defText, defFlag);
+							processRtvalElement(groupie, gid.toLowerCase(), defDouble, defText, defFlag,defInteger);
 						}
 					}else { // If it isn't a group node
 						// then the id is the full id
-						processRtvalElement(rtval, id.toLowerCase(), defDouble, defText, defFlag);
+						processRtvalElement(rtval, id.toLowerCase(), defDouble, defText, defFlag,defInteger);
 					}
 				}
 		);
@@ -107,7 +110,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	 * @param defText The default text value
 	 * @param defFlag The default boolean value
 	 */
-	private void processRtvalElement(Element rtval, String id, double defDouble, String defText, boolean defFlag ){
+	private void processRtvalElement(Element rtval, String id, double defDouble, String defText, boolean defFlag, int defInteger ){
 		switch( rtval.getTagName() ){
 			case "double": case "real":
 				// Both attributes fractiondigits and scale are valid, so check for both
@@ -142,6 +145,34 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					String trig = trigCmd.getAttribute("when");
 					String cmd = trigCmd.getTextContent();
 					dv.addTriggeredCmd(trig,cmd);
+				}
+				break;
+			case "integer":
+				if( !hasInteger(id)) // If it doesn't exist yet
+					setInteger(id,defInteger,true); // create it
+				var iv = getIntegerVal(id).get();//
+				iv.reset(); // reset needed if this is called because of reload
+				iv.name(XMLtools.getChildValueByTag(rtval,"name",iv.name()))
+						.group(XMLtools.getChildValueByTag(rtval,"group",iv.group()))
+						.unit(XMLtools.getStringAttribute(rtval,"unit",""))
+						.defValue(XMLtools.getIntAttribute(rtval,"default",defInteger));
+
+				String opts = XMLtools.getStringAttribute(rtval,"options","");
+				for( var opt : opts.split(",")){
+					var arg = opt.split(":");
+					switch( arg[0]){
+						case "minmax":  iv.keepMinMax(); break;
+						case "time":    iv.keepTime();   break;
+						case "order":   iv.order( NumberUtils.toInt(arg[1],-1)); break;
+						case "history": iv.enableHistory( NumberUtils.toInt(arg[1],-1)); break;
+					}
+				}
+				if( !XMLtools.getChildElements(rtval,"cmd").isEmpty() )
+					iv.enableTriggeredCmds(dQueue);
+				for( Element trigCmd : XMLtools.getChildElements(rtval,"cmd")){
+					String trig = trigCmd.getAttribute("when");
+					String cmd = trigCmd.getTextContent();
+					iv.addTriggeredCmd(trig,cmd);
 				}
 				break;
 			case "text":
@@ -190,6 +221,15 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					case 'D': case 'R':
 						line = line.replace(word,""+getOrAddDoubleVal(id).value());
 						break;
+					case 'i':
+						if( !hasInteger(id)) {
+							Logger.error("No such integer "+id+", extracted from "+line);
+							if( !error.equalsIgnoreCase("ignore"))
+								return error;
+						}
+					case 'I':
+						line = line.replace(word,""+getOrAddIntegerVal(id).value());
+						break;
 					case 'f':
 						if( !hasFlag(id)) {
 							Logger.error("No such flag "+id+ ", extracted from "+line);
@@ -221,19 +261,24 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				if (!Double.isNaN(d)) {
 					line = line.replace(word, "" + d);
  				} else { // if not
-					var t = getText(word, ""); // check if it's a text
-					if (!t.isEmpty()) {
-						line = line.replace(word, t);
-					} else if (hasFlag(word)) { // if it isn't a text, check if it's a flag
-						line = line.replace(word, isFlagUp(word) ? "1" : "0");
-					} else if (error.equalsIgnoreCase("create")) { // if still not found and error is set to create
-						// add it as a double
-						getOrAddDoubleVal(word).updateValue(0);
-						Logger.warn("Created doubleval " + word + " with value 0");
-						line = line.replace(word, "0"); // default of a double is 0
-					} else if (!error.equalsIgnoreCase("ignore")) { // if it's not ignore
-						Logger.error("Couldn't process " + word + " found in " + line); // log it and abort
-						return error;
+					var i = getInteger(word,Integer.MAX_VALUE);
+					if( i != Integer.MAX_VALUE){
+						line = line.replace(word, "" + i);
+					}else {
+						var t = getText(word, ""); // check if it's a text
+						if (!t.isEmpty()) {
+							line = line.replace(word, t);
+						} else if (hasFlag(word)) { // if it isn't a text, check if it's a flag
+							line = line.replace(word, isFlagUp(word) ? "1" : "0");
+						} else if (error.equalsIgnoreCase("create")) { // if still not found and error is set to create
+							// add it as a double
+							getOrAddDoubleVal(word).updateValue(0);
+							Logger.warn("Created doubleval " + word + " with value 0");
+							line = line.replace(word, "0"); // default of a double is 0
+						} else if (!error.equalsIgnoreCase("ignore")) { // if it's not ignore
+							Logger.error("Couldn't process " + word + " found in " + line); // log it and abort
+							return error;
+						}
 					}
 				}
 			}
@@ -347,6 +392,22 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 							return "";
 						}
 						break;
+					case "int": case "i": case "I": case "INT":
+						var ii = p[0].startsWith("I:")?Optional.of(getOrAddIntegerVal(p[1])):getIntegerVal(p[1]);
+						if( ii.isPresent() ){
+							index = nums.indexOf(ii.get());
+							if(index==-1){
+								nums.add( ii.get() );
+								index = nums.size()-1;
+							}
+							index += offset;
+							exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + index);
+						}else{
+							Logger.error("Couldn't find a integer with id "+p[1]);
+							errorLog.add("Couldn't find a integer with id "+p[1]);
+							return "";
+						}
+						break;
 					case "f": case "flag": case "b": case "F":
 						var f = p[0].equalsIgnoreCase("F")?Optional.of(getOrAddFlagVal(p[1])):getFlagVal(p[1]);
 						if( f.isPresent() ){
@@ -363,7 +424,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 							return "";
 						}
 						break;
-					case "i": // issues
+					case "is": // issues
 						var i = issuePool.getIssue(p[1]);
 						if( i.isPresent() ){
 							index = nums.indexOf(i.get());
@@ -634,6 +695,171 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			return defVal;
 		}
 		return d.value();
+	}
+	/* ************************************ I N T E G E R V A L ***************************************************** */
+
+	/**
+	 * Retrieve a IntegerVal from the hashmap based on the id
+	 * @param id The reference with which the object was stored
+	 * @return The requested IntegerVal or empty optional if not found
+	 */
+	public Optional<IntegerVal> getIntegerVal( String id ){
+		if( integerVals.get(id)==null)
+			Logger.error( "Tried to retrieve non existing integerval "+id);
+		return Optional.ofNullable(integerVals.get(id));
+	}
+
+	/**
+	 * Retrieves the id or adds it if it doesn't exist yet
+	 * @param id The group_name or just name of the val
+	 * @return The object if found or made or null if something went wrong
+	 */
+	public IntegerVal getOrAddIntegerVal( String id ){
+		if( id.isEmpty())
+			return null;
+
+		var val = integerVals.get(id);
+		if( val==null){
+			val = IntegerVal.newVal(id);
+			integerVals.put(id,val);
+			if( !readingXML ){
+				var fab = XMLfab.withRoot(settingsPath, "dcafs","settings","rtvals");
+
+				if( fab.hasChild("integer","id",id).isEmpty()){
+					if( val.group().isEmpty()) {
+						if( fab.hasChild("integer","id",id).isEmpty()) {
+							Logger.info("integerval new, adding to xml :"+id);
+							fab.addChild("integer").attr("id", id).attr("unit", val.unit()).build();
+						}
+					}else{
+						if( fab.hasChild("integer","id",val.group()).isEmpty() ){
+							fab.addChild("integer").attr("id",val.group()).down();
+							if( fab.hasChild("integer","id",val.name()).isEmpty() )
+								fab.addChild("integer").attr("name", val.name()).attr("unit", val.unit()).build();
+						}else{
+							String name = val.name();
+							String unit = val.unit();
+							fab.selectChildAsParent("group","id",val.group())
+									.ifPresent( f->{
+										if( f.hasChild("integer","name",name).isEmpty()) {
+											Logger.info("integerval new, adding to xml :"+id);
+											fab.addChild("integer").attr("name", name).attr("unit", unit).build();
+										}
+									});
+						}
+					}
+				}
+			}
+		}
+		return val;
+	}
+	public boolean renameInteger( String from, String to, boolean alterXml){
+		if( hasInteger(to) ){
+			return false;
+		}
+		var iv = getIntegerVal(from);
+		if( iv.isPresent() ){
+			// Alter the DoubleVal
+			integerVals.remove(from); // Remove it from the list
+			var name = to;
+			if( name.contains("_") )
+				name = name.substring(name.indexOf("_")+1);
+			String newName = name;
+			String oriName = iv.get().name();
+			iv.get().name(name);
+			integerVals.put(to,iv.get()); // Add it renamed
+
+			// Correct the XML
+			if( alterXml ) {
+				if (name.equalsIgnoreCase(to)) { // so didn't contain a group
+					XMLfab.withRoot(settingsPath, "dcafs", "rtvals").selectChildAsParent("integer", "id", from)
+							.ifPresent(fab -> fab.attr("id", to).build());
+				} else { // If it did contain a group
+					var grOpt = XMLfab.withRoot(settingsPath, "dcafs", "rtvals").selectChildAsParent("group", "id", from.substring(0, from.indexOf("_")));
+					if (grOpt.isPresent()) { // If the group tag is already present alter it there
+						grOpt.get().selectChildAsParent("integer", "name", oriName).ifPresent(f -> f.attr("name", newName).build());
+					} else { // If not
+						XMLfab.withRoot(settingsPath, "dcafs", "rtvals").selectChildAsParent("integer", "id", from)
+								.ifPresent(fab -> fab.attr("id", to).build());
+					}
+				}
+			}
+		}
+		return true;
+	}
+	public boolean hasInteger( String id){
+		return integerVals.containsKey(id);
+	}
+	/**
+	 * Sets the value of a parameter (in a hashmap)
+	 * @param id The parameter name
+	 * @param value The value of the parameter
+	 * @param createIfNew Whether to create a new object if none was found
+	 * @return True if it was created
+	 */
+	private boolean setInteger(String id, int value, boolean createIfNew) {
+
+		if( id.isEmpty()) {
+			Logger.error("Empty id given");
+			return false;
+		}
+		IntegerVal d;
+		if( createIfNew ) {
+			d = getOrAddIntegerVal(id);
+		}else{
+			d = integerVals.get(id);
+		}
+
+		if( d==null ) {
+			Logger.error("No such double "+id+" yet, create it first");
+			return false;
+		}
+		d.updateValue(value);
+		return true;
+	}
+	public boolean setInteger(String id, int value){
+		return setInteger(id,value,true);
+	}
+	public boolean updateInteger(String id, int value) {
+		if( id.isEmpty())
+			return false;
+		return !setInteger(id,value,false);
+	}
+
+	/**
+	 * Alter all the values of the doubles in the given group
+	 * @param group The group to alter
+	 * @param value The value to set
+	 * @return The amount of doubles updated
+	 */
+	public int updateIntegerGroup(String group, int value){
+		var set = integerVals.values().stream().filter( iv -> iv.group().equalsIgnoreCase(group)).collect(Collectors.toSet());
+		set.forEach(iv->iv.updateValue(value));
+		return set.size();
+	}
+	/**
+	 * Get the value of an integer
+	 *
+	 * @param id The id to get the value of
+	 * @param bad The value to return of the id wasn't found
+	 * @return The value found or the bad value
+	 */
+	public int getInteger(String id, int bad) {
+		return getInteger(id,bad,false);
+	}
+	public int getInteger(String id, int defVal, boolean createIfNew) {
+
+		IntegerVal i = integerVals.get(id.toLowerCase());
+		if (i == null) {
+			if( createIfNew ){
+				Logger.warn("ID "+id+" doesn't exist, creating it with value "+defVal);
+				setDouble(id,defVal,true);
+			}else{
+				Logger.debug("No such id: " + id);
+			}
+			return defVal;
+		}
+		return i.intValue();
 	}
 	/* *********************************** T E X T S  ************************************************************* */
 	public boolean hasText(String id){

@@ -102,7 +102,7 @@ public class Generic {
         return this;
     }
     /**
-     * Add looking for a integer/long on the given index
+     * Add looking for an integer/long on the given index
      * @param index The index to look at
      * @param title The name under which to store this ( or table_title if table is defined)
      * @return this object
@@ -247,11 +247,11 @@ public class Generic {
                     case INTEGER:
                             if( doubles!=null && doubles.length>entry.index && doubles[entry.index]!=null){
                                 data[a] = doubles[entry.index].intValue();
-                                dp.setDouble( ref, doubles[entry.index] );
+                                dp.setInteger( ref, (int)data[a] );
                             }else if( NumberUtils.isCreatable(split[entry.index])){
                                 val=NumberUtils.toInt(split[entry.index],-999);
                                 data[a]=val;
-                                dp.setDouble( ref, val );
+                                dp.setInteger( ref, val );
                             }else{
                                 data[a]=null;
                             }
