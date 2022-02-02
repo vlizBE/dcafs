@@ -209,9 +209,22 @@ public class PathForward {
             lastStep().get().addTarget(f);
         }
     }
-    public boolean debugStep( int step, Writable wr ){
-        if( step >= stepsForward.size() || wr==null )
-            return false;
+    public String debugStep( String step, Writable wr ){
+        for( var sf : stepsForward ) {
+            sf.removeTarget(wr);
+            if (sf.id.equalsIgnoreCase(step)) {
+                sf.addTarget(wr);
+                return "Request for " + sf.getXmlChildTag() + ":" + sf.id + " received";
+            }
+        }
+        return "No such step";
+    }
+    public String debugStep( int step, Writable wr ){
+        if( wr==null )
+            return "No proper writable received";
+        if( step >= stepsForward.size() )
+            return "Wanted step "+step+" but only "+stepsForward.size()+" available";
+
         for( var ab : stepsForward )
             ab.removeTarget(wr);
         if( !customs.isEmpty() ){
@@ -220,16 +233,15 @@ public class PathForward {
                 customs.forEach(CustomSrc::start);
             }else if( step < stepsForward.size()){
                 stepsForward.get(step).addTarget(wr);
-            }else{
-                return false;
             }
-        }else if(step !=-1 && step <stepsForward.size() ){
+        }else if(step !=-1 && step < stepsForward.size() ){
             stepsForward.get(step).addTarget(wr);
         }else{
-            return false;
+            return "Failed to request data, bad index given";
         }
+        var s = stepsForward.get(step);
 
-        return true;
+        return "Request for "+s.getXmlChildTag()+":"+s.id+" received";
     }
     private Optional<AbstractForward> lastStep(){
         if( stepsForward.isEmpty())

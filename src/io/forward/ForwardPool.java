@@ -876,7 +876,7 @@ public class ForwardPool implements Commandable {
                 .add(" paths:reload,id -> reload the path with the given id")
                 .add(" paths:readpath,id,path -> Add a path using a path xml")
                 .add(" paths:list -> List all the currently loaded paths")
-                .add(" paths:debug,id,stepnr -> Request the data from a single step in the path (0=first; -1=custom src)");
+                .add(" paths:debug,id,stepnr/stepid -> Request the data from a single step in the path (nr:0=first; -1=custom src)");
                 return help.toString();
             case "reload":
                 if( cmds.length==1) {
@@ -1023,18 +1023,19 @@ public class ForwardPool implements Commandable {
                 return join.toString();
             case "debug":
                 if( cmds.length!=3)
-                    return "Incorrect number of arguments, needs to be path:debug,pathid,stepnr (from 0)";
-                int nr = NumberUtils.toInt(cmds[2],-1);
+                    return "Incorrect number of arguments, needs to be path:debug,pathid,stepnr/stepid (from 0 or -1 for customsrc)";
                 var pp = paths.get(cmds[1]);
                 if( pp==null)
                     return "No such path: "+cmds[1];
+                int nr = NumberUtils.toInt(cmds[2],-2);
+
                 if( wr==null)
                     return "No valid writable";
-                if( pp.debugStep(nr,wr) )
-                    return "Debugging step "+cmds[2];
-                return "Invalid step nr "+cmds[2];
+                if( nr==-2)
+                    return pp.debugStep(cmds[2],wr);
+                return pp.debugStep(nr,wr);
             default:
-                return "unknown command: paths:"+cmd;
+                return "Unknown command: paths:"+cmd;
         }
     }
     public void readPathsFromXML(){
