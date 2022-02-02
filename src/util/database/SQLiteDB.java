@@ -128,7 +128,7 @@ public class SQLiteDB extends SQLDB{
             state = STATE.CON_BUSY;
             con = DriverManager.getConnection(irl, user, pass);
             con.setAutoCommit(false); //Changed
-            Logger.info( getID() + " -> Connection: " + irl +con);
+            Logger.info( getID() + " -> Connection: "+con+ " irl:"+irl);
             state=STATE.HAS_CON;
     	} catch ( SQLException ex) {              
             String message = ex.getMessage();
