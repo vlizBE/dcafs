@@ -12,6 +12,7 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -57,7 +58,7 @@ public class PathForward {
     public void setSrc( String src ){
         this.src=src;
     }
-    public void readFromXML( Element pathEle ){
+    public void readFromXML( Element pathEle, String workpath ){
 
         var oldTargets = new ArrayList<Writable>();
 
@@ -76,6 +77,10 @@ public class PathForward {
 
         id = XMLtools.getStringAttribute(pathEle,"id","");
         String imp = XMLtools.getStringAttribute(pathEle,"import","");
+
+        if( !Path.of(imp).isAbsolute() && !imp.isEmpty()){ // If the path isn't absolute make it
+            imp = workpath+ File.separator + imp;
+        }
         String delimiter = XMLtools.getStringAttribute(pathEle,"delimiter","");;
         this.src = XMLtools.getStringAttribute(pathEle,"src","");
 
