@@ -888,7 +888,7 @@ public class ForwardPool implements Commandable {
                         .getChild("path","id",cmds[1]);
                 if(ele.isEmpty())
                     return "No such path "+cmds[1];
-                paths.get(cmds[1]).readFromXML(ele.get());
+                paths.get(cmds[1]).readFromXML(ele.get(),settingsPath.getParent().toString());
                 return "Path reloaded";
             case "readfile":
 
@@ -913,7 +913,7 @@ public class ForwardPool implements Commandable {
                                 .selectOrAddChildAsParent("path", "id", cmds[1])
                                 .addChild("customsrc", cmds[2]).attr("type", "file").attr("interval", "1s");
                         fab.build();
-                        path.readFromXML( fab.getCurrentElement());
+                        path.readFromXML( fab.getCurrentElement(),settingsPath.getParent().toString() );
                     }else{
                         path.setSrc(cmds[2]);
                     }
@@ -1043,7 +1043,7 @@ public class ForwardPool implements Commandable {
                 pathEle -> {
                     PathForward path = new PathForward(dataProviding,dQueue,nettyGroup);
                     path.setWorkPath(settingsPath.getParent());
-                    path.readFromXML(pathEle);
+                    path.readFromXML(pathEle,settingsPath.getParent().toString());
                     paths.put(path.getID(),path);
                 }
         );
