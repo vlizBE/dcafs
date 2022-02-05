@@ -243,7 +243,7 @@ public class SQLiteDB extends SQLDB{
         if( path.isEmpty() )
             return null;
 
-        String pa = path.toString();
+        String pa = path.get().toString();
         if( !pa.endsWith(".sqlite"))
             pa=pa+".sqlite";
         SQLiteDB db = SQLiteDB.createDB(id,Path.of(pa));

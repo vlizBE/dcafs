@@ -1,26 +1,27 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <dcafs>
     <settings>
-		<databases hint="Connect to sqlite files and/or sql servers">
-			<server id="!" type="mssql,mysql,mariadb,postgres">
-				<address>!</address>
-				<flush age="30s" batchsize="30"/>
-				<idleclose hint="After how much idle time the connection is closed">-1</idleclose>
-				<table name="!">
-					<int alias="?">!</int>
-					<real alias="?">!</real>
-				</table>
-			</server>
-			<sqlite id="!" path="db/{id}.sqlite">
-				<flush hint="Flush settings" age="30s" batchsize="30"/>
-				<idleclose  hint="After how much idle time the connection is closed">5m</idleclose>
-				<table cf="opt" name="*">
-					<int alias="?">!</int>
-					<real alias="?">!</real>
-				</table>
-			</sqlite>
-		</databases>
+
     </settings>
+    <databases hint="Connect to sqlite files and/or sql servers">
+        <server id="!" type="mssql,mysql,mariadb,postgres">
+            <address>!</address>
+            <flush age="30s" batchsize="30"/>
+            <idleclose hint="After how much idle time the connection is closed">-1</idleclose>
+            <table name="!">
+                <int alias="?">!</int>
+                <real alias="?">!</real>
+            </table>
+        </server>
+        <sqlite id="!" path="db/{id}.sqlite">
+            <flush hint="Flush settings" age="30s" batchsize="30"/>
+            <idleclose  hint="After how much idle time the connection is closed">5m</idleclose>
+            <table cf="opt" name="*">
+                <int alias="?">!</int>
+                <real alias="?">!</real>
+            </table>
+        </sqlite>
+    </databases>
     <streams hint="Connect to tcp,udp server and serial/tty devices">
         <stream id="!" type="tcp,udp">
             <address>ip:port</address>

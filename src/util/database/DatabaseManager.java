@@ -154,11 +154,11 @@ public class DatabaseManager implements QueryWriting, Commandable {
      * Read the databases' setup from the settings.xml
      */
     private void readFromXML() {
-        XMLfab.getRootChildren(settingsPath,"dcafs","settings","databases","sqlite")
+        XMLfab.getRootChildren(settingsPath,"dcafs","databases","sqlite")
                 .filter( db -> !db.getAttribute("id").isEmpty() )
                 .forEach( db -> addSQLiteDB(db.getAttribute("id"),SQLiteDB.readFromXML(db,workPath) ));
 
-        XMLfab.getRootChildren(settingsPath,"dcafs","settings","databases","server")
+        XMLfab.getRootChildren(settingsPath,"dcafs","databases","server")
                 .filter( db -> !db.getAttribute("id").isEmpty() )
                 .forEach( db -> {
                                     switch(db.getAttribute("type")){
@@ -180,7 +180,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
      * @return The database reloaded
      */
     public Optional<Database> reloadDatabase( String id ){
-        var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","databases");
+        var fab = XMLfab.withRoot(settingsPath,"dcafs","databases");
         var sqlite = fab.getChild("sqlite","id",id);
         if( sqlite.isPresent()){
             return Optional.ofNullable(addSQLiteDB(id,SQLiteDB.readFromXML( sqlite.get(),workPath)));
@@ -472,14 +472,14 @@ public class DatabaseManager implements QueryWriting, Commandable {
                         }
                 ).orElse("No such database found" );
             case "addserver":
-                DatabaseManager.addBlankServerToXML( XMLfab.withRoot(settingsPath, "settings","databases"), "mysql", cmds.length>=2?cmds[1]:"" );
+                DatabaseManager.addBlankServerToXML( XMLfab.withRoot(settingsPath, "databases"), "mysql", cmds.length>=2?cmds[1]:"" );
                 return "Added blank database server node to the settings.xml";
             case "addmysql":
                 var mysql = SQLDB.asMYSQL(address,dbName,user,pass);
                 mysql.setID(id);
                 if( mysql.connect(false) ){
                     mysql.getCurrentTables(false);
-                    mysql.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","settings","databases"));
+                    mysql.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","databases"));
                     addSQLDB(id,mysql);
                     return "Connected to MYSQL database and stored in xml as id "+id;
                 }else{
@@ -490,7 +490,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
                 mssql.setID(id);
                 if( mssql.connect(false) ){
                     mssql.getCurrentTables(false);
-                    mssql.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","settings","databases"));
+                    mssql.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","databases"));
                     addSQLDB(id,mssql);
                     return "Connected to MYSQL database and stored in xml as id "+id;
                 }else{
@@ -503,7 +503,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
                 mariadb.setID(id);
                 if( mariadb.connect(false) ){
                     mariadb.getCurrentTables(false);
-                    mariadb.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","settings","databases"));
+                    mariadb.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","databases"));
                     addSQLDB(id,mariadb);
                     return "Connected to MariaDB database and stored in xml with id "+id;
                 }else{
@@ -516,7 +516,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
                 postgres.setID(id);
                 if( postgres.connect(false) ){
                     postgres.getCurrentTables(false);
-                    postgres.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","settings","databases"));
+                    postgres.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","databases"));
                     addSQLDB(id,postgres);
                     return "Connected to PostgreSQL database and stored in xml with id "+id;
                 }else{
@@ -533,7 +533,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
                 var sqlite = SQLiteDB.createDB( id, p );
                 if( sqlite.connect(false) ){
                     addSQLiteDB(id,sqlite);
-                    sqlite.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","settings","databases") );
+                    sqlite.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","databases") );
                     return "Created SQLite at "+dbName+" and wrote to settings.xml";
                 }else{
                     return "Failed to create SQLite";
@@ -545,7 +545,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
                 if( dbOpt.isEmpty())
                     return "No such database "+cmds[1];
                 // Select the correct server node
-                var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","databases");
+                var fab = XMLfab.withRoot(settingsPath,"dcafs","databases");
                 if( fab.selectChildAsParent("server","id",cmds[1]).isEmpty())
                     fab.selectChildAsParent("sqlite","id",cmds[1]);
                 if( fab.hasChild("table","name",cmds[2]).isPresent())
@@ -564,7 +564,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
                 return getSQLiteDB(cmds[1])
                             .map( lite -> {
                                             lite.setRollOver(cmds[4], NumberUtils.createInteger(cmds[2]),cmds[3])
-                                                .writeToXml(XMLfab.withRoot(settingsPath,"dcafs","settings","databases"));
+                                                .writeToXml(XMLfab.withRoot(settingsPath,"dcafs","databases"));
                                             lite.forceRollover();
                                             return "Rollover added";
                 }).orElse( cmds[1] +" is not an SQLite");
@@ -572,7 +572,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
                 var influx = new InfluxDB(address,dbName,user,pass);
                 if( influx.connect(false)){
                     addInfluxDB(id,influx);
-                    influx.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","settings","databases") );
+                    influx.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","databases") );
                     return "Connected to InfluxDB and stored it in xml with id "+id;
                 }else{
                     return "Failed to connect to InfluxDB";
@@ -580,7 +580,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
             case "addtable":
                 if( cmds.length < 3 )
                     return "Not enough arguments, needs to be dbm:addtable,dbId,tableName<,format>";
-                if( DatabaseManager.addBlankTableToXML( XMLfab.withRoot(settingsPath,"dcafs","settings","databases"), cmds[1], cmds[2], cmds.length==4?cmds[3]:"" ) ) {
+                if( DatabaseManager.addBlankTableToXML( XMLfab.withRoot(settingsPath,"dcafs","databases"), cmds[1], cmds[2], cmds.length==4?cmds[3]:"" ) ) {
                     if( cmds.length==4)
                         return "Added a partially setup table to " + cmds[1] + " in the settings.xml, edit it to set column names etc";
                     return "Created tablenode for "+cmds[1]+" inside the db node";
@@ -596,7 +596,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
                 String[] col = cmds[2].split(":");
                 String alias = cmds.length==4?cmds[3]:"";
 
-                fab = XMLfab.withRoot(settingsPath,"settings","databases");
+                fab = XMLfab.withRoot(settingsPath,"databases");
 
                 for( var dbtype : new String[]{"database","sqlite"}) {
                     for (var ele : fab.getChildren(dbtype)) {
