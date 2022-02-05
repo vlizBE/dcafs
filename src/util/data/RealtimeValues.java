@@ -312,6 +312,13 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 							line = line.replace("{" + p[0] + ":" + p[1] + "}", Double.isNaN(d) ? error : "" + d);
 						break;
 					}
+					case "i": case "I":
+					case "int": case "integer": {
+						var i = p[0].equals("I")?getOrAddIntegerVal(p[1]).intValue():getInteger(p[1], Integer.MAX_VALUE);
+						if (i != Integer.MAX_VALUE)
+							line = line.replace("{" + p[0] + ":" + p[1] + "}",  "" + i);
+						break;
+					}
 					case "t":
 					case "text":
 						String t = getText(p[1], error);
