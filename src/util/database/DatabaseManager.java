@@ -527,8 +527,10 @@ public class DatabaseManager implements QueryWriting, Commandable {
                     dbName = "db"+File.separator+(dbName.isEmpty()?id:dbName);
                 if(!dbName.endsWith(".sqlite"))
                     dbName+=".sqlite";
-
-                var sqlite = SQLiteDB.createDB(id,Path.of(dbName).isAbsolute()?"":workPath,Path.of(dbName));
+                Path p = Path.of(dbName);
+                if( !p.isAbsolute())
+                    p = Path.of(workPath).resolve(p);
+                var sqlite = SQLiteDB.createDB( id, p );
                 if( sqlite.connect(false) ){
                     addSQLiteDB(id,sqlite);
                     sqlite.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","settings","databases") );

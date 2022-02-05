@@ -38,14 +38,12 @@ public class SQLiteDB extends SQLDB{
     private LocalDateTime rolloverTimestamp;
 
     private String currentForm = "";
-    private String workPath="";
     /**
      * Create an instance of a database with rollover
      * @param db Path to the database
      */
-    public SQLiteDB( String id,String workPath, Path db ) {
+    public SQLiteDB( String id, Path db ) {
 
-        this.workPath = workPath+(workPath.endsWith(File.separator)?"":File.separator);
         this.id=id;
         this.dbPath = db;
 
@@ -58,8 +56,8 @@ public class SQLiteDB extends SQLDB{
         }
     }
     /* ************************************************************************************************************** */
-    public static SQLiteDB createDB( String id, String workPath, Path db ){
-        return new SQLiteDB( id, workPath, db );
+    public static SQLiteDB createDB( String id, Path db ){
+        return new SQLiteDB( id, db );
     }
     /* ************************************************************************************************************** */
     @Override
@@ -80,7 +78,7 @@ public class SQLiteDB extends SQLDB{
      * @return The path to the database as a string
      */
     public String getPath(){
-        String path = workPath+dbPath.toString();
+        String path = dbPath.toString();
 
         //without rollover
         if( currentForm.isEmpty() )
@@ -240,16 +238,15 @@ public class SQLiteDB extends SQLDB{
             return null;
 
         String id = XMLtools.getStringAttribute(dbe,"id","");
-        String pa = dbe.getAttribute("path");
+        var path = XMLtools.getPathAttribute(dbe,"path",workPath);
+
+        if( path.isEmpty() )
+            return null;
+
+        String pa = path.toString();
         if( !pa.endsWith(".sqlite"))
             pa=pa+".sqlite";
-        var p = Path.of(pa);
-        SQLiteDB db;
-        if( p.isAbsolute() ){
-            db = SQLiteDB.createDB(id,"",p);
-        }else{
-            db = SQLiteDB.createDB(id,workPath,p);
-        }
+        SQLiteDB db = SQLiteDB.createDB(id,Path.of(pa));
         
         /* RollOver */
         Element roll = XMLtools.getFirstChildByTag(dbe, "rollover");
