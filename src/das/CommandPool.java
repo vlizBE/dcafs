@@ -13,6 +13,7 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import util.gis.GisTools;
 import util.math.MathUtils;
+import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
@@ -685,7 +686,9 @@ public class CommandPool {
 					.add("admin:ipv4 -> Get the IPv4 and MAC of all network interfaces")
 					.add("admin:ipv6 -> Get the IPv6 and MAC of all network interfaces")
 					.add("admin:gc -> Fore a java garbage collection")
-					.add("admin:reboot -> Reboot the computer (linux only)");
+					.add("admin:reboot -> Reboot the computer (linux only)")
+					.add("admin:info,x -> Return the last x lines of the infolog or 30 if no x given")
+					.add("admin:errors,x -> Return the last x lines of the errorlog or 30 if no x given");
 				return join.toString();
 			case "getlogs":
 				if( sendEmail != null ){
@@ -759,7 +762,19 @@ public class CommandPool {
 					Logger.error(e);
 				}
 				return "Never gonna happen?";
-
+			case "errors": case "info":
+				int lines = cmd.length>1?NumberUtils.toInt(cmd[1],30):30;
+				var data = FileTools.readLastLines( Path.of(workPath).resolve("logs").resolve(cmd[0]+".log"),lines);
+				boolean wait = true;
+				StringJoiner j = new StringJoiner(html?"<br":"\r\n");
+				j.setEmptyValue("No "+cmd[0]+" yet");
+				for( String d : data){
+					if( d.startsWith( "20") )
+						wait=false;
+					if(!wait)
+						j.add(d);
+				}
+				return j.toString();
 			default: return UNKNOWN_CMD+" : "+request[1];
 		}
 	}
