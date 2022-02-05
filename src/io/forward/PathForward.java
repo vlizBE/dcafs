@@ -78,20 +78,16 @@ public class PathForward {
         id = XMLtools.getStringAttribute(pathEle,"id","");
         String delimiter = XMLtools.getStringAttribute(pathEle,"delimiter","");;
         this.src = XMLtools.getStringAttribute(pathEle,"src","");
-        String imp = XMLtools.getStringAttribute(pathEle,"import","");
 
-        if( !imp.isEmpty() ) {
-            if( !Path.of(imp).isAbsolute() ){ // If the path isn't absolute make it
-                imp = workpath+ File.separator + imp;
-            }
-
-            var p = XMLfab.getRootChildren(Path.of(imp),"dcafs","path").findFirst();
+        var importPath = XMLtools.getPathAttribute(pathEle,"import",workpath);
+        if( importPath.isPresent() ) {
+            var p = XMLfab.getRootChildren(importPath.get(),"dcafs","path").findFirst();
             if(p.isPresent()) {
                 pathEle = p.get();
                 delimiter = XMLtools.getStringAttribute(pathEle,"delimiter","");
-                Logger.info("Valid path script found at "+imp);
+                Logger.info("Valid path script found at "+importPath.get());
             }else{
-                Logger.error("No valid path script found: "+imp);
+                Logger.error("No valid path script found: "+importPath.get());
                 return;
             }
         }

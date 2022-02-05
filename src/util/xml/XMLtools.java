@@ -5,6 +5,7 @@ import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 import util.tools.Tools;
 
+import javax.swing.text.html.Option;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -19,6 +20,7 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -29,6 +31,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class XMLtools {
 
@@ -266,7 +269,30 @@ public class XMLtools {
 			return def;
 		return e.getTextContent();
 	}
-
+	/**
+	 * Get the path value of a node from the given element with the given name
+	 *
+	 * @param element The element to look in
+	 * @param tag     The name of the node
+	 * @param workPath The value to return if the node wasn't found
+	 * @return The requested path or an empty optional is something went wrong
+	 */
+	public static Optional<Path> getChildPathValueByTag(Element element, String tag, String workPath ) {
+		if( element == null ){
+			Logger.error("Element is null when looking for "+tag);
+			return Optional.empty();
+		}
+		Element e = getFirstChildByTag(element, tag.toLowerCase());
+		if (e == null )
+			return Optional.empty();
+		String p = e.getTextContent().replaceAll("[\\/]", File.separator); // Make sure to use correct slashes
+		if( p.isEmpty() )
+			return Optional.empty();
+		var path = Path.of(p);
+		if( path.isAbsolute() || workPath.isEmpty())
+			return Optional.of(path);
+		return Optional.of( Path.of(workPath).resolve(path) );
+	}
 	/**
 	 * Get the integer value of a node from the given element with the given name
 	 * 
@@ -388,6 +414,31 @@ public class XMLtools {
 		if( parent.hasAttribute(attribute))
 			return parent.getAttribute(attribute).trim();
 		return def;
+	}
+	/**
+	 * Get the path value of a node from the given element with the given name
+	 *
+	 * @param parent The element to look in
+	 * @param attribute     The name of the attribute
+	 * @param workPath The value to return if the node wasn't found
+	 * @return The requested path or an empty optional is something went wrong
+	 */
+	public static Optional<Path> getPathAttribute(Element parent, String attribute, String workPath ) {
+		if( parent == null ){
+			Logger.error("Parent is null when looking for "+attribute);
+			return Optional.empty();
+		}
+		if( !parent.hasAttribute(attribute))
+			return Optional.empty();
+
+		String p = parent.getAttribute(attribute).trim().replace("/", File.separator); // Make sure to use correct slashes
+		p = p .replace("\\",File.separator);
+		if( p.isEmpty() )
+			return Optional.empty();
+		var path = Path.of(p);
+		if( path.isAbsolute() || workPath.isEmpty())
+			return Optional.of(path);
+		return Optional.of( Path.of(workPath).resolve(path) );
 	}
 	/**
 	 * Get the attributes of an element and cast to integer, return def if failed

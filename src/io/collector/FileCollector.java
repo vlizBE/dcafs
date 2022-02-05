@@ -132,13 +132,13 @@ public class FileCollector extends AbstractCollector{
         }
         /* Source and destination */
         addSource( XMLtools.getStringAttribute(fcEle,"src",""));
-        String path = XMLtools.getChildValueByTag(fcEle,"path","");
+        var path = XMLtools.getChildPathValueByTag(fcEle,"path",workpath);
         if( path.isEmpty() ){
             Logger.error(id+"(fc) -> No valid destination given");
             return;
         }
 
-        setPath(path,workpath);
+        setPath(path.get());
 
         /* Headers */
         headers.clear();
@@ -269,14 +269,12 @@ public class FileCollector extends AbstractCollector{
         trigCmds.add( new TriggeredCommand(trigger,cmd) );
     }
     /**
-     * Set the the full path (relative of absolute) to the file
+     * Set the full path (relative of absolute) to the file
      * @param path the path to the file
      */
     public void setPath( Path path ){
         this.destPath=path;
-    }
-    public void setPath( String path, String workPath ){
-       setPath(Path.of(path),workPath);
+        Logger.info(id+"(fc) -> Path set to "+destPath);
     }
     public void setPath( Path path, String workPath ){
         if( !path.isAbsolute()) {
