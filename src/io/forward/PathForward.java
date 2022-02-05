@@ -76,15 +76,15 @@ public class PathForward {
         }
 
         id = XMLtools.getStringAttribute(pathEle,"id","");
-        String imp = XMLtools.getStringAttribute(pathEle,"import","");
-
-        if( !Path.of(imp).isAbsolute() && !imp.isEmpty()){ // If the path isn't absolute make it
-            imp = workpath+ File.separator + imp;
-        }
         String delimiter = XMLtools.getStringAttribute(pathEle,"delimiter","");;
         this.src = XMLtools.getStringAttribute(pathEle,"src","");
+        String imp = XMLtools.getStringAttribute(pathEle,"import","");
 
         if( !imp.isEmpty() ) {
+            if( !Path.of(imp).isAbsolute() ){ // If the path isn't absolute make it
+                imp = workpath+ File.separator + imp;
+            }
+
             var p = XMLfab.getRootChildren(Path.of(imp),"dcafs","path").findFirst();
             if(p.isPresent()) {
                 pathEle = p.get();
@@ -158,6 +158,7 @@ public class PathForward {
             var src = XMLtools.getStringAttribute(step,"src","");
             if( stepsForward.isEmpty() && !src.isEmpty())
                 step.setAttribute("src","");
+
             switch( step.getTagName() ){
                 case "filter":
                     FilterForward ff = new FilterForward( step, dQueue );
