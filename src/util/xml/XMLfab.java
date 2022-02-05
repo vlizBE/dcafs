@@ -659,7 +659,17 @@ public class XMLfab {
             return XMLtools.getChildElements(last);
         return XMLtools.getChildElements(last, tag);
     }
-
+    /**
+     * Get a list of all the children with the given tag
+     * @param tag The tag to look for
+     * @return A list of all the child elements found or empty list if none
+     */
+    public List<Element> getDistinctChildren( String tag ){
+        if( tag.equals("*") )
+            return XMLtools.getChildElements(last);
+        var l= XMLtools.getChildElements(last, tag);
+        return l.stream().distinct().collect( Collectors.toList());
+    }
     /**
      * Get a list of all the children with the given tag and attribute value combination
      * @param tag The tag to look for
