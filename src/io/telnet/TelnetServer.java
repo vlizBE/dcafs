@@ -61,17 +61,18 @@ public class TelnetServer implements Commandable {
     public static boolean inXML(Document xml) {
 		return XMLtools.getFirstElementByTag(xml, XML_PARENT_TAG) != null;
 	}
-    public boolean readSettingsFromXML(  ) {
-
-        var xml = XMLtools.readXML(settingsPath);
-        Element settings = XMLtools.getFirstElementByTag( xml, XML_PARENT_TAG );
-        if( settings != null ){
-            port = XMLtools.getIntAttribute(settings, "port", 23 );
-            title = XMLtools.getStringAttribute( settings, "title", "DCAFS" );
-            ignore = XMLtools.getChildValueByTag( settings, "ignore", "" );
-            return true;
+    public boolean readSettingsFromXML( ) {
+        if( dQueue != null ) {
+            var xml = XMLtools.readXML(settingsPath);
+            Element settings = XMLtools.getFirstElementByTag(xml, XML_PARENT_TAG);
+            if (settings != null) {
+                port = XMLtools.getIntAttribute(settings, "port", 23);
+                title = XMLtools.getStringAttribute(settings, "title", "DCAFS");
+                ignore = XMLtools.getChildValueByTag(settings, "ignore", "");
+                return true;
+            }
+            addBlankTelnetToXML(xml);
         }
-        addBlankTelnetToXML(xml);
         return false;
     }
     public static boolean addBlankTelnetToXML( Document xmlDoc ){

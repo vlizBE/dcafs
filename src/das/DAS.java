@@ -126,7 +126,8 @@ public class DAS implements DeadThreadListener {
         settingsDoc = XMLtools.readXML(settingsPath);
 
         if (settingsDoc == null) {
-            Logger.error("No Settings.xml file found, aborting. Searched path: " + settingsPath.toString());
+            Logger.error("Issue in current settings.xml, aborting: " + settingsPath.toString());
+            addTelnetServer();
         } else {
             bootOK = true;
 
@@ -230,8 +231,8 @@ public class DAS implements DeadThreadListener {
             }else{
                 Logger.info("No gpios defined in settings.xml");
             }
+            commandPool.setDAS(this);
         }
-        commandPool.setDAS(this);
         this.attachShutDownHook();
     }
     public DAS(boolean start) {
@@ -499,8 +500,14 @@ public class DAS implements DeadThreadListener {
      * Create the telnet server
      */
     public void addTelnetServer() {
-        telnet = new TelnetServer(this.getDataQueue(), settingsPath, nettyGroup);
-        addCommandable(telnet,"telnet","nb");
+
+
+        if( bootOK) {
+            telnet = new TelnetServer(this.getDataQueue(), settingsPath, nettyGroup);
+            addCommandable(telnet, "telnet", "nb");
+        }else{
+            telnet = new TelnetServer(null, settingsPath, nettyGroup);
+        }
     }
 
     /* ********************************   B U S ************************************************/
@@ -643,8 +650,8 @@ public class DAS implements DeadThreadListener {
         }
 
         // TaskManager
-        taskManagerPool.reloadAll();
-
+        if (taskManagerPool != null)
+            taskManagerPool.reloadAll();
 
         Logger.debug("Finished");
     }

@@ -6,7 +6,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.codec.TooLongFrameException;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
+import util.tools.FileTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
 import worker.Datagram;
@@ -83,38 +85,52 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 			}else{
 				Logger.info("IPv6: "+((Inet6Address)remote.getAddress()));
 			}
+			if( dQueue != null ) {
+				XMLfab.withRoot(settingsPath, "dcafs", "settings", "telnet")
+						.selectChildAsParent("client", "host", remote.getHostName())
+						.ifPresent(f -> {
+							id = f.getCurrentElement().getAttribute("id");
+							start = f.getChild("start").map(c -> c.getTextContent()).orElse("");
+							for (var c : f.getChildren("macro")) {
+								macros.put(c.getAttribute("ref"), c.getTextContent());
+							}
+						});
 
-			XMLfab.withRoot(settingsPath,"dcafs","settings","telnet")
-					.selectChildAsParent( "client","host",remote.getHostName())
-					.ifPresent( f -> {
-						id = f.getCurrentElement().getAttribute("id");
-						start = f.getChild("start").map(c -> c.getTextContent()).orElse("");
-						for( var c : f.getChildren("macro")){
-							macros.put( c.getAttribute("ref"),c.getTextContent());
-						}
-					});
-
-			id = XMLfab.withRoot(settingsPath,"dcafs","settings","telnet")
-					.selectChildAsParent( "client","host",remote.getHostName())
-					.map( f -> f.getCurrentElement().getAttribute("id")).orElse("");
-
+				id = XMLfab.withRoot(settingsPath, "dcafs", "settings", "telnet")
+						.selectChildAsParent("client", "host", remote.getHostName())
+						.map(f -> f.getCurrentElement().getAttribute("id")).orElse("");
+			}
 		}else{
 			Logger.error( "Channel.remoteAddress is null in channelActive method");
 		}
 
 		cli = new CommandLineInterface(channel); // Start the cli
-
-		if( id.isEmpty()) {
-			writeString(TelnetCodes.TEXT_RED + "Welcome to " + title + "!\r\n" + TelnetCodes.TEXT_RESET);
+		if( dQueue !=null ) {
+			if (id.isEmpty()) {
+				writeString(TelnetCodes.TEXT_RED + "Welcome to " + title + "!\r\n" + TelnetCodes.TEXT_RESET);
+			} else {
+				writeString(TelnetCodes.TEXT_RED + "Welcome back " + id + "!\r\n" + TelnetCodes.TEXT_RESET);
+			}
+			writeString(TelnetCodes.TEXT_GREEN + "It is " + new Date() + " now.\r\n" + TelnetCodes.TEXT_RESET);
+			writeString(TelnetCodes.TEXT_BRIGHT_BLUE + "> Common Commands: [h]elp,[st]atus, rtvals, exit...\r\n");
+			writeString(TelnetCodes.TEXT_BRIGHT_YELLOW + ">");
+			channel.flush();
+			if (!start.isEmpty()) {
+				dQueue.add(Datagram.build(start).label(LABEL).writable(this).origin("telnet:" + channel.remoteAddress().toString()));
+			}
 		}else{
-			writeString(TelnetCodes.TEXT_RED + "Welcome back " + id + "!\r\n" + TelnetCodes.TEXT_RESET);
-		}
-		writeString( TelnetCodes.TEXT_GREEN + "It is " + new Date() + " now.\r\n"+TelnetCodes.TEXT_RESET);
-		writeString( TelnetCodes.TEXT_BRIGHT_BLUE+"> Common Commands: [h]elp,[st]atus, rtvals, exit...\r\n");
-		writeString( TelnetCodes.TEXT_BRIGHT_YELLOW +">");
-		channel.flush();
-		if( !start.isEmpty() ){
-			dQueue.add( Datagram.build(start).label(LABEL).writable(this).origin("telnet:"+channel.remoteAddress().toString()));
+			writeLine(TelnetCodes.TEXT_RED + "Issue in settings.xml, can't start up properly! Please fix! " + TelnetCodes.TEXT_ORANGE);
+			writeLine( ">>> LAST 15ish lines of errors.log<<<<");
+			var data = FileTools.readLastLines( settingsPath.getParent().resolve("logs").resolve("errors.log"),15);
+			boolean wait = true;
+			for( String d : data){
+				if( d.startsWith( "20") ) {
+					wait = false;
+				}
+				if(!wait) {
+					writeLine(d);
+				}
+			}
 		}
 	}    
     @Override
