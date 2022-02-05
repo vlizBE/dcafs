@@ -695,7 +695,7 @@ public class CommandPool {
 					sendEmail.sendEmail( Email.toAdminAbout("Statuslog").subject("File attached (probably)")
 							.attachment( Path.of(workPath,"logs","info.log") ));
 					sendEmail.sendEmail( Email.toAdminAbout("Errorlog").subject("File attached (probably)")
-							.attachment(Path.of(workPath,"logs","errors_"+TimeTools.formatUTCNow("yyMMdd")+".log" )) );
+							.attachment(Path.of(workPath,"logs","errors.log" )) );
 					return "Sending logs (info,errors) to admin...";
 				}
 				return "No email functionality active.";
