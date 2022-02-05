@@ -768,13 +768,23 @@ public class CommandPool {
 				boolean wait = true;
 				StringJoiner j = new StringJoiner(html?"<br":"\r\n");
 				j.setEmptyValue("No "+cmd[0]+" yet");
+				String col=TelnetCodes.TEXT_YELLOW;
 				for( String d : data){
-					if( d.startsWith( "20") )
-						wait=false;
-					if(!wait)
-						j.add(d);
+					if( d.startsWith( "20") ) {
+						wait = false;
+						if( d.contains(" ERROR\t")) {
+							col = TelnetCodes.TEXT_RED;
+						}else if( d.contains(" WARN\t")){
+							col= TelnetCodes.TEXT_ORANGE;
+						}else if( d.contains(" INFO\t")){
+							col=TelnetCodes.TEXT_YELLOW;
+						}
+					}
+					if(!wait) {
+						j.add(col+d);
+					}
 				}
-				return j.toString();
+				return j.toString()+TelnetCodes.TEXT_YELLOW;
 			default: return UNKNOWN_CMD+" : "+request[1];
 		}
 	}
