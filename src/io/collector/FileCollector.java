@@ -419,23 +419,24 @@ public class FileCollector extends AbstractCollector{
         String line;
         int cnt=dataBuffer.size()*4; // At maximum write 4 times the buffer
         while((line=dataBuffer.poll()) != null && cnt !=0) {
-            join.add(line);
+            if( !line.isBlank() )
+                join.add(line);
             cnt--;
         }
 
         byteCount=0;
         try {
-            if(headerChanged && Files.exists(dest)) {
-                Path renamed=null;
-                for( int a=1;a<1000;a++){
-                    renamed = Path.of(dest.toString().replace(".", "."+a+"."));
+            if (headerChanged && Files.exists(dest)) {
+                Path renamed = null;
+                for (int a = 1; a < 1000; a++) {
+                    renamed = Path.of(dest.toString().replace(".", "." + a + "."));
                     // Check if the desired name or zipped version already is available
-                    if( Files.notExists(renamed) )
+                    if (Files.notExists(renamed))
                         break;
                 }
                 Files.move(dest, dest.resolveSibling(renamed));
             }
-            headerChanged=false;
+            headerChanged = false;
 
             Files.write(dest, join.toString().getBytes(charSet), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
             Logger.debug("Written " + join.toString().length() + " bytes to " + dest.getFileName().toString());
