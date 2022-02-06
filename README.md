@@ -15,7 +15,7 @@ That is in broad terms what it is capable of.
 * Update itself via email (linux only for now)
 
 ## Installation
-* Make sure you have _at least_ java11 installed. If not, [download and install java 16](https://adoptopenjdk.net/releases.html?variant=openjdk16&jvmVariant=hotspot) ([win](https://github.com/AdoptOpenJDK/openjdk16-binaries/releases/download/jdk-16.0.1%2B9/OpenJDK16U-jre_x64_windows_hotspot_16.0.1_9.msi))
+* Make sure you have _at least_ java11 installed. If not, [download and install java 17](https://adoptium.net/)
 * Either download the most recent (pre)release [here](https://github.com/vlizBE/dcafs/releases)
   * Unpack to the working folder  
 * Or clone the repo and compile it in an IDE
