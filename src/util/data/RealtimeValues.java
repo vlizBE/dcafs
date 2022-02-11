@@ -516,7 +516,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		return j;
 	}
 	/**
-	 * Look for a numerical val (i.e. DoubleVal or FlagVal) with the given id
+	 * Look for a numerical val (i.e. DoubleVal, IntegerVal or FlagVal) with the given id
 	 * @param id The id to look for
 	 * @return An optional Numericalval that's empty if nothing was found
 	 */
