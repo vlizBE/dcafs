@@ -22,11 +22,16 @@ From 0.5.0 onwards, this should be better documented...
 ## 0.11.8 (work in progress)
 
 - Updated jSerialComm dependency to 2.9.0
-- Moved databases out of settings, but still finds it in settings too
+
+### Settings.xml
+- Moved databases node out of settings node , but still finds it in settings too
 - Added admin:errors,x and admin:info,x to get the last x lines in the errors/info log, or 30 if x is omitted. That 
 way it's possible to check both without having direct access to the files (if the issue isn't the telnet server).
 - Altered startup so that a bad xml (missing > etc) still allows the telnet server to start so the user
 gets feedback on the issue (last 15 lines of the errors.log).
+
+### Other
+- SQLitedb no longer uses workpath expects a proper path instead
 
 ### Fixes
 - parseRTline (used for customsrc etc.) didn't process the i/I yet
