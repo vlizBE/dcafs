@@ -285,7 +285,8 @@ public class XMLtools {
 		Element e = getFirstChildByTag(element, tag.toLowerCase());
 		if (e == null )
 			return Optional.empty();
-		String p = e.getTextContent().replaceAll("[\\/]", File.separator); // Make sure to use correct slashes
+		String p = e.getTextContent().replace("/", File.separator); // Make sure to use correct slashes
+		p=p.replace("\\",File.separator);
 		if( p.isEmpty() )
 			return Optional.empty();
 		var path = Path.of(p);
