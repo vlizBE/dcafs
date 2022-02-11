@@ -171,7 +171,7 @@ public class TimeTools {
                 if( sec%60==0){ // so clean minutes
                     sec /= 60;
                     int mins = (int) (((now.getMinute()/sec+1))*sec);
-                    first = first.withMinute( mins>60?mins-60:mins );
+                    first = first.withMinute( mins>59?mins-60:mins );
                 }else{ // so combination of minutes and seconds...
                     long m_s= now.getMinute()*60+now.getSecond();
                     int res = (int) ((m_s/sec+1)*sec);
