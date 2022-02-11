@@ -51,9 +51,9 @@ public class CommandLineInterface {
                         case 65: // Arrow Up
                             sendHistory(-1);
                             break;
-                        case 66:
+                        case 66: // Arrow Down
                             sendHistory(1);
-                            break; // Arrow Down
+                            break;
                         case 67: // Arrow Right
                             // Only move to the right if current space is used
                             if( buffer.getByte(buffer.writerIndex()) != 0 ) {
@@ -83,12 +83,12 @@ public class CommandLineInterface {
                 buffer.clear();
                 buffer.setZero(0,wi);
                 String r = new String(rec);
-                if(!cmdHistory.contains(r)) {
-                    cmdHistory.add(new String(rec));
-                    if( cmdHistory.size()>50)
-                        cmdHistory.remove(0);
-                    cmdHistoryIndex = cmdHistory.size();
-                }
+                cmdHistory.remove(r);
+                cmdHistory.add(r);
+                if( cmdHistory.size()>50)
+                    cmdHistory.remove(0);
+                cmdHistoryIndex = cmdHistory.size();
+
             }else if( b == 126){// delete
                 writeString(TelnetCodes.CURSOR_RIGHT);
                 if( buffer.getByte(buffer.writerIndex()+1)!=0x00){
