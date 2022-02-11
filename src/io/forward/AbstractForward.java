@@ -117,9 +117,14 @@ public abstract class AbstractForward implements Writable {
         join.add(id+ (sources.isEmpty()?" without sources":" getting data from "+String.join( ";",sources)));
         join.add(getRules());
 
-        StringJoiner ts = new StringJoiner(", ","Targets: ","" );
-        ts.setEmptyValue("No targets yet.");
-        targets.forEach( x -> ts.add(x.getID()));
+        StringJoiner ts = new StringJoiner(", " );
+        ts.setEmptyValue("\tNo targets yet.");
+        if( !targets.isEmpty())
+            join.add("\t\tTargets: ");
+        targets.forEach( x -> ts.add(x.getID()+", "
+
+
+        ));
         join.add(ts.toString());
 
         return join.toString();

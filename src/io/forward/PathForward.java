@@ -267,18 +267,19 @@ public class PathForward {
     }
 
     public String toString(){
+        var join = new StringJoiner("\r\n");
         if( customs.isEmpty() ){
             if( stepsForward==null||stepsForward.isEmpty())
                 return "Nothing in the path yet";
-            return " gives the data from "+stepsForward.get(stepsForward.size()-1).getID();
         }
-        var join = new StringJoiner("\r\n");
+
         customs.forEach(c->join.add(c.toString()));
         if(stepsForward!=null) {
             for (int a = 0; a < stepsForward.size(); a++) {
                 join.add("   -> " + stepsForward.get(a).toString());
             }
         }
+        join.add( " gives the data from "+stepsForward.get(stepsForward.size()-1).getID() );
         return join.toString();
     }
     public void addTarget(Writable wr){
