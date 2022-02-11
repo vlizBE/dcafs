@@ -145,13 +145,11 @@ public class DAS implements DeadThreadListener {
                     Logger.info("Program booting in NORMAL mode");
                 }
             }
+            /* RealtimeValues */
+            rtvals = new RealtimeValues( settingsPath, dQueue );
 
             /* Database manager */
             dbManager = new DatabaseManager(workPath,rtvals);
-
-
-            /* RealtimeValues */
-            rtvals = new RealtimeValues( settingsPath, dQueue );
 
             /* CommandPool */
             commandPool = new CommandPool( workPath);

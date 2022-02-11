@@ -487,7 +487,7 @@ public class Task implements Comparable<Task>{
 		switch(triggerType) {
 			case CLOCK:
 				if( future !=null ){
-					suffix = " scheduled at "+this.time+(utc?" [UTC]":"")+" next occurence in "+ TimeTools.convertPeriodtoString(future.getDelay(TimeUnit.SECONDS), TimeUnit.SECONDS);
+					suffix = " scheduled at "+this.time+(utc?" [UTC]":"")+" next occurrence in "+ TimeTools.convertPeriodtoString(future.getDelay(TimeUnit.SECONDS), TimeUnit.SECONDS);
 					if( future.getDelay(TimeUnit.SECONDS) <0 )
 						suffix=".";
 				}
@@ -496,7 +496,8 @@ public class Task implements Comparable<Task>{
 				suffix = " after "+TimeTools.convertPeriodtoString(startDelay, unit);
 				break;
 			case INTERVAL:
-				suffix = " every "+ TimeTools.convertPeriodtoString(interval, unit) + (startDelay==0?".":" after initial delay "+TimeTools.convertPeriodtoString(startDelay, unit));
+				suffix = " every "+ TimeTools.convertPeriodtoString(interval, unit) + (startDelay==0?".":" after initial delay "+TimeTools.convertPeriodtoString(startDelay, unit))
+							+ (future==null?".":(" next occurrence in "+ TimeTools.convertPeriodtoString(future.getDelay(TimeUnit.SECONDS), TimeUnit.SECONDS)));
 				break;
 			case KEYWORD:
 				suffix = " if "+keyword;

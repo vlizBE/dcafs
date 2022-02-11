@@ -9,6 +9,7 @@ import io.netty.handler.codec.TooLongFrameException;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import util.tools.FileTools;
+import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
 import worker.Datagram;
@@ -120,8 +121,10 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 			}
 		}else{
 			writeLine(TelnetCodes.TEXT_RED + "Issue in settings.xml, can't start up properly! Please fix! " + TelnetCodes.TEXT_ORANGE);
-			writeLine( ">>> LAST 15ish lines of errors.log<<<<");
-			var data = FileTools.readLastLines( settingsPath.getParent().resolve("logs").resolve("errors.log"),15);
+			writeLine( ">>> LAST 15ish lines of the errors log<<<<");
+			var data = FileTools.readLastLines( settingsPath.getParent()
+									.resolve("logs")
+									.resolve("errors_"+ TimeTools.formatUTCNow("yyMMdd") +".log"),15);
 			boolean wait = true;
 			for( String d : data){
 				if( d.startsWith( "20") ) {
@@ -131,6 +134,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 					writeLine(d);
 				}
 			}
+			writeLine("Press <enter> to shut down dcafs...");
 		}
 	}    
     @Override
@@ -149,8 +153,11 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 
 		if( recOpt.isEmpty())
 			return;
-
 		var rec = recOpt.get();
+
+		if( dQueue==null ){
+			System.exit(0);
+		}
 
 		if( config ){ // Config mode
 			String reply = conf.reply(new String(rec));

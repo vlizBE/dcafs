@@ -279,7 +279,8 @@ public class PathForward {
                 join.add("   -> " + stepsForward.get(a).toString());
             }
         }
-        join.add( " gives the data from "+stepsForward.get(stepsForward.size()-1).getID() );
+        if( !stepsForward.isEmpty() )
+            join.add( " gives the data from "+stepsForward.get(stepsForward.size()-1).getID() );
         return join.toString();
     }
     public void addTarget(Writable wr){
