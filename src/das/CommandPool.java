@@ -745,9 +745,24 @@ public class CommandPool {
 			case "gc":
 				System.gc();
 				return "Tried to execute GC";
+			case "rebootsh":
+				if( !System.getProperty("os.name").toLowerCase().startsWith("linux")){
+					return "Only Linux supported for now.";
+				}
+				try {
+					ProcessBuilder pb = new ProcessBuilder("sh","-c","reboot now");
+					pb.inheritIO();
+
+					Logger.error("Started restart attempt at "+TimeTools.formatLongUTCNow());
+					pb.start();
+
+					System.exit(0); // shutting down das
+				} catch (IOException e) {
+					Logger.error(e);
+				}
+				return "Never gonna happen3?";
 			case "reboot":
-				String os = System.getProperty("os.name").toLowerCase();
-				if( !os.startsWith("linux")){
+				if( !System.getProperty("os.name").toLowerCase().startsWith("linux")){
 					return "Only Linux supported for now.";
 				}
 				try {
