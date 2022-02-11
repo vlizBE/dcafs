@@ -22,8 +22,10 @@ import util.xml.XMLtools;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.time.temporal.TemporalField;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -370,7 +372,12 @@ public class TaskManager implements CollectorFuture {
 				Logger.tag(TINY_TAG).info("[" + id + "] Scheduling task: " + task + " with delay/interval/unit:"
 						+ task.startDelay + ";" + task.interval + ";" + task.unit);
 				try {
-					task.future = scheduler.scheduleAtFixedRate(new DelayedControl(task), task.startDelay,
+					long delay = task.startDelay;
+					if(task.startDelay==-1){ // Figure out the delay
+						delay = TimeTools.millisDelayToCleanTime(task.interval);
+						Logger.info("Delay calculated to "+TimeTools.convertPeriodtoString(delay,TimeUnit.MILLISECONDS));
+					}
+					task.future = scheduler.scheduleAtFixedRate(new DelayedControl(task), delay,
 							task.interval, task.unit);
 				} catch (IllegalArgumentException e) {
 					Logger.tag(TINY_TAG).error("Illegal Argument: start=" + task.startDelay + " interval=" + task.interval + " unit="

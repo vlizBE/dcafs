@@ -8,6 +8,7 @@ import java.text.SimpleDateFormat;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 
 import java.util.Locale;
@@ -155,6 +156,45 @@ public class TimeTools {
         }
         
         return local.format( DateTimeFormatter.ofPattern(outputFormat) );
+    }
+    public static long millisDelayToCleanTime( long millis ){
+        LocalDateTime now = LocalDateTime.now();
+
+        if( millis%1000 == 0 ){ //meaning clean seconds
+            long sec = millis/1000;
+            LocalDateTime first = now.withNano(0);
+            if( sec < 60 ){ // so less than a minute
+                int secs = (int)((now.getSecond()/sec+1)*sec);
+                first = first.withSecond(secs>60?secs-60:secs);
+            }else if( sec < 3600 ) { // so below an hour
+                first = first.withSecond(0);
+                if( sec%60==0){ // so clean minutes
+                    sec /= 60;
+                    int mins = (int) (((now.getMinute()/sec+1))*sec);
+                    first = first.withMinute( mins>60?mins-60:mins );
+                }else{ // so combination of minutes and seconds...
+                    long m_s= now.getMinute()*60+now.getSecond();
+                    int res = (int) ((m_s/sec+1)*sec);
+                    int min = res/60;
+                    first = first.withMinute(min>59?min-60:min).withSecond(res%60);
+                }
+            }else{ // more than an hour
+                first = first.withMinute(0).withSecond(0);
+                int h = (int) sec/3600;
+                int m = (int) sec/60;
+
+                if( sec % 3600 == 0 ){ // clean hours
+                    int hs = h*(now.getHour()/h+1);
+                    first = first.withHour( hs>23?hs-24:hs );
+                }else{ // hours and min (fe 1h30m or 90m)
+                    long h_m= now.getHour()*60+now.getMinute();
+                    int res = (int) (h_m/m+1)*m;
+                    first = first.withHour(res/60).withMinute(res%60);
+                }
+            }
+            return Duration.between( LocalDateTime.now(),first).toMillis();
+        }
+        return millis;
     }
     /**
      * Takes a string datetime and converts it to a calendar object
