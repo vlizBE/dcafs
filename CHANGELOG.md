@@ -19,7 +19,7 @@ From 0.5.0 onwards, this should be better documented...
     * Bring javadoc up to date
   * Rework the TaskManager (might be trigger for 0.12.0)
 
-## 0.11.8 (work in progress)
+## 0.11.8 (11/02/2022)
 
 - Updated jSerialComm dependency to 2.9.0
 - Moved databases out of settings, but still finds it in settings too
@@ -28,10 +28,14 @@ way it's possible to check both without having direct access to the files (if th
 - Altered startup so that a bad xml (missing > etc) still allows the telnet server to start so the user
 gets feedback on the issue (last 15 lines of the errors.log).
 
-### Fixes
+### Cmd's
+- <taskmanager id>:? should now show the time till next occurrence for interval tasks
+- Fixed: dbm:store should now work again, for some reason declarations were moved
+- Fixed: pf:list should now show the steps in the path again
+
+### Other Fixes
 - parseRTline (used for customsrc etc.) didn't process the i/I yet
 - PathForward, import now uses correct relative path instead of depending on how dcafs was started
-
 
 ## 0.11.7 (02/02/2022)
 
