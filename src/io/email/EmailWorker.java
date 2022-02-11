@@ -204,7 +204,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 				inbox.hasSSL = XMLtools.getBooleanAttribute( server, "ssl",  false);
 
 				String interval = XMLtools.getChildValueByTag(email, "checkinterval", "5m");    // Interval to check for new emails (in minutes)
-				checkIntervalSeconds = TimeTools.parsePeriodStringToSeconds(interval);
+				checkIntervalSeconds = (int)TimeTools.parsePeriodStringToSeconds(interval);
 				allowedDomain = XMLtools.getChildValueByTag(email, "allowed", "");
 			}
 		}			
@@ -497,7 +497,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 				return "Will check emails asap.";
 			case "interval":
 				if( parts.length==2){
-					this.checkIntervalSeconds = TimeTools.parsePeriodStringToSeconds(parts[1]);
+					this.checkIntervalSeconds = (int)TimeTools.parsePeriodStringToSeconds(parts[1]);
 					return "Interval changed to "+this.checkIntervalSeconds+" seconds (todo:save to settings.xml)";
 				}else{
 					return "Invalid number of parameters";

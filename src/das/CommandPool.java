@@ -910,7 +910,7 @@ public class CommandPool {
 		
 		int seconds;
 		String[] cmd = request[1].split(",");
-		seconds = TimeTools.parsePeriodStringToSeconds(cmd[1]);
+		seconds = (int) TimeTools.parsePeriodStringToSeconds(cmd[1]);
 
 		
 		try {

@@ -420,8 +420,8 @@ public class TimeTools {
             return Pair.of(total,null);
         }   
     }
-    public static int parsePeriodStringToSeconds( String period ){
-        return (int)parsePeriodString(period, TimeUnit.SECONDS);
+    public static long parsePeriodStringToSeconds( String period ){
+        return parsePeriodString(period, TimeUnit.SECONDS);
     }
     public static long parsePeriodStringToMillis( String period ){
     	return parsePeriodString(period, TimeUnit.MILLISECONDS);   	
