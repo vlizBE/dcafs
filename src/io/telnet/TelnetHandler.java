@@ -134,7 +134,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 					writeLine(d);
 				}
 			}
-			writeLine("Send 'sd' to shut down dcafs...");
+			writeLine("Press <enter> to shut down dcafs...");
 		}
 	}    
     @Override
@@ -156,15 +156,8 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 		var rec = recOpt.get();
 
 		if( dQueue==null ){
-			switch(new String(rec)){
-				case "sd":
-					writeLine("Shutting down...");
-					System.exit(0);
-					break;
-			}
+			System.exit(0);
 		}
-
-
 
 		if( config ){ // Config mode
 			String reply = conf.reply(new String(rec));
