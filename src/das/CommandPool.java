@@ -745,12 +745,12 @@ public class CommandPool {
 			case "gc":
 				System.gc();
 				return "Tried to execute GC";
-			case "rebootsh":
+			case "reboot":
 				if( !System.getProperty("os.name").toLowerCase().startsWith("linux")){
 					return "Only Linux supported for now.";
 				}
 				try {
-					ProcessBuilder pb = new ProcessBuilder("sh","-c","reboot now");
+					ProcessBuilder pb = new ProcessBuilder("bash","-c","shutdown -r +1");
 					pb.inheritIO();
 
 					Logger.error("Started restart attempt at "+TimeTools.formatLongUTCNow());
@@ -760,13 +760,8 @@ public class CommandPool {
 				} catch (IOException e) {
 					Logger.error(e);
 				}
-				return "Never gonna happen3?";
-			case "reboot":
-				if( !System.getProperty("os.name").toLowerCase().startsWith("linux")){
-					return "Only Linux supported for now.";
-				}
 				try {
-					ProcessBuilder pb = new ProcessBuilder("bash","-c","shutdown -r +1");
+					ProcessBuilder pb = new ProcessBuilder("sh","-c","reboot now");
 					pb.inheritIO();
 
 					Logger.error("Started restart attempt at "+TimeTools.formatLongUTCNow());
