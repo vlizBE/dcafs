@@ -375,15 +375,14 @@ public class TaskManager implements CollectorFuture {
 					long delay = task.startDelay;
 					if(task.startDelay==-1){ // Figure out the delay
 						delay = TimeTools.millisDelayToCleanTime(task.interval);
-						Logger.info("Delay calculated to "+TimeTools.convertPeriodtoString(delay,TimeUnit.MILLISECONDS));
 					}
 					task.future = scheduler.scheduleAtFixedRate(new DelayedControl(task), delay,
 							task.interval, task.unit);
+					Logger.info(id+" -> Delay set to "+TimeTools.convertPeriodtoString(delay,TimeUnit.MILLISECONDS)+" for "+task.interval/1000+"s interval");
 				} catch (IllegalArgumentException e) {
 					Logger.tag(TINY_TAG).error("Illegal Argument: start=" + task.startDelay + " interval=" + task.interval + " unit="
 							+ task.unit);
 				}
-
 			} else {
 				if (task.future != null && task.future.isCancelled()) {
 					Logger.tag(TINY_TAG).info("[" + id + "] Task future was cancelled " + task.id);
