@@ -157,44 +157,66 @@ public class TimeTools {
         
         return local.format( DateTimeFormatter.ofPattern(outputFormat) );
     }
-    public static long millisDelayToCleanTime( long millis ){
+
+    /**
+     * Calculate the delay till the next occurrence of a 'clean' interval start
+     * fe. 60000 = 10min => if now 13:42, next at 13:50 or 8min so 8*60*1000
+     * @param interval_millis
+     * @return Amount of millis calculated
+     */
+    public static long millisDelayToCleanTime( long interval_millis ){
         LocalDateTime now = LocalDateTime.now();
 
-        if( millis%1000 == 0 ){ //meaning clean seconds
-            long sec = millis/1000;
+        if( interval_millis%1000 == 0 ){ //meaning clean seconds
+            long sec = interval_millis/1000;
             LocalDateTime first = now.withNano(0);
             if( sec < 60 ){ // so less than a minute
                 int secs = (int)((now.getSecond()/sec+1)*sec);
-                first = first.withSecond(secs>60?secs-60:secs);
+                if( secs >= 60 ){
+                    first = first.plusMinutes(1).withSecond( secs - 60);
+                }else {
+                    first = first.withSecond( secs );
+                }
             }else if( sec < 3600 ) { // so below an hour
-                first = first.withSecond(0);
+                int mins=0;
                 if( sec%60==0){ // so clean minutes
                     sec /= 60;
-                    int mins = (int) (((now.getMinute()/sec+1))*sec);
-                    first = first.withMinute( mins>59?mins-60:mins );
+                    mins = (int) (((now.getMinute()/sec+1))*sec);
+                    first = first.withSecond(0);
                 }else{ // so combination of minutes and seconds...
                     long m_s= now.getMinute()*60+now.getSecond();
                     int res = (int) ((m_s/sec+1)*sec);
-                    int min = res/60;
-                    first = first.withMinute(min>59?min-60:min).withSecond(res%60);
+                    mins = res/60;
+                    first = first.withSecond(res%60);
+                }
+                if( mins >= 60 ){
+                    first = first.plusHours(1).withMinute( mins - 60);
+                }else {
+                    first = first.withMinute( mins );
                 }
             }else{ // more than an hour
                 first = first.withMinute(0).withSecond(0);
                 int h = (int) sec/3600;
                 int m = (int) sec/60;
-
+                int hs=0;
                 if( sec % 3600 == 0 ){ // clean hours
-                    int hs = h*(now.getHour()/h+1);
-                    first = first.withHour( hs>23?hs-24:hs );
+                    hs = h*(now.getHour()/h+1);
                 }else{ // hours and min (fe 1h30m or 90m)
                     long h_m= now.getHour()*60+now.getMinute();
                     int res = (int) (h_m/m+1)*m;
-                    first = first.withHour(res/60).withMinute(res%60);
+                    first = first.withMinute(res%60);
+                    hs = res/60;
+                }
+                if( hs>23 ){
+                    first = first.plusDays(1).withHour( hs-24 );
+                }else{
+                    first = first.withHour( hs );
                 }
             }
+            Logger.info("Found next at "+first);
             return Duration.between( LocalDateTime.now(),first).toMillis();
         }
-        return millis;
+        return interval_millis;
     }
     /**
      * Takes a string datetime and converts it to a calendar object
