@@ -772,7 +772,9 @@ public class CommandPool {
 					Logger.error(e);
 				}
 				return "Never gonna happen?";
-			case "errors": case "info":
+			case "errors":
+				cmd[0]+= "_"+TimeTools.formatUTCNow("yyMMdd");
+			case "info":
 				int lines = cmd.length>1?NumberUtils.toInt(cmd[1],30):30;
 				var data = FileTools.readLastLines( Path.of(workPath).resolve("logs").resolve(cmd[0]+".log"),lines);
 				boolean wait = true;
