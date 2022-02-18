@@ -15,6 +15,9 @@ import util.xml.XMLtools;
 import worker.Datagram;
 import worker.Generic;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
@@ -863,6 +866,7 @@ public class ForwardPool implements Commandable {
                 .add(" the amount of xml the user needs to write.");
                 help.add("").add(TelnetCodes.TEXT_GREEN+"Add/build new paths"+TelnetCodes.TEXT_YELLOW)
                 .add(" paths:addpath/add,id,src -> Add a path with the given id and src")
+                .add(" paths:addfile/add,id,src -> Add a path file with the given id and src")
                 .add(" paths:addsteps,id,format -> Add empty steps to the path")
                 .add("                             Format options are:")
                 .add("                             F -> filter without subs")
@@ -893,9 +897,38 @@ public class ForwardPool implements Commandable {
             case "readfile":
 
                 return "File reading added";
+            case "addfile":
+                if( cmds.length<2) {
+                    return "To few arguments, expected pf:addfile,id,src (src is optional)";
+                }
+
+                try {
+                    Files.createDirectories( settingsPath.getParent().resolve("paths") );
+                } catch (IOException e) {
+                    Logger.error(e);
+                }
+
+                var p = settingsPath.getParent().resolve("paths").resolve(cmds[1]+".xml");
+                XMLfab.withRoot(p,"dcafs")
+                        .addParentToRoot("path")
+                            .attr("id",cmds[1])
+                            .attr("delimiter",",")
+                        .build();
+
+                XMLfab.withRoot(settingsPath,"dcafs","paths")
+                        .selectOrAddChildAsParent("path","id",cmds[1])
+                        .attr("src",cmds.length>2?cmds[2]:"")
+                        .attr("delimiter",",")
+                        .attr("import","paths"+ File.separator+cmds[1]+".xml")
+                        .build();
+                dQueue.add( Datagram.system("gens:reload") );
+                readPathsFromXML();
+                return "New path file added and reloaded";
             case "addblank": case "addpath": case "add":
                 blank=true;
-
+                if( cmds.length<2) {
+                    return "To few arguments, expected pf:add,id,src";
+                }
                 XMLfab.withRoot(settingsPath,"dcafs","paths")
                         .selectOrAddChildAsParent("path","id",cmds[1])
                             .attr("src",cmds.length>2?cmds[2]:"")
