@@ -1121,7 +1121,7 @@ public class MathUtils {
         return nulls==dbs.length?null:dbs;
     }
     /**
-     * Convert a 12bit 2's complement value to an actual signed int
+     * Convert a 8bit value to an actual signed int
      * @param ori The value to convert
      * @return The signed int
      */
@@ -1133,7 +1133,7 @@ public class MathUtils {
     }
 
     /**
-     * Convert a 12bit 2's complement value to an actual signed int
+     * Convert a 10bit value to an actual signed int
      * @param ori The value to convert
      * @return The signed int
      */
