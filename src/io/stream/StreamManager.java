@@ -7,6 +7,7 @@ import io.collector.ConfirmCollector;
 import io.stream.serialport.ModbusStream;
 import io.stream.serialport.MultiStream;
 import io.stream.serialport.SerialStream;
+import io.stream.tcp.ModbusTCPStream;
 import io.stream.tcp.TcpStream;
 import io.stream.udp.UdpServer;
 import io.stream.udp.UdpStream;
@@ -453,11 +454,20 @@ public class StreamManager implements StreamListener, CollectorFuture {
 				serial.reconnectFuture = scheduler.schedule( new DoConnection( serial ), 0, TimeUnit.SECONDS );
 				return serial; 
 			case "modbus":
-				ModbusStream modbus = new ModbusStream( dQueue, stream );
-				modbus.setEventLoopGroup(eventLoopGroup);
-				modbus.addListener(this);
-				modbus.reconnectFuture = scheduler.schedule( new DoConnection( modbus ), 0, TimeUnit.SECONDS );
-				return modbus;
+				if( XMLtools.hasChildByTag(stream,"address")){ // Address means tcp
+					ModbusTCPStream mbtcp = new ModbusTCPStream( dQueue, stream );
+					mbtcp.setEventLoopGroup(eventLoopGroup);
+					mbtcp.addListener(this);
+					bootstrapTCP = mbtcp.setBootstrap(bootstrapTCP);
+					mbtcp.reconnectFuture = scheduler.schedule( new DoConnection( mbtcp ), 0, TimeUnit.SECONDS );
+					return mbtcp;
+				}else{
+					ModbusStream modbus = new ModbusStream( dQueue, stream );
+					modbus.setEventLoopGroup(eventLoopGroup);
+					modbus.addListener(this);
+					modbus.reconnectFuture = scheduler.schedule( new DoConnection( modbus ), 0, TimeUnit.SECONDS );
+					return modbus;
+				}
 			case "multiplex":
 				MultiStream mStream = new MultiStream( dQueue, stream );
 				mStream.setEventLoopGroup(eventLoopGroup);
@@ -569,6 +579,16 @@ public class StreamManager implements StreamListener, CollectorFuture {
 	 */
 	public boolean isStreamOk( String id ){
 		return isStreamOk(id,false);
+	}
+
+	/**
+	 * Checks if the given stream is from the Modbus TCP type
+	 * @param id The id of the stream
+	 * @return True if it's modbus
+	 */
+	public boolean isModbus( String id ){
+		BaseStream base = streams.get(id.toLowerCase());
+		return base.getClass() == ModbusTCPStream.class;
 	}
 	/* ***************************************************************************************************** */
 	/**

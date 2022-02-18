@@ -312,7 +312,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 	}
 	public synchronized boolean writeBytes( byte[] data ){
 		if( channel != null && channel.isActive()){
-			channel.writeAndFlush(data);
+			channel.writeAndFlush(Tools.fromBytesToHexString(data));
 			lastSendMessage = new String(data);	// Store the message for future reference
 			return true;
 		}
