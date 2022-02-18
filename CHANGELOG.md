@@ -18,7 +18,22 @@ From 0.5.0 onwards, this should be better documented...
   * Code cleanup
     * Bring javadoc up to date
   * Rework the TaskManager (might be trigger for 0.12.0)
+## 0.11.9 (work in progress)
 
+### Modbus TCP
+- Added support for receiving 03 function response
+  - Data received is converted to 16bit integer and formatted regx:val,regx:val 
+- When sending data, the header is attached by dcafs (so everything in front of function)
+
+### TaskManager
+- Changed the interval trigger to start from the 'clean' interval if no start delay was given.
+So 5m interval will start at the next x0 or x5 minutes (0 seconds etc).
+  - For some reason this doesn't work as accurately under linux as windows (or sbc vs pc) 
+
+### Commands
+- Altered admin:reboot, attempts to reboot the linux system using bash or sh.
+- admin:errors now checks the daily file instead of the link because that is only valid for non-removable media
+- 
 ## 0.11.8 (11/02/2022)
 
 - Updated jSerialComm dependency to 2.9.0
