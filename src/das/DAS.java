@@ -5,6 +5,7 @@ import io.email.EmailSending;
 import io.email.EmailWorker;
 import io.hardware.gpio.InterruptPins;
 import io.hardware.i2c.I2CWorker;
+import io.matrix.MatrixClient;
 import io.mqtt.MqttPool;
 import io.sms.DigiWorker;
 import io.stream.StreamManager;
@@ -233,6 +234,12 @@ public class DAS implements DeadThreadListener {
             }
 
             /* Matrix */
+            if( XMLfab.hasRoot(settingsPath,"dcafs","settings","matrix") ){
+                Logger.info("Reading Matrix info from settings.xml");
+                matrixClient = new MatrixClient(dQueue, XMLtools.getFirstElementByTag(settingsDoc,"matrix"));
+            }else{
+                Logger.info("No matrix settings");
+            }
             commandPool.setDAS(this);
         }
         this.attachShutDownHook();
@@ -654,6 +661,11 @@ public class DAS implements DeadThreadListener {
         // TaskManager
         if (taskManagerPool != null)
             taskManagerPool.reloadAll();
+
+        // Matrix
+        if( matrixClient != null ){
+            matrixClient.login();
+        }
 
         Logger.debug("Finished");
     }

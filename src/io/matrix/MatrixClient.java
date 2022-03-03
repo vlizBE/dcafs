@@ -1,7 +1,6 @@
 package io.matrix;
 
 import io.Writable;
-import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.tinylog.Logger;
@@ -19,9 +18,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Optional;
-import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
@@ -62,7 +59,6 @@ public class MatrixClient implements Writable {
     public MatrixClient(BlockingQueue<Datagram> dQueue, Element matrixEle){
         this.dQueue=dQueue;
         readFromXML(matrixEle);
-        login();
     }
     public void readFromXML(Element matrixEle ){
         String u = XMLtools.getStringAttribute(matrixEle,"user","");
@@ -79,110 +75,96 @@ public class MatrixClient implements Writable {
             server = XMLtools.getStringAttribute(matrixEle,"host","");
             userID="@"+u+":"+server.substring(7,server.length()-1);
         }
-        pw = XMLtools.getStringAttribute(matrixEle,"pw","");
+        server += server.endsWith("/")?"":"/";
+        pw = XMLtools.getStringAttribute(matrixEle,"pass","");
         room = XMLtools.getChildValueByTag(matrixEle,"room","!PKPNTPclVyZpsBdFon:matrix.org");
     }
-    private void login(){
+    public void login(){
 
         var json = new JSONObject().put("type","m.login.password")
                 .put("identifier",new JSONObject().put("type","m.id.user").put("user",userName))
                 .put("password",pw);
-        try {
-            var request = HttpRequest.newBuilder(new URI(server+login))
-                    .POST(HttpRequest.BodyPublishers.ofString(json.toString()))
-                    .build();
-            httpClient = HttpClient.newBuilder()
-                    .executor(executorService)
-                    .build();
 
-            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply( res -> {
-                        if( res.statusCode()==200 ){
-                            JSONObject j = new JSONObject(res.body());
-                            accessToken = j.getString("access_token");
-                            deviceID = j.getString("device_id");
+        httpClient = HttpClient.newBuilder()
+                .executor(executorService)
+                .build();
 
-                            setupFilter();
-                            sync(true);
-                            joinRoom(room);
-                        }else{
-                            Logger.error("matrix -> Failed to connect to "+server);
-                        }
-                        return 0;
-                    });
+        asyncPOST( login, json, res -> {
+                                    if( res.statusCode()==200 ) {
+                                        JSONObject j = new JSONObject(res.body());
+                                        accessToken = j.getString("access_token");
+                                        deviceID = j.getString("device_id");
 
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
+                                        setupFilter();
+                                        sync(true);
+                                        joinRoom(room);
+                                        return true;
+                                    }
+                                    if( res.statusCode()>400 ){
+                                        Logger.error("matrix -> Failed to connect to "+server+" because "
+                                                +new JSONObject(res.body()).getString("error"));
+                                    }else{
+                                        Logger.error("matrix -> Failed to connect to "+server);
+                                        Logger.error(res);
+                                        Logger.error(res.body());
+
+                                    }
+                                    return false;
+                                }
+                    );
     }
 
     public void hasFilter(){
-        try{
-            String url = server+user+userID+"/filter/2?access_token="+accessToken;
-            var request = HttpRequest.newBuilder(new URI(url))
-                    .build();
-            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply( res -> {
-                                var body=new JSONObject(res.body());
-                                if( res.statusCode()!=200){
-                                    Logger.warn("matrix -> No such filter yet.");
-                                    if( body.getString("error").equalsIgnoreCase("No such filter")) {
-                                        setupFilter();
+        asyncGET(user+userID+"/filter/1",
+                            res -> {
+                                    var body=new JSONObject(res.body());
+                                    if( res.statusCode()!=200){
+                                        Logger.warn("matrix -> No such filter yet.");
+                                        if( body.getString("error").equalsIgnoreCase("No such filter")) {
+                                            setupFilter();
+                                        }
+                                        return false;
+                                    }else{
+                                        Logger.info("matrix -> Active filter:"+res.body());
+                                        return true;
                                     }
-                                }else{
-                                    Logger.info("matrix -> Active filter:"+res.body());
-                                }
-                                return 0;
-                            }
-                    );
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
+
+                                });
     }
+
     private void setupFilter(){
+
         Optional<Path> filterOpt = FileTools.getPathToResource(this.getClass(),"filter.json");
         JSONObject js = new JSONObject(new JSONTokener(FileTools.readTxtFileToString(filterOpt.get().toString())));
-
-        try{
-            String url = server+user+userID+"/filter?access_token="+accessToken;
-            var request = HttpRequest.newBuilder(new URI(url))
-                    .POST(HttpRequest.BodyPublishers.ofString(js.toString()))
-                    .build();
-            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply( res -> {
-                                System.out.println("Filters?");
-                                System.out.println(res.toString());
-                                System.out.println(res.body());
-                                return 0;
-                            }
-                    );
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
+        asyncPOST( user+userID+"/filter",js, res -> {
+                                if( res.statusCode() != 200 ) {
+                                    System.out.println("Filters?");
+                                    System.out.println(res.toString());
+                                    System.out.println(res.body());
+                                    return false;
+                                }
+                                return true;
+                            });
     }
+
+
     public void keyClaim(){
-        JSONObject js = new JSONObject();
-        js.put("one_time_keys",new JSONObject().put(userID,new JSONObject().put(deviceID,"signed_curve25519")))
+
+        JSONObject js = new JSONObject()
+                .put("one_time_keys",new JSONObject().put(userID,new JSONObject().put(deviceID,"signed_curve25519")))
                 .put("timeout",10000);
 
-        System.out.println("clam:"+js.toString());
-        try{
-            String url = server+keys+"claim?access_token="+accessToken;
-            var request = HttpRequest.newBuilder(new URI(url))
-                    .POST(HttpRequest.BodyPublishers.ofString(js.toString()))
-                    .build();
-            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply( res -> {
+        asyncPOST( keys+"claim",js,
+                            res -> {
                                 System.out.println("keyclaim?");
                                 System.out.println(res.toString());
                                 System.out.println(res.body());
-                                return 0;
+                                return true;
                             }
                     );
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
     }
+
+
     public void sync( boolean first){
         try {
             String url = server+sync +"?access_token="+accessToken+"&timeout=10000&filter=1&set_presence=online";
@@ -190,12 +172,10 @@ public class MatrixClient implements Writable {
 
             httpClient.sendAsync( request.build(), HttpResponse.BodyHandlers.ofString())
                     .thenApply( res -> {
-                        //System.out.println(res.toString());
                         var body = new JSONObject(res.body());
                         if( res.statusCode()==200 ){
                             since = body.getString("next_batch");
                             if( !first ) {
-                                //System.out.println(res.body());
                                 try {
                                     var b = body.getJSONObject("device_one_time_keys_count");
                                     if (b != null) {
@@ -220,6 +200,30 @@ public class MatrixClient implements Writable {
             e.printStackTrace();
         }
     }
+
+    /**
+     * Join a specific room (by room id not alias) and make it the active one
+     * @param room
+     */
+    public void joinRoom( String room ){
+        asyncPOST( rooms+room+"/join",new JSONObject().put("reason","Feel like it"),
+                res -> {
+                    var body = new JSONObject(res.body());
+                    if( res.statusCode()==200 ){
+                        // Joined the room
+                        Logger.info("matrix -> Joined the room! " + body.getString("room_id"));
+                        sendMessage(room, "Have no fear, "+userName+" is here! :)");
+                        return true;
+                    }
+                    if( res.statusCode()==403){
+                        Logger.error("matrix -> "+body.getString("error"));
+                    }else {
+                        Logger.error("matrix -> "+res.body());
+                    }
+                    return false;
+                });
+    }
+
     public void getRoomEvents( JSONObject js){
         var opt = getJSONArray(js,"rooms","join",room,"timeline","events");
         if( opt.isEmpty())
@@ -232,12 +236,89 @@ public class MatrixClient implements Writable {
             String from = ev.getString("sender");
             if( !from.equalsIgnoreCase(userID)){
                 if( body.startsWith("das")){
-                    Datagram.system(body).label("matrix").origin(ev.getString("sender")).writable(this);
+                    dQueue.add(Datagram.system(body.substring(body.indexOf(":")+1)).origin(ev.getString("sender")).writable(this));
                 }
             }
         });
     }
 
+    public void sendMessage( String room, String message ){
+
+        String nohtml = message.replace("<br>","\r\n");
+        nohtml = nohtml.replaceAll("<.?b>|<.?u>",""); // Alter bold
+
+        var j = new JSONObject().put("body",message).put("msgtype", "m.text");
+
+            j = new JSONObject().put("body",nohtml)
+                                .put("msgtype", "m.text")
+                                .put("formatted_body", message)
+                                .put("format","org.matrix.custom.html");
+
+        try {
+            String url = server+rooms+room+"/send/m.room.message/"+ Instant.now().toEpochMilli()+"?access_token="+accessToken;
+            var request = HttpRequest.newBuilder(new URI(url))
+                    .PUT(HttpRequest.BodyPublishers.ofString( j.toString()))
+                    .build();
+            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply( res -> {
+                        System.out.println(res.toString());
+                        var body = new JSONObject(res.body());
+                        if( res.statusCode()==200 ){
+                            Logger.info("matrix -> Message send! ");
+                        }else if( res.statusCode()==403){
+                            Logger.error("matrix -> "+body.getString("error"));
+                        }else{
+                            Logger.warn("matrix -> "+res.body());
+                        }
+                        return 0;
+                    });
+
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+    }
+    /* ******** Helper methods ****** */
+    private void asyncGET( String url, CompletionEvent onCompletion){
+        try{
+            url=server+url;
+            if( !accessToken.isEmpty())
+                url+="?access_token="+accessToken;
+            var request = HttpRequest.newBuilder(new URI(url))
+                    .build();
+            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply( res -> onCompletion.onCompletion(res) );
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+    }
+    private void asyncPUT( String url, JSONObject data, CompletionEvent onCompletion){
+        try{
+            url=server+url;
+            if( !accessToken.isEmpty())
+                url+="?access_token="+accessToken;
+            var request = HttpRequest.newBuilder(new URI(url))
+                    .POST(HttpRequest.BodyPublishers.ofString(data.toString()))
+                    .build();
+            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply( res -> onCompletion.onCompletion(res) );
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+    }
+    private void asyncPOST( String url, JSONObject data, CompletionEvent onCompletion){
+        try{
+            url=server+url;
+            if( !accessToken.isEmpty())
+                url+="?access_token="+accessToken;
+            var request = HttpRequest.newBuilder(new URI(url))
+                    .POST(HttpRequest.BodyPublishers.ofString(data.toString()))
+                    .build();
+            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply( res -> onCompletion.onCompletion(res) );
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+    }
     private Optional<ArrayList<JSONObject>> getJSONArray(JSONObject obj, String... keys){
         for( int a=0;a<keys.length-1;a++){
             if( !obj.has(keys[a]))
@@ -254,66 +335,11 @@ public class MatrixClient implements Writable {
         }
         return Optional.empty();
     }
-
-    public void joinRoom( String room ){
-        try {
-            String url = server+rooms+room+"/join?access_token="+accessToken;
-            var request = HttpRequest.newBuilder(new URI(url))
-                    .POST(HttpRequest.BodyPublishers.ofString( new JSONObject().put("reason","Feel like it").toString()))
-                    .build();
-            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                      .thenApply( res -> {
-                        System.out.println(res.toString());
-                        var body = new JSONObject(res.body());
-                        if( res.statusCode()==200 ){
-                            // Joined the room
-                            System.out.println("Joined the room! " + body.getString("room_id"));
-                            sendMessage(room, "Have no fair, "+userName+"is here!");
-                        }else if( res.statusCode()==403){
-                            System.err.println(body.getString("error"));
-                        }else{
-                            System.out.println(res.body());
-                        }
-
-                        return 0;
-                    });
-
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
-    }
-    public void sendMessage( String room, String message ){
-        try {
-            String url = server+rooms+room+"/send/m.room.message/"+ Instant.now().toEpochMilli()+"?access_token="+accessToken;
-            var request = HttpRequest.newBuilder(new URI(url))
-                    .PUT(HttpRequest.BodyPublishers.ofString( new JSONObject().put("body",message).put("msgtype", "m.text").toString()))
-                    .build();
-            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply( res -> {
-                        System.out.println(res.toString());
-                        var body = new JSONObject(res.body());
-                        if( res.statusCode()==200 ){
-                            System.out.println("Message send! ");
-                        }else if( res.statusCode()==403){
-                            System.err.println(body.getString("error"));
-                        }else{
-                            System.out.println(res.body());
-                        }
-
-                        return 0;
-                    });
-
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
-    }
-
     /* ************************** not used ***************************************************** */
     public void pushers(){
         try{
             String url = server+push+"?access_token="+accessToken;
             var request = HttpRequest.newBuilder(new URI(url))
-                    //.header("access_token",accessToken)
                     .GET()
                     .build();
             httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
@@ -359,7 +385,7 @@ public class MatrixClient implements Writable {
             e.printStackTrace();
         }
     }
-
+    /* ******************* Writable **************************** */
     @Override
     public boolean writeString(String data) {
         return writeLine(data);

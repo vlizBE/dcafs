@@ -170,6 +170,9 @@ public class CommandPool {
 	 */
 	public String createResponse(String question, Writable wr, boolean remember, boolean html) {
 
+		if( wr!=null && wr.getID().contains("matrix")){
+			html=true;
+		}
 		String result = UNKNOWN_CMD;
 		question=question.trim();
 
@@ -268,8 +271,11 @@ public class CommandPool {
 		}
 
 		if( wr!=null ) {
-			if (!wr.getID().equalsIgnoreCase("telnet"))
+			if( wr.getID().contains("matrix")) {
+				wr.writeLine(result);
+			}else if (!wr.getID().equalsIgnoreCase("telnet")) {
 				Logger.debug("Hidden response for " + wr.getID() + ": " + result);
+			}
 		}else{
 			Logger.debug("Hidden response to " + question + ": " + result);
 		}
