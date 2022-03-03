@@ -86,6 +86,8 @@ public class DAS implements DeadThreadListener {
     boolean rebootOnShutDown = false;
     private InterruptPins isrs;
 
+    private MatrixClient matrixClient;
+
     /* Threading */
     EventLoopGroup nettyGroup = new NioEventLoopGroup(); // Single group so telnet,trans and streampool can share it
 
@@ -229,6 +231,8 @@ public class DAS implements DeadThreadListener {
             }else{
                 Logger.info("No gpios defined in settings.xml");
             }
+
+            /* Matrix */
             commandPool.setDAS(this);
         }
         this.attachShutDownHook();
@@ -845,6 +849,9 @@ public class DAS implements DeadThreadListener {
                 Logger.error("Unknown thread");
                 break;
         }
+    }
+    public void test(){
+
     }
     public static void main(String[] args) {
 

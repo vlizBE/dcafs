@@ -92,6 +92,13 @@
 		</plugins>
 	</build>
   <dependencies>
+	  <!-- https://mvnrepository.com/artifact/org.json/json -->
+	  <dependency>
+		  <groupId>org.json</groupId>
+		  <artifactId>json</artifactId>
+		  <version>20211205</version>
+	  </dependency>
+
 	  <!-- https://mvnrepository.com/artifact/org.influxdb/influxdb-java -->
 	  <dependency>
 		  <groupId>org.influxdb</groupId>
