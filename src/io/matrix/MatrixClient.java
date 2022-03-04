@@ -17,6 +17,7 @@ import java.net.http.HttpResponse;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -35,6 +36,7 @@ public class MatrixClient implements Writable {
     public static String whoami = client+"account/whoami";
     public static String presence = client+"presence/";
     public static String rooms = client+"rooms/";
+    public static String knock = client+"knock/";
     public static String sync = client+"sync";
     public static String user  = client+"user/";
     public static String upload = media+"upload/";
@@ -51,22 +53,28 @@ public class MatrixClient implements Writable {
     String accessToken = "";
     String deviceID = "";
     String userID;
-    String room = "";
+    ArrayList<String> roomPresence = new ArrayList<>();
     String since = "";
     HttpClient httpClient;
+
     BlockingQueue<Datagram> dQueue;
 
     public MatrixClient(BlockingQueue<Datagram> dQueue, Element matrixEle){
         this.dQueue=dQueue;
         readFromXML(matrixEle);
     }
+
+    /**
+     * Reads the settings from an xml element
+     * @param matrixEle The element containing the matrix info
+     */
     public void readFromXML(Element matrixEle ){
         String u = XMLtools.getStringAttribute(matrixEle,"user","");
         if( u.isEmpty()) {
             Logger.error("Invalid matrix user");
             return;
         }
-        if( u.contains(":")){
+        if( u.contains(":")){ // If the format is @xxx:yyyy.zzz
             userID=u;
             userName=u.substring(1,u.indexOf(":"));
             server = "http://"+u.substring(u.indexOf(":")+1);
@@ -77,7 +85,8 @@ public class MatrixClient implements Writable {
         }
         server += server.endsWith("/")?"":"/";
         pw = XMLtools.getStringAttribute(matrixEle,"pass","");
-        room = XMLtools.getChildValueByTag(matrixEle,"room","!PKPNTPclVyZpsBdFon:matrix.org");
+        for( var rm : XMLtools.getChildElements(matrixEle,"room") )
+            roomPresence.add( rm.getTextContent() );
     }
     public void login(){
 
@@ -97,18 +106,11 @@ public class MatrixClient implements Writable {
 
                                         setupFilter();
                                         sync(true);
-                                        joinRoom(room);
+                                        for( var room : roomPresence)
+                                            joinRoom(room);
                                         return true;
                                     }
-                                    if( res.statusCode()>400 ){
-                                        Logger.error("matrix -> Failed to connect to "+server+" because "
-                                                +new JSONObject(res.body()).getString("error"));
-                                    }else{
-                                        Logger.error("matrix -> Failed to connect to "+server);
-                                        Logger.error(res);
-                                        Logger.error(res.body());
-
-                                    }
+                                    processError(res);
                                     return false;
                                 }
                     );
@@ -128,7 +130,6 @@ public class MatrixClient implements Writable {
                                         Logger.info("matrix -> Active filter:"+res.body());
                                         return true;
                                     }
-
                                 });
     }
 
@@ -138,11 +139,10 @@ public class MatrixClient implements Writable {
         JSONObject js = new JSONObject(new JSONTokener(FileTools.readTxtFileToString(filterOpt.get().toString())));
         asyncPOST( user+userID+"/filter",js, res -> {
                                 if( res.statusCode() != 200 ) {
-                                    System.out.println("Filters?");
-                                    System.out.println(res.toString());
-                                    System.out.println(res.body());
-                                    return false;
+                                    Logger.info("matrix -> Filters applied");
+                                    return true;
                                 }
+                                processError(res);
                                 return true;
                             });
     }
@@ -156,10 +156,12 @@ public class MatrixClient implements Writable {
 
         asyncPOST( keys+"claim",js,
                             res -> {
-                                System.out.println("keyclaim?");
-                                System.out.println(res.toString());
-                                System.out.println(res.body());
-                                return true;
+                                if( res.statusCode()==200 ){
+                                    Logger.info("matrix -> Key Claimed");
+                                    return true;
+                                }
+                                processError(res);
+                                return false;
                             }
                     );
     }
@@ -189,18 +191,28 @@ public class MatrixClient implements Writable {
                                 }
                             }
                             executorService.execute( ()->sync(false));
-                        }else if( res.statusCode()==403){
-                            System.err.println(body.getString("error"));
-                        }else{
-                            System.out.println(res.body());
+                            return true;
                         }
-                        return 0;
+                        processError(res);
+                        return false;
                     });
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
     }
-
+    public void requestRoomInvite( String room ){
+        Logger.info("Requesting invite to "+room);
+        asyncPOST( knock+room,new JSONObject().put("reason","i want to"),
+                res -> {
+                    var body = new JSONObject(res.body());
+                    if( res.statusCode()==200 ){
+                        System.out.println(body);
+                        return true;
+                    }
+                    processError(res);
+                    return false;
+        });
+    }
     /**
      * Join a specific room (by room id not alias) and make it the active one
      * @param room
@@ -215,37 +227,81 @@ public class MatrixClient implements Writable {
                         sendMessage(room, "Have no fear, "+userName+" is here! :)");
                         return true;
                     }
-                    if( res.statusCode()==403){
-                        Logger.error("matrix -> "+body.getString("error"));
-                    }else {
-                        Logger.error("matrix -> "+res.body());
-                    }
+                    processError(res);
                     return false;
                 });
     }
 
     public void getRoomEvents( JSONObject js){
-        var opt = getJSONArray(js,"rooms","join",room,"timeline","events");
-        if( opt.isEmpty())
+
+        var join = getJSONSubObject(js,"rooms","join");
+        if( join.isEmpty())
             return;
-        var events = opt.get();
+
+        js = join.get();
+
+        // Get room id
+        String originRoom = js.keys().next();
+
+        // Get events
+        var events = getJSONArray(js,originRoom,"timeline","events");
+
+        if( events.isEmpty())
+            return; // Return if no events
+
+        for( var event :events){
+            System.out.println("type:"+event.getString("type"));
+            String from = event.getString("sender");
+
+            if( from.equalsIgnoreCase(userID)){
+                System.out.println("Ignored own event"); // confirm?
+                System.out.println(event);
+                continue;
+            }
+
+            switch( event.getString("type")){
+                case "m.room.message":
+                    String body = event.getJSONObject("content").getString("body");
+                    Logger.info("Received message in "+originRoom+" from "+from+": "+body);
+                    if( body.startsWith("das") || body.startsWith(userName)){ // check if message for us
+                        body = body.replaceAll("("+userName+"|das):?","").trim();
+                        var d = Datagram.build(body).label("matrix").origin(originRoom +"|"+ from).writable(this);
+                        dQueue.add(d);
+                    }else{
+                        Logger.info(from +" said "+body+" to someone else");
+                    }
+                    break;
+                    default:
+                        Logger.info("Event of type:"+event.getString("type"));
+                        break;
+            }
+        }
+        /*
+
+
         events.forEach( ev -> System.out.println(ev));
 
         events.forEach( ev -> {
             String body = ev.getJSONObject("content").getString("body");
             String from = ev.getString("sender");
             if( !from.equalsIgnoreCase(userID)){
-                if( body.startsWith("das")){
-                    dQueue.add(Datagram.system(body.substring(body.indexOf(":")+1)).origin(ev.getString("sender")).writable(this));
+                if( body.startsWith("das") || body.startsWith(userName)){
+                    var d = Datagram.system(body.substring(body.indexOf(":")+1)).origin(originRoom + ev.getString("sender")).writable(this);
+                    System.out.println(d);
+                    dQueue.add(d);
+                    // Origin becomes roomid@sender
                 }
             }
-        });
+        });*/
     }
 
     public void sendMessage( String room, String message ){
 
         String nohtml = message.replace("<br>","\r\n");
         nohtml = nohtml.replaceAll("<.?b>|<.?u>",""); // Alter bold
+
+        if(message.toLowerCase().startsWith("unknown command"))
+            message = "Either you made a typo or i lost that cmd... ;)";
 
         var j = new JSONObject().put("body",message).put("msgtype", "m.text");
 
@@ -262,13 +318,11 @@ public class MatrixClient implements Writable {
             httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                     .thenApply( res -> {
                         System.out.println(res.toString());
-                        var body = new JSONObject(res.body());
+
                         if( res.statusCode()==200 ){
                             Logger.info("matrix -> Message send! ");
-                        }else if( res.statusCode()==403){
-                            Logger.error("matrix -> "+body.getString("error"));
                         }else{
-                            Logger.warn("matrix -> "+res.body());
+                            processError(res);
                         }
                         return 0;
                     });
@@ -278,6 +332,24 @@ public class MatrixClient implements Writable {
         }
     }
     /* ******** Helper methods ****** */
+    private void processError( HttpResponse<String> res ){
+        if( res.statusCode()==200)
+            return;
+        var body = new JSONObject(res.body());
+        String error = body.getString("error");
+
+        if( res.statusCode()==403){
+            Logger.error("matrix -> "+body.getString("error"));
+            switch(error){
+                case "You are not invited to this room.":
+                    //requestRoomInvite(room); break;
+                case "You don't have permission to knock":
+                    break;
+            }
+        }else{
+            Logger.warn("matrix -> "+res.body());
+        }
+    }
     private void asyncGET( String url, CompletionEvent onCompletion){
         try{
             url=server+url;
@@ -319,21 +391,29 @@ public class MatrixClient implements Writable {
             e.printStackTrace();
         }
     }
-    private Optional<ArrayList<JSONObject>> getJSONArray(JSONObject obj, String... keys){
-        for( int a=0;a<keys.length-1;a++){
+    private Optional<JSONObject> getJSONSubObject(JSONObject obj, String... keys){
+        for( int a=0;a<keys.length;a++){
             if( !obj.has(keys[a]))
                 return Optional.empty();
             obj=obj.getJSONObject(keys[a]);
         }
+        return Optional.of(obj);
+    }
+    private ArrayList<JSONObject> getJSONArray(JSONObject obj, String... keys){
         ArrayList<JSONObject> events = new ArrayList<>();
+        for( int a=0;a<keys.length-1;a++){
+            if( !obj.has(keys[a]))
+                return events;
+            obj=obj.getJSONObject(keys[a]);
+        }
+
         if( obj.has(keys[keys.length-1])){
             var ar = obj.getJSONArray(keys[keys.length-1]);
             for( int a=0;a<ar.length();a++){
                 events.add(ar.getJSONObject(a));
             }
-            return Optional.of(events);
         }
-        return Optional.empty();
+        return events;
     }
     /* ************************** not used ***************************************************** */
     public void pushers(){
@@ -393,7 +473,8 @@ public class MatrixClient implements Writable {
 
     @Override
     public boolean writeLine(String data) {
-        sendMessage(room,data);
+        var d = data.split("\\|"); //0=room,1=from,2=data
+        sendMessage(d[0],d[2]);
         return true;
     }
 

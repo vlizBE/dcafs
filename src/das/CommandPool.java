@@ -131,7 +131,7 @@ public class CommandPool {
 		d.setData( d.getData().toLowerCase());
 
 		/* Writable is in case the question is for realtime received data */
-		String response = createResponse( d.getData(), d.getWritable(), false, true );
+		String response = createResponse( d, false, true );
 
 		if (!response.toLowerCase().contains(UNKNOWN_CMD)) {
 			response = response.replace("[33m ", "");
@@ -147,28 +147,28 @@ public class CommandPool {
 	/**
 	 * A question is asked to the BaseReq through this method, a Writable is
 	 * passed for streaming data questions
-	 * 
-	 * @param question The command/Question to process
-	 * @param wr The writable (if any) this question originates from
+	 *
+	 * @param d The datagram to process
 	 * @param remember If the command should be recorded in the raw data
 	 * @return The response to the command/question
 	 */
-	public String createResponse(String question, Writable wr, boolean remember) {
-		return createResponse(question, wr, remember, false);
+	public String createResponse( Datagram d, boolean remember) {
+		return createResponse( d, remember, false);
 	}
 
 	/**
 	 * A question is asked to the BaseReq through this method, a Writable is
 	 * passed for streaming data questions
 	 * 
-	 * @param question The command/Question to process
-	 * @param wr  Writable in order to be able to respond to streaming
-	 *                 data questions
+	 * @param d The datagram to process
 	 * @param remember If the command should be recorded in the raw data
 	 * @param html     If the response should you html encoding or not
 	 * @return The response to the command/question
 	 */
-	public String createResponse(String question, Writable wr, boolean remember, boolean html) {
+	public String createResponse( Datagram d, boolean remember, boolean html) {
+
+		String question = d.getData();
+		var wr = d.getWritable();
 
 		if( wr!=null && wr.getID().contains("matrix")){
 			html=true;
@@ -271,8 +271,8 @@ public class CommandPool {
 		}
 
 		if( wr!=null ) {
-			if( wr.getID().contains("matrix")) {
-				wr.writeLine(result);
+			if( d.getLabel().startsWith("matrix")) {
+				wr.writeLine(d.getOriginID()+"|"+result);
 			}else if (!wr.getID().equalsIgnoreCase("telnet")) {
 				Logger.debug("Hidden response for " + wr.getID() + ": " + result);
 			}
@@ -829,7 +829,7 @@ public class CommandPool {
 		if( request[1].startsWith("send,") ){ // If it's a send request
 			String[] parts = request[1].split(",");
 			if( parts.length==4){ // Check if the amount of components is correct
-				String rep = createResponse(parts[3],wr,false,true); //if so, use content as command
+				String rep = createResponse(Datagram.build(parts[3]).writable(wr),false,true); //if so, use content as command
 				if( !rep.startsWith("unknown")) // if this resulted in a response
 					parts[3]=rep; //replace the command
 				request[1] = String.join(",",parts);

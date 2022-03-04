@@ -92,7 +92,8 @@ public class Datagram {
      */
     public Datagram writable(Writable writable){
         this.writable=writable;
-        this.originID=writable.getID();
+        if(originID.isEmpty())
+            this.originID=writable.getID();
         return this;
     }
     /**
@@ -102,7 +103,8 @@ public class Datagram {
      */
     public Datagram readable( Readable readable ){
         this.readable=readable;
-        this.originID=readable.getID();
+        if(originID.isEmpty())
+            this.originID=readable.getID();
         return this;
     }
     public Datagram origin( String origin ){

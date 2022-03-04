@@ -265,8 +265,8 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 					}
 				}else {
 					switch (label) {
-						case "system": case "cmd":
-							executor.execute(() -> reqData.createResponse(d.getData(), d.getWritable(), false));
+						case "system": case "cmd": case "matrix":
+							executor.execute(() -> reqData.createResponse( d, false));
 							break;
 						case "void":
 							break;
@@ -360,7 +360,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				Logger.info("Executing telnet command [" + d.getData() + "]" + from);
 		}
 
-		String response = reqData.createResponse(d.getData(), dt, false);
+		String response = reqData.createResponse( d, false);
 		if( spy!=null && d.getWritable()!=spy && (d.getWritable().getID().equalsIgnoreCase(spyingon)||spyingon.equalsIgnoreCase("all"))){
 			spy.writeLine(TelnetCodes.TEXT_ORANGE+"Cmd: "+d.getData()+TelnetCodes.TEXT_YELLOW);
 			spy.writeLine(response);
