@@ -1,14 +1,17 @@
 package io.matrix;
 
+import das.Commandable;
 import io.Writable;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.math.MathFab;
 import util.tools.FileTools;
 import util.xml.XMLtools;
 import worker.Datagram;
 
+import java.io.FileNotFoundException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
@@ -17,14 +20,14 @@ import java.net.http.HttpResponse;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Locale;
+import java.util.HashMap;
 import java.util.Optional;
+import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Function;
 
-public class MatrixClient implements Writable {
+public class MatrixClient implements Writable, Commandable {
 
     private static String root = "_matrix/";
     public static String client = root+"client/v3/";
@@ -53,7 +56,8 @@ public class MatrixClient implements Writable {
     String accessToken = "";
     String deviceID = "";
     String userID;
-    ArrayList<String> roomPresence = new ArrayList<>();
+    HashMap<String,String> roomPresence = new HashMap<>();
+    HashMap<String,String> files = new HashMap<>();
     String since = "";
     HttpClient httpClient;
 
@@ -86,7 +90,7 @@ public class MatrixClient implements Writable {
         server += server.endsWith("/")?"":"/";
         pw = XMLtools.getStringAttribute(matrixEle,"pass","");
         for( var rm : XMLtools.getChildElements(matrixEle,"room") )
-            roomPresence.add( rm.getTextContent() );
+            roomPresence.put( rm.getAttribute("id"),rm.getTextContent() );
     }
     public void login(){
 
@@ -106,7 +110,7 @@ public class MatrixClient implements Writable {
 
                                         setupFilter();
                                         sync(true);
-                                        for( var room : roomPresence)
+                                        for( var room : roomPresence.values())
                                             joinRoom(room);
                                         return true;
                                     }
@@ -234,6 +238,7 @@ public class MatrixClient implements Writable {
 
     public void getRoomEvents( JSONObject js){
 
+        //System.out.println(js);
         var join = getJSONSubObject(js,"rooms","join");
         if( join.isEmpty())
             return;
@@ -258,43 +263,65 @@ public class MatrixClient implements Writable {
                 System.out.println(event);
                 continue;
             }
-
             switch( event.getString("type")){
+                case "m.room.redaction":
+                    break;
                 case "m.room.message":
-                    String body = event.getJSONObject("content").getString("body");
-                    Logger.info("Received message in "+originRoom+" from "+from+": "+body);
-                    if( body.startsWith("das") || body.startsWith(userName)){ // check if message for us
-                        body = body.replaceAll("("+userName+"|das):?","").trim();
-                        var d = Datagram.build(body).label("matrix").origin(originRoom +"|"+ from).writable(this);
-                        dQueue.add(d);
-                    }else{
-                        Logger.info(from +" said "+body+" to someone else");
+                    var content = event.getJSONObject("content");
+                    String body = content.getString("body");
+                    switch( content.getString("msgtype")){
+                        case "m.image": case "m.file":
+                            files.put(body,content.getString("url"));
+                            Logger.info("Received link to "+body+" at "+files.get(body));
+                            break;
+                        case "m.text":
+                            Logger.info("Received message in "+originRoom+" from "+from+": "+body);
+                            if( body.startsWith("das") || body.startsWith(userName)){ // check if message for us
+                                body = body.replaceAll("("+userName+"|das):?","").trim();
+                                var d = Datagram.build(body).label("matrix").origin(originRoom +"|"+ from).writable(this);
+                                dQueue.add(d);
+                            }else if(body.startsWith("solve ")) {
+                                var math = MathFab.newFormula(body.substring(6).trim());
+                                var bd = math.solve();
+                                if( bd.toString().length()==1 ){
+                                    sendMessage( originRoom,"No offense but... *"+userName+" raises "+bd.toString()+" fingers. *");
+                                }else{
+                                    sendMessage( originRoom, math.getOri() +" = "+bd );
+                                }
+                            }else{
+                                Logger.info(from +" said "+body+" to someone else");
+                            }
+                            break;
+                        default:
+                            Logger.info("Event of type:"+event.getString("type"));
+                            break;
                     }
                     break;
-                    default:
-                        Logger.info("Event of type:"+event.getString("type"));
-                        break;
             }
         }
-        /*
-
-
-        events.forEach( ev -> System.out.println(ev));
-
-        events.forEach( ev -> {
-            String body = ev.getJSONObject("content").getString("body");
-            String from = ev.getString("sender");
-            if( !from.equalsIgnoreCase(userID)){
-                if( body.startsWith("das") || body.startsWith(userName)){
-                    var d = Datagram.system(body.substring(body.indexOf(":")+1)).origin(originRoom + ev.getString("sender")).writable(this);
-                    System.out.println(d);
-                    dQueue.add(d);
-                    // Origin becomes roomid@sender
-                }
-            }
-        });*/
     }
+    public void sendFile( String room, Path path){
 
+        try{
+            String url=server+media + "upload";
+            if( !accessToken.isEmpty())
+                url+="?access_token="+accessToken;
+            var request = HttpRequest.newBuilder(new URI(url))
+                    .POST(HttpRequest.BodyPublishers.ofFile(path))
+                    .build();
+            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply( res -> {
+                        if( res.statusCode()==200){
+                            System.out.println(res.body());
+                            return true;
+                        }
+                        processError(res);
+                        return false;
+                    } );
+        } catch (URISyntaxException | FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
     public void sendMessage( String room, String message ){
 
         String nohtml = message.replace("<br>","\r\n");
@@ -496,5 +523,39 @@ public class MatrixClient implements Writable {
     @Override
     public Writable getWritable() {
         return this;
+    }
+
+    @Override
+    public String replyToCommand(String[] request, Writable wr, boolean html) {
+        var cmd = request[1].substring(0,request[1].indexOf(","));
+        var rest = request[1].substring(request[1].indexOf(",")+1);
+        StringJoiner j = new StringJoiner("\r\n");
+        switch(cmd){
+            case "?":
+
+                j.add("matrix:send,roomid,message -> Send the given message to the room");
+                return j.toString();
+            case "send":
+                String to = rest.substring(0,rest.indexOf(","));
+                String what = rest.substring(to.length()+1);
+                sendMessage(roomPresence.get(to),what);
+                break;
+            case "rooms":
+                roomPresence.forEach( (key,val) -> j.add(key +" -> "+val));
+                return j.toString();
+        }
+        return null;
+    }
+
+    @Override
+    public boolean removeWritable(Writable wr) {
+        return false;
+    }
+
+    private class RoomSetup {
+        String localId="";
+        String globalID="";
+        ArrayList<Writable> targets;
+
     }
 }

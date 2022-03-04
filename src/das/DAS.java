@@ -237,6 +237,7 @@ public class DAS implements DeadThreadListener {
             if( XMLfab.hasRoot(settingsPath,"dcafs","settings","matrix") ){
                 Logger.info("Reading Matrix info from settings.xml");
                 matrixClient = new MatrixClient(dQueue, XMLtools.getFirstElementByTag(settingsDoc,"matrix"));
+                addCommandable("matrix",matrixClient);
             }else{
                 Logger.info("No matrix settings");
             }
