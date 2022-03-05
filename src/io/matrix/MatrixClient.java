@@ -62,6 +62,8 @@ public class MatrixClient implements Writable, Commandable {
     HttpClient httpClient;
 
     BlockingQueue<Datagram> dQueue;
+    boolean downloadAll=true;
+
 
     public MatrixClient(BlockingQueue<Datagram> dQueue, Element matrixEle){
         this.dQueue=dQueue;
@@ -273,6 +275,8 @@ public class MatrixClient implements Writable, Commandable {
                         case "m.image": case "m.file":
                             files.put(body,content.getString("url"));
                             Logger.info("Received link to "+body+" at "+files.get(body));
+                            if( downloadAll )
+                                downloadFile(body,null);
                             break;
                         case "m.text":
                             Logger.info("Received message in "+originRoom+" from "+from+": "+body);
@@ -321,6 +325,34 @@ public class MatrixClient implements Writable, Commandable {
         } catch (URISyntaxException | FileNotFoundException e) {
             e.printStackTrace();
         }
+    }
+    public boolean downloadFile( String id, Writable wr ){
+        String mxc=files.get(id);
+        if( mxc.isEmpty())
+            return false;
+
+        try{
+            String url = server+media+"download"+mxc.substring(5);
+            if( !accessToken.isEmpty())
+                url+="?access_token="+accessToken;
+            var request = HttpRequest.newBuilder(new URI(url))
+                    .build();
+            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofFile(Path.of(id)))
+                    .thenApply( res -> {
+                        if( res.statusCode()==200){
+                            if( wr!=null)
+                                wr.writeLine("File received");
+                        }else{
+                            Logger.error(res);
+                            if( wr!=null)
+                                wr.writeLine("File download failed with code: "+res.statusCode());
+                        }
+                        return 0;
+                    } );
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+        return true;
     }
     public void sendMessage( String room, String message ){
 
@@ -543,6 +575,16 @@ public class MatrixClient implements Writable, Commandable {
             case "rooms":
                 roomPresence.forEach( (key,val) -> j.add(key +" -> "+val));
                 return j.toString();
+            case "files":
+                j.setEmptyValue("No files yet");
+                files.keySet().forEach( k -> j.add(k));
+                break;
+            case "get":
+                if( downloadFile(rest,wr) ){
+                    return "Valid file chosen";
+                }else{
+                    return "No such file";
+                }
         }
         return null;
     }
