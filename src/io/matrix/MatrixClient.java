@@ -267,9 +267,11 @@ public class MatrixClient implements Writable, Commandable {
         if( events.isEmpty())
             return; // Return if no events
 
-        for( var event :events){
-            System.out.println("type:"+event.getString("type"));
+        for( var event :events ){
+            //System.out.println("type:"+event.getString("type"));
+            String eventID = event.getString("event_id");
             String from = event.getString("sender");
+            confirmRead( originRoom, eventID); // Confirm received
 
             if( from.equalsIgnoreCase(userID)){
                 System.out.println("Ignored own event"); // confirm?
@@ -290,7 +292,7 @@ public class MatrixClient implements Writable, Commandable {
                                 downloadFile(body,null);
                             break;
                         case "m.text":
-                            Logger.info("Received message in "+originRoom+" from "+from+": "+body);
+                          //  Logger.info("Received message in "+originRoom+" from "+from+": "+body);
                             if( body.startsWith("das") || body.startsWith(userName)){ // check if message for us
                                 body = body.replaceAll("("+userName+"|das):?","").trim();
                                 var d = Datagram.build(body).label("matrix").origin(originRoom +"|"+ from).writable(this);
@@ -334,7 +336,7 @@ public class MatrixClient implements Writable, Commandable {
                                     sendMessage( originRoom, "Stored "+res +" as "+split[1] );
                                 }
                             }else{
-                                Logger.info(from +" said "+body+" to someone else");
+                                Logger.info(from +" said "+body+" to someone/everyone");
                             }
                             break;
                         default:
@@ -345,6 +347,28 @@ public class MatrixClient implements Writable, Commandable {
             }
         }
     }
+
+    /**
+     * Send a confirmation of receival of the given event
+     * @param room The room the event occurred in
+     * @param eventID The id of the event
+     */
+    public void confirmRead(String room, String eventID){
+        asyncPOST( rooms+room+"/receipt/m.read/"+eventID,new JSONObject(),
+                res -> {
+                    if(res.statusCode()==200){
+                        return true;
+                    }
+                    processError(res);
+                    return false;
+                });
+    }
+
+    /**
+     * Upload a file to the repository (doesn't work yet)
+     * @param room The room to use
+     * @param path The path to the file
+     */
     public void sendFile( String room, Path path){
 
         try{
