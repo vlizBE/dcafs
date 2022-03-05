@@ -375,6 +375,9 @@ public class MatrixClient implements Writable, Commandable {
             String url=server+media + "upload";
             if( !accessToken.isEmpty())
                 url+="?access_token="+accessToken;
+            url+="&Content-Type=m.file";
+            url+="&filename="+path.getFileName().toString();
+
             var request = HttpRequest.newBuilder(new URI(url))
                     .POST(HttpRequest.BodyPublishers.ofFile(path))
                     .build();
@@ -382,6 +385,8 @@ public class MatrixClient implements Writable, Commandable {
                     .thenApply( res -> {
                         if( res.statusCode()==200){
                             System.out.println(res.body());
+                            String mxc = new JSONObject(res.body()).getString("content_uri"); // Got a link... now post it?
+                            shareFile(room,mxc,path.getFileName().toString());
                             return true;
                         }
                         processError(res);
@@ -422,6 +427,35 @@ public class MatrixClient implements Writable, Commandable {
             e.printStackTrace();
         }
         return true;
+    }
+    public void shareFile( String room, String mxc, String filename ){
+
+        var j = new JSONObject()
+                .put("body",filename)
+                .put("url",mxc)
+                .put("mimetype","text/plain")
+                .put("msgtype", "m.file");
+
+        try {
+            String url = server+rooms+room+"/send/m.room.message/"+ Instant.now().toEpochMilli()+"?access_token="+accessToken;
+            var request = HttpRequest.newBuilder(new URI(url))
+                    .PUT(HttpRequest.BodyPublishers.ofString( j.toString()))
+                    .build();
+            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply( res -> {
+                        System.out.println(res.toString());
+
+                        if( res.statusCode()==200 ){
+                            Logger.info("matrix -> Link send! ");
+                        }else{
+                            processError(res);
+                        }
+                        return 0;
+                    });
+
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
     }
     public void sendMessage( String room, String message ){
 
