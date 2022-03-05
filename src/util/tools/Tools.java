@@ -325,6 +325,34 @@ public class Tools {
         }
         return new ArrayList<String>();
     }
+
+    /**
+     * Search the given txt for regex matches and alter those with the value but with append and or prepend
+     * @param txt The txt to check/alter
+     * @param regex The regex to look for
+     * @param prepend The string to add in front
+     * @param append The string to add in the back
+     * @return The altered text or the original if it failed
+     */
+    public static String alterMatches(String txt, String filter, String regex, String prepend, String append ){
+        try {
+            var pat = Pattern.compile(regex);
+            if (pat != null) {
+                var res = pat.matcher(txt)
+                        .results()
+                        .map(MatchResult::group)
+                        .filter( s -> s.matches(filter))
+                        .collect(Collectors.toCollection(ArrayList::new));
+
+                for( var r : res ){
+                    txt=txt.replace(r,prepend+r+append);
+                }
+            }
+        }catch( Exception e){
+            Logger.error(e);
+        }
+        return txt;
+    }
     /**
      * Replaces all the occurrences of the byte size hex escape sequences (fe.\x10) with their respective value
      * @param txt The text in which to replace them

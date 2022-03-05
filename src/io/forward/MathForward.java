@@ -23,7 +23,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.function.Function;
 import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 public class MathForward extends AbstractForward {
 
@@ -45,6 +44,9 @@ public class MathForward extends AbstractForward {
     public MathForward(Element ele, BlockingQueue<Datagram> dQueue, DataProviding dp){
         super(dQueue,dp);
         readFromXML(ele);
+    }
+    public MathForward(BlockingQueue<Datagram> dQueue, DataProviding dp){
+        super(null,dp);
     }
     /**
      * Read a mathForward from an element in the xml
@@ -531,7 +533,38 @@ public class MathForward extends AbstractForward {
         }
         return join.toString();
     }
+
+    /**
+     * Method to use all the functionality but without persistence
+     * @param op The formula to compute fe. 15+58+454/3 or a+52 if a was defined
+     * @return
+     */
+    public double solveOp( String op ){
+        ops.clear();rulesString.clear();
+
+        var opt = addStdOperation("i0="+op,-1,"");
+        if( opt.isEmpty())
+            return Double.NaN;
+        return NumberUtils.toDouble(solveFor("0"),Double.NaN);
+    }
     /* ************************************* R E F E R E N C E S *************************************************** */
+
+    /**
+     * Create a static numericalval
+     * @param key
+     * @param val
+     */
+    public void addNumericalRef( String key, double val){
+        if( referencedNums==null)
+            referencedNums=new ArrayList<>();
+        for( var v : referencedNums ) {
+            if (v.id().equalsIgnoreCase("matrix_" + key)) {
+                v.updateValue(val);
+                return;
+            }
+        }
+        referencedNums.add( DoubleVal.newVal("matrix",key).value(val) );
+    }
     /**
      * Build the BigDecimal array base on received data and the local references.
      * From the received data only the part that holds used 'i's is converted (so if i1 and i5 is used, i0-i5 is taken)
@@ -569,7 +602,7 @@ public class MathForward extends AbstractForward {
         for( var p : pairs ) {
             if (p.length == 2) {
                 switch(p[0]){
-                    case "d": case "double":
+                    case "d": case "double": case "r":
                         dataProviding.getDoubleVal(p[1]).ifPresent( referencedNums::add );
                         break;
                     case "D":

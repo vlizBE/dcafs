@@ -2,21 +2,27 @@ package io.matrix;
 
 import das.Commandable;
 import io.Writable;
+import io.forward.MathForward;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.data.DataProviding;
 import util.math.MathFab;
 import util.tools.FileTools;
+import util.tools.Tools;
 import util.xml.XMLtools;
 import worker.Datagram;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -62,11 +68,15 @@ public class MatrixClient implements Writable, Commandable {
     HttpClient httpClient;
 
     BlockingQueue<Datagram> dQueue;
+    MathForward math;
     boolean downloadAll=true;
+    Path dlFolder=Path.of("downloads");
+    DataProviding dp;
 
 
-    public MatrixClient(BlockingQueue<Datagram> dQueue, Element matrixEle){
+    public MatrixClient(BlockingQueue<Datagram> dQueue, DataProviding dp, Element matrixEle){
         this.dQueue=dQueue;
+        math = new MathForward(null,dp);
         readFromXML(matrixEle);
     }
 
@@ -200,6 +210,7 @@ public class MatrixClient implements Writable, Commandable {
                             return true;
                         }
                         processError(res);
+                        executorService.execute( ()->sync(false));
                         return false;
                     });
         } catch (URISyntaxException e) {
@@ -284,13 +295,43 @@ public class MatrixClient implements Writable, Commandable {
                                 body = body.replaceAll("("+userName+"|das):?","").trim();
                                 var d = Datagram.build(body).label("matrix").origin(originRoom +"|"+ from).writable(this);
                                 dQueue.add(d);
-                            }else if(body.startsWith("solve ")) {
-                                var math = MathFab.newFormula(body.substring(6).trim());
-                                var bd = math.solve();
-                                if( bd.toString().length()==1 ){
-                                    sendMessage( originRoom,"No offense but... *"+userName+" raises "+bd.toString()+" fingers. *");
+                            }else if( body.matches(".+=[0-9]*$")){
+                                var sp = body.split("=");
+                                double d = NumberUtils.toDouble(sp[1].trim(),Double.NaN);
+                                if( Double.isNaN(d)){
+                                    sendMessage(originRoom, "Invalid number given, can't parse "+sp[1]);
                                 }else{
-                                    sendMessage( originRoom, math.getOri() +" = "+bd );
+                                    math.addNumericalRef(sp[0].trim(), d);
+                                    sendMessage( originRoom, "Stored "+sp[1]+" as "+sp[0] );
+                                }
+                            }else if(body.startsWith("solve ")|| body.matches(".+=[a-zA-Z?]+?")) {
+
+                                var split = body.split("=");
+                                var op = split[0];
+                                if( op.startsWith("*"))
+                                    op.substring(2);
+                                op = op.replace("solve ","").trim();
+
+                                var ori=op;
+                                op = Tools.alterMatches(op,"^[^{]+","[{]?[a-zA-Z:]+","{d:matrix_","}");
+                                var dbl = math.solveOp( op );
+                                if( Double.isNaN(dbl)){
+                                    sendMessage(originRoom,"Failed to process: "+ori);
+                                    continue;
+                                }
+
+                                var res=""+dbl;
+                                if( res.endsWith(".0"))
+                                    res=res.substring(0,res.indexOf("."));
+                                if( split.length==1 || split[1].equalsIgnoreCase("?")){
+                                    if( res.length()==1 ){
+                                        sendMessage( originRoom,"No offense but... *"+userName+" raises "+res+" fingers. *");
+                                    }else{
+                                        sendMessage( originRoom, ori +" = "+res );
+                                    }
+                                }else{
+                                    math.addNumericalRef(split[1],dbl);
+                                    sendMessage( originRoom, "Stored "+res +" as "+split[1] );
                                 }
                             }else{
                                 Logger.info(from +" said "+body+" to someone else");
@@ -337,7 +378,9 @@ public class MatrixClient implements Writable, Commandable {
                 url+="?access_token="+accessToken;
             var request = HttpRequest.newBuilder(new URI(url))
                     .build();
-            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofFile(Path.of(id)))
+            var p = dlFolder.resolve(id);
+            Files.createDirectories(p.getParent());
+            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofFile(p))
                     .thenApply( res -> {
                         if( res.statusCode()==200){
                             if( wr!=null)
@@ -350,6 +393,8 @@ public class MatrixClient implements Writable, Commandable {
                         return 0;
                     } );
         } catch (URISyntaxException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
             e.printStackTrace();
         }
         return true;
@@ -397,14 +442,16 @@ public class MatrixClient implements Writable, Commandable {
         var body = new JSONObject(res.body());
         String error = body.getString("error");
 
-        if( res.statusCode()==403){
-            Logger.error("matrix -> "+body.getString("error"));
-            switch(error){
+        if( res.statusCode()==403) {
+            Logger.error("matrix -> " + body.getString("error"));
+            switch (error) {
                 case "You are not invited to this room.":
                     //requestRoomInvite(room); break;
                 case "You don't have permission to knock":
                     break;
             }
+        }else if( res.statusCode()==500){
+            Logger.warn("matrix -> "+res.body());
         }else{
             Logger.warn("matrix -> "+res.body());
         }
