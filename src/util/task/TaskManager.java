@@ -655,7 +655,7 @@ public class TaskManager implements CollectorFuture {
 						splits[0] += ";";
 					}
 				}
-				if (task.value.startsWith("cmd") || ( task.out != OUTPUT.MQTT && task.out != OUTPUT.STREAM && task.out != OUTPUT.MANAGER && task.out != OUTPUT.TELNET)) {
+				if (task.value.startsWith("cmd") || ( task.out != OUTPUT.MQTT && task.out != OUTPUT.STREAM && task.out != OUTPUT.MANAGER && task.out != OUTPUT.TELNET && task.out != OUTPUT.MATRIX)) {
 					// This is not supposed to be used when the output is a channel or no reqdata defined
 
 					if (commandPool == null) {
@@ -773,6 +773,15 @@ public class TaskManager implements CollectorFuture {
 							}
 						}
 						*/
+						break;
+					case MATRIX:
+						String resp="";
+						if( task.value.startsWith(""+'"')){
+							resp = task.value.replace(""+'"',"");
+						}else {
+							resp = commandPool.createResponse(Datagram.system(task.value), false, true);
+						}
+						commandPool.createResponse(Datagram.system("matrix:say,"+task.stream+","+resp),false,true);
 						break;
 					case LOG: // Write the value in either status.log or error.log (and maybe send an email)
 						String[] spl = task.value.split(";");

@@ -286,14 +286,11 @@ public class MatrixClient implements Writable, Commandable {
             return; // Return if no events
 
         for( var event :events ){
-            //System.out.println("type:"+event.getString("type"));
             String eventID = event.getString("event_id");
             String from = event.getString("sender");
             confirmRead( originRoom, eventID); // Confirm received
 
             if( from.equalsIgnoreCase(userID)){
-                System.out.println("Ignored own event"); // confirm?
-                System.out.println(event);
                 continue;
             }
             switch( event.getString("type")){
@@ -502,11 +499,7 @@ public class MatrixClient implements Writable, Commandable {
                     .build();
             httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                     .thenApply( res -> {
-                        System.out.println(res.toString());
-
-                        if( res.statusCode()==200 ){
-                            Logger.info("matrix -> Message send! ");
-                        }else{
+                        if( res.statusCode()!=200 ){
                             processError(res);
                         }
                         return 0;
@@ -719,10 +712,9 @@ public class MatrixClient implements Writable, Commandable {
             case "say": case "txt":
                 if( cmds.length<3 )
                     return "Not enough arguments: matrix:say,roomid,message";
-                String what = request[2].substring(5+cmds[1].length());
+                String what = request[1].substring(5+cmds[1].length());
                 sendMessage(roomSetups.get(cmds[1]).url(),what);
-                break;
-
+                return "Message send";
             /* *************** Files ********************* */
             case "files":
                 j.setEmptyValue("No files yet");
@@ -777,7 +769,6 @@ public class MatrixClient implements Writable, Commandable {
                 f.addChild("macro",cmds[2]).attr("key",cmds[1]);
                 macros.put(cmds[1],cmds[2]);
                 return "Macro added to xml";
-
         }
         return null;
     }

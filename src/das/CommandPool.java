@@ -230,7 +230,7 @@ public class CommandPool {
 			case "s_": result=doS_(split); break;
 			case "upgrade": result=doUPGRADE(split, wr,html); break;
 		}	
-		String rep=result;
+
 		if( result.startsWith(UNKNOWN_CMD) ){
 			var cmdOpt = commandables.entrySet().stream()
 						.filter( ent -> {
@@ -242,7 +242,9 @@ public class CommandPool {
 
 			if( cmdOpt.isPresent()) {
 				result = cmdOpt.get().replyToCommand(split, wr, html);
-				if( result.startsWith(UNKNOWN_CMD) ) {
+				if( result == null){
+					Logger.error("Got a null as response to "+question);
+				}else if( result.startsWith(UNKNOWN_CMD) ) {
 					Logger.warn("Found "+find+" but corresponding cmd to do: " + question);
 				}
 			}else{
