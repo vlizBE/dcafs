@@ -342,8 +342,8 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				}
 			}
 		}
-		if( line.contains("{") && !pairs.isEmpty()){
-			Logger.error("Found a {, this means couldn't parse a section of "+line);
+		if( line.toLowerCase().matches(".*[{][drfi]:.*") && !pairs.isEmpty()){
+			Logger.warn("Found a {*:*}, might mean parsing a section of "+line+" failed");
 		}
 		return line;
 	}
