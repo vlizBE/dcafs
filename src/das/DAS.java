@@ -665,6 +665,7 @@ public class DAS implements DeadThreadListener {
 
         // Matrix
         if( matrixClient != null ){
+            Logger.info("Trying to login to matrix");
             matrixClient.login();
         }
 

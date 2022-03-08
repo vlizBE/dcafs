@@ -128,6 +128,7 @@ public class MatrixClient implements Writable, Commandable {
 
         asyncPOST( login, json, res -> {
                                     if( res.statusCode()==200 ) {
+                                        Logger.info("Logged into the Matrix network");
                                         JSONObject j = new JSONObject(res.body());
                                         accessToken = j.getString("access_token");
                                         deviceID = j.getString("device_id");
@@ -199,34 +200,37 @@ public class MatrixClient implements Writable, Commandable {
         try {
             String url = server+sync +"?access_token="+accessToken+"&timeout=10000&filter=1&set_presence=online";
             var request = HttpRequest.newBuilder(new URI(url+(since.isEmpty()?"":("&since="+since))));
-
-            httpClient.sendAsync( request.build(), HttpResponse.BodyHandlers.ofString())
-                    .thenApply( res -> {
-                        var body = new JSONObject(res.body());
-                        if( res.statusCode()==200 ){
-                            since = body.getString("next_batch");
-                            if( !first ) {
-                                try {
-                                    var b = body.getJSONObject("device_one_time_keys_count");
-                                    if (b != null) {
-                                        if (b.getInt("signed_curve25519") == 0) {
-                                            //  keyClaim();
+            try {
+                httpClient.sendAsync(request.build(), HttpResponse.BodyHandlers.ofString())
+                        .thenApply(res -> {
+                            var body = new JSONObject(res.body());
+                            if (res.statusCode() == 200) {
+                                since = body.getString("next_batch");
+                                if (!first) {
+                                    try {
+                                        var b = body.getJSONObject("device_one_time_keys_count");
+                                        if (b != null) {
+                                            if (b.getInt("signed_curve25519") == 0) {
+                                                //  keyClaim();
+                                            }
                                         }
+                                        getRoomEvents(body);
+                                    } catch (org.json.JSONException e) {
+                                        Logger.error("Matrix -> Json error: " + e.getMessage());
                                     }
-                                    getRoomEvents(body);
-                                } catch (org.json.JSONException e) {
-                                    System.err.println(e);
                                 }
+                                executorService.execute(() -> sync(false));
+                                return true;
                             }
-                            executorService.execute( ()->sync(false));
-                            return true;
-                        }
-                        processError(res);
-                        executorService.execute( ()->sync(false));
-                        return false;
-                    });
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
+                            executorService.execute(() -> sync(false));
+                            processError(res);
+                            return false;
+                        });
+            }catch(IllegalArgumentException e){
+                Logger.error("matrix -> "+e.getMessage());
+            }
+        } catch ( Exception e ) {
+            Logger.error(e);
         }
     }
     public void requestRoomInvite( String room ){
@@ -247,6 +251,7 @@ public class MatrixClient implements Writable, Commandable {
      * @param room
      */
     public void joinRoom( RoomSetup room, Writable wr ){
+
         asyncPOST( rooms+room.url()+"/join",new JSONObject().put("reason","Feel like it"),
                 res -> {
                     var body = new JSONObject(res.body());
@@ -260,6 +265,7 @@ public class MatrixClient implements Writable, Commandable {
                         }
                         return true;
                     }
+                    Logger.error("Failed to join the room.");
                     if( wr!=null)
                         wr.writeLine("Failed to join "+room.id() +" because " +res.body() );
                     processError(res);
@@ -289,7 +295,7 @@ public class MatrixClient implements Writable, Commandable {
             String eventID = event.getString("event_id");
             String from = event.getString("sender");
             confirmRead( originRoom, eventID); // Confirm received
-
+            Logger.info("Processing event");
             if( from.equalsIgnoreCase(userID)){
                 continue;
             }
@@ -520,6 +526,7 @@ public class MatrixClient implements Writable, Commandable {
             Logger.error("matrix -> " + body.getString("error"));
             switch (error) {
                 case "You are not invited to this room.":
+                    Logger.error("Not allowed to join this room, invite only.");
                     //requestRoomInvite(room); break;
                 case "You don't have permission to knock":
                     break;
@@ -769,6 +776,9 @@ public class MatrixClient implements Writable, Commandable {
                 f.addChild("macro",cmds[2]).attr("key",cmds[1]);
                 macros.put(cmds[1],cmds[2]);
                 return "Macro added to xml";
+            case "sync":
+                sync(false);
+                return "Initiated sync";
         }
         return null;
     }
