@@ -6,10 +6,10 @@ import io.forward.MathForward;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.json.JSONObject;
 import org.json.JSONTokener;
+import org.json.XML;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.data.DataProviding;
-import util.math.MathFab;
 import util.tools.FileTools;
 import util.tools.Tools;
 import util.xml.XMLtools;
@@ -54,6 +54,8 @@ public class MatrixClient implements Writable, Commandable {
     public static String push = client+"pushers";
     public static String addPush =push+"/set";
 
+    HashMap<String,RoomSetup> roomSetups = new HashMap<>();
+
     String userName;
     String pw;
     String server;
@@ -62,7 +64,6 @@ public class MatrixClient implements Writable, Commandable {
     String accessToken = "";
     String deviceID = "";
     String userID;
-    HashMap<String,String> roomPresence = new HashMap<>();
     HashMap<String,String> files = new HashMap<>();
     String since = "";
     HttpClient httpClient;
@@ -101,8 +102,19 @@ public class MatrixClient implements Writable, Commandable {
         }
         server += server.endsWith("/")?"":"/";
         pw = XMLtools.getStringAttribute(matrixEle,"pass","");
-        for( var rm : XMLtools.getChildElements(matrixEle,"room") )
-            roomPresence.put( rm.getAttribute("id"),rm.getTextContent() );
+
+        for( var rm : XMLtools.getChildElements(matrixEle,"room") ){
+            var rs = RoomSetup.withID( rm.getAttribute("id") )
+                    .url( XMLtools.getChildValueByTag(rm,"url",""))
+                    .welcome(XMLtools.getChildValueByTag(rm,"welcome",""))
+                    .entering(XMLtools.getChildValueByTag(rm,"entering",""))
+                    .leaving(XMLtools.getChildValueByTag(rm,"leaving",""))
+                    .welcome(XMLtools.getChildValueByTag(rm,"greet",""));
+            for( var macro : XMLtools.getChildElements(rm,"macro")){
+                rs.macro(macro.getAttribute("id"),macro.getTextContent());
+            }
+            roomSetups.put(rs.id(),rs);
+        }
     }
     public void login(){
 
@@ -122,8 +134,8 @@ public class MatrixClient implements Writable, Commandable {
 
                                         setupFilter();
                                         sync(true);
-                                        for( var room : roomPresence.values())
-                                            joinRoom(room);
+                                        for( var room : roomSetups.values())
+                                            joinRoom(room,null);
                                         return true;
                                     }
                                     processError(res);
@@ -234,16 +246,22 @@ public class MatrixClient implements Writable, Commandable {
      * Join a specific room (by room id not alias) and make it the active one
      * @param room
      */
-    public void joinRoom( String room ){
-        asyncPOST( rooms+room+"/join",new JSONObject().put("reason","Feel like it"),
+    public void joinRoom( RoomSetup room, Writable wr ){
+        asyncPOST( rooms+room.url()+"/join",new JSONObject().put("reason","Feel like it"),
                 res -> {
                     var body = new JSONObject(res.body());
                     if( res.statusCode()==200 ){
                         // Joined the room
                         Logger.info("matrix -> Joined the room! " + body.getString("room_id"));
-                        sendMessage(room, "Have no fear, "+userName+" is here! :)");
+                        if( !room.entering().isEmpty())
+                            sendMessage(room.url(), room.entering().replace("{user}",userName) );
+                        if( wr!=null) {
+                            wr.writeLine("Joined " + room.id() + " at " + room.url());
+                        }
                         return true;
                     }
+                    if( wr!=null)
+                        wr.writeLine("Failed to join "+room.id() +" because " +res.body() );
                     processError(res);
                     return false;
                 });
@@ -366,10 +384,10 @@ public class MatrixClient implements Writable, Commandable {
 
     /**
      * Upload a file to the repository (doesn't work yet)
-     * @param room The room to use
+     * @param roomid The room to use (id)
      * @param path The path to the file
      */
-    public void sendFile( String room, Path path){
+    public void sendFile( String roomid, Path path, Writable wr){
 
         try{
             String url=server+media + "upload";
@@ -386,9 +404,14 @@ public class MatrixClient implements Writable, Commandable {
                         if( res.statusCode()==200){
                             System.out.println(res.body());
                             String mxc = new JSONObject(res.body()).getString("content_uri"); // Got a link... now post it?
-                            shareFile(room,mxc,path.getFileName().toString());
+                            if( !roomid.isEmpty())
+                                shareFile(roomSetups.get(roomid).url(),mxc,path.getFileName().toString());
+                            if( wr!=null)
+                                wr.writeLine("File upload succeeded");
                             return true;
                         }
+                        if( wr!=null)
+                            wr.writeLine("File upload failed: "+res.body());
                         processError(res);
                         return false;
                     } );
@@ -666,25 +689,70 @@ public class MatrixClient implements Writable, Commandable {
     public String replyToCommand(String[] request, Writable wr, boolean html) {
         var cmd = request[1].substring(0,request[1].indexOf(","));
         var rest = request[1].substring(request[1].indexOf(",")+1);
+        var spl = rest.split(",");
+        Path p;
         StringJoiner j = new StringJoiner("\r\n");
         switch(cmd){
             case "?":
+                j.add( "matrix:leave,room -> Leave the given room");
+                j.add( "matrix:rooms -> Give a list of all the joined rooms");
+                j.add( "matrix:join,roomid,url -> Join a room with the given id and url");
+                j.add( "matrix:rooms -> Give a list of all the joined rooms");
+                j.add( "matrix:say,roomid,message -> Send the given message to the room");
 
-                j.add("matrix:send,roomid,message -> Send the given message to the room");
+                j.add( "matrix:files -> Get a listing of all the file links received");
+                j.add( "matrix:down,fileid -> Download the file with the given id to the downloads map");
+                j.add( "matrix:upload,path -> Upload a file with the given path");
+                j.add( "matrix:share,roomid,path -> Upload a file with the given path and share the link in the room");
+
+
                 return j.toString();
-            case "send":
+
+            case "rooms":
+                roomSetups.forEach( (key,val) -> j.add(key +" -> "+val.url()));
+                return j.toString();
+            case "join":
+                if( spl.length<2 )
+                    return "Not enough arguments: matrix:join,roomid,url";
+                var rs = RoomSetup.withID(spl[0]).url(spl[1]);
+                roomSetups.put(spl[0],rs);
+                joinRoom(rs, wr);
+                return "Tried to join room";
+            case "say":
                 String to = rest.substring(0,rest.indexOf(","));
                 String what = rest.substring(to.length()+1);
-                sendMessage(roomPresence.get(to),what);
+                sendMessage(roomSetups.get(to).url(),what);
                 break;
-            case "rooms":
-                roomPresence.forEach( (key,val) -> j.add(key +" -> "+val));
-                return j.toString();
+
+            /* *************** Files ********************* */
             case "files":
                 j.setEmptyValue("No files yet");
                 files.keySet().forEach( k -> j.add(k));
                 break;
-            case "get":
+            case "share":
+                if( spl.length<2 )
+                    return "Not enough arguments: matrix:share,roomid,filepath";
+
+                p = Path.of(spl[1]);
+                if( Files.exists( p ) ) {
+                    if( roomSetups.containsKey(spl[0])){
+                        sendFile( roomSetups.get(spl[0]).url(), p,wr);
+                        return "File shared with "+spl[0];
+                    }
+                    return "No such room (yet): "+spl[0];
+                }else{
+                    return "No such file rest";
+                }
+
+            case "upload":
+                p = Path.of(rest);
+                if( Files.exists( p ) ) {
+                    sendFile("", p,wr);
+                    return "File uploaded.";
+                }else{
+                    return "No such file rest";
+                }
+            case "down":
                 if( downloadFile(rest,wr) ){
                     return "Valid file chosen";
                 }else{
@@ -699,10 +767,5 @@ public class MatrixClient implements Writable, Commandable {
         return false;
     }
 
-    private class RoomSetup {
-        String localId="";
-        String globalID="";
-        ArrayList<Writable> targets;
 
-    }
 }
