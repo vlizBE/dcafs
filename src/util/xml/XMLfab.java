@@ -1,6 +1,7 @@
 package util.xml;
 
 import org.tinylog.Logger;
+import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -92,7 +93,11 @@ public class XMLfab {
         if( root == null ){
             Logger.error("No such root "+parentTag+ " in "+xmlPath.getFileName());
             root = xmlDoc.createElement(parentTag);
-            xmlDoc.appendChild(root);
+            try {
+                xmlDoc.appendChild(root);
+            }catch( DOMException e ){
+                Logger.error( "Issue while trying to add "+parentTag+" to "+xmlDoc.toString()+":"+e.getMessage());
+            }
         }
         this.last=root;
     }
