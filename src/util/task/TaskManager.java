@@ -18,6 +18,7 @@ import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
+import worker.Datagram;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -654,7 +655,7 @@ public class TaskManager implements CollectorFuture {
 						splits[0] += ";";
 					}
 				}
-				if (task.value.startsWith("cmd") || ( task.out != OUTPUT.MQTT && task.out != OUTPUT.STREAM && task.out != OUTPUT.MANAGER && task.out != OUTPUT.TELNET)) {
+				if (task.value.startsWith("cmd") || ( task.out != OUTPUT.MQTT && task.out != OUTPUT.STREAM && task.out != OUTPUT.MANAGER && task.out != OUTPUT.TELNET && task.out != OUTPUT.MATRIX)) {
 					// This is not supposed to be used when the output is a channel or no reqdata defined
 
 					if (commandPool == null) {
@@ -662,17 +663,18 @@ public class TaskManager implements CollectorFuture {
 						return false;
 					}
 					if (task.out == OUTPUT.SYSTEM || task.out == OUTPUT.STREAM ) {
-						response = commandPool.createResponse(fill.replace("cmd:", "").replace("\r\n", ""), null, true);
+						var d = Datagram.build(fill.replace("cmd:", "").replace("\r\n", ""));
+						response = commandPool.createResponse( d, true);
 					} else if( task.out == OUTPUT.I2C ){
-						response = commandPool.createResponse( "i2c:"+task.value, null, true);
+						response = commandPool.createResponse( Datagram.build("i2c:"+task.value), true);
 					}else if( task.out == OUTPUT.EMAIL ){
 						if( splits.length==2){
 							String it = splits[1]+(splits[1].contains(":")?"":"html");
-							response = commandPool.createResponse( it, null, true);
+							response = commandPool.createResponse( Datagram.build(it), true);
 						}
 					}else if( task.out != OUTPUT.LOG ){
 						String it = splits[splits.length - 1]+(splits[splits.length - 1].contains(":")?"":"html");
-						response = commandPool.createResponse( it, null, true);
+						response = commandPool.createResponse( Datagram.build(it), true);
 					}
 					if (response.toLowerCase().startsWith("unknown")) {
 						response = splits[splits.length - 1];
@@ -772,6 +774,15 @@ public class TaskManager implements CollectorFuture {
 						}
 						*/
 						break;
+					case MATRIX:
+						String resp="";
+						if( task.value.startsWith(""+'"')){
+							resp = task.value.replace(""+'"',"");
+						}else {
+							resp = commandPool.createResponse(Datagram.system(task.value), false, true);
+						}
+						commandPool.createResponse(Datagram.system("matrix:say,"+task.stream+","+resp),false,true);
+						break;
 					case LOG: // Write the value in either status.log or error.log (and maybe send an email)
 						String[] spl = task.value.split(";");
 					
@@ -798,7 +809,7 @@ public class TaskManager implements CollectorFuture {
 						break;
 					case TELNET:
 						var send = dp.parseRTline(task.value,"");
-						commandPool.createResponse("telnet:broadcast,"+task.outputRef+","+send,null,false);
+						commandPool.createResponse(Datagram.build("telnet:broadcast,"+task.outputRef+","+send),false);
 						break;
 					case MANAGER:
 						String[] com = task.value.split(":");

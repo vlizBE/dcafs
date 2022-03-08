@@ -5,6 +5,7 @@ import io.email.EmailSending;
 import io.email.EmailWorker;
 import io.hardware.gpio.InterruptPins;
 import io.hardware.i2c.I2CWorker;
+import io.matrix.MatrixClient;
 import io.mqtt.MqttPool;
 import io.sms.DigiWorker;
 import io.stream.StreamManager;
@@ -85,6 +86,8 @@ public class DAS implements DeadThreadListener {
     BlockingQueue<Datagram> dQueue = new LinkedBlockingQueue<>();
     boolean rebootOnShutDown = false;
     private InterruptPins isrs;
+
+    private MatrixClient matrixClient;
 
     /* Threading */
     EventLoopGroup nettyGroup = new NioEventLoopGroup(); // Single group so telnet,trans and streampool can share it
@@ -228,6 +231,15 @@ public class DAS implements DeadThreadListener {
                 isrs = new InterruptPins(dQueue,settingsPath);
             }else{
                 Logger.info("No gpios defined in settings.xml");
+            }
+
+            /* Matrix */
+            if( XMLfab.hasRoot(settingsPath,"dcafs","settings","matrix") ){
+                Logger.info("Reading Matrix info from settings.xml");
+                matrixClient = new MatrixClient( dQueue, rtvals, settingsPath );
+                addCommandable("matrix",matrixClient);
+            }else{
+                Logger.info("No matrix settings");
             }
             commandPool.setDAS(this);
         }
@@ -651,6 +663,11 @@ public class DAS implements DeadThreadListener {
         if (taskManagerPool != null)
             taskManagerPool.reloadAll();
 
+        // Matrix
+        if( matrixClient != null ){
+            matrixClient.login();
+        }
+
         Logger.debug("Finished");
     }
 
@@ -845,6 +862,9 @@ public class DAS implements DeadThreadListener {
                 Logger.error("Unknown thread");
                 break;
         }
+    }
+    public void test(){
+
     }
     public static void main(String[] args) {
 

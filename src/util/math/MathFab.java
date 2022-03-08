@@ -193,6 +193,9 @@ public class MathFab {
 
         return bd.doubleValue();
     }
+    public BigDecimal solve(  ) throws ArrayIndexOutOfBoundsException{
+        return solve(new BigDecimal[0]);
+    }
 
     /**
      * Solve the build equation using the given bigdecimals

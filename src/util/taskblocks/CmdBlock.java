@@ -2,6 +2,7 @@ package util.taskblocks;
 
 import das.CommandPool;
 import io.Writable;
+import worker.Datagram;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -36,14 +37,14 @@ public class CmdBlock extends AbstractBlock{
         return true;
     }
     public boolean addData( String data ){
-        var ans = cmdPool.createResponse(data, null, false);
+        var ans = cmdPool.createResponse(Datagram.build(data), false);
         next.forEach( n -> n.addData(ans));
         return true;
     }
     @Override
     public boolean start(TaskBlock starter) {
         for( var cmd : cmds) {
-           var ans = cmdPool.createResponse(cmd, null, false);
+           var ans = cmdPool.createResponse(Datagram.build(cmd), false);
            next.forEach( n -> n.addData(ans));
         }
         doNext();
