@@ -12,6 +12,7 @@ import org.w3c.dom.Element;
 import util.data.DataProviding;
 import util.tools.FileTools;
 import util.tools.Tools;
+import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
@@ -72,20 +73,21 @@ public class MatrixClient implements Writable, Commandable {
     MathForward math;
     boolean downloadAll=true;
     Path dlFolder=Path.of("downloads");
-    DataProviding dp;
+    Path settingsFile;
+    private HashMap<String,String> macros = new HashMap<>();
 
-
-    public MatrixClient(BlockingQueue<Datagram> dQueue, DataProviding dp, Element matrixEle){
+    public MatrixClient(BlockingQueue<Datagram> dQueue, DataProviding dp, Path settingsFile ){
         this.dQueue=dQueue;
+        this.settingsFile=settingsFile;
         math = new MathForward(null,dp);
-        readFromXML(matrixEle);
+        readFromXML();
     }
 
     /**
-     * Reads the settings from an xml element
-     * @param matrixEle The element containing the matrix info
+     * Reads the settings from the globalb settingsfile
      */
-    public void readFromXML(Element matrixEle ){
+    private void readFromXML( ){
+        var matrixEle = XMLfab.withRoot(settingsFile,"dcafs","settings","matrix").getCurrentElement();
         String u = XMLtools.getStringAttribute(matrixEle,"user","");
         if( u.isEmpty()) {
             Logger.error("Invalid matrix user");
@@ -97,22 +99,20 @@ public class MatrixClient implements Writable, Commandable {
             server = "http://"+u.substring(u.indexOf(":")+1);
         }else{
             userName=u;
-            server = XMLtools.getStringAttribute(matrixEle,"host","");
+            server = XMLtools.getStringAttribute(matrixEle,"homeserver","");
             userID="@"+u+":"+server.substring(7,server.length()-1);
         }
         server += server.endsWith("/")?"":"/";
         pw = XMLtools.getStringAttribute(matrixEle,"pass","");
+        for( var macro : XMLtools.getChildElements(matrixEle,"macro"))
+            macros.put(macro.getAttribute("id"),macro.getTextContent());
 
         for( var rm : XMLtools.getChildElements(matrixEle,"room") ){
             var rs = RoomSetup.withID( rm.getAttribute("id") )
                     .url( XMLtools.getChildValueByTag(rm,"url",""))
-                    .welcome(XMLtools.getChildValueByTag(rm,"welcome",""))
                     .entering(XMLtools.getChildValueByTag(rm,"entering",""))
                     .leaving(XMLtools.getChildValueByTag(rm,"leaving",""))
                     .welcome(XMLtools.getChildValueByTag(rm,"greet",""));
-            for( var macro : XMLtools.getChildElements(rm,"macro")){
-                rs.macro(macro.getAttribute("id"),macro.getTextContent());
-            }
             roomSetups.put(rs.id(),rs);
         }
     }
@@ -687,12 +687,12 @@ public class MatrixClient implements Writable, Commandable {
 
     @Override
     public String replyToCommand(String[] request, Writable wr, boolean html) {
-        var cmd = request[1].substring(0,request[1].indexOf(","));
-        var rest = request[1].substring(request[1].indexOf(",")+1);
-        var spl = rest.split(",");
+
+        var cmds = request[1].split(",");
+
         Path p;
         StringJoiner j = new StringJoiner("\r\n");
-        switch(cmd){
+        switch(cmds[0]){
             case "?":
                 j.add( "matrix:leave,room -> Leave the given room");
                 j.add( "matrix:rooms -> Give a list of all the joined rooms");
@@ -704,24 +704,23 @@ public class MatrixClient implements Writable, Commandable {
                 j.add( "matrix:down,fileid -> Download the file with the given id to the downloads map");
                 j.add( "matrix:upload,path -> Upload a file with the given path");
                 j.add( "matrix:share,roomid,path -> Upload a file with the given path and share the link in the room");
-
-
                 return j.toString();
 
             case "rooms":
                 roomSetups.forEach( (key,val) -> j.add(key +" -> "+val.url()));
                 return j.toString();
             case "join":
-                if( spl.length<2 )
+                if( cmds.length<3 )
                     return "Not enough arguments: matrix:join,roomid,url";
-                var rs = RoomSetup.withID(spl[0]).url(spl[1]);
-                roomSetups.put(spl[0],rs);
+                var rs = RoomSetup.withID(cmds[1]).url(cmds[2]);
+                roomSetups.put(cmds[1],rs);
                 joinRoom(rs, wr);
                 return "Tried to join room";
-            case "say":
-                String to = rest.substring(0,rest.indexOf(","));
-                String what = rest.substring(to.length()+1);
-                sendMessage(roomSetups.get(to).url(),what);
+            case "say": case "txt":
+                if( cmds.length<3 )
+                    return "Not enough arguments: matrix:say,roomid,message";
+                String what = request[2].substring(5+cmds[1].length());
+                sendMessage(roomSetups.get(cmds[1]).url(),what);
                 break;
 
             /* *************** Files ********************* */
@@ -730,22 +729,24 @@ public class MatrixClient implements Writable, Commandable {
                 files.keySet().forEach( k -> j.add(k));
                 break;
             case "share":
-                if( spl.length<2 )
+                if( cmds.length<3 )
                     return "Not enough arguments: matrix:share,roomid,filepath";
 
-                p = Path.of(spl[1]);
+                p = Path.of(cmds[2]);
                 if( Files.exists( p ) ) {
-                    if( roomSetups.containsKey(spl[0])){
-                        sendFile( roomSetups.get(spl[0]).url(), p,wr);
-                        return "File shared with "+spl[0];
+                    if( roomSetups.containsKey(cmds[1])){
+                        sendFile( roomSetups.get(cmds[1]).url(), p,wr);
+                        return "File shared with "+cmds[1];
                     }
-                    return "No such room (yet): "+spl[0];
+                    return "No such room (yet): "+cmds[1];
                 }else{
                     return "No such file rest";
                 }
 
             case "upload":
-                p = Path.of(rest);
+                if( cmds.length<2 )
+                    return "Not enough arguments: matrix:upload,filepath";
+                p = Path.of(cmds[1]);
                 if( Files.exists( p ) ) {
                     sendFile("", p,wr);
                     return "File uploaded.";
@@ -753,11 +754,30 @@ public class MatrixClient implements Writable, Commandable {
                     return "No such file rest";
                 }
             case "down":
-                if( downloadFile(rest,wr) ){
+                if( cmds.length<2 )
+                    return "Not enough arguments: matrix:down,filepath";
+                if( downloadFile(cmds[1],wr) ){
                     return "Valid file chosen";
                 }else{
                     return "No such file";
                 }
+            case "addblank":
+                var fab = XMLfab.withRoot(settingsFile,"dcafs","settings","matrix");
+                fab.attr("user").attr("pass").attr("homeserver")
+                        .addChild("room").attr("id").down()
+                        .addChild("url")
+                        .addChild("entering","Hello!")
+                        .addChild("leaving","Bye :(")
+                        .addChild("greet","Welcome");
+                return "Blank matrix node added";
+            case "addmacro":
+                if( cmds.length<2 )
+                    return "Not enough arguments: matrix:addmacro,key,value";
+                var f = XMLfab.withRoot(settingsFile,"dcafs","settings","matrix");
+                f.addChild("macro",cmds[2]).attr("key",cmds[1]);
+                macros.put(cmds[1],cmds[2]);
+                return "Macro added to xml";
+
         }
         return null;
     }

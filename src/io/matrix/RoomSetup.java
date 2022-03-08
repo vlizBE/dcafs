@@ -13,7 +13,7 @@ public class RoomSetup {
     private String hello="";
     private String welcome="";
     private String bye="";
-    private HashMap<String,String> macros = new HashMap<>();
+
     private String alias="";
     
     public RoomSetup(String localId){
@@ -47,9 +47,4 @@ public class RoomSetup {
         this.bye=bye;
         return this;
     }
-    public RoomSetup macro( String id, String cmd){
-        macros.put(id,cmd);
-        return this;
-    }
-
 }
