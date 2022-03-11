@@ -2,9 +2,10 @@ package das;
 
 import io.Writable;
 import io.telnet.TelnetCodes;
-import util.tools.FileTools;
+import org.tinylog.Logger;
 import util.tools.Tools;
 import util.xml.XMLfab;
+import util.xml.XMLtools;
 
 import java.nio.file.Path;
 import java.util.*;
@@ -39,9 +40,12 @@ public class Configurator {
         this.wr=wr;
 
         target = XMLfab.withRoot(settings,"dcafs");
-        Optional<Path> configOpt = FileTools.getPathToResource(this.getClass(),"config.xml");
-        configOpt.ifPresent(path -> ref = XMLfab.withRoot(path, "dcafs"));
-
+        var doc = XMLtools.readResourceXML(this.getClass(),"/config.xml");
+        if(doc.isEmpty()){
+            Logger.error("Config.xml not found");
+            return;
+        }
+        ref = XMLfab.withRoot(doc.get(),"dcafs");
         lvls.put(0, addChildren(false,true));
 
         // Colors
