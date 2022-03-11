@@ -20,10 +20,7 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -58,7 +55,29 @@ public class XMLtools {
 		}
 		return doc;
 	}
+	public static Optional<Document> readResourceXML( Class origin,String path ){
+		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+		Document doc=null;
 
+		if( !path.startsWith("/"))
+			path = "/"+path;
+
+		InputStream is = origin.getResourceAsStream(path);
+		if( is==null){
+			Logger.error("File not found "+path);
+			return Optional.empty();
+		}
+		try {
+			doc = dbf.newDocumentBuilder().parse(is);
+			doc.getDocumentElement().normalize();
+		} catch (ParserConfigurationException | SAXException | IOException | java.nio.file.InvalidPathException e) {
+			Logger.error("Error occurred while reading " + path, true);
+			Logger.error(e);
+		}
+		return Optional.of(doc);
+	}
 	/**
 	 * Create an empty xml file and return the Document to fill in
 	 * 
