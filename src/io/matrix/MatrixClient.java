@@ -84,7 +84,7 @@ public class MatrixClient implements Writable, Commandable {
     }
 
     /**
-     * Reads the settings from the globalb settingsfile
+     * Reads the settings from the global settingsfile
      */
     private void readFromXML( ){
         var matrixEle = XMLfab.withRoot(settingsFile,"dcafs","settings","matrix").getCurrentElement();
@@ -128,7 +128,7 @@ public class MatrixClient implements Writable, Commandable {
 
         asyncPOST( login, json, res -> {
                                     if( res.statusCode()==200 ) {
-                                        Logger.info("Logged into the Matrix network");
+                                        Logger.info("matrix -> Logged into the Matrix network");
                                         JSONObject j = new JSONObject(res.body());
                                         accessToken = j.getString("access_token");
                                         deviceID = j.getString("device_id");
@@ -139,6 +139,7 @@ public class MatrixClient implements Writable, Commandable {
                                             joinRoom(room,null);
                                         return true;
                                     }
+                                    Logger.warn("matrix -> Failed to login to the matrix network");
                                     processError(res);
                                     return false;
                                 }
