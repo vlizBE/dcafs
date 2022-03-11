@@ -126,11 +126,11 @@ public class ValMap {
             String value = pair.getTextContent();
 
             if( value != null ) {
-                if (XMLtools.hasChildByTag(pair, "text")) { // convert number to text
+                if (XMLtools.hasChildByTag(pair, "rttext")) {
                     map.addTextMapping(key, value);
                     map.setRtVal(key, XMLtools.getChildValueByTag(pair,"rtval",""));
 
-                    for (var rtt : XMLtools.getChildElements(pair, "text")) {
+                    for (var rtt : XMLtools.getChildElements(pair, "rttext")) {
                         String rttext = XMLtools.getStringAttribute(rtt, "ref", "");
                         if (!rttext.isEmpty()) {
                             map.setRtText(key, rttext);
