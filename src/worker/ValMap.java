@@ -14,6 +14,7 @@ public class ValMap {
 
     String split="";
     String multi="";
+    String group="";
     HashMap<String,Mapping> mapping = new HashMap<>();
     String id="";
 
@@ -34,7 +35,9 @@ public class ValMap {
     public String getID(){
         return id;
     }
-
+    public void setGroup(String group){
+        this.group=group;
+    }
     public void apply(String data, DataProviding dp){
         if( multi.isEmpty()) {
             processSingle(data,dp);
@@ -87,10 +90,11 @@ public class ValMap {
         }
         return readsplit;
     }
-    private void addRTValMap(String key,String rtval){
+    private void addNumericMapping(String key, String rtval){
+        rtval = (group.isEmpty()?"":group+"_")+rtval;
         mapping.put(key, new Mapping(rtval, ""));
     }
-    private void addRTTextMap(String key,String rttext){
+    private void addTextMapping(String key, String rttext){
         mapping.put(key, new Mapping("", rttext));
     }
     private void addText(String id, String key, String value){
@@ -114,6 +118,7 @@ public class ValMap {
         var map = ValMap.create(vmEle.getAttribute("id"));
         map.setDelimiter(vmEle.getAttribute("split"));
         map.setMultiSplit(vmEle.getAttribute("delimiter"));
+        map.setGroup( vmEle.getAttribute("group") );
         Logger.info("Building ValMap "+map.id+" which splits on "+map.getReadableSplit());
 
         for( var pair : XMLtools.getChildElements(vmEle,"map")){
@@ -121,11 +126,11 @@ public class ValMap {
             String value = pair.getTextContent();
 
             if( value != null ) {
-                if (XMLtools.hasChildByTag(pair, "rttext")) {
-                    map.addRTTextMap(key, value);
+                if (XMLtools.hasChildByTag(pair, "text")) { // convert number to text
+                    map.addTextMapping(key, value);
                     map.setRtVal(key, XMLtools.getChildValueByTag(pair,"rtval",""));
 
-                    for (var rtt : XMLtools.getChildElements(pair, "rttext")) {
+                    for (var rtt : XMLtools.getChildElements(pair, "text")) {
                         String rttext = XMLtools.getStringAttribute(rtt, "ref", "");
                         if (!rttext.isEmpty()) {
                             map.setRtText(key, rttext);
@@ -138,7 +143,7 @@ public class ValMap {
                         }
                     }
                 }else if(!value.isEmpty()){
-                    map.addRTValMap(key, value);
+                    map.addNumericMapping(key, value);
                     Logger.info(map.id + " -> Adding single " + key + " > " + value);
                 }else{
                     Logger.error(map.id+" -> Bad element");
