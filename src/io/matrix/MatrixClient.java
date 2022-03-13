@@ -345,10 +345,9 @@ public class MatrixClient implements Writable, Commandable {
                             files.put(body,content.getString("url"));
                             Logger.info("Received link to "+body+" at "+files.get(body));
                             if( downloadAll )
-                                downloadFile(body,null);
+                                downloadFile(body,null,originRoom);
                             break;
                         case "m.text":
-                          //  Logger.info("Received message in "+originRoom+" from "+from+": "+body);
                             if( body.startsWith("das") || body.startsWith(userName)){ // check if message for us
                                 body = body.replaceAll("("+userName+"|das):?","").trim();
                                 var d = Datagram.build(body).label("matrix").origin(originRoom +"|"+ from).writable(this);
@@ -383,7 +382,7 @@ public class MatrixClient implements Writable, Commandable {
                                     res=res.substring(0,res.indexOf("."));
                                 if( split.length==1 || split[1].equalsIgnoreCase("?")){
                                     if( res.length()==1 ){
-                                        sendMessage( originRoom,"No offense but... *"+userName+" raises "+res+" fingers. *");
+                                        sendMessage( originRoom,"No offense but... *raises "+res+" fingers*");
                                     }else{
                                         sendMessage( originRoom, ori +" = "+res );
                                     }
@@ -410,7 +409,7 @@ public class MatrixClient implements Writable, Commandable {
     }
 
     /**
-     * Send a confirmation of receival of the given event
+     * Send a confirmation on receiving an event
      * @param room The room the event occurred in
      * @param eventID The id of the event
      */
@@ -426,7 +425,7 @@ public class MatrixClient implements Writable, Commandable {
     }
 
     /**
-     * Upload a file to the repository (doesn't work yet)
+     * Upload a file to the repository
      * @param roomid The room to use (id)
      * @param path The path to the file
      */
@@ -462,7 +461,7 @@ public class MatrixClient implements Writable, Commandable {
             e.printStackTrace();
         }
     }
-    public boolean downloadFile( String id, Writable wr ){
+    public boolean downloadFile( String id, Writable wr, String originRoom ){
         String mxc=files.get(id);
         if( mxc.isEmpty())
             return false;
@@ -473,24 +472,28 @@ public class MatrixClient implements Writable, Commandable {
                 url+="?access_token="+accessToken;
             var request = HttpRequest.newBuilder(new URI(url))
                     .build();
-            var p = dlFolder.resolve(id);
+            var p = settingsFile.getParent().resolve(dlFolder).resolve(id);
             Files.createDirectories(p.getParent());
             httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofFile(p))
                     .thenApply( res -> {
                         if( res.statusCode()==200){
                             if( wr!=null)
                                 wr.writeLine("File received");
+                            if( !originRoom.isEmpty())
+                                sendMessage(originRoom,"Downloaded the file.");
                         }else{
                             Logger.error(res);
                             if( wr!=null)
                                 wr.writeLine("File download failed with code: "+res.statusCode());
+                            if( !originRoom.isEmpty())
+                                sendMessage(originRoom,"Download failed.");
                         }
                         return 0;
                     } );
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (URISyntaxException | IOException e) {
+            Logger.error(e);
+            if( !originRoom.isEmpty())
+                sendMessage(originRoom,"Error when trying to download the file.");
         }
         return true;
     }
@@ -522,6 +525,9 @@ public class MatrixClient implements Writable, Commandable {
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
+    }
+    public void broadcast( String message ){
+        roomSetups.forEach( (k,v) -> sendMessage(v.url(),message) );
     }
     public void sendMessage( String room, String message ){
 
@@ -817,7 +823,7 @@ public class MatrixClient implements Writable, Commandable {
             case "down":
                 if( cmds.length<2 )
                     return "Not enough arguments: matrix:down,filepath";
-                if( downloadFile(cmds[1],wr) ){
+                if( downloadFile(cmds[1],wr,"") ){
                     return "Valid file chosen";
                 }else{
                     return "No such file";
