@@ -328,11 +328,41 @@ public class FileTools {
         ClassLoader classLoader = origin.getClassLoader();
         URL resource = classLoader.getResource(filename);
         if (resource == null) {
-            throw new IllegalArgumentException("file not found! " + filename);
+            throw new IllegalArgumentException("File not found! " + filename);
         } else {
             try {
+                Logger.info("Found "+resource.toURI());
                 return Optional.of(Path.of(resource.toURI()));
             } catch (URISyntaxException e) {
+                Logger.error(e);
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Read a resource (aka file inside the jar) ascii file
+     * @param origin The origin class
+     * @param filename The name of the file, / will be prepended if not provided
+     * @return And empty optional if something went wrong or containing the string if it worked
+     */
+    public static Optional<String> getResourceStringContent(Class origin, String filename){
+
+        if( !filename.startsWith("/"))
+            filename = "/"+filename;
+
+        InputStream is = origin.getResourceAsStream(filename);
+
+        if (is == null) {
+            Logger.error( filename+ " not found");
+        } else {
+            try (InputStreamReader streamReader =
+                         new InputStreamReader(is, StandardCharsets.UTF_8);
+                 BufferedReader reader = new BufferedReader(streamReader)) {
+                var j = new StringJoiner(System.lineSeparator());
+                reader.lines().forEach(j::add);
+                return Optional.of(j.toString());
+            } catch (IOException e) {
                 Logger.error(e);
             }
         }

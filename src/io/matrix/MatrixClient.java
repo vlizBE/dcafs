@@ -6,9 +6,7 @@ import io.forward.MathForward;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.json.JSONObject;
 import org.json.JSONTokener;
-import org.json.XML;
 import org.tinylog.Logger;
-import org.w3c.dom.Element;
 import util.data.DataProviding;
 import util.tools.FileTools;
 import util.tools.Tools;
@@ -25,14 +23,13 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Optional;
 import java.util.StringJoiner;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 public class MatrixClient implements Writable, Commandable {
 
@@ -61,7 +58,7 @@ public class MatrixClient implements Writable, Commandable {
     String pw;
     String server;
 
-    ExecutorService executorService = Executors.newFixedThreadPool(2);
+    ScheduledExecutorService executorService = Executors.newScheduledThreadPool(2);
     String accessToken = "";
     String deviceID = "";
     String userID;
@@ -75,6 +72,12 @@ public class MatrixClient implements Writable, Commandable {
     Path dlFolder=Path.of("downloads");
     Path settingsFile;
     private HashMap<String,String> macros = new HashMap<>();
+
+    static final long RETRY_MAX = 90;
+    static final long RETRY_STEP = 15;
+    private long retry=RETRY_STEP;
+
+    private ArrayList<String[]> failedMessages = new ArrayList<>();
 
     public MatrixClient(BlockingQueue<Datagram> dQueue, DataProviding dp, Path settingsFile ){
         this.dQueue=dQueue;
@@ -128,6 +131,7 @@ public class MatrixClient implements Writable, Commandable {
 
         asyncPOST( login, json, res -> {
                                     if( res.statusCode()==200 ) {
+                                        retry=RETRY_STEP;
                                         Logger.info("matrix -> Logged into the Matrix network");
                                         JSONObject j = new JSONObject(res.body());
                                         accessToken = j.getString("access_token");
@@ -143,6 +147,12 @@ public class MatrixClient implements Writable, Commandable {
                                     processError(res);
                                     return false;
                                 }
+                                , fail -> {
+                                        Logger.error(fail.getMessage());
+                                        executorService.schedule( ()->login(),retry,TimeUnit.SECONDS);
+                                        retry += retry <RETRY_MAX?RETRY_STEP:0;
+                                        return false;
+                                 }
                     );
     }
 
@@ -151,6 +161,7 @@ public class MatrixClient implements Writable, Commandable {
                             res -> {
                                     var body=new JSONObject(res.body());
                                     if( res.statusCode()!=200){
+                                        retry=RETRY_STEP;
                                         Logger.warn("matrix -> No such filter yet.");
                                         if( body.getString("error").equalsIgnoreCase("No such filter")) {
                                             setupFilter();
@@ -165,9 +176,17 @@ public class MatrixClient implements Writable, Commandable {
 
     private void setupFilter(){
 
-        Optional<Path> filterOpt = FileTools.getPathToResource(this.getClass(),"filter.json");
-        JSONObject js = new JSONObject(new JSONTokener(FileTools.readTxtFileToString(filterOpt.get().toString())));
-        asyncPOST( user+userID+"/filter",js, res -> {
+        Optional<String> filterOpt;
+        try{
+            filterOpt = FileTools.getResourceStringContent(this.getClass(),"/filter.json");
+        }catch( /*IllegalArgumentException |*/ Exception e ){
+            Logger.error(e);
+            return;
+        }
+        if( filterOpt.isEmpty()){
+            Logger.error("Couldn't find the filter resource");
+        }
+        asyncPOST( user+userID+"/filter",new JSONObject(new JSONTokener(filterOpt.get())), res -> {
                                 if( res.statusCode() != 200 ) {
                                     Logger.info("matrix -> Filters applied");
                                     return true;
@@ -206,6 +225,16 @@ public class MatrixClient implements Writable, Commandable {
                         .thenApply(res -> {
                             var body = new JSONObject(res.body());
                             if (res.statusCode() == 200) {
+                                if( !failedMessages.isEmpty() ){
+                                    int delay=0;
+                                    while( !failedMessages.isEmpty()){
+                                        var fm = failedMessages.remove(0);
+                                        executorService.schedule(()->sendMessage(fm[0],fm[1]),delay,TimeUnit.SECONDS);
+                                        delay++;
+                                    }
+
+                                }
+                                retry=RETRY_STEP;
                                 since = body.getString("next_batch");
                                 if (!first) {
                                     try {
@@ -225,6 +254,11 @@ public class MatrixClient implements Writable, Commandable {
                             }
                             executorService.execute(() -> sync(false));
                             processError(res);
+                            return false;
+                        }).exceptionally( t -> {
+                            Logger.error(t.getMessage());
+                            executorService.schedule(()->sync(false),retry,TimeUnit.SECONDS);
+                            retry += retry <RETRY_MAX?RETRY_STEP:0;
                             return false;
                         });
             }catch(IllegalArgumentException e){
@@ -276,7 +310,6 @@ public class MatrixClient implements Writable, Commandable {
 
     public void getRoomEvents( JSONObject js){
 
-        //System.out.println(js);
         var join = getJSONSubObject(js,"rooms","join");
         if( join.isEmpty())
             return;
@@ -296,12 +329,13 @@ public class MatrixClient implements Writable, Commandable {
             String eventID = event.getString("event_id");
             String from = event.getString("sender");
             confirmRead( originRoom, eventID); // Confirm received
-            Logger.info("Processing event");
+
             if( from.equalsIgnoreCase(userID)){
                 continue;
             }
             switch( event.getString("type")){
                 case "m.room.redaction":
+                    Logger.info("Ignored redaction event");
                     break;
                 case "m.room.message":
                     var content = event.getJSONObject("content");
@@ -311,10 +345,9 @@ public class MatrixClient implements Writable, Commandable {
                             files.put(body,content.getString("url"));
                             Logger.info("Received link to "+body+" at "+files.get(body));
                             if( downloadAll )
-                                downloadFile(body,null);
+                                downloadFile(body,null,originRoom);
                             break;
                         case "m.text":
-                          //  Logger.info("Received message in "+originRoom+" from "+from+": "+body);
                             if( body.startsWith("das") || body.startsWith(userName)){ // check if message for us
                                 body = body.replaceAll("("+userName+"|das):?","").trim();
                                 var d = Datagram.build(body).label("matrix").origin(originRoom +"|"+ from).writable(this);
@@ -349,7 +382,7 @@ public class MatrixClient implements Writable, Commandable {
                                     res=res.substring(0,res.indexOf("."));
                                 if( split.length==1 || split[1].equalsIgnoreCase("?")){
                                     if( res.length()==1 ){
-                                        sendMessage( originRoom,"No offense but... *"+userName+" raises "+res+" fingers. *");
+                                        sendMessage( originRoom,"No offense but... *raises "+res+" fingers*");
                                     }else{
                                         sendMessage( originRoom, ori +" = "+res );
                                     }
@@ -357,6 +390,8 @@ public class MatrixClient implements Writable, Commandable {
                                     math.addNumericalRef(split[1],dbl);
                                     sendMessage( originRoom, "Stored "+res +" as "+split[1] );
                                 }
+                            }else if( body.equalsIgnoreCase("hello?")) {
+                                sendMessage( originRoom,"Yes?");
                             }else{
                                 Logger.info(from +" said "+body+" to someone/everyone");
                             }
@@ -366,12 +401,15 @@ public class MatrixClient implements Writable, Commandable {
                             break;
                     }
                     break;
+                default:
+                    Logger.info("matrix -> Ignored:"+event.getString("type"));
+                    break;
             }
         }
     }
 
     /**
-     * Send a confirmation of receival of the given event
+     * Send a confirmation on receiving an event
      * @param room The room the event occurred in
      * @param eventID The id of the event
      */
@@ -387,7 +425,7 @@ public class MatrixClient implements Writable, Commandable {
     }
 
     /**
-     * Upload a file to the repository (doesn't work yet)
+     * Upload a file to the repository
      * @param roomid The room to use (id)
      * @param path The path to the file
      */
@@ -423,7 +461,7 @@ public class MatrixClient implements Writable, Commandable {
             e.printStackTrace();
         }
     }
-    public boolean downloadFile( String id, Writable wr ){
+    public boolean downloadFile( String id, Writable wr, String originRoom ){
         String mxc=files.get(id);
         if( mxc.isEmpty())
             return false;
@@ -434,24 +472,28 @@ public class MatrixClient implements Writable, Commandable {
                 url+="?access_token="+accessToken;
             var request = HttpRequest.newBuilder(new URI(url))
                     .build();
-            var p = dlFolder.resolve(id);
+            var p = settingsFile.getParent().resolve(dlFolder).resolve(id);
             Files.createDirectories(p.getParent());
             httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofFile(p))
                     .thenApply( res -> {
                         if( res.statusCode()==200){
                             if( wr!=null)
                                 wr.writeLine("File received");
+                            if( !originRoom.isEmpty())
+                                sendMessage(originRoom,"Downloaded the file.");
                         }else{
                             Logger.error(res);
                             if( wr!=null)
                                 wr.writeLine("File download failed with code: "+res.statusCode());
+                            if( !originRoom.isEmpty())
+                                sendMessage(originRoom,"Download failed.");
                         }
                         return 0;
                     } );
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (URISyntaxException | IOException e) {
+            Logger.error(e);
+            if( !originRoom.isEmpty())
+                sendMessage(originRoom,"Error when trying to download the file.");
         }
         return true;
     }
@@ -484,6 +526,9 @@ public class MatrixClient implements Writable, Commandable {
             e.printStackTrace();
         }
     }
+    public void broadcast( String message ){
+        roomSetups.forEach( (k,v) -> sendMessage(v.url(),message) );
+    }
     public void sendMessage( String room, String message ){
 
         String nohtml = message.replace("<br>","\r\n");
@@ -491,7 +536,7 @@ public class MatrixClient implements Writable, Commandable {
 
         if(message.toLowerCase().startsWith("unknown command"))
             message = "Either you made a typo or i lost that cmd... ;)";
-
+        final String mes = message;
         var j = new JSONObject().put("body",message).put("msgtype", "m.text");
 
             j = new JSONObject().put("body",nohtml)
@@ -509,6 +554,11 @@ public class MatrixClient implements Writable, Commandable {
                         if( res.statusCode()!=200 ){
                             processError(res);
                         }
+                        return 0;
+                    })
+                    .exceptionally( t -> {
+                        Logger.error(t.getMessage());
+                        failedMessages.add( new String[]{room,mes} );
                         return 0;
                     });
 
@@ -566,17 +616,34 @@ public class MatrixClient implements Writable, Commandable {
         }
     }
     private void asyncPOST( String url, JSONObject data, CompletionEvent onCompletion){
+        asyncPOST(url,data,onCompletion,fail -> {
+                                            Logger.error(fail.getMessage());
+                                            executorService.schedule( ()->login(),retry,TimeUnit.SECONDS);
+                                            Logger.info("Retrying in "+retry+"s");
+                                            retry += retry <RETRY_MAX?RETRY_STEP:0;
+                                            return false;
+                                        });
+    }
+    private void asyncPOST( String url, JSONObject data, CompletionEvent onCompletion, FailureEvent onFailure){
+        if( data==null){
+            Logger.error("matrix -> No valid data received to send to "+url);
+            return;
+        }
         try{
             url=server+url;
             if( !accessToken.isEmpty())
                 url+="?access_token="+accessToken;
             var request = HttpRequest.newBuilder(new URI(url))
                     .POST(HttpRequest.BodyPublishers.ofString(data.toString()))
+                    .timeout(Duration.ofSeconds(30))
                     .build();
+
             httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply( res -> onCompletion.onCompletion(res) );
+                    .orTimeout(10, TimeUnit.SECONDS)
+                    .thenApply( res -> onCompletion.onCompletion(res) )
+                    .exceptionally( t -> onFailure.onFailure(t) );
         } catch (URISyntaxException e) {
-            e.printStackTrace();
+            Logger.error(e);
         }
     }
     private Optional<JSONObject> getJSONSubObject(JSONObject obj, String... keys){
@@ -756,7 +823,7 @@ public class MatrixClient implements Writable, Commandable {
             case "down":
                 if( cmds.length<2 )
                     return "Not enough arguments: matrix:down,filepath";
-                if( downloadFile(cmds[1],wr) ){
+                if( downloadFile(cmds[1],wr,"") ){
                     return "Valid file chosen";
                 }else{
                     return "No such file";
