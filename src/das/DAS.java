@@ -216,14 +216,7 @@ public class DAS implements DeadThreadListener {
             );
 
             /* File Collectors */
-            FileCollector.createFromXml( XMLfab.getRootChildren(settingsDoc,"dcafs","collectors","file"), nettyGroup,dQueue, workPath ).forEach(
-                    fc ->
-                    {
-                        Logger.info("Created "+fc.getID());
-                        fileCollectors.put(fc.getID(),fc);
-                        dQueue.add( Datagram.system(fc.getSource()).writable(fc) ); // request the data
-                    }
-            );
+            loadFileCollectors();
 
             /* GPIO's */
             if( XMLfab.hasRoot(settingsPath,"dcafs","gpio") ){
@@ -511,7 +504,6 @@ public class DAS implements DeadThreadListener {
      */
     public void addTelnetServer() {
 
-
         if( bootOK) {
             telnet = new TelnetServer(this.getDataQueue(), settingsPath, nettyGroup);
             addCommandable(telnet, "telnet", "nb");
@@ -538,6 +530,21 @@ public class DAS implements DeadThreadListener {
         addCommandable("i2c",i2cWorker);
     }
     /* *************************************** F I L E C O L L E C T O R ************************************ */
+
+    /**
+     * Load all file collectors from the settings.xml
+     */
+    public void loadFileCollectors(){
+        fileCollectors.clear();
+        FileCollector.createFromXml( XMLfab.getRootChildren(settingsDoc,"dcafs","collectors","file"), nettyGroup,dQueue, workPath ).forEach(
+                fc ->
+                {
+                    Logger.info("Created "+fc.getID());
+                    fileCollectors.put(fc.getID(),fc);
+                    dQueue.add( Datagram.system(fc.getSource()).writable(fc) ); // request the data
+                }
+        );
+    }
     public Optional<FileCollector> getFileCollector(String id){
         return Optional.ofNullable(fileCollectors.get(id));
     }
