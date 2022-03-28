@@ -467,7 +467,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 										} else {
 											for( String id : gen.getDBID() ){
 												if (!queryWriting.buildInsert(id, gen.getTable(), dp, gen.macro)) {
-													Logger.error("Failed to write record for " + gen.getTable());
+													Logger.error("Failed to write record for " + gen.getTable()+ " in "+id);
 												}
 											}
 										}
