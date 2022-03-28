@@ -37,8 +37,7 @@ public class MathUtils {
     public static List<String[]> splitExpression(String expression, int indexOffset, boolean debug ){
         var result = new ArrayList<String[]>();
 
-        expression=expression.replace("+-","-"); // adding a negative number is the same as subtracting it
-
+        expression=expression.replace("+-","-"); // adding a negative number is the same as subtractingression=expression.replace("-o","-1*o");
         var parts = extractParts(expression);
 
         if( debug ){
@@ -377,6 +376,7 @@ public class MathUtils {
         final int i1;
         final BigDecimal bd2 ;
         final int i2;
+        boolean i1Neg=false;
 
         try{
             if(NumberUtils.isCreatable(first) ) {
