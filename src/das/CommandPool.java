@@ -971,7 +971,8 @@ public class CommandPool {
 				join.add(TelnetCodes.TEXT_MAGENTA+"The FileCollectors store data from sources in files with custom headers and optional rollover");
 				join.add(TelnetCodes.TEXT_GREEN+"Create/Alter the FileCollector"+TelnetCodes.TEXT_YELLOW)
 					 .add("   fc:addnew,id,src,path -> Create a blank filecollector with given id, source and path")
-					 .add("   fc:alter,id,param:value -> Alter some elements, options: eol, path, sizelimit, src");
+					 .add("   fc:alter,id,param:value -> Alter some elements, options: eol, path, sizelimit, src")
+				     .add("   fc:reload -> Reload the file collectors");
 				join.add(TelnetCodes.TEXT_GREEN+"Add optional parts"+TelnetCodes.TEXT_YELLOW)
 					 .add("   fc:addrollover,id,count,unit,format,zip? -> Add rollover (unit options:min,hour,day,week,month,year")
 					 .add("   fc:addcmd,id,trigger:cmd -> Add a triggered command, triggers: maxsize,idle,rollover")
@@ -1088,9 +1089,10 @@ public class CommandPool {
 						return "No such param "+alter[0];
 				}
 			case "reload":
-				if( cmds.length!=2)
-					return "Not enough arguments given: fc:reload,id";
-
+				if( cmds.length==1) {
+					das.loadFileCollectors();
+					return "Reloaded all filecollectors";
+				}
 				fco = das.getFileCollector("fc:"+cmds[1]);
 
 				if( fco.isEmpty() )
