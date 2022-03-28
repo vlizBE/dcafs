@@ -138,8 +138,31 @@ public class SerialStream extends BaseStream implements Writable {
         }
     }
     protected void processListenerEvent( byte[] data ){
-        Logger.info("ReceivedEvent: "+new String(data));
-        Logger.tag("RAW").warn(priority + "\t" + label + "\t" + new String(data));
+        Logger.info("ReceivedEvent: "+Tools.fromBytesToHexString(data));
+        Logger.tag("RAW").warn(priority + "\t" + label + "\t" + Tools.fromBytesToHexString(data));
+
+        if( !targets.isEmpty() ){
+            try {
+                targets.forEach(dt -> {
+                    eventLoopGroup.submit(()-> {
+                        try {
+                            if( dt.getID().contains("telnet")) {
+                                dt.writeString(Tools.fromBytesToHexString(data));
+                            }else{
+                                dt.writeBytes(data);
+                            }
+                        } catch (Exception e) {
+                            Logger.error(id + " -> Something bad while writeLine to " + dt.getID());
+                            Logger.error(e);
+                        }
+                    });
+                });
+                targets.removeIf(wr -> !wr.isConnectionValid()); // Clear inactive
+            }catch(Exception e){
+                Logger.error(id+" -> Something bad in serialport");
+                Logger.error(e);
+            }
+        }
     }
     protected void processMessageEvent(byte[] data){
         String message = new String(data).replace(eol, "");
@@ -322,7 +345,7 @@ public class SerialStream extends BaseStream implements Writable {
      */
     @Override
     public synchronized boolean writeBytes(byte[] data) {
-        return write(data);
+         return write(data);
     }
     /**
      * Sending a hexidecimal value
