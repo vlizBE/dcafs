@@ -283,6 +283,9 @@ public class PathForward {
             join.add( " gives the data from "+stepsForward.get(stepsForward.size()-1).getID() );
         return join.toString();
     }
+    public ArrayList<Writable> getTargets(){
+        return targets;
+    }
     public void addTarget(Writable wr){
         if( stepsForward == null )
             return;
