@@ -736,7 +736,7 @@ public class DAS implements DeadThreadListener {
                 }
             }
         }
-        if( i2cWorker !=null ){
+        if( i2cWorker !=null && i2cWorker.getDeviceCount()!=0){
             if (html) {
                 b.append("<br><b>Devices</b><br>");
             } else {

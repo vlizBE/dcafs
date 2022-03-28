@@ -130,7 +130,9 @@ public class I2CWorker implements Commandable {
         }
         return join.toString();
     }
-
+    public int getDeviceCount(){
+        return devices.size();
+    }
     /**
      * Add the writable to the list of targets of the device
      * @param id The id of the device
