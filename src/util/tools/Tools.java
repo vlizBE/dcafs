@@ -461,11 +461,12 @@ public class Tools {
         return fromDecToHexString(decimal, 1);
     }
 
-    public static int[] fromBytesToUnsigned(byte[] bytes) {
-        int[] ints = new int[bytes.length];
-        for (int a = 0; a < bytes.length; a++) {
+    public static int[] fromBytesToUnsigned(byte[] bytes, int offset, int length) {
+        int[] ints = new int[length];
+        length+=offset;
+        for (int a = offset; a < bytes.length && a < length; a++) {
             int x = bytes[a];
-            ints[a] = x < 0 ? x + 256 : x;
+            ints[a-offset] = x < 0 ? x + 256 : x;
         }
         return ints;
     }

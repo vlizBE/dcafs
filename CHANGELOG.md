@@ -13,12 +13,25 @@ From 0.5.0 onwards, this should be better documented...
 - Trans command >>>signin:id to claim to be a certain id and pass the ip test
 
 ## Work in progress
+* Rework the TaskManager ( > 1.0.0 )
+* Zigbee support ( > 1.0.0 )
+
 ## 0.11.x
 - Goals for this version series (removed when they are done)
   * Code cleanup
     * Bring javadoc up to date
-  * Rework the TaskManager (might be trigger for 0.12.0)
-## 0.11.9 (work in progress)
+
+## 0.11.10 (work in progress)
+
+## 0.11.9 (28/03/22)
+
+Mainly added initial matrix & modbus tcp support.
+
+### Matrix support
+- Added basic support for joining a room and sending messages.
+- TaskManager can send either text or the result of a command
+- Can respond to message in the form of a math formula (1+1=?) and use earlier defined variables for it
+- Can upload and download files
 
 ### Modbus TCP
 - Added support for receiving 03 function response
@@ -33,7 +46,13 @@ So 5m interval will start at the next x0 or x5 minutes (0 seconds etc).
 ### Commands
 - Altered admin:reboot, attempts to reboot the linux system using bash or sh.
 - admin:errors now checks the daily file instead of the link because that is only valid for non-removable media
-- 
+- fc:reload added do reload all filecollectors at once
+
+### Other Fixes
+- pf:reload should no longer break file collectors (writables weren't kept)
+- parseRTline that checks for references to vals was to broad, use regex now.
+- Various small fixes to the modbus tcp code
+
 ## 0.11.8 (11/02/2022)
 
 - Updated jSerialComm dependency to 2.9.0

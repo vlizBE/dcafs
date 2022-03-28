@@ -1074,7 +1074,11 @@ public class ForwardPool implements Commandable {
     public void readPathsFromXML(){
         XMLfab.getRootChildren(settingsPath,"dcafs","paths","path").forEach(
                 pathEle -> {
+
                     PathForward path = new PathForward(dataProviding,dQueue,nettyGroup);
+                    var p = paths.get(path.getID());
+                    if( p!=null)
+                        p.getTargets().forEach( path::addTarget );
                     path.setWorkPath(settingsPath.getParent());
                     path.readFromXML(pathEle,settingsPath.getParent().toString());
                     paths.put(path.getID(),path);
