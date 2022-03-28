@@ -414,6 +414,8 @@ public class Tools {
 
         for (int a = 0; a < numbers.length; a++) {
             try {
+                if( numbers[a].isEmpty()) // skip empty strings
+                    continue;
                 if (base == 16) {
                     numbers[a] = numbers[a].replace("0x", "");
                 } else if (base == 2) {
