@@ -53,7 +53,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 
 	/* Other */
 	private final BlockingQueue<Datagram> dQueue; // Used to issue triggered cmd's
-	private ArrayList<String> errorLog = new ArrayList<>();
+	private final ArrayList<String> errorLog = new ArrayList<>();
 
 	boolean readingXML=false;
 
@@ -512,7 +512,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 	}
 	public String getErrrorLog(){
 		var j = String.join("\r\n",errorLog);
-		errorLog.clear();;
+		errorLog.clear();
 		return j;
 	}
 	/**

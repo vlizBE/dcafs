@@ -39,26 +39,26 @@ import java.util.concurrent.*;
  */
 public class StreamManager implements StreamListener, CollectorFuture, Commandable {
 
-	private BlockingQueue<Datagram> dQueue; // Holds the data for the DataWorker
+	private final BlockingQueue<Datagram> dQueue; // Holds the data for the DataWorker
 
 	// Netty 
 	private Bootstrap bootstrapTCP;		// Bootstrap for TCP connections
 	private Bootstrap bootstrapUDP;	  	// Bootstrap for UDP connections
 
-	private EventLoopGroup eventLoopGroup;	// Event loop used by the netty stuff
+	private final EventLoopGroup eventLoopGroup;	// Event loop used by the netty stuff
 
-	private IssuePool issues;			// Handles the issues/problems that arise
+	private final IssuePool issues;			// Handles the issues/problems that arise
 	private int retryDelayMax = 30;			// The minimum time between reconnection attempts
 	private int retryDelayIncrement = 5;	// How much the delay increases between attempts
 
-	private HashMap<String, ConfirmCollector> confirmCollectors = new HashMap<>();
+	private final HashMap<String, ConfirmCollector> confirmCollectors = new HashMap<>();
 
-	private LinkedHashMap<String,BaseStream> streams = new LinkedHashMap<>();
+	private final LinkedHashMap<String,BaseStream> streams = new LinkedHashMap<>();
 
 	private Path settingsPath = Path.of("settings.xml"); // Path to the xml file
 	private boolean debug = false; // Whether or not in debug mode, gives more feedback
 
-	private ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(); // scheduler for the connection attempts
+	private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(); // scheduler for the connection attempts
 	private static final String XML_PARENT_TAG="streams";
 	private static final String XML_CHILD_TAG="stream";
 

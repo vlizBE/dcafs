@@ -28,7 +28,7 @@ public class PathForward {
     private String src = "";
 
     private final ArrayList<Writable> targets = new ArrayList<>();
-    private ArrayList<CustomSrc> customs=new ArrayList<>();
+    private final ArrayList<CustomSrc> customs=new ArrayList<>();
 
     DataProviding dataProviding;
     BlockingQueue<Datagram> dQueue;
@@ -76,7 +76,7 @@ public class PathForward {
         }
 
         id = XMLtools.getStringAttribute(pathEle,"id","");
-        String delimiter = XMLtools.getStringAttribute(pathEle,"delimiter","");;
+        String delimiter = XMLtools.getStringAttribute(pathEle,"delimiter","");
         this.src = XMLtools.getStringAttribute(pathEle,"src","");
 
         var importPath = XMLtools.getPathAttribute(pathEle,"import",workpath);
@@ -386,7 +386,8 @@ public class PathForward {
                 stop();
 
             switch( srcType){
-                case CMD:; targets.forEach( t->dQueue.add( Datagram.build(data).label("telnet").writable(t))); break;
+                case CMD:
+                    targets.forEach(t->dQueue.add( Datagram.build(data).label("telnet").writable(t))); break;
                 case RTVALS:
                     var write = dataProviding.parseRTline(data,"-999");
                     targets.forEach( x -> x.writeLine(write));

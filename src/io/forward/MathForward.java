@@ -657,7 +657,7 @@ public class MathForward extends AbstractForward {
         for( var p : Tools.parseKeyValue(exp,true) ) {
             if (p.length == 2) { // The pair should be an actual pair
                 boolean ok=false; // will be used at the end to check if ok
-                if ( p[0].toLowerCase().equals("d")||p[0].equals("double")||p[0].toLowerCase().equals("f")||p[0].equals("flag") ) { // if the left of the pair is a double
+                if ( p[0].equalsIgnoreCase("d")||p[0].equals("double")|| p[0].equalsIgnoreCase("f")||p[0].equals("flag") ) { // if the left of the pair is a double
                     for( int pos=0;pos<referencedNums.size();pos++ ){ // go through the known doubleVals
                         var d = referencedNums.get(pos);
                         if( d.id().equalsIgnoreCase(p[1])) { // If a match is found

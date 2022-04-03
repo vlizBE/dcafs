@@ -33,13 +33,13 @@ public class FileCollector extends AbstractCollector{
     ScheduledExecutorService scheduler;
 
     BlockingQueue<String> dataBuffer = new LinkedBlockingQueue<>();
-    private BlockingQueue<Datagram> dQueue;                        // Queue to send commands
+    private final BlockingQueue<Datagram> dQueue;                        // Queue to send commands
 
     private int byteCount=0;
     private Path destPath;
     private String lineSeparator = System.lineSeparator();
-    private ArrayList<String> headers= new ArrayList<>();
-    private Charset charSet = StandardCharsets.UTF_8;
+    private final ArrayList<String> headers= new ArrayList<>();
+    private final Charset charSet = StandardCharsets.UTF_8;
     private int batchSize = 10;
 
     /* Variables related to the rollover */
@@ -58,7 +58,8 @@ public class FileCollector extends AbstractCollector{
     long firstData=-1;
 
     /* Triggers */
-    enum TRIGGERS {IDLE, ROLLOVER, MAXSIZE };
+    enum TRIGGERS {IDLE, ROLLOVER, MAXSIZE }
+
     ArrayList<TriggeredCommand> trigCmds = new ArrayList<>();
 
     /* Size limit */
@@ -452,7 +453,7 @@ public class FileCollector extends AbstractCollector{
                             break;
                     }
                     if( renamed !=null) {
-                        Logger.debug("Renamed to "+renamed.toString());
+                        Logger.debug("Renamed to "+ renamed);
                         Files.move(dest, dest.resolveSibling(renamed)); // rename the file
                         String path ;
                         if (zipMaxBytes) { // if wanted, zip it

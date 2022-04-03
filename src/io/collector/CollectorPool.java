@@ -28,9 +28,9 @@ public class CollectorPool implements Commandable, CollectorFuture {
     private final HashMap<String, MathCollector> mathCollectors = new HashMap<>(); // Math collectors
 
     private final Path workPath;
-    private BlockingQueue<Datagram> dQueue;
-    private EventLoopGroup nettyGroup;
-    private DataProviding dp;
+    private final BlockingQueue<Datagram> dQueue;
+    private final EventLoopGroup nettyGroup;
+    private final DataProviding dp;
 
     public CollectorPool(Path workpath, BlockingQueue<Datagram> dQueue, EventLoopGroup nettyGroup, DataProviding dp ){
         this.workPath=workpath;
@@ -109,7 +109,7 @@ public class CollectorPool implements Commandable, CollectorFuture {
         String[] cmds = request[1].split(",");
         StringJoiner join = new StringJoiner(html?"<br":"\r\n");
 
-        Optional<FileCollector>  fco = Optional.ofNullable(fileCollectors.get(cmds[1])); ;
+        Optional<FileCollector>  fco = Optional.ofNullable(fileCollectors.get(cmds[1]));
         var settingsPath = workPath.resolve("settings.xml");
         switch( cmds[0] ) {
             case "?":
