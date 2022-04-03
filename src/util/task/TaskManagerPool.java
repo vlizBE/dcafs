@@ -1,7 +1,6 @@
 package util.task;
 
 import io.email.EmailSending;
-import io.sms.SMSSending;
 import io.stream.StreamManager;
 import io.Writable;
 import das.CommandPool;
@@ -29,7 +28,6 @@ public class TaskManagerPool implements Commandable {
     CommandPool cmdReq;
     StreamManager streamManager;
     EmailSending emailSender;
-    SMSSending smsSender;
 
     static final String UNKNOWN_CMD = "unknown command";
 
@@ -44,9 +42,6 @@ public class TaskManagerPool implements Commandable {
     }
     public void setEmailSending(EmailSending emailSender ){
         this.emailSender=emailSender;
-    }
-    public void setSMSSending(SMSSending smsSending){
-        this.smsSender=smsSending;
     }
     public void readFromXML() {
         var xml = XMLtools.readXML(Path.of(workPath,"settings.xml"));
@@ -68,7 +63,6 @@ public class TaskManagerPool implements Commandable {
         tl.setCommandReq(cmdReq);
         tl.setWorkPath(workPath);
         tl.setEmailSending(emailSender);
-        tl.setSMSSending(smsSender);
 
         tasklists.put(id,tl);
         return tl;

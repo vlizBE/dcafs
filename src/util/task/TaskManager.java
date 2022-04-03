@@ -3,7 +3,6 @@ package util.task;
 import util.data.DataProviding;
 import io.email.Email;
 import io.email.EmailSending;
-import io.sms.SMSSending;
 import io.stream.StreamManager;
 import io.collector.CollectorFuture;
 import das.CommandPool;
@@ -23,10 +22,8 @@ import worker.Datagram;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.time.temporal.TemporalField;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -42,7 +39,6 @@ public class TaskManager implements CollectorFuture {
 
 	/* The different outputs */
 	EmailSending emailer = null;    // Reference to the email send, so emails can be send
-	SMSSending smsSender = null; 	// Reference to the sms queue, so sms's can be send
 	StreamManager streams; 			// Reference to the streampool, so sensors can be talked to
 	DataProviding dp;
 
@@ -89,15 +85,6 @@ public class TaskManager implements CollectorFuture {
 	 */
 	public void setEmailSending(EmailSending emailer) {
 		this.emailer = emailer;
-	}
-
-	/**
-	 * Add the SMS queue to the TaskManager so SMS can be send
-	 * 
-	 * @param smsSender The interface implementation that allows sending sms
-	 */
-	public void setSMSSending(SMSSending smsSender) {
-		this.smsSender = smsSender;
 	}
 
 	/**
@@ -689,14 +676,6 @@ public class TaskManager implements CollectorFuture {
 							FileTools.appendToTxtFile(xmlPath.getParent().resolve(task.outputFile).toString(), response);
 						}
 						break;
-					case SMS: // Send the response in an SMS
-						if (smsSender == null) {
-							Logger.tag(TINY_TAG).error("[" + id + "] Task not executed because no valid smsSender");
-							return false;
-						}
-						String sms = splits[splits.length - 1];
-						smsSender.sendSMS( task.outputRef, sms.length() > 150 ? sms.substring(0, 150) : sms );
-						break;
 					case EMAIL: // Send the response in an email
 						if (emailer == null) {
 							Logger.tag(TINY_TAG).error("[" + id + "] Task not executed because no valid EmailSending");
@@ -757,7 +736,7 @@ public class TaskManager implements CollectorFuture {
 						}
 						break;
 					case MQTT:	
-					/*					
+					/*
 						MqttWorker mqtt = reqData.das.mqttWorkers.get( task.outputRef );
 						String[] tosend = task.txt.split(";");											
 						if (tosend.length == 2){

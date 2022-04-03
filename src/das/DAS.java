@@ -8,7 +8,6 @@ import io.hardware.gpio.InterruptPins;
 import io.hardware.i2c.I2CWorker;
 import io.matrix.MatrixClient;
 import io.mqtt.MqttPool;
-import io.sms.DigiWorker;
 import io.stream.StreamManager;
 import io.forward.ForwardPool;
 import io.stream.tcp.TcpServer;
@@ -58,7 +57,6 @@ public class DAS implements DeadThreadListener {
     /* Workers */
     private EmailWorker emailWorker;
     private LabelWorker labelWorker;
-    private DigiWorker digiWorker;
     private DebugWorker debugWorker;
     private I2CWorker i2cWorker;
 
@@ -178,10 +176,6 @@ public class DAS implements DeadThreadListener {
             /* EmailWorker */
             if (XMLtools.hasElementByTag(settingsDoc, "email") ) {
                 addEmailWorker();
-            }
-            /* DigiWorker */
-            if (XMLtools.hasElementByTag(settingsDoc, "digi") ) {
-                addDigiWorker();
             }
             /* DebugWorker */
             if (DebugWorker.inXML(settingsDoc)) {
@@ -322,9 +316,6 @@ public class DAS implements DeadThreadListener {
             taskManagerPool.setStreamPool(streampool);
         if (emailWorker != null)
             taskManagerPool.setEmailSending(emailWorker.getSender());
-        if (digiWorker != null) {
-            taskManagerPool.setSMSSending(digiWorker);
-        }
         taskManagerPool.readFromXML();
         addCommandable("tm", taskManagerPool);
     }
@@ -461,16 +452,6 @@ public class DAS implements DeadThreadListener {
         return Optional.empty();
     }
 
-    /* *****************************************  D I G I W O R K E R **************************************************/
-    /**
-     * Adds a digiworker, this is a worker talking to a Digi 4g modem via telnet
-     */
-    public void addDigiWorker() {
-        Logger.info("Adding DigiWorker");
-        digiWorker = new DigiWorker(settingsDoc);
-        digiWorker.setEventListener(this);
-        addCommandable("sms",digiWorker);
-    }
     /* *************************************  D E B U G W O R K E R ***********************************************/
     /**
      * Creates the DebugWorker
@@ -607,10 +588,6 @@ public class DAS implements DeadThreadListener {
         if (labelWorker != null) {
             Logger.info("Starting BaseWorker...");
             new Thread(labelWorker, "BaseWorker").start();// Start the thread
-        }
-        if (digiWorker != null) {
-            Logger.info("Starting DigiWorker...");
-            new Thread(digiWorker, "DigiWorker").start();// Start the thread
         }
         if (debug && debugWorker == null) {
             Logger.info("Debug mode but no debugworker created...");
@@ -794,11 +771,6 @@ public class DAS implements DeadThreadListener {
             join.add(emailWorker.getSettings());
             join.add(emailWorker.getEmailBook());
         }
-        if (digiWorker != null) {
-            join.add("\r\n----SMS----");
-            join.add(digiWorker.getServerInfo());
-            join.add(digiWorker.getSMSBook());
-        }
         if (mqttPool !=null) {
             join.add("\r\n----MQTT----");
             join.add(mqttPool.getMqttBrokersInfo());
@@ -821,12 +793,6 @@ public class DAS implements DeadThreadListener {
                 } else {
                     Logger.error("BaseWorker died 50 times, giving up reviving.");
                     rtvals.getIssuePool().addIfNewAndIncrement("fatal:" + thread, thread + " permanently dead.");
-                }
-                break;
-            case "DigiWorker": // done
-                if (digiWorker != null) {
-                    Logger.error("DigiWorker not alive, trying to restart...");
-                    new Thread(digiWorker, "DigiWorker").start();// Start the thread
                 }
                 break;
             default:
