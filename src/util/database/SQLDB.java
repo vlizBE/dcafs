@@ -139,10 +139,7 @@ public class SQLDB extends Database{
                 case MSSQL:	  
                     Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");  
                     break;
-                case MYSQL:   
-                   // Class.forName("com.mysql.cj.jdbc.Driver");
-                   // break;
-                case MARIADB: 
+                case MYSQL: case MARIADB:
                     Class.forName("org.mariadb.jdbc.Driver");                       
                     break;
                 case POSTGRESQL:
@@ -908,7 +905,7 @@ public class SQLDB extends Database{
                                         if( errors>10) {
                                             Logger.error(getID()+" -(db)> 10x SQL Error:"+e.getMessage() );
                                             Logger.error( "Errorcode:" +e.getErrorCode() );
-                                            Logger.error(getID()+" (db)-> "+SQLDB.this.toString());
+                                            Logger.error(getID()+" (db)-> "+SQLDB.this);
                                             ok = false;
                                         }
                                     } catch (Exception e) {

@@ -73,7 +73,7 @@ public abstract class AbstractBlock implements TaskBlock{
 
     @Override
     public void getBlockInfo(StringJoiner join,String offset) {
-        var list = ("-> "+toString()).split("\r\n");
+        var list = ("-> "+this).split("\r\n");
         for( var s:list)
             join.add(offset + s);
         for( var b : next ){
@@ -92,12 +92,10 @@ public abstract class AbstractBlock implements TaskBlock{
         return true;
     }
     public void nextOk(){
-        if( parentBlock!=null )
-            parentBlock.get().nextOk();
+        parentBlock.ifPresent(TaskBlock::nextOk);
     }
     public void nextFailed(TaskBlock failed){
-        if( parentBlock!=null )
-            parentBlock.get().nextFailed(failed);
+        parentBlock.ifPresent(taskBlock -> taskBlock.nextFailed(failed));
     }
 }
 

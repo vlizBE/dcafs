@@ -489,9 +489,8 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 	/* *************************************** C O M M A N D A B L E ********************************************** */
 	@Override
 	public String replyToCommand(String[] request, Writable wr, boolean html) {
-		switch(request[0]) {
-			case "gens": return doGENericS(request,wr,html);
-
+		if ("gens".equals(request[0])) {
+			return doGENericS(request, wr, html);
 		}
 		return "unknown command: "+request[0]+":"+request[1];
 	}

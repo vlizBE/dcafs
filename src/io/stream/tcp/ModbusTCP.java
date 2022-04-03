@@ -90,7 +90,7 @@ public class ModbusTCP extends TcpHandler{
             join.add(origin[data[7]]+reg+":"+(i0*256+i1));
             reg++;
         }
-        Logger.debug("Received "+join.toString());
+        Logger.debug("Received "+join);
         if( !label.equalsIgnoreCase("void")) {
             var dg = Datagram.build(join.toString())
                     .label(label)

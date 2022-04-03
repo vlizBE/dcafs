@@ -785,12 +785,6 @@ public class ForwardPool implements Commandable {
                 }
                 ff=fopt.get();
                 dQueue.add( Datagram.system("stop").writable(ff));
-                /*var oriopt = getStream(cmds[2]);
-                if( oriopt.isEmpty() )
-                    return "No valid ori given";
-                if( getStream(cmds[3]).isEmpty() )
-                    return "No valid new given";
-                oriopt.get().removeTarget(ff.getID());*/
 
                 ff.removeSource("raw:"+cmds[2]);
                 ff.addSource("raw:"+cmds[3]);

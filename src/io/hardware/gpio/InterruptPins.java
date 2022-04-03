@@ -38,11 +38,9 @@ public class InterruptPins implements DeviceEventConsumer<DigitalInputEvent> {
                 case "both": ic=addBoth(pin);break;
                 default: ic =Optional.empty();
             }
-            if( ic.isPresent() ){
-                XMLtools.getChildElements(isr,"cmd").forEach(
-                        cmd -> ic.get().addCmd(cmd.getTextContent())
-                );
-            }
+            ic.ifPresent(interruptCmd -> XMLtools.getChildElements(isr, "cmd").forEach(
+                    cmd -> interruptCmd.addCmd(cmd.getTextContent())
+            ));
         });
     }
     public Optional<InterruptCmd> addFalling(int pinNr ){
@@ -90,7 +88,7 @@ public class InterruptPins implements DeviceEventConsumer<DigitalInputEvent> {
             }
         }
     }
-    private class InterruptCmd {
+    private static class InterruptCmd {
         DigitalInputDevice device;
         ArrayList<String> cmds;
         public InterruptCmd(DigitalInputDevice device){

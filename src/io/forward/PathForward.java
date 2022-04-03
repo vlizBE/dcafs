@@ -60,9 +60,7 @@ public class PathForward {
     }
     public void readFromXML( Element pathEle, String workpath ){
 
-        var oldTargets = new ArrayList<Writable>();
-
-        oldTargets.addAll(targets);
+        var oldTargets = new ArrayList<>(targets);
         targets.clear();
 
         if( customs!=null) { // if any future is active, stop it

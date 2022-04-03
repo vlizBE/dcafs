@@ -149,10 +149,7 @@ public class RtvalCheck {
                     return true;
             }
         }
-        if( type == CHECKTYPE.AND || type==CHECKTYPE.SINGLE)
-            return true;
-
-        return false;
+        return type == CHECKTYPE.AND || type == CHECKTYPE.SINGLE;
     }
 
     public String toString(){

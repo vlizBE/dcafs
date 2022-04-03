@@ -44,7 +44,6 @@ public class FileCollector extends AbstractCollector{
 
     /* Variables related to the rollover */
     private DateTimeFormatter format = null;
-    private String oriFormat="";
     private ScheduledFuture<?> rollOverFuture;
     private TimeTools.RolloverUnit rollUnit = TimeTools.RolloverUnit.NONE;
     private int rollCount = 0;
@@ -86,9 +85,9 @@ public class FileCollector extends AbstractCollector{
         if( byteCount < 10000){
             size=byteCount+"B";
         }else if( byteCount < 1000000){
-            size = Tools.roundDouble(byteCount/1024,1)+"KB";
+            size = Tools.roundDouble(byteCount/1024.0,1)+"KB";
         }else{
-            size = Tools.roundDouble(byteCount/(1024*1024),1)+"MB";
+            size = Tools.roundDouble(byteCount/(1024.0*1024.0),1)+"MB";
         }
         return "Writing to "+getPath()+" buffer containing "+dataBuffer.size()+"/max"+" items for a total of "+size;
     }
@@ -267,7 +266,7 @@ public class FileCollector extends AbstractCollector{
      * @return True if added successfully
      */
     public void addTriggerCommand( TRIGGERS trigger, String cmd ){
-        trigCmds.add( new TriggeredCommand(trigger,cmd) );
+        trigCmds.add(new TriggeredCommand(trigger, cmd));
     }
     /**
      * Set the full path (relative of absolute) to the file
@@ -495,7 +494,6 @@ public class FileCollector extends AbstractCollector{
         }
         this.rollCount=rollCount;
         rollUnit=unit;
-        oriFormat=dateFormat;
         zippedRoll=zip;
 
         format = DateTimeFormatter.ofPattern(dateFormat);
@@ -588,7 +586,7 @@ public class FileCollector extends AbstractCollector{
             }
         }
     }
-    private class TriggeredCommand {
+    private static class TriggeredCommand {
         TRIGGERS trigger;
         String cmd;
 
