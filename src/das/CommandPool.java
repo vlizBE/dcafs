@@ -3,12 +3,10 @@ package das;
 import io.email.Email;
 import io.email.EmailSending;
 import io.email.EmailWorker;
-import com.fazecast.jSerialComm.SerialPort;
 import io.Writable;
 import io.telnet.TelnetCodes;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
-import util.gis.GisTools;
 import util.math.MathUtils;
 import util.tools.FileTools;
 import util.tools.TimeTools;
@@ -19,8 +17,6 @@ import worker.DebugWorker;
 
 import java.io.File;
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -46,9 +42,7 @@ public class CommandPool {
 	private String shutdownReason="";
 	private final BlockingQueue<Datagram> dQueue;
 	/* ******************************  C O N S T R U C T O R *********************************************************/
-	/**
-	 * Constructor requiring a link to the @see RealtimeValues for runtime values
-	 */
+
 	public CommandPool(String workPath, BlockingQueue<Datagram> dQueue ){
 		this.workPath=workPath;
 		this.dQueue=dQueue;
@@ -182,23 +176,25 @@ public class CommandPool {
 
 		result = switch (find) {
 			case "admin" -> doADMIN(split, html);
-			case "checksum" -> doCHECKSUM(split[0]);
-			case "conv" -> doCONVert(split);
+			case "checksum" -> doCHECKSUM(workPath, split[0]);
+
 			case "email" -> doEMAIL(split, wr, html);
 			case "help", "h", "?" -> doHelp(split, html);
-			case "lt" -> doListThread(split);
 			case "read" -> doREAD(split, wr);
+			case "upgrade" -> doUPGRADE(split, wr, html);
 			case "retrieve" -> doRETRIEVE(split, wr, html);
 			case "reqtasks" -> doREQTASKS(split);
 			case "sd" -> doShutDown(split, wr, html);
 			case "st" -> doSTatus(split, html);
-			case "serialports" -> doSERIALPORTS(split, html);
+			case "lt" -> Tools.listThreads(html);
+			case "serialports" -> Tools.getSerialPorts(html);
+			case "conv" -> Tools.convertCoords(split[1].split(";"));
 			case "sleep" -> doSLEEP(split, wr);
-			case "upgrade" -> doUPGRADE(split, wr, html);
 			case "", "stop" -> {
 				stopCommandable.forEach(c -> c.replyToCommand(new String[]{"", ""}, wr, false));
 				yield "Clearing requests";
 			}
+			default -> UNKNOWN_CMD;
 		};
 
 		if( result.startsWith(UNKNOWN_CMD) ){
@@ -267,7 +263,7 @@ public class CommandPool {
 	 * @param request The full command checksum:something
 	 * @return Calculated checksum
 	 */
-	public String doCHECKSUM( String request ){
+	public static String doCHECKSUM( String workPath, String request ){
 		
 		// Check for files with wildcard? 2019-07-24_RAW_0.log.zip
 		StringBuilder b = new StringBuilder();
@@ -412,26 +408,7 @@ public class CommandPool {
 		}
 	}
 	/* *******************************************************************************/
-	/**
-	 * Execute commands associated with serialports on the system
-	 * 
-	 * @param request The full command split on the first :
-	 * @param html Whether to use html for newline etc
-	 * @return Descriptive result of the command, "Unknown command if not recognised
-	 */
-	public String doSERIALPORTS( String[] request, boolean html ){
-		String eol = html ? "<br>" : "\r\n";
-		StringJoiner response = new StringJoiner(eol);
-		response.setEmptyValue("No ports found");
-		if( request[1].equals("?") )
-			return " -> Get a list of available serial ports on the PC running dcafs.";
 
-		response.add("Ports found: ");
-		for( SerialPort p : SerialPort.getCommPorts()) {
-			response.add(p.getSystemPortName());
-		}
-		return response.toString();
-	}
 	/**
 	 * Execute command to shut down dcafs, can be either sd or shutdown or sd:reason
 	 * 
@@ -513,19 +490,7 @@ public class CommandPool {
 		return join.toString();
 	}
 
-	public String doListThread( String[] request ){	
-		if( request[1].equals("?") )
-			return " -> Get a list of the currently active threads";
 
-		StringBuilder response = new StringBuilder();
-		ThreadGroup currentGroup = Thread.currentThread().getThreadGroup();
-        Thread[] lstThreads = new Thread[currentGroup.activeCount()];
-		currentGroup.enumerate(lstThreads);
-		response.append("\r\n");
-		for (Thread lstThread : lstThreads)
-			response.append("Thread ID:").append(lstThread.getId()).append(" = ").append(lstThread.getName()).append("\r\n");
-		return response.toString();   
-	}
 	public String doREAD( String[] request, Writable wr ){
 		dQueue.add( Datagram.build("").writable(wr).label("read:"+request[1]) );
 		return "Request for readable "+request[1]+" from "+wr.getID()+" issued";
@@ -709,46 +674,7 @@ public class CommandPool {
 		return response;       	
 	}
 
-	public String doCONVert( String[] request){
-		if( request[1].equals("?") )
-			return " -> Convert a coordinate in the standard degrees minutes format";		
-		
-		BigDecimal bd60 = BigDecimal.valueOf(60);	            	
-		StringBuilder b = new StringBuilder();
-		String[] items = request[1].split(";");
-		ArrayList<Double> degrees = new ArrayList<>();
-		
-		for( String item : items ){
-			String[] nrs = item.split(" ");		            	
-			if( nrs.length == 1){//meaning degrees!	 		            				            		
-				degrees.add(Tools.parseDouble(nrs[0], 0));		            			            		
-			}else if( nrs.length == 3){//meaning degrees minutes seconds!
-				double degs = Tools.parseDouble(nrs[0], 0);
-				double mins = Tools.parseDouble(nrs[1], 0);
-				double secs = Tools.parseDouble(nrs[2], 0);
-				
-				BigDecimal deg = BigDecimal.valueOf(degs);
-				BigDecimal sec = BigDecimal.valueOf(secs);	            		
-				BigDecimal min = sec.divide(bd60, 7, RoundingMode.HALF_UP).add(BigDecimal.valueOf(mins));
-				deg = deg.add(min.divide(bd60,7, RoundingMode.HALF_UP));
-				degrees.add(deg.doubleValue());
-			}
-		}
-		if( degrees.size()%2 == 0 ){ //meaning an even number of values
-			for( int a=0;a<degrees.size();a+=2){
-				double la = degrees.get(a);
-				double lo = degrees.get(a+1);
-							
-				b.append("Result:").append(la).append(" and ").append(lo).append(" => ").append(GisTools.fromDegrToDegrMin(la, -1, "°")).append(" and ").append(GisTools.fromDegrToDegrMin(lo, -1, "°"));
-				b.append("\r\n");
-			}
-		}else{
-			for( double d : degrees ){
-				b.append("Result: ").append(degrees).append(" --> ").append(GisTools.fromDegrToDegrMin(d, -1, "°")).append("\r\n");
-			}
-		}    				
-		return b.toString();
-	}
+
 	public String doSLEEP( String[] request, Writable wr ){
 		if( request[1].equals("?") || request[1].split(",").length!=2 ){
 			return "sleep:rtc,<time> -> Let the processor sleep for some time using an rtc fe. sleep:1,5m sleep 5min based on rtc1";

@@ -1,6 +1,8 @@
 package util.tools;
 
+import com.fazecast.jSerialComm.SerialPort;
 import org.tinylog.Logger;
+import util.gis.GisTools;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
@@ -707,5 +709,76 @@ public class Tools {
             Logger.error(e.getMessage());
             return "None";
         }
+    }
+    /**
+     * Execute commands associated with serialports on the system
+     *
+     * @param html Whether to use html for newline etc
+     * @return Descriptive result of the command, "Unknown command if not recognised
+     */
+    public static String getSerialPorts( boolean html ){
+        StringJoiner response = new StringJoiner(html ? "<br>" : "\r\n","Ports found: ","");
+        response.setEmptyValue("No ports found");
+
+        Arrays.stream(SerialPort.getCommPorts()).forEach( sp -> response.add( sp.getSystemPortName()));
+        return response.toString();
+    }
+
+    /**
+     * List all the currently active threads
+     * @param html Whether or not it should be html or standard eol
+     * @return
+     */
+    public static String listThreads( boolean html ){
+        StringJoiner join = new StringJoiner(html ? "<br>" : "\r\n");
+        ThreadGroup currentGroup = Thread.currentThread().getThreadGroup();
+        Thread[] lstThreads = new Thread[currentGroup.activeCount()];
+        currentGroup.enumerate(lstThreads);
+
+        Arrays.stream(lstThreads).forEach( lt -> join.add("Thread ID:"+lt.getId()+" = "+lt.getName()) );
+        return join.toString();
+    }
+
+    /**
+     * Converts coords to the deg min.min format
+     * @param coords The coords to convert
+     * @return The result
+     */
+    public static String convertCoords( String[] coords){
+
+        BigDecimal bd60 = BigDecimal.valueOf(60);
+        StringBuilder b = new StringBuilder();
+        ArrayList<Double> degrees = new ArrayList<>();
+
+        for( String item : coords ){
+            String[] nrs = item.split(" ");
+            if( nrs.length == 1){//meaning degrees!
+                degrees.add(Tools.parseDouble(nrs[0], 0));
+            }else if( nrs.length == 3){//meaning degrees minutes seconds!
+                double degs = Tools.parseDouble(nrs[0], 0);
+                double mins = Tools.parseDouble(nrs[1], 0);
+                double secs = Tools.parseDouble(nrs[2], 0);
+
+                BigDecimal deg = BigDecimal.valueOf(degs);
+                BigDecimal sec = BigDecimal.valueOf(secs);
+                BigDecimal min = sec.divide(bd60, 7, RoundingMode.HALF_UP).add(BigDecimal.valueOf(mins));
+                deg = deg.add(min.divide(bd60,7, RoundingMode.HALF_UP));
+                degrees.add(deg.doubleValue());
+            }
+        }
+        if( degrees.size()%2 == 0 ){ //meaning an even number of values
+            for( int a=0;a<degrees.size();a+=2){
+                double la = degrees.get(a);
+                double lo = degrees.get(a+1);
+
+                b.append("Result:").append(la).append(" and ").append(lo).append(" => ").append(GisTools.fromDegrToDegrMin(la, -1, "°")).append(" and ").append(GisTools.fromDegrToDegrMin(lo, -1, "°"));
+                b.append("\r\n");
+            }
+        }else{
+            for( double d : degrees ){
+                b.append("Result: ").append(degrees).append(" --> ").append(GisTools.fromDegrToDegrMin(d, -1, "°")).append("\r\n");
+            }
+        }
+        return b.toString();
     }
 }
