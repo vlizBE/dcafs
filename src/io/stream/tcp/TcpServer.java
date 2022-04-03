@@ -383,10 +383,13 @@ public class TcpServer implements StreamListener, Commandable {
 						return "Altered id to "+value;
 					default: return "Nothing called "+ref;
 				}
-
+			case "trans" :
+				if( cmds.length!=2)
+					return "Not enough arguments, need trans:id";
+				cmds[1]="forward"+cmds[1];
 			case "forward":
 				if( cmds.length==1)
-					return "No enough parameters given for forwarding...";
+					return "No enough parameters given, needs ts:forward,id";
 
 				if( defaults.containsKey(cmds[1]) || hOpt.isPresent() ) {
 					if (!targets.containsKey(cmds[1])) {

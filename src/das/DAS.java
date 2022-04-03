@@ -441,6 +441,7 @@ public class DAS implements DeadThreadListener {
         trans.setDataQueue(dQueue);
 
         addCommandable("ts",trans);
+        addCommandable("trans",trans);
     }
 
     /* **********************************  E M A I L W O R K E R *********************************************/
@@ -469,7 +470,6 @@ public class DAS implements DeadThreadListener {
         digiWorker = new DigiWorker(settingsDoc);
         digiWorker.setEventListener(this);
         addCommandable("sms",digiWorker);
-        commandPool.setSMSSending(digiWorker);
     }
     /* *************************************  D E B U G W O R K E R ***********************************************/
     /**

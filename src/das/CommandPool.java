@@ -4,10 +4,7 @@ import io.email.Email;
 import io.email.EmailSending;
 import io.email.EmailWorker;
 import com.fazecast.jSerialComm.SerialPort;
-import io.sms.SMSSending;
-import io.stream.StreamManager;
 import io.Writable;
-import io.collector.FileCollector;
 import io.telnet.TelnetCodes;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
@@ -45,10 +42,9 @@ public class CommandPool {
 	static final String UNKNOWN_CMD = "unknown command";
 
 	private EmailSending sendEmail = null;
-	private SMSSending sendSMS = null;
 
 	private String shutdownReason="";
-	private BlockingQueue<Datagram> dQueue;
+	private final BlockingQueue<Datagram> dQueue;
 	/* ******************************  C O N S T R U C T O R *********************************************************/
 	/**
 	 * Constructor requiring a link to the @see RealtimeValues for runtime values
@@ -86,17 +82,8 @@ public class CommandPool {
 	 * @param emailWorker A reference to the emailworker
 	 */
 	public void setEmailWorker(EmailWorker emailWorker) {
-
 		this.emailWorker = emailWorker;
 		sendEmail = emailWorker.getSender();
-	}
-
-	/**
-	 * Enable SMS sending from the CommandPool
-	 * @param sms The object that allows sms sending
-	 */
-	public void setSMSSending(SMSSending sms){
-		sendSMS = sms;
 	}
 
 	public String getShutdownReason(){
@@ -192,32 +179,27 @@ public class CommandPool {
 			find = split[0];
 			
 		find = find.isBlank() ? "nothing" : find;
-		
-		switch( find ){
-			case "admin": result=doADMIN(split, html); break;
-			case "cmds":     result=doCMDS( split, html); break;
-			case "checksum": result=doCHECKSUM(split[0]); break;
-			case "conv": result=doCONVert(split); break;
 
-			case "email": result=doEMAIL(split, wr,html); break;
-			case "help": case "h": case "?": result=doHelp(split,html); break;
-
-			case "lt": result=doListThread(split); break;
-			case "read": result=doREAD(split, wr ); break;
-			case "retrieve": result=doRETRIEVE(split, wr,html); break;
-			case "reqtasks": result=doREQTASKS(split); break;
-			
-			case "trans": result=doTRANS(split, wr); break;
-			case "sd": result=doShutDown(split, wr,html); break;
-			case "st": result=doSTatus(split, html); break;
-			case "serialports": result=doSERIALPORTS(split, html); break;
-			case "sleep": result=doSLEEP(split, wr); break;
-			case "upgrade": result=doUPGRADE(split, wr,html); break;
-			case "": case "stop":
-				stopCommandable.forEach( c -> c.replyToCommand(new String[]{"",""},wr,false));
-				result="Clearing requests";
-				break;
-		}	
+		result = switch (find) {
+			case "admin" -> doADMIN(split, html);
+			case "checksum" -> doCHECKSUM(split[0]);
+			case "conv" -> doCONVert(split);
+			case "email" -> doEMAIL(split, wr, html);
+			case "help", "h", "?" -> doHelp(split, html);
+			case "lt" -> doListThread(split);
+			case "read" -> doREAD(split, wr);
+			case "retrieve" -> doRETRIEVE(split, wr, html);
+			case "reqtasks" -> doREQTASKS(split);
+			case "sd" -> doShutDown(split, wr, html);
+			case "st" -> doSTatus(split, html);
+			case "serialports" -> doSERIALPORTS(split, html);
+			case "sleep" -> doSLEEP(split, wr);
+			case "upgrade" -> doUPGRADE(split, wr, html);
+			case "", "stop" -> {
+				stopCommandable.forEach(c -> c.replyToCommand(new String[]{"", ""}, wr, false));
+				yield "Clearing requests";
+			}
+		};
 
 		if( result.startsWith(UNKNOWN_CMD) ){
 			var cmdOpt = commandables.entrySet().stream()
@@ -262,7 +244,7 @@ public class CommandPool {
 		}else{
 			Logger.debug("Hidden response to " + question + ": " + result);
 		}
-		if( result.isEmpty())
+		if( result == null || result.isEmpty())
 			return "";
 
 		if( result.equalsIgnoreCase(UNKNOWN_CMD))
@@ -278,21 +260,6 @@ public class CommandPool {
 			return UNKNOWN_CMD+": No "+id+" available";
 		}
 		return c.replyToCommand(new String[]{id,command},wr,false);
-	}
-	/* ******************************************  C O M M A N D S ****************************************************/
-	/**
-	 * Command that creates a list of all available commands. Then execute a request
-	 * with '?' from each which should return the info.
-	 * 
-	 * @param request The full request as received, [0]=method and [1]=command
-	 * @param html    True if the command needs to be html formatted
-	 * @return Response to the request
-	 */
-	public String doCMDS(String[] request, boolean html) {
-		String nl = html ? "<br>" : "\r\n";
-		
-		
-		return "Needs a rewrite";
 	}
 	/* ******************************************************************************/
 	/**
@@ -445,9 +412,6 @@ public class CommandPool {
 		}
 	}
 	/* *******************************************************************************/
-	public String doTRANS(String[] request, Writable wr ){
-		return doCmd("ts","forward,"+request[1],wr);
-	}
 	/**
 	 * Execute commands associated with serialports on the system
 	 * 
@@ -621,12 +585,6 @@ public class CommandPool {
 			case "adddebugnode":
 				DebugWorker.addBlank(XMLfab.withRoot(settingsPath,"dcafs","settings"));
 				return "Tried to add node";
-			case "sms":
-				if(sendSMS!=null ) {
-					sendSMS.sendSMS("admin", "test");
-					return "Trying to send SMS";
-				}
-				return "No SMS functionality present";
 			case "clock": return TimeTools.formatLongUTCNow();
 			case "regex":
 				if( cmd.length != 3 )
