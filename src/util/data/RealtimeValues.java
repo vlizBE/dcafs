@@ -31,14 +31,14 @@ import java.util.stream.Collectors;
  * A storage class
  *
  */
-public class RealtimeValues implements CollectorFuture, DataProviding, Commandable {
+public class RealtimeValues implements DataProviding, Commandable {
 
 	/* Data stores */
 	private final ConcurrentHashMap<String, DoubleVal> doubleVals = new ConcurrentHashMap<>(); // doubles
 	private final ConcurrentHashMap<String, IntegerVal> integerVals = new ConcurrentHashMap<>(); // doubles
 	private final ConcurrentHashMap<String, String> texts = new ConcurrentHashMap<>(); // strings
 	private final ConcurrentHashMap<String, FlagVal> flagVals = new ConcurrentHashMap<>(); // booleans
-	private final HashMap<String, MathCollector> mathCollectors = new HashMap<>(); // Math collectors
+
 	private Waypoints waypoints; // waypoints
 	private final IssuePool issuePool;
 
@@ -1064,18 +1064,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		}
 		return 0;
 	}
-	/* **************************** MATH COLLECTOR ********************************************** */
-	public void addMathCollector( MathCollector mc ){
-		mc.addListener(this);
-		mathCollectors.put( mc.getID(),mc);
-	}
-	@Override
-	public void collectorFinished(String id, String message, Object result) {
-		String[] ids = id.split(":");
-		if(ids[0].equalsIgnoreCase("math")){
-			setDouble(message,(double)result,false);
-		}
-	}
+
 	/* ************************** C O M M A N D A B L E ***************************************** */
 	@Override
 	public String replyToCommand(String[] request, Writable wr, boolean html) {

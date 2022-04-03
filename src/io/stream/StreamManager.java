@@ -1,5 +1,6 @@
 package io.stream;
 
+import das.Commandable;
 import das.IssuePool;
 import io.Writable;
 import io.collector.CollectorFuture;
@@ -36,7 +37,7 @@ import java.util.concurrent.*;
  * data from it. It uses the internal class StreamDescriptor to hold this
  * information. All connections are made using the Netty 4.x library.
  */
-public class StreamManager implements StreamListener, CollectorFuture {
+public class StreamManager implements StreamListener, CollectorFuture, Commandable {
 
 	private BlockingQueue<Datagram> dQueue; // Holds the data for the DataWorker
 
@@ -1032,12 +1033,56 @@ public class StreamManager implements StreamListener, CollectorFuture {
 		return true;
 	}
 
+	@Override
+	public String replyToCommand(String[] request, Writable wr, boolean html) {
+		return switch( request[0].toLowerCase().replaceAll("\\d+","_")) {
+			case "ss", "streams" -> replyToCommand(request, wr, html);
+			case "rios" -> replyToCommand(new String[]{"streams","rios"}, wr, html);
+			case "raw","stream" -> "Request for "+request[0]+":"+request[1]+" "+( addForwarding(request[1],wr)?"ok":"failed");
+			case "s_","h_" -> doSorH( request);
+			case "","stop" -> removeWritable(wr)?"Ok.":"";
+			default -> "Unknown Command";
+		};
+	}
+	private String doSorH( String[] request ){
+		return switch( request[1] ){
+			case "??" -> "Sx:y -> Send the string y to stream x";
+			case "" -> "No use sending an empty string";
+			default -> {
+				var stream = getStreamID( Tools.parseInt( request[0].substring(1), 0 ) -1);
+				if( !stream.isEmpty()){
+					request[1] = request[1].replace("<cr>", "\r").replace("<lf>", "\n"); // Normally the delimiters are used that are chosen in settings file, extra can be added
+
+					var written = "";
+					if( request[0].startsWith("h")){
+						written = writeBytesToStream(stream, Tools.fromHexStringToBytes(request[1]) );
+					}else{
+						written = writeToStream(stream, request[1], "" );
+					}
+					if( !written.isEmpty() )
+						yield "Sending '"+request[1]+"' to "+stream;
+					yield "Failed to send "+request[1]+" to "+stream;
+
+				}else{
+					yield switch( getStreamCount() ){
+						case 0 -> "No streams active to send data to.";
+						case 1 ->"Only one stream active. S1:"+getStreamID(0);
+						default -> "Invalid number chosen! Must be between 1 and "+getStreamCount();
+					};
+				}
+			}
+		};
+	}
+
 	/**
 	 * Remove the given writable from the various sources
 	 * @param wr The writable to remove
 	 * @return True if any were removed
 	 */
 	public boolean removeWritable(Writable wr) {
+		if( wr==null)
+			return false;
+
 		boolean removed=false;
 		for( BaseStream bs : streams.values() ){
 			if( bs.removeTarget(wr) )

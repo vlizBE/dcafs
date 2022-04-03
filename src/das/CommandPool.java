@@ -28,18 +28,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
+import java.util.concurrent.BlockingQueue;
 
 public class CommandPool {
 
-	private final ArrayList<Commandable> bulkCommandable = new ArrayList<>();
+	private final ArrayList<Commandable> stopCommandable = new ArrayList<>();
 	private final HashMap<String,Commandable> commandables = new HashMap<>();
 
 	private ArrayList<ShutdownPreventing> sdps;
 
-	private StreamManager streampool = null; // To be able to interact with attached devices
 	private EmailWorker emailWorker; // To be able to send emails and get status
-
-	private DAS das;
 
 	private final String workPath;
 	private final Path settingsPath;
@@ -48,12 +46,16 @@ public class CommandPool {
 
 	private EmailSending sendEmail = null;
 	private SMSSending sendSMS = null;
+
+	private String shutdownReason="";
+	private BlockingQueue<Datagram> dQueue;
 	/* ******************************  C O N S T R U C T O R *********************************************************/
 	/**
 	 * Constructor requiring a link to the @see RealtimeValues for runtime values
 	 */
-	public CommandPool( String workPath){
+	public CommandPool(String workPath, BlockingQueue<Datagram> dQueue ){
 		this.workPath=workPath;
+		this.dQueue=dQueue;
 		settingsPath = Path.of(workPath,"settings.xml");
 		Logger.info("CommandPool started with workpath: "+workPath);
 	}
@@ -63,25 +65,20 @@ public class CommandPool {
 	 * @param cmdbl The implementation
 	 */
 	public void addCommandable( String id, Commandable cmdbl){
-		commandables.put(id,cmdbl);
+		if( id.equalsIgnoreCase("stop")||id.equalsIgnoreCase("")) {
+			if( !stopCommandable.contains(cmdbl))
+				stopCommandable.add(cmdbl);
+		}else{
+			commandables.put(id,cmdbl);
+		}
 	}
-	public void addBulkCommandable( Commandable cmdbl){
-		bulkCommandable.add(cmdbl);
-	}
+
 	public void addShutdownPreventing( ShutdownPreventing sdp){
 		if( sdps==null)
 			sdps = new ArrayList<>();
 		sdps.add(sdp);
 	}
 	/* ****************************  S E T U P - C H E C K U P: Adding different parts from dcafs  *********************/
-	/**
-	 * Give the DAS object, so it has access to everything it might need
-	 * 
-	 * @param das The reference to everything including itself... should be removed in the future
-	 */
-	public void setDAS(DAS das) {
-		this.das = das;
-	}
 
 	/**
 	 * To be able to send emails, access to the emailQueue is needed
@@ -101,15 +98,10 @@ public class CommandPool {
 	public void setSMSSending(SMSSending sms){
 		sendSMS = sms;
 	}
-	/**
-	 * To interact with streams/channels, access to the streampool is needed
-	 *
-	 * @param streampool  A reference to the streampool
-	 */
-	public void setStreamPool(StreamManager streampool) {
-		this.streampool = streampool;
-	}
 
+	public String getShutdownReason(){
+		return shutdownReason;
+	}
 	/* ************************************ * R E S P O N S E *************************************************/
 
 	public void emailResponse( Datagram d ) {
@@ -208,34 +200,30 @@ public class CommandPool {
 			case "conv": result=doCONVert(split); break;
 
 			case "email": result=doEMAIL(split, wr,html); break;
-			case "fc": result=doFileCollector(split, html); break;
 			case "help": case "h": case "?": result=doHelp(split,html); break;
-			case "h_": result=doH_(split); break;
 
 			case "lt": result=doListThread(split); break;
-			case "nothing": result=doNOTHING(split,wr); break;
-			case "raw": case "stream": result=doRAW(split, wr); break;
 			case "read": result=doREAD(split, wr ); break;
 			case "retrieve": result=doRETRIEVE(split, wr,html); break;
 			case "reqtasks": result=doREQTASKS(split); break;
-			case "rios": result=doRIOS(split, wr,html); break;
 			
 			case "trans": result=doTRANS(split, wr); break;
 			case "sd": result=doShutDown(split, wr,html); break;
 			case "st": result=doSTatus(split, html); break;
-			case "stop": result=doSTOP( wr ); break;
 			case "serialports": result=doSERIALPORTS(split, html); break;
 			case "sleep": result=doSLEEP(split, wr); break;
-			case "ss": case "streams": result=doStreamS(split, wr,html); break;
-			case "s_": result=doS_(split); break;
 			case "upgrade": result=doUPGRADE(split, wr,html); break;
+			case "": case "stop":
+				stopCommandable.forEach( c -> c.replyToCommand(new String[]{"",""},wr,false));
+				result="Clearing requests";
+				break;
 		}	
 
 		if( result.startsWith(UNKNOWN_CMD) ){
 			var cmdOpt = commandables.entrySet().stream()
 						.filter( ent -> {
 							String key = ent.getKey();
-							if( key.equals(split[0]))
+							if( key.equals(split[0])||key.equals(split[0].replaceAll("\\d+","_")))
 								return true;
 							return Arrays.stream(key.split(";")).anyMatch(k->k.equals(split[0]));
 						}).map(Map.Entry::getValue).findFirst();
@@ -249,23 +237,16 @@ public class CommandPool {
 				}
 			}else{
 				String res;
-				for( var cd : bulkCommandable ){
-					result = cd.replyToCommand(split,wr,html);
-					if( !result.startsWith(UNKNOWN_CMD))
-						break;
+				if (split[1].equals("?") || split[1].equals("list")) {
+					var nl = html ? "<br>" : "\r\n";
+					res = doCmd("tm", split[0] + ",sets", wr) + nl + doCmd("tm", split[0] + ",tasks", wr);
+				}else if( split[1].equalsIgnoreCase("reload")){
+					res = doCmd("tm","reload,"+split[0],wr);
+				} else {
+					res = doCmd("tm", "run," + split[0] + ":" + split[1], wr);
 				}
-				if( result.startsWith(UNKNOWN_CMD)) {
-					if (split[1].equals("?") || split[1].equals("list")) {
-						var nl = html ? "<br>" : "\r\n";
-						res = doCmd("tm", split[0] + ",sets", wr) + nl + doCmd("tm", split[0] + ",tasks", wr);
-					}else if( split[1].equalsIgnoreCase("reload")){
-						res = doCmd("tm","reload,"+split[0],wr);
-					} else {
-						res = doCmd("tm", "run," + split[0] + ":" + split[1], wr);
-					}
-					if (!res.startsWith("No ") && !res.startsWith("Not "))
-						result = res;
-				}
+				if (!res.startsWith("No ") && !res.startsWith("Not "))
+					result = res;
 				if( result.startsWith(UNKNOWN_CMD) ) {
 					Logger.warn("Not defined:" + question + " because no method named " + find + ".");
 				}
@@ -404,7 +385,7 @@ public class CommandPool {
 					if( Files.exists(p) && Files.exists(refr) ){
 						Files.copy(p, to );	// Make a backup if it doesn't exist yet
 						Files.copy(refr, p , StandardCopyOption.REPLACE_EXISTING );// Overwrite
-						das.setShutdownReason( "Replaced settings.xml" );    // restart das
+						shutdownReason = "Replaced settings.xml";    // restart das
 						System.exit(0);
 					}else{
 						Logger.warn("Didn't find the needed files.");
@@ -467,96 +448,6 @@ public class CommandPool {
 	public String doTRANS(String[] request, Writable wr ){
 		return doCmd("ts","forward,"+request[1],wr);
 	}
-	public String doSTOP( Writable wr ) {
-		if( streampool.removeWritable(wr) )
-			return "Removed forwarding to "+wr.getID();
-		commandables.values().forEach( c -> c.removeWritable(wr) );
-		return "No matches found for "+wr.getID();
-	}
-	public String doRAW( String[] request, Writable wr ){
-		if( streampool.addForwarding(request[1], wr ) ){
-			return "Request for "+request[0]+":"+request[1]+" ok.";
-		}else{
-			return "Request for "+request[0]+":"+request[1]+" failed.";
-		}
-	}
-
-	/**
-	 * Execute commands associated with the @see StreamManager
-	 * 
-	 * @param request The full command split on the first :
-	 * @param wr The 'writable' of the source of the command
-	 * @param html Whether to use html for newline etc
-	 * @return Descriptive result of the command, "Unknown command if not recognised
-	 */
-	public String doStreamS(String[] request, Writable wr, boolean html ){
-		if( streampool == null ){
-			return "No StreamManager defined.";
-		}
-		return streampool.replyToCommand(request[1], wr, html);
-	}
-	public String doRIOS( String[] request, Writable wr, boolean html ){
-		if( request[1].equals("?") )
-			return "rios -> Get a list of the currently active streams.";
-		return doStreamS( new String[]{"streams","rios"}, wr, html);
-	}
-	public String doH_( String[] request){
-		if( streampool == null )
-			return "No StreamManager defined.";
-
-		if( request[1].equals("?") ){
-			return "Hx:y -> Send the hex y to stream x";
-		}
-		int nr = Tools.parseInt( request[0].substring(1), -1 );    		
-		if( nr >= 0 && nr <= streampool.getStreamCount()){
-			String channel = streampool.getStreamID(nr);
-			
-			boolean ok = !streampool.writeBytesToStream(channel, Tools.fromHexStringToBytes(request[1]) ).isEmpty();
-
-			if( !ok )
-				return "Failed to send "+request[1]+" to "+channel;
-			return "Sending command '"+request[1]+"' to "+channel;
-		}else{
-			switch( streampool.getStreamCount() ){
-				case 0:
-					return "No streams active to send data to.";
-				case 1:
-					return "Only one stream active. S1:"+streampool.getStreamID(0);
-				default:
-					return "Invalid number chosen! Must be between 1 and "+streampool.getStreamCount();    					    			
-			}
-		}
-	}
-	public String doS_( String[] request ){	
-		
-		if( streampool == null )
-			return "No StreamManager defined.";
-
-		if( request[1].equals("??") ){
-			return "Sx:y -> Send the string y to stream x";
-		}
-		if( request[1].isEmpty() )
-			return "No use sending an empty string";
-
-		String stream = streampool.getStreamID( Tools.parseInt( request[0].substring(1), 0 ) -1);
-		if( !stream.isEmpty()){
-			request[1] = request[1].replace("<cr>", "\r").replace("<lf>", "\n"); // Normally the delimiters are used that are chosen in settings file, extra can be added
-			
-			if( !streampool.writeToStream(stream, request[1], "" ).isEmpty() )
-				return "Sending '"+request[1]+"' to "+stream;
-			return "Failed to send "+request[1]+" to "+stream;
-			
-		}else{
-			switch( streampool.getStreamCount() ){
-				case 0:
-					return "No streams active to send data to.";
-				case 1:
-					return "Only one stream active. S1:"+streampool.getStreamID(0);
-				default:
-					return "Invalid number chosen! Must be between 1 and "+streampool.getStreamCount();    					    			
-			}
-		}
-	}
 	/**
 	 * Execute commands associated with serialports on the system
 	 * 
@@ -598,7 +489,7 @@ public class CommandPool {
 				}
 			}
 		}
-		das.setShutdownReason( reason );
+		shutdownReason = reason;
 		System.exit(0);                    
 		return "Shutting down program..."+ (html?"<br>":"\r\n");
 	}
@@ -653,9 +544,6 @@ public class CommandPool {
 					join.add("   -> For scheduling events, check taskmanager");
 					join.add("   -> ...").add("");
 				break;
-			case "start": 
-
-				break;
 			default:	return UNKNOWN_CMD+":"+request[1];
 		}
 		return join.toString();
@@ -675,7 +563,7 @@ public class CommandPool {
 		return response.toString();   
 	}
 	public String doREAD( String[] request, Writable wr ){
-		das.getDataQueue().add( Datagram.build("").writable(wr).label("read:"+request[1]) ); //new Datagram(wr,"",1,"read:"+request[1]));
+		dQueue.add( Datagram.build("").writable(wr).label("read:"+request[1]) );
 		return "Request for readable "+request[1]+" from "+wr.getID()+" issued";
 	}
 	public String doADMIN( String[] request, boolean html ){
@@ -688,7 +576,6 @@ public class CommandPool {
 					.add("admin:gettasklog -> Get the taskmananger log")
 					.add("admin:adddebugnode -> Adds a debug node with default values")
 					.add("admin:sms -> Send a test SMS to the admin number")
-					.add("admin:haw -> Stop all workers")
 					.add("admin:clock -> Get the current timestamp")
 					.add("admin:regex,<regex>,<match> -> Test a regex")
 					.add("admin:ipv4 -> Get the IPv4 and MAC of all network interfaces")
@@ -740,9 +627,6 @@ public class CommandPool {
 					return "Trying to send SMS";
 				}
 				return "No SMS functionality present";
-			case "haw":
-				das.haltWorkers();
-				return nl+"Stopping all worker threads.";
 			case "clock": return TimeTools.formatLongUTCNow();
 			case "regex":
 				if( cmd.length != 3 )
@@ -804,7 +688,7 @@ public class CommandPool {
 						j.add(col+d);
 					}
 				}
-				return j.toString()+TelnetCodes.TEXT_YELLOW;
+				return j+TelnetCodes.TEXT_YELLOW;
 			default: return UNKNOWN_CMD+" : "+request[1];
 		}
 	}
@@ -819,7 +703,7 @@ public class CommandPool {
 		if( emailWorker == null ){
 			if(request[1].equals("reload") 
 					&& XMLfab.withRoot(settingsPath, "settings").getChild("email").isPresent() ){
-				das.addEmailWorker();
+			//	das.addEmailWorker();
 			}else{
 				return "No EmailWorker defined (yet), use email:addblank to add blank to xml.";
 			}
@@ -854,25 +738,13 @@ public class CommandPool {
 				.attachment( Path.of(workPath,"logs","tasks.csv").toString() ) );
 		return "Sending log of taskset execution to "+request[1];
 	}
-
-	public String doNOTHING( String[] request, Writable wr ){
-		if( request[1].equals("?") )
-			return " -> Clear the datarequests";
-		if( wr != null ){
-			streampool.removeWritable(wr);
-			commandables.values().forEach( c -> c.removeWritable(wr) );
-		}
-		return "Clearing all data requests\r\n";
-	}	
-
-	
 	public String doSTatus( String[] request, boolean html ){
 		if( request[1].equals("?") )
 			return " -> Get a status update";
 
 		String response = "";	
 		try{
-			response =  das.getStatus(html);   
+		//	response =  das.getStatus(html);
 		}catch( java.lang.NullPointerException e){
 			Logger.error(e);
 		}
@@ -957,155 +829,5 @@ public class CommandPool {
 			Logger.error(e);
 		}
 		return "Waking up at "+TimeTools.formatLongUTCNow();
-	}
-
-
-	public String doFileCollector( String[] request, boolean html ) {
-		String[] cmds = request[1].split(",");
-		StringJoiner join = new StringJoiner(html?"<br":"\r\n");
-
-		Optional<FileCollector> fco ;
-
-		switch( cmds[0] ) {
-			case "?":
-				join.add(TelnetCodes.TEXT_MAGENTA+"The FileCollectors store data from sources in files with custom headers and optional rollover");
-				join.add(TelnetCodes.TEXT_GREEN+"Create/Alter the FileCollector"+TelnetCodes.TEXT_YELLOW)
-					 .add("   fc:addnew,id,src,path -> Create a blank filecollector with given id, source and path")
-					 .add("   fc:alter,id,param:value -> Alter some elements, options: eol, path, sizelimit, src")
-				     .add("   fc:reload -> Reload the file collectors");
-				join.add(TelnetCodes.TEXT_GREEN+"Add optional parts"+TelnetCodes.TEXT_YELLOW)
-					 .add("   fc:addrollover,id,count,unit,format,zip? -> Add rollover (unit options:min,hour,day,week,month,year")
-					 .add("   fc:addcmd,id,trigger:cmd -> Add a triggered command, triggers: maxsize,idle,rollover")
-					 .add("   fc:addheader,id,headerline -> Adds the header to the given fc")
-					 .add("   fc:addsizelimit,id,size,zip? -> Adds a limit of the given size with optional zipping");
-				join.add(TelnetCodes.TEXT_GREEN+"Get info"+TelnetCodes.TEXT_YELLOW)
-					 .add("   fc:list -> Get a list of all active File Collectors")
-					 .add("   fc:? -> Show this message");
-				return join.toString();
-			case "addnew":
-				if( cmds.length<4)
-					return "Not enough arguments given: fc:addnew,id,src,path";
-				FileCollector.addBlankToXML(XMLfab.withRoot(settingsPath,"dcafs"),cmds[1],cmds[2],cmds[3]);
-				var fc = das.addFileCollector(cmds[1]);
-				fc.addSource(cmds[2]);
-				fc.setPath( Path.of(cmds[3]), workPath );
-
-				return "FileCollector "+cmds[1]+" created and added to xml.";
-			case "list":
-				return das.getFileCollectorsList(html?"<br":"\r\n");
-			case "addrollover":
-				if( cmds.length<6)
-					return "Not enough arguments given: fc:addrollover,id,count,unit,format,zip?";
-
-				fco = das.getFileCollector(cmds[1]);
-				if( fco.isEmpty() )
-					return "No such fc: "+cmds[1];
-
-				if( fco.get().setRollOver(cmds[4],NumberUtils.toInt(cmds[2]),TimeTools.convertToRolloverUnit(cmds[3]),Tools.parseBool(cmds[5],false)) ) {
-					XMLfab.withRoot(settingsPath, "dcafs", "collectors")
-							.selectOrAddChildAsParent("file", "id", cmds[1])
-							.alterChild("rollover",cmds[4]).attr("count",cmds[2]).attr("unit",cmds[3]).attr("zip",cmds[5]).build();
-					return "Rollover added";
-				}
-				return "Failed to add rollover";
-			case "addheader":
-				if( cmds.length<3)
-					return "Not enough arguments given: fc:addheader,id,header";
-
-				fco = das.getFileCollector(cmds[1]);
-				if( fco.isEmpty() )
-					return "No such fc: "+cmds[1];
-				fco.get().flushNow();
-				fco.get().addHeaderLine(cmds[2]);
-				XMLfab.withRoot(settingsPath, "dcafs", "collectors")
-						.selectOrAddChildAsParent("file", "id", cmds[1])
-						.addChild("header", cmds[2]).build();
-				return "Header line added to "+cmds[1];
-			case "addcmd":
-				if( cmds.length<3)
-					return "Not enough arguments given: fc:adcmd,id,trigger:cmd";
-				fco = das.getFileCollector(cmds[1]);
-				if( fco.isEmpty() )
-					return "No such fc: "+cmds[1];
-
-				String[] cmd = cmds[2].split(":");
-				if( fco.get().addTriggerCommand(cmd[0],cmd[1]) ) {
-					XMLfab.withRoot(settingsPath, "dcafs", "collectors")
-							.selectOrAddChildAsParent("file", "id", cmds[1])
-							.addChild("cmd", cmd[1]).attr("trigger", cmd[0]).build();
-					return "Triggered command added to "+cmds[1];
-				}
-				return "Failed to add command, unknown trigger?";
-			case "addsizelimit":
-				if( cmds.length<4)
-					return "Not enough arguments given: fc:addsizelimit,id,size,zip?";
-				fco = das.getFileCollector(cmds[1]);
-
-				if( fco.isEmpty() )
-					return "No such fc: "+cmds[1];
-
-				fco.get().setMaxFileSize(cmds[2],Tools.parseBool(cmds[3],false));
-				XMLfab.withRoot(settingsPath, "dcafs", "collectors")
-						.selectOrAddChildAsParent("file", "id", cmds[1])
-						.addChild("sizelimit", cmds[2]).attr("zip", cmds[3]).build();
-				return "Size limit added to "+cmds[1];
-			case "alter":
-				if( cmds.length<3)
-					return "Not enough arguments given: fc:alter,id,param:value";
-				int a = cmds[2].indexOf(":");
-				if( a == -1)
-					return "No valid param:value pair";
-
-				String[] alter = {cmds[2].substring(0,a),cmds[2].substring(a+1)};
-				fco = das.getFileCollector(cmds[1]);
-
-				if( fco.isEmpty() )
-					return "No such fc: "+cmds[1];
-
-				var fab = XMLfab.withRoot(settingsPath, "dcafs", "collectors")
-										.selectOrAddChildAsParent("file", "id", cmds[1]);
-
-				switch(alter[0]){
-					case "path":
-						fco.get().setPath(Path.of(alter[1]),workPath);
-						fab.alterChild("path",alter[1]).build();
-						return "Altered the path";
-					case "sizelimit":
-						fco.get().setMaxFileSize(alter[1]);
-						fab.alterChild("sizelimit",alter[1]).build();
-						return "Altered the size limit to "+alter[1];
-					case "eol":
-						fco.get().setLineSeparator( Tools.fromEscapedStringToBytes(alter[1]));
-						fab.attr("eol",alter[1]).build();
-						return "Altered the eol string to "+alter[1];
-					case "charset":
-						fab.attr("charset",alter[1]).build();
-						return "Altered the charset to "+alter[1];
-					case "src":
-						fco.get().addSource(alter[1]);
-						fab.attr("src",alter[1]).build();
-						return "Source altered to "+alter[1];
-					default:
-						return "No such param "+alter[0];
-				}
-			case "reload":
-				if( cmds.length==1) {
-					das.loadFileCollectors();
-					return "Reloaded all filecollectors";
-				}
-				fco = das.getFileCollector("fc:"+cmds[1]);
-
-				if( fco.isEmpty() )
-					return "No such fc: "+cmds[1];
-
-				var opt = XMLfab.withRoot(settingsPath, "dcafs", "collectors")
-						.getChild("file", "id", cmds[1]);
-				if( opt.isPresent() ) {
-					fco.get().flushNow();
-					fco.get().readFromXML(opt.get(), workPath);
-				}
-
-		}
-		return UNKNOWN_CMD+": "+request[0]+":"+request[1];
 	}
 }

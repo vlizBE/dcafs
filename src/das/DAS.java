@@ -1,5 +1,6 @@
 package das;
 
+import io.collector.CollectorPool;
 import io.email.Email;
 import io.email.EmailSending;
 import io.email.EmailWorker;
@@ -9,8 +10,6 @@ import io.matrix.MatrixClient;
 import io.mqtt.MqttPool;
 import io.sms.DigiWorker;
 import io.stream.StreamManager;
-import io.collector.FileCollector;
-import io.collector.MathCollector;
 import io.forward.ForwardPool;
 import io.stream.tcp.TcpServer;
 import io.telnet.TelnetCodes;
@@ -75,8 +74,7 @@ public class DAS implements DeadThreadListener {
     private DatabaseManager dbManager;
     private MqttPool mqttPool;
     private TaskManagerPool taskManagerPool;
-
-    private final Map<String, FileCollector> fileCollectors = new HashMap<>();
+    private CollectorPool collectorPool;
 
     private boolean debug = false;
     private boolean log = false;
@@ -132,7 +130,7 @@ public class DAS implements DeadThreadListener {
             Logger.error("Issue in current settings.xml, aborting: " + settingsPath.toString());
             addTelnetServer();
         } else {
-            bootOK = true;
+
 
             Element settings = XMLtools.getFirstElementByTag(settingsDoc, "settings");
 
@@ -155,7 +153,7 @@ public class DAS implements DeadThreadListener {
             dbManager = new DatabaseManager(workPath,rtvals);
 
             /* CommandPool */
-            commandPool = new CommandPool( workPath);
+            commandPool = new CommandPool( workPath, dQueue );
             addCommandable(rtvals.getIssuePool(),"issue","issues");
             addCommandable("flags;fv;doubles;double;dv;texts;tv",rtvals);
             addCommandable(rtvals,"rtval","rtvals");
@@ -205,18 +203,12 @@ public class DAS implements DeadThreadListener {
             addCommandable(forwardPool,"math","mf","maths");
             addCommandable(forwardPool,"editor","ef","editors");
             addCommandable(forwardPool,"paths","path","pf","paths");
+            addCommandable(forwardPool, "");
 
-            /* Math Collectors */
-            MathCollector.createFromXml( XMLfab.getRootChildren(settingsDoc,"dcafs","maths","*") ).forEach(
-                mc ->
-                {
-                    rtvals.addMathCollector(mc);
-                    dQueue.add( Datagram.system(mc.getSource()).writable(mc) ); // request the data
-                }
-            );
-
-            /* File Collectors */
-            loadFileCollectors();
+            /* Collectors */
+            collectorPool = new CollectorPool(settingsPath,dQueue,nettyGroup,rtvals);
+            addCommandable(collectorPool,"fc");
+            addCommandable(collectorPool,"mc");
 
             /* GPIO's */
             if( XMLfab.hasRoot(settingsPath,"dcafs","gpio") ){
@@ -234,7 +226,8 @@ public class DAS implements DeadThreadListener {
             }else{
                 Logger.info("No matrix settings");
             }
-            commandPool.setDAS(this);
+
+            bootOK = true;
         }
         this.attachShutDownHook();
     }
@@ -304,14 +297,6 @@ public class DAS implements DeadThreadListener {
     public CommandPool getCommandPool(){
         return commandPool;
     }
-    /**
-     * Add a commandable to the CommandPool, this is the same as adding commands to dcafs,
-     * bulk means that this can contain multiple 'major' commands but no specific command will trigger it
-     * @param cmd The commandable to add
-     */
-    public void addBulkCommandable( Commandable cmd ){
-        commandPool.addBulkCommandable(cmd);
-    }
 
     /**
      * Adds a check to do to see if it's allowed to shut down now
@@ -354,7 +339,9 @@ public class DAS implements DeadThreadListener {
     public void addStreamPool() {
 
         streampool = new StreamManager(dQueue, rtvals.getIssuePool(), nettyGroup);
-        commandPool.setStreamPool(streampool);
+        addCommandable(streampool,"ss","streams","");
+        addCommandable(streampool,"s_","h_");
+        addCommandable(streampool,"rios","raw","stream");
 
         if (debug) {
             streampool.enableDebug();
@@ -529,36 +516,7 @@ public class DAS implements DeadThreadListener {
         i2cWorker = new I2CWorker(settingsPath, dQueue);
         addCommandable("i2c",i2cWorker);
     }
-    /* *************************************** F I L E C O L L E C T O R ************************************ */
 
-    /**
-     * Load all file collectors from the settings.xml
-     */
-    public void loadFileCollectors(){
-        fileCollectors.clear();
-        FileCollector.createFromXml( XMLfab.getRootChildren(settingsDoc,"dcafs","collectors","file"), nettyGroup,dQueue, workPath ).forEach(
-                fc ->
-                {
-                    Logger.info("Created "+fc.getID());
-                    fileCollectors.put(fc.getID(),fc);
-                    dQueue.add( Datagram.system(fc.getSource()).writable(fc) ); // request the data
-                }
-        );
-    }
-    public Optional<FileCollector> getFileCollector(String id){
-        return Optional.ofNullable(fileCollectors.get(id));
-    }
-    public String getFileCollectorsList( String eol ){
-        StringJoiner join = new StringJoiner(eol);
-        join.setEmptyValue("None yet");
-        fileCollectors.forEach((key, value) -> join.add(key + " -> " + value.toString()));
-        return join.toString();
-    }
-    public FileCollector addFileCollector( String id ){
-        var fc=new FileCollector(id,"1m",nettyGroup,dQueue);
-        fileCollectors.put(id, fc);
-        return fc;
-    }
     /* ******************************** * S H U T D O W N S T U F F ***************************************** */
     /**
      * Set the reason for shutting down
@@ -593,12 +551,14 @@ public class DAS implements DeadThreadListener {
                 Logger.info("Flushing database buffers");
                 dbManager.flushAll();
 
-                // File collectors
-                fileCollectors.values().forEach(FileCollector::flushNow);
+                // Collectors
+                collectorPool.flushAll();
 
                 // Try to send email...
                 if (emailWorker != null) {
                     Logger.info("Informing admin");
+                    String r = commandPool.getShutdownReason();
+                    sdReason = r.isEmpty()?sdReason:r;
                     emailWorker.sendEmail( Email.toAdminAbout(telnet.getTitle() + " shutting down.").content("Reason: " + sdReason) );
                 }
                 try {

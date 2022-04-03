@@ -138,7 +138,7 @@ public class SerialStream extends BaseStream implements Writable {
         }
     }
     protected void processListenerEvent( byte[] data ){
-        Logger.info("ReceivedEvent: "+Tools.fromBytesToHexString(data));
+        Logger.debug(id+ " <-- "+Tools.fromBytesToHexString(data));
         Logger.tag("RAW").warn(priority + "\t" + label + "\t" + Tools.fromBytesToHexString(data));
 
         if( !targets.isEmpty() ){
@@ -365,6 +365,7 @@ public class SerialStream extends BaseStream implements Writable {
      * @return True If nothing was wrong with the connection
      */
     public synchronized boolean write(byte[] data) {
+        Logger.debug(id+" --> "+Tools.fromBytesToHexString(data));
         if (serialPort != null && serialPort.isOpen() && serialPort.bytesAwaitingWrite()<8000) {
             var res=-1;
             try{

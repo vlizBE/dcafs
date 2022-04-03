@@ -96,8 +96,15 @@ public class ForwardPool implements Commandable {
             // Math
             case "mf": case "maths": return replyToMathCmd(request[1],html);
             case "math": ok = getMathForward(request[1]).map(mf -> { mf.addTarget(wr); return true;} ).orElse(false); break;
+            case "":
+                maths.forEach( (k,m) -> m.removeTarget(wr));
+                editors.forEach( (k,e) -> e.removeTarget(wr));
+                filters.forEach( (k,m) -> m.removeTarget(wr));
+                paths.forEach( (k,m) -> m.removeTarget(wr));
+                return "Cleared requests";
             default:
                 return "unknown command: "+request[0]+":"+request[1];
+
         }
         if( ok )
             return "Request for "+request[0]+":"+request[1]+" ok.";
