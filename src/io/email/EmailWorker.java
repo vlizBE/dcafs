@@ -44,9 +44,9 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 	private final Map<String, String> emailBook = new HashMap<>(); // Hashmap containing the reference to email address
 																	// 'translation'
 	private final ArrayList<Permit> permits = new ArrayList<>();
-	/* Outbox */
-	MailBox outbox = new MailBox();
 
+    /* Outbox */
+	MailBox outbox = new MailBox();
 	boolean outboxAuth = false; // Whether or not to authenticate
 
 	/* Inbox */

@@ -596,8 +596,8 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 	public String replyToCommand(String[] request, Writable wr, boolean html) {
 		String find = request[0].toLowerCase().replaceAll("\\d+","_");
 		return switch( find ) {
-			case "ss", "streams" -> replyToSSCommand(request[1], wr, html);
-			case "rios" -> replyToSSCommand("rios", wr, html);
+			case "ss", "streams" -> replyToStreamCommand(request[1], wr, html);
+			case "rios" -> replyToStreamCommand("rios", wr, html);
 			case "raw","stream" -> "Request for "+request[0]+":"+request[1]+" "+( addForwarding(request[1],wr)?"ok":"failed");
 			case "s_","h_" -> doSorH( request);
 			case "","stop" -> removeWritable(wr)?"Ok.":"";
@@ -610,7 +610,7 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 	 * @param html Whether the answer should use html or regular line endings
 	 * @return The answer or Unknown Command if the question wasn't understood
 	 */
-	public String replyToSSCommand(String request, Writable wrOri, boolean html ){
+	public String replyToStreamCommand(String request, Writable wrOri, boolean html ){
 
 		String nl = html?"<br>":"\r\n";
 
