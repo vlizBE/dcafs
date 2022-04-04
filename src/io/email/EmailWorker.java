@@ -1,5 +1,6 @@
 package io.email;
 
+import das.Commandable;
 import io.Writable;
 import io.collector.BufferCollector;
 import io.collector.CollectorFuture;
@@ -26,7 +27,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
-public class EmailWorker implements CollectorFuture, EmailSending {
+public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 
 	static double megaByte = 1024.0 * 1024.0;
 
@@ -93,17 +94,19 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 
 	static final String XML_PARENT_TAG = "email";
 	static final String TIMEOUT_MILLIS="10000";
-
+	final Path settingsPath;
+	private boolean ready=false;
 	/**
 	 * Constructor for this class
 	 * 
-	 * @param xml       the xml document containing the settings
+	 * @param settingsPath   the path to the xml with the settings
 	 * @param dQueue the queue processed by a @see BaseWorker
 	 */
-	public EmailWorker(Document xml, BlockingQueue<Datagram> dQueue) {
+	public EmailWorker(Path settingsPath, BlockingQueue<Datagram> dQueue) {
 		this.dQueue = dQueue;
-		this.readFromXML(xml);
-		init();
+		this.settingsPath=settingsPath;
+		if( readFromXML() )
+			init();
 	}
 
 	/**
@@ -137,7 +140,8 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 		mc.addMailcap("text/plain;; x-java-content-handler=com.sun.mail.handlers.text_plain");
 		mc.addMailcap("multipart/*;; x-java-content-handler=com.sun.mail.handlers.multipart_mixed");
 		mc.addMailcap("message/rfc822;; x-java-content-handler=com.sun.mail.handlers.message_rfc822");
-		CommandMap.setDefaultCommandMap(mc);	
+		CommandMap.setDefaultCommandMap(mc);
+		ready=true;
 	}
 
 	/**
@@ -166,14 +170,13 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 	}
 	/**
 	 * Read the settings from the XML file and apply them
-	 * 
-	 * @param xmlDoc The XML document containing the settings
 	 */
-	public void readFromXML(Document xmlDoc ){
+	public boolean readFromXML(){
 
-		xml = XMLtools.getDocPath(xmlDoc);
+		Element email = XMLtools.getFirstElementByTag( XMLtools.readXML(settingsPath), XML_PARENT_TAG);	// Get the element containing the settings and references
 
-		Element email = XMLtools.getFirstElementByTag( xmlDoc, XML_PARENT_TAG);	// Get the element containing the settings and references
+		if( email == null)
+			return false;
 
 		// Sending
 		Element outboxElement = XMLtools.getFirstChildByTag(email, "outbox");
@@ -214,6 +217,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 		**/
 		readEmailBook(email);
 		readPermits(email);
+		return true;
 	}
 
 	/**
@@ -451,18 +455,30 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 		String list = emailBook.get(ref);
 		return list.contains(address);
 	}
-	/**
-	 * Method to have the worker act on commands/requests
-	 * 
-	 * @param req The command/request to execute
-	 * @param html Whether or not the response should be html formatted
-	 * @return The response to the command/request
-	 */
-	public String replyToSingleRequest( String req, boolean html ){
+	@Override
+	public String replyToCommand(String[] request, Writable wr, boolean html) {
 
-        String[] parts = req.split(",");
-        
-        switch(parts[0]){
+		if( request[1].equalsIgnoreCase("addblank") ){
+			if( EmailWorker.addBlankEmailToXML(  XMLfab.withRoot(settingsPath, "settings"), true,true) )
+				return "Adding default email settings";
+			return "Failed to add default email settings";
+		}
+
+		if( !ready ){
+			if(request[1].equals("reload")
+					&& XMLfab.withRoot(settingsPath, "settings").getChild("email").isPresent() ){
+				if( !readFromXML() )
+					return "No proper email node yet";
+			}else{
+				return "No EmailWorker initialized (yet), use email:addblank to add blank to xml.";
+			}
+		}
+		// Allow a shorter version to email to admin, replace it to match the standard command
+		request[1] = request[1].replace("toadmin,","send,admin,");
+
+		String[] cmds = request[1].split(",");
+
+		switch(cmds[0]){
 			case "?":
 				StringJoiner b = new StringJoiner(html?"<br>":"\r\n");
 				b.add("email:reload -> Reload the settings found in te XML.");
@@ -474,45 +490,46 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 				b.add("email:adddeny,from,cmd(,isRegex) -> Adds permit deny node, default no regex");
 				b.add("email:interval,x -> Change the inbox check interval to x");
 				return b.toString();
-			case "reload": 
+			case "reload":
 				if( xml == null )
 					return "No xml defined yet...";
-				readFromXML(XMLtools.readXML(xml));
+				readFromXML();
 				return "Settings reloaded";
 			case "refs": return this.getEmailBook();
 			case "setup":case "status": return this.getSettings();
 			case "send":
-				if( parts.length !=4 )
+				if( cmds.length !=4 )
 					return "Not enough arguments send,ref/email,subject,content";
 
 				// Check if the subject contains time request
-				parts[2]=parts[2].replace("{localtime}", TimeTools.formatNow("HH:mm"));
-				parts[2]=parts[2].replace("{utctime}", TimeTools.formatUTCNow("HH:mm"));
+				cmds[2]=cmds[2].replace("{localtime}", TimeTools.formatNow("HH:mm"));
+				cmds[2]=cmds[2].replace("{utctime}", TimeTools.formatUTCNow("HH:mm"));
 
-				sendEmail( Email.to(parts[1]).subject(parts[2]).content(parts[3]) );
+				sendEmail( Email.to(cmds[1]).subject(cmds[2]).content(cmds[3]) );
 				return "Tried to send email";
 			case "checknow":
 				checker.cancel(false);
 				checker = scheduler.schedule( new Check(), 1, TimeUnit.SECONDS);
 				return "Will check emails asap.";
 			case "interval":
-				if( parts.length==2){
-					this.checkIntervalSeconds = (int)TimeTools.parsePeriodStringToSeconds(parts[1]);
+				if( cmds.length==2){
+					this.checkIntervalSeconds = (int)TimeTools.parsePeriodStringToSeconds(cmds[1]);
 					return "Interval changed to "+this.checkIntervalSeconds+" seconds (todo:save to settings.xml)";
 				}else{
 					return "Invalid number of parameters";
 				}
 			case "addallow":case "adddeny":
-				if( parts.length <3 ){
-					return "Not enough arguments email:"+parts[0]+",from,cmd(,isRegex)";
+				if( cmds.length <3 ){
+					return "Not enough arguments email:"+cmds[0]+",from,cmd(,isRegex)";
 				}
-				boolean regex = parts.length == 4 && Tools.parseBool(parts[3], false);
-				permits.add(new Permit(parts[0].equals("adddeny"), parts[1], parts[2], regex));
+				boolean regex = cmds.length == 4 && Tools.parseBool(cmds[3], false);
+				permits.add(new Permit(cmds[0].equals("adddeny"), cmds[1], cmds[2], regex));
 				return writePermits()?"Permit added":"Failed to write to xml";
 			default	:
 				return "unknown command";
 		}
 	}
+
 	/**
 	 * Send an email
 	 * @param email The email to send
@@ -548,6 +565,12 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 
 	public void setSending( boolean send ){
 		sendEmails=send;
+	}
+
+
+	@Override
+	public boolean removeWritable(Writable wr) {
+		return false;
 	}
 	/* *********************************  W O R K E R S ******************************************************* */
 	/**

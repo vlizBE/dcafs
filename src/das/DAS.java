@@ -1,5 +1,6 @@
 package das;
 
+import io.Writable;
 import io.collector.CollectorPool;
 import io.email.Email;
 import io.email.EmailSending;
@@ -43,7 +44,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
-public class DAS implements DeadThreadListener {
+public class DAS implements DeadThreadListener, Commandable{
 
     private static final String version = "1.0.0";
 
@@ -128,8 +129,6 @@ public class DAS implements DeadThreadListener {
             Logger.error("Issue in current settings.xml, aborting: " + settingsPath.toString());
             addTelnetServer();
         } else {
-
-
             Element settings = XMLtools.getFirstElementByTag(settingsDoc, "settings");
 
             if (settings != null) {
@@ -157,6 +156,7 @@ public class DAS implements DeadThreadListener {
             addCommandable(rtvals,"rtval","rtvals");
             addCommandable( "wpts",rtvals.enableWaypoints(nettyGroup) );
             addCommandable(dbManager,"dbm","myd");
+            addCommandable(this,"st");
 
             /* TransServer */
             addTransServer(-1);
@@ -185,9 +185,6 @@ public class DAS implements DeadThreadListener {
             /* I2C */
             addI2CWorker();
 
-            /* Telnet */
-            addTelnetServer();
-
             /* TaskManagerPool */
             addTaskManager();
 
@@ -200,7 +197,7 @@ public class DAS implements DeadThreadListener {
             addCommandable(forwardPool, "");
 
             /* Collectors */
-            collectorPool = new CollectorPool(settingsPath,dQueue,nettyGroup,rtvals);
+            collectorPool = new CollectorPool(settingsPath.getParent(),dQueue,nettyGroup,rtvals);
             addCommandable(collectorPool,"fc");
             addCommandable(collectorPool,"mc");
 
@@ -222,6 +219,9 @@ public class DAS implements DeadThreadListener {
             }
 
             bootOK = true;
+
+            /* Telnet */
+            addTelnetServer();
         }
         this.attachShutDownHook();
     }
@@ -442,9 +442,10 @@ public class DAS implements DeadThreadListener {
     public void addEmailWorker() {
         Logger.info("Adding EmailWorker");
         addLabelWorker();
-        emailWorker = new EmailWorker(settingsDoc, dQueue);
+        emailWorker = new EmailWorker(settingsPath, dQueue);
         emailWorker.setEventListener(this);
-        commandPool.setEmailWorker(emailWorker);
+        addCommandable("email",emailWorker);
+        commandPool.setEmailSender(emailWorker);
     }
     public Optional<EmailSending> getEmailSender(){
         if(emailWorker!=null)
@@ -800,8 +801,17 @@ public class DAS implements DeadThreadListener {
                 break;
         }
     }
-    public void test(){
+    @Override
+    public String replyToCommand(String[] request, Writable wr, boolean html) {
+        return switch( request[0]){
+            case "st" -> getStatus(html);
+            default -> "Unkown command";
+        };
+    }
 
+    @Override
+    public boolean removeWritable(Writable wr) {
+        return false;
     }
     public static void main(String[] args) {
 
@@ -815,4 +825,6 @@ public class DAS implements DeadThreadListener {
         Logger.info("Dcafs "+version+" boot finished!");
 
     }
+
+
 }

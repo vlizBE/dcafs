@@ -592,13 +592,25 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 		return base.getClass() == ModbusTCPStream.class;
 	}
 	/* ***************************************************************************************************** */
+	@Override
+	public String replyToCommand(String[] request, Writable wr, boolean html) {
+		String find = request[0].toLowerCase().replaceAll("\\d+","_");
+		return switch( find ) {
+			case "ss", "streams" -> replyToSSCommand(request[1], wr, html);
+			case "rios" -> replyToSSCommand("rios", wr, html);
+			case "raw","stream" -> "Request for "+request[0]+":"+request[1]+" "+( addForwarding(request[1],wr)?"ok":"failed");
+			case "s_","h_" -> doSorH( request);
+			case "","stop" -> removeWritable(wr)?"Ok.":"";
+			default -> "Unknown Command";
+		};
+	}
 	/**
 	 * The streampool can give replies to certain predetermined questions
 	 * @param request The question to ask
-	 * @param html Whether or not the answer should use html or regular line endings
+	 * @param html Whether the answer should use html or regular line endings
 	 * @return The answer or Unknown Command if the question wasn't understood
 	 */
-	public String replyToCommand(String request, Writable wrOri, boolean html ){
+	public String replyToSSCommand(String request, Writable wrOri, boolean html ){
 
 		String nl = html?"<br>":"\r\n";
 
@@ -1033,17 +1045,7 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 		return true;
 	}
 
-	@Override
-	public String replyToCommand(String[] request, Writable wr, boolean html) {
-		return switch( request[0].toLowerCase().replaceAll("\\d+","_")) {
-			case "ss", "streams" -> replyToCommand(request, wr, html);
-			case "rios" -> replyToCommand(new String[]{"streams","rios"}, wr, html);
-			case "raw","stream" -> "Request for "+request[0]+":"+request[1]+" "+( addForwarding(request[1],wr)?"ok":"failed");
-			case "s_","h_" -> doSorH( request);
-			case "","stop" -> removeWritable(wr)?"Ok.":"";
-			default -> "Unknown Command";
-		};
-	}
+
 	private String doSorH( String[] request ){
 		return switch( request[1] ){
 			case "??" -> "Sx:y -> Send the string y to stream x";

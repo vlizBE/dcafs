@@ -30,8 +30,6 @@ public class CommandPool {
 
 	private ArrayList<ShutdownPreventing> sdps;
 
-	private EmailWorker emailWorker; // To be able to send emails and get status
-
 	private final String workPath;
 	private final Path settingsPath;
 
@@ -68,20 +66,18 @@ public class CommandPool {
 			sdps = new ArrayList<>();
 		sdps.add(sdp);
 	}
+	public String getShutdownReason(){
+		return shutdownReason;
+	}
 	/* ****************************  S E T U P - C H E C K U P: Adding different parts from dcafs  *********************/
 
 	/**
 	 * To be able to send emails, access to the emailQueue is needed
 	 * 
-	 * @param emailWorker A reference to the emailworker
+	 * @param sendEmail A reference to the emailworker
 	 */
-	public void setEmailWorker(EmailWorker emailWorker) {
-		this.emailWorker = emailWorker;
-		sendEmail = emailWorker.getSender();
-	}
-
-	public String getShutdownReason(){
-		return shutdownReason;
+	public void setEmailSender(EmailSending sendEmail) {
+		this.sendEmail = sendEmail;
 	}
 	/* ************************************ * R E S P O N S E *************************************************/
 
@@ -97,7 +93,7 @@ public class CommandPool {
 			return;
 		}
 		/* Notification to know if anyone uses the bot. */
-		if ( (!d.getOriginID().startsWith("admin") && !emailWorker.isAddressInRef("admin",d.getOriginID()) ) && header.equalsIgnoreCase("Bot Reply")  ) {
+		if ( (!d.getOriginID().startsWith("admin") && !sendEmail.isAddressInRef("admin",d.getOriginID()) ) && header.equalsIgnoreCase("Bot Reply")  ) {
 			sendEmail.sendEmail( Email.toAdminAbout("DCAFSbot").content("Received '" + d.getData() + "' command from " + d.getOriginID()) );
 		}
 		/* Processing of the question */
@@ -175,21 +171,16 @@ public class CommandPool {
 		find = find.isBlank() ? "nothing" : find;
 
 		result = switch (find) {
-			case "admin" -> doADMIN(split, html);
+			case "admin" -> doADMIN(split, wr, html);
 			case "checksum" -> doCHECKSUM(workPath, split[0]);
-
-			case "email" -> doEMAIL(split, wr, html);
 			case "help", "h", "?" -> doHelp(split, html);
 			case "read" -> doREAD(split, wr);
 			case "upgrade" -> doUPGRADE(split, wr, html);
 			case "retrieve" -> doRETRIEVE(split, wr, html);
 			case "reqtasks" -> doREQTASKS(split);
 			case "sd" -> doShutDown(split, wr, html);
-			case "st" -> doSTatus(split, html);
-			case "lt" -> Tools.listThreads(html);
 			case "serialports" -> Tools.getSerialPorts(html);
 			case "conv" -> Tools.convertCoords(split[1].split(";"));
-			case "sleep" -> doSLEEP(split, wr);
 			case "", "stop" -> {
 				stopCommandable.forEach(c -> c.replyToCommand(new String[]{"", ""}, wr, false));
 				yield "Clearing requests";
@@ -495,7 +486,7 @@ public class CommandPool {
 		dQueue.add( Datagram.build("").writable(wr).label("read:"+request[1]) );
 		return "Request for readable "+request[1]+" from "+wr.getID()+" issued";
 	}
-	public String doADMIN( String[] request, boolean html ){
+	public String doADMIN( String[] request, Writable wr, boolean html ){
 		String nl = html?"<br":"\r\n";
 		String[] cmd = request[1].split(",");
 		switch( cmd[0] ){
@@ -504,13 +495,14 @@ public class CommandPool {
 				join.add("admin:getlogs -> Get the latest logfiles")
 					.add("admin:gettasklog -> Get the taskmananger log")
 					.add("admin:adddebugnode -> Adds a debug node with default values")
-					.add("admin:sms -> Send a test SMS to the admin number")
 					.add("admin:clock -> Get the current timestamp")
 					.add("admin:regex,<regex>,<match> -> Test a regex")
 					.add("admin:ipv4 -> Get the IPv4 and MAC of all network interfaces")
 					.add("admin:ipv6 -> Get the IPv6 and MAC of all network interfaces")
 					.add("admin:gc -> Fore a java garbage collection")
+					.add("admin:lt -> Show all threads")
 					.add("admin:reboot -> Reboot the computer (linux only)")
+					.add("admin:sleep,x -> Sleep for x time (linux only")
 					.add("admin:info,x -> Return the last x lines of the infolog or 30 if no x given")
 					.add("admin:errors,x -> Return the last x lines of the errorlog or 30 if no x given");
 				return join.toString();
@@ -557,6 +549,8 @@ public class CommandPool {
 				return "Matches? "+cmd[1].matches(cmd[2]);
 			case "ipv4": return Tools.getIP("", true);
 			case "ipv6": return Tools.getIP("", false);
+			case "sleep": return doSLEEP(cmd, wr);
+			case "lt": return Tools.listThreads(html);
 			case "gc":
 				System.gc();
 				return "Tried to execute GC";
@@ -615,37 +609,7 @@ public class CommandPool {
 			default: return UNKNOWN_CMD+" : "+request[1];
 		}
 	}
-	public String doEMAIL( String[] request, Writable wr, boolean html ){
-		
-		if( request[1].equalsIgnoreCase("addblank") ){
-			if( EmailWorker.addBlankEmailToXML(  XMLfab.withRoot(settingsPath, "settings"), true,true) )
-				return "Adding default email settings";
-			return "Failed to add default email settings";
-		}
 
-		if( emailWorker == null ){
-			if(request[1].equals("reload") 
-					&& XMLfab.withRoot(settingsPath, "settings").getChild("email").isPresent() ){
-			//	das.addEmailWorker();
-			}else{
-				return "No EmailWorker defined (yet), use email:addblank to add blank to xml.";
-			}
-		}
-		// Allow a shorter version to email to admin, replace it to match the standard command
-		request[1] = request[1].replace("toadmin,","send,admin,");
-
-		// Check if the content part of a send command is a command itself, if so replace it
-		if( request[1].startsWith("send,") ){ // If it's a send request
-			String[] parts = request[1].split(",");
-			if( parts.length==4){ // Check if the amount of components is correct
-				String rep = createResponse(Datagram.build(parts[3]).writable(wr),false,true); //if so, use content as command
-				if( !rep.startsWith("unknown")) // if this resulted in a response
-					parts[3]=rep; //replace the command
-				request[1] = String.join(",",parts);
-			}
-		}
-		return emailWorker.replyToSingleRequest(request[1], html);
-	}
 
 	public String doREQTASKS( String[] request ){
 		if( request[1].equals("?") )
@@ -661,38 +625,22 @@ public class CommandPool {
 				.attachment( Path.of(workPath,"logs","tasks.csv").toString() ) );
 		return "Sending log of taskset execution to "+request[1];
 	}
-	public String doSTatus( String[] request, boolean html ){
-		if( request[1].equals("?") )
-			return " -> Get a status update";
 
-		String response = "";	
-		try{
-		//	response =  das.getStatus(html);
-		}catch( java.lang.NullPointerException e){
-			Logger.error(e);
-		}
-		return response;       	
-	}
-
-
-	public String doSLEEP( String[] request, Writable wr ){
-		if( request[1].equals("?") || request[1].split(",").length!=2 ){
-			return "sleep:rtc,<time> -> Let the processor sleep for some time using an rtc fe. sleep:1,5m sleep 5min based on rtc1";
+	public String doSLEEP( String[] cmd, Writable wr ){
+		if( cmd.length!=3 ){
+			return "admin:sleep,rtc,<time> -> Let the processor sleep for some time using an rtc fe. sleep:1,5m sleep 5min based on rtc1";
 		}
 		String os = System.getProperty("os.name").toLowerCase();
 		if( !os.startsWith("linux")){
 			return "Only Linux supported for now.";
 		}
 		
-		int seconds;
-		String[] cmd = request[1].split(",");
-		seconds = (int) TimeTools.parsePeriodStringToSeconds(cmd[1]);
-
+		int seconds = (int) TimeTools.parsePeriodStringToSeconds(cmd[2]);
 		
 		try {
 			StringJoiner tempScript = new StringJoiner( "; ");
-			tempScript.add("echo 0 > /sys/class/rtc/rtc"+cmd[0]+"/wakealarm");
-			tempScript.add("echo +"+seconds+" > /sys/class/rtc/rtc"+cmd[0]+"/wakealarm");
+			tempScript.add("echo 0 > /sys/class/rtc/rtc"+cmd[1]+"/wakealarm");
+			tempScript.add("echo +"+seconds+" > /sys/class/rtc/rtc"+cmd[1]+"/wakealarm");
 			tempScript.add("echo mem > /sys/power/state");
 
 			ProcessBuilder pb = new ProcessBuilder("bash","-c", tempScript.toString());
