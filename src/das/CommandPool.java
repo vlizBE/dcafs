@@ -170,14 +170,14 @@ public class CommandPool {
 		String question = d.getData();
 		var wr = d.getWritable();
 
-		if( wr!=null && wr.getID().contains("matrix")){
+		if( wr!=null && (wr.getID().contains("matrix") || wr.getID().startsWith("file:"))){
 			html=true;
 		}
 		String result = UNKNOWN_CMD;
 		question=question.trim();
 
 		if (!html) // if html is false, verify that the command doesn't imply the opposite
-			html = question.endsWith("html");
+			html = question.endsWith("html") ;
 
 		question = question.replace("html", "");
 
@@ -275,6 +275,10 @@ public class CommandPool {
 		if( wr!=null ) {
 			if( d.getLabel().startsWith("matrix")) {
 				wr.writeLine(d.getOriginID()+"|"+result);
+			}else if (wr.getID().startsWith("file:")) {
+				result = result.replace("<br>",System.lineSeparator());
+				result = result.replaceAll("<.{1,2}>","");
+				wr.writeLine(result);
 			}else if (!wr.getID().equalsIgnoreCase("telnet")) {
 				Logger.debug("Hidden response for " + wr.getID() + ": " + result);
 			}
