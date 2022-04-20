@@ -532,7 +532,7 @@ public class CommandPool {
 		if( streampool == null )
 			return "No StreamManager defined.";
 
-		if( request[1].equals("?") ){
+		if( request[1].equals("??") ){
 			return "Sx:y -> Send the string y to stream x";
 		}
 		if( request[1].isEmpty() )

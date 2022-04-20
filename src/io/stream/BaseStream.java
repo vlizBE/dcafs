@@ -84,7 +84,9 @@ public abstract class BaseStream {
         log = XMLtools.getChildValueByTag(stream, "log", "yes").equals("yes");
 
         // delimiter
-        String deli = XMLtools.getChildValueByTag( stream, "eol", "\r\n"); // Delimiter used, default carriage return + line feed
+        String deli = XMLtools.getChildValueByTag( stream, "eol", "\r\n");
+        if( deli.equalsIgnoreCase("\\0"))
+            deli="";// Delimiter used, default carriage return + line feed
         eol = Tools.getDelimiterString(deli);
 
         // ttl

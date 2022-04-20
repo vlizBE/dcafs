@@ -281,7 +281,7 @@ public class Task implements Comparable<Task>{
 			this.startDelay = 0;
 
 			trigger = trigger.replace(";", ",").toLowerCase();
-
+			trigger = trigger.replace("=",":");
 			String cmd = trigger.substring(0, trigger.indexOf(":"));
 			if( trigger.equals(cmd) ){
 				Logger.tag("TASK").error("Not enough arguments in trigger: "+trigger);

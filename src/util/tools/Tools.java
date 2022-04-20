@@ -252,11 +252,11 @@ public class Tools {
 
     /**
      * Converts a part of an array of characters to a space separated string of
-     * hexadecimals (0x00 0x01)
+     * hexadecimals (0x00 0x01), can work MSB->LSB and LSB->MSB
      * 
      * @param data   The array to parse
      * @param offset Start index
-     * @param length Amount of bytes from the start to convert
+     * @param length Amount of bytes from the start to convert, negative means LSB first
      * @return The hex string
      */
     public static String fromBytesToHexString(byte[] data, int offset, int length) {
@@ -264,7 +264,7 @@ public class Tools {
             return "";
 
         StringJoiner join = new StringJoiner(" 0x", "0x", "");
-        for (int x = offset; x < length && x < data.length; x++) {
+        for (int x = offset; (length>0?x<offset+length:x>offset+length) && (length>0?x<data.length:x>-1); x+=(length>0?1:-1)) {
             String hex = Integer.toHexString(data[x]).toUpperCase();
             if (hex.length() > 2) {
                 hex = hex.substring(hex.length() - 2);
@@ -414,6 +414,8 @@ public class Tools {
 
         for (int a = 0; a < numbers.length; a++) {
             try {
+                if( numbers[a].isEmpty()) // skip empty strings
+                    continue;
                 if (base == 16) {
                     numbers[a] = numbers[a].replace("0x", "");
                 } else if (base == 2) {
