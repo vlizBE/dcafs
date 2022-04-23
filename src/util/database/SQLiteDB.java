@@ -238,7 +238,7 @@ public class SQLiteDB extends SQLDB{
             return null;
 
         String id = XMLtools.getStringAttribute(dbe,"id","");
-        var path = XMLtools.getPathAttribute(dbe,"path",workPath);
+        var path = XMLtools.getPathAttribute(dbe,"path",Path.of(workPath));
 
         if( path.isEmpty() )
             return null;

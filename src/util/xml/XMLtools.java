@@ -436,14 +436,14 @@ public class XMLtools {
 		return def;
 	}
 	/**
-	 * Get the path value of a node from the given element with the given name
+	 * Get the optional path value of a node from the given element with the given name
 	 *
 	 * @param parent The element to look in
 	 * @param attribute     The name of the attribute
 	 * @param workPath The value to return if the node wasn't found
 	 * @return The requested path or an empty optional is something went wrong
 	 */
-	public static Optional<Path> getPathAttribute(Element parent, String attribute, String workPath ) {
+	public static Optional<Path> getPathAttribute(Element parent, String attribute, Path workPath ) {
 		if( parent == null ){
 			Logger.error("Parent is null when looking for "+attribute);
 			return Optional.empty();
@@ -456,9 +456,10 @@ public class XMLtools {
 		if( p.isEmpty() )
 			return Optional.empty();
 		var path = Path.of(p);
-		if( path.isAbsolute() || workPath.isEmpty())
+
+		if( path.isAbsolute() || workPath==null)
 			return Optional.of(path);
-		return Optional.of( Path.of(workPath).resolve(path) );
+		return Optional.of( workPath.resolve(path) );
 	}
 	/**
 	 * Get the attributes of an element and cast to integer, return def if failed
