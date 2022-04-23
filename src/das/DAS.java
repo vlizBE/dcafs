@@ -12,6 +12,7 @@ import io.stream.StreamManager;
 import io.collector.FileCollector;
 import io.collector.MathCollector;
 import io.forward.ForwardPool;
+import io.stream.file.FileMonitor;
 import io.stream.tcp.TcpServer;
 import io.telnet.TelnetCodes;
 import io.telnet.TelnetServer;
@@ -88,6 +89,7 @@ public class DAS implements DeadThreadListener {
     private InterruptPins isrs;
 
     private MatrixClient matrixClient;
+    private FileMonitor fileMonitor;
 
     /* Threading */
     EventLoopGroup nettyGroup = new NioEventLoopGroup(); // Single group so telnet,trans and streampool can share it
@@ -217,6 +219,9 @@ public class DAS implements DeadThreadListener {
 
             /* File Collectors */
             loadFileCollectors();
+            /* File monitor */
+            if( FileMonitor.inXML(settingsPath))
+                fileMonitor = new FileMonitor(settingsPath.getParent(),dQueue);
 
             /* GPIO's */
             if( XMLfab.hasRoot(settingsPath,"dcafs","gpio") ){
