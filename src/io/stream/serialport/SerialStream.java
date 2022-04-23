@@ -139,7 +139,7 @@ public class SerialStream extends BaseStream implements Writable {
     }
     protected void processListenerEvent( byte[] data ){
         Logger.debug(id+ " <-- "+Tools.fromBytesToHexString(data));
-        Logger.tag("RAW").warn(priority + "\t" + label + "\t" + Tools.fromBytesToHexString(data));
+        Logger.tag("RAW").warn(priority + "\t" + label+"|"+id + "\t" + Tools.fromBytesToHexString(data));
 
         if( !targets.isEmpty() ){
             try {
@@ -147,7 +147,7 @@ public class SerialStream extends BaseStream implements Writable {
                     eventLoopGroup.submit(()-> {
                         try {
                             if( dt.getID().contains("telnet")) {
-                                dt.writeString(Tools.fromBytesToHexString(data));
+                                dt.writeString(Tools.fromBytesToHexString(data)+" ");
                             }else{
                                 dt.writeBytes(data);
                             }

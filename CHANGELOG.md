@@ -23,6 +23,17 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 0.11.10 (work in progress)
 
+Moved to java 17 (new LTS)
+
+### File monitor 
+- Simple class that watches files for modification and executes a cmd on event
+- Purely xml for now, now telnet interface
+
+### Fixes
+- EmailWorker check thread got called multiple times if it failed, this amount kept increasing
+- The command to send a string to a stream didn't allow a single ?, now info on the cmd is with ??
+- Various small fixes in the tools package
+
 ## 0.11.9 (28/03/22)
 
 Mainly added initial matrix & modbus tcp support.
