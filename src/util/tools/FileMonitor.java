@@ -29,15 +29,25 @@ public class FileMonitor {
 
         readFromXML();
     }
+    /**
+     * Check if the settings.xml contains an element for the monitor
+     * @param xml The path to the settings.xml
+     * @return True if it contains a monitor node
+     */
     public static boolean inXML( Path xml ){
         return XMLtools.getAllElementsByTag(XMLtools.readXML( xml),"monitor").length==1;
     }
+
+    /**
+     * Read the monitor setup from settings.xml
+     * @return True if read properly
+     */
     public boolean readFromXML( ){
         var base = XMLtools.readXML(root.resolve("settings.xml"));
         var ele = XMLtools.getAllElementsByTag(base,"monitor");
         if( ele.length==0)
             return false;
-
+        /* Check for simple file modification alerts */
         for( var file : XMLtools.getChildElements(ele[0],"file")){
             var p = XMLtools.getPathAttribute(file,"path",root);
             if( p.isEmpty())
@@ -57,7 +67,6 @@ public class FileMonitor {
                 service = FileSystems.getDefault().newWatchService();
                 Files.createFile(p);
                 var mon = new ReactionInfo(p,act,false);
-
                 files.add( mon );
                 watcher.submit(() -> watch(mon));
             } catch (IOException e) {
@@ -120,7 +129,10 @@ public class FileMonitor {
         watcher.schedule(()->watch(mon),Math.max(blank,1), TimeUnit.SECONDS);
     }
 
-    public class ReactionInfo {
+    /**
+     * Simple class to contain all required info on what to do after an event
+     */
+    private class ReactionInfo {
         private Path file;
         private Function<String, Integer> action;
         private String cmd="";
