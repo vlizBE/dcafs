@@ -11,6 +11,7 @@ import io.matrix.MatrixClient;
 import io.mqtt.MqttPool;
 import io.stream.StreamManager;
 import io.forward.ForwardPool;
+import util.tools.FileMonitor;
 import io.stream.tcp.TcpServer;
 import io.telnet.TelnetCodes;
 import io.telnet.TelnetServer;
@@ -85,6 +86,7 @@ public class DAS implements DeadThreadListener, Commandable{
     private InterruptPins isrs;
 
     private MatrixClient matrixClient;
+    private FileMonitor fileMonitor;
 
     /* Threading */
     EventLoopGroup nettyGroup = new NioEventLoopGroup(); // Single group so telnet,trans and streampool can share it
@@ -200,6 +202,10 @@ public class DAS implements DeadThreadListener, Commandable{
             collectorPool = new CollectorPool(settingsPath.getParent(),dQueue,nettyGroup,rtvals);
             addCommandable(collectorPool,"fc");
             addCommandable(collectorPool,"mc");
+
+            /* File monitor */
+            if( FileMonitor.inXML(settingsPath))
+                fileMonitor = new FileMonitor(settingsPath.getParent(),dQueue);
 
             /* GPIO's */
             if( XMLfab.hasRoot(settingsPath,"dcafs","gpio") ){
@@ -823,8 +829,5 @@ public class DAS implements DeadThreadListener, Commandable{
         das.startAll();
 
         Logger.info("Dcafs "+version+" boot finished!");
-
     }
-
-
 }
