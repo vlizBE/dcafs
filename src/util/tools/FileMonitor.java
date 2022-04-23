@@ -1,4 +1,4 @@
-package io.stream.file;
+package util.tools;
 
 import org.tinylog.Logger;
 import util.xml.XMLtools;
@@ -73,14 +73,11 @@ public class FileMonitor {
             return;
         }
         try {
-            if(service == null) {
-                try {
-                    service = FileSystems.getDefault().newWatchService();
-                } catch (IOException e) {
-                    Logger.error(e);
-                }
-            }
+            if(service == null)
+                service = FileSystems.getDefault().newWatchService();
+
             var wk = mon.register(service);
+            mon.updatePosition();
             service.take();
             for (var ev : wk.pollEvents()) {
                 String mod = ev.context().toString();
@@ -141,6 +138,13 @@ public class FileMonitor {
             this.cmd=cmd;
 
             Logger.info("Monitoring '"+file+"', on modify: "+cmd);
+        }
+        public boolean updatePosition() throws IOException{
+            if( position==-1)
+                return false;
+            long old=position;
+            position = Files.size(file);
+            return old!=position;
         }
         public WatchKey register( WatchService ws ) throws IOException {
             return file.getParent().register(ws, ENTRY_MODIFY);
