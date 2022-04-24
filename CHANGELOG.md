@@ -16,6 +16,16 @@ From 0.5.0 onwards, this should be better documented...
 * Rework the TaskManager ( > 1.0.0 )
 * Zigbee support ( > 1.0.0 )
 
+## 1.0.0
+
+- Now using java 17 (new lts)
+- Clean up, remove unused stuff etc
+- Removed DigiWorker and other things related to sms
+- Moved methods in CommandPool that can be static to Tools package
+- Removed cyclic redundancy between CommandPool and Das
+- 
+
+
 ## 0.11.x
 - Goals for this version series (removed when they are done)
   * Code cleanup
