@@ -11,13 +11,11 @@ import das.CommandPool;
 import io.mqtt.MqttWriting;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
-import util.DeadThreadListener;
 import util.database.QueryWriting;
 import util.tools.TimeTools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 
-import javax.xml.crypto.Data;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
@@ -55,8 +53,6 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 	private final AtomicInteger procCount = new AtomicInteger(0);
 	private long procTime = Instant.now().toEpochMilli();
 	long waitingSince;
-
-	protected DeadThreadListener listener;
 
 	ThreadPoolExecutor executor = new ThreadPoolExecutor(1,
 			Math.min(3, Runtime.getRuntime().availableProcessors()), // max allowed threads
@@ -97,14 +93,6 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 
 	public void setMqttWriter( MqttWriting mqtt){
 		this.mqtt=mqtt;
-	}
-	/**
-	 * Add a listener to be notified of the event the thread fails.
-	 *
-	 * @param listener the listener
-	 */
-	public void setEventListener(DeadThreadListener listener) {
-		this.listener = listener;
 	}
 
 	/**
@@ -301,7 +289,6 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				Logger.error(e);
 			}
 		}
-		listener.notifyCancelled("BaseWorker");
 	}
 
 	/* ******************************* D E F A U L T   S T U F F **************************************** */

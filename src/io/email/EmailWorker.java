@@ -7,7 +7,6 @@ import io.collector.CollectorFuture;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import util.DeadThreadListener;
 import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.tools.Tools;
@@ -86,8 +85,6 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 
 	long lastInboxConnect = -1; // Keep track of the last timestamp that a inbox connection was made
 
-	protected DeadThreadListener listener;	// a way to notify anything that the thread died somehow
-
 	HashMap<String, DataRequest> buffered = new HashMap<>();	// Store the requests made for data via email
 
 
@@ -110,16 +107,6 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 		if( readFromXML() )
 			init();
 	}
-
-	/**
-	 * Add a listener to be notified of the event the thread fails.
-	 * 
-	 * @param listener the listener
-	 */
-	public void setEventListener(DeadThreadListener listener) {
-		this.listener = listener;
-	}
-
 	/**
 	 * Initialises the worker by enabling the retry task and setting the defaults
 	 * settings, if reading emails is enabled this starts the thread for this.

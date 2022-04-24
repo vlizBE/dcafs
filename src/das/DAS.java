@@ -22,7 +22,6 @@ import org.tinylog.Logger;
 import org.tinylog.provider.ProviderRegistry;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import util.DeadThreadListener;
 import util.data.DataProviding;
 import util.data.RealtimeValues;
 import util.database.*;
@@ -45,7 +44,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
-public class DAS implements DeadThreadListener, Commandable{
+public class DAS implements Commandable{
 
     private static final String version = "1.0.0";
 
@@ -212,7 +211,7 @@ public class DAS implements DeadThreadListener, Commandable{
                 Logger.info("Reading interrupt gpio's from settings.xml");
                 isrs = new InterruptPins(dQueue,settingsPath);
             }else{
-                Logger.info("No gpios defined in settings.xml");
+                Logger.info("No gpio's defined in settings.xml");
             }
 
             /* Matrix */
@@ -262,10 +261,6 @@ public class DAS implements DeadThreadListener, Commandable{
         return debug;
     }
 
-    public String getDASVersion() {
-        return version;
-    }
-
     public String getUptime() {
         return TimeTools.convertPeriodtoString(Duration.between(bootupTimestamp, LocalDateTime.now()).getSeconds(),
                 TimeUnit.SECONDS);
@@ -294,10 +289,6 @@ public class DAS implements DeadThreadListener, Commandable{
     public void addCommandable( Commandable cmd, String... id  ){
         commandPool.addCommandable(String.join(";",id),cmd);
     }
-    public CommandPool getCommandPool(){
-        return commandPool;
-    }
-
     /**
      * Adds a check to do to see if it's allowed to shut down now
      * @param sdp
@@ -365,7 +356,6 @@ public class DAS implements DeadThreadListener, Commandable{
         labelWorker.setCommandReq(commandPool);
         labelWorker.setDebugging(debug);
         labelWorker.setMqttWriter(mqttPool);
-        labelWorker.setEventListener(this);
 
         addCommandable(labelWorker,"gens");
     }
@@ -449,7 +439,6 @@ public class DAS implements DeadThreadListener, Commandable{
         Logger.info("Adding EmailWorker");
         addLabelWorker();
         emailWorker = new EmailWorker(settingsPath, dQueue);
-        emailWorker.setEventListener(this);
         addCommandable("email",emailWorker);
         commandPool.setEmailSender(emailWorker);
     }
@@ -784,34 +773,11 @@ public class DAS implements DeadThreadListener, Commandable{
         }
         return join.toString();
     }
-
-    @Override
-    public void notifyCancelled(String thread) {
-
-        Logger.error("Thread: " + thread + " stopped for some reason.");
-        rtvals.getIssuePool().addIfNewAndIncrement("threaddied:" + thread, thread + " died and got restarted");
-
-        switch (thread) {
-            case "BaseWorker": // done
-                int retries = rtvals.getIssuePool().getIssueTriggerCount("thread died:" + thread);
-                if (labelWorker != null && retries < 50) {
-                    Logger.error("BaseWorker not alive, trying to restart...");
-                    new Thread(labelWorker, "BaseWorker").start();// Start the thread
-                } else {
-                    Logger.error("BaseWorker died 50 times, giving up reviving.");
-                    rtvals.getIssuePool().addIfNewAndIncrement("fatal:" + thread, thread + " permanently dead.");
-                }
-                break;
-            default:
-                Logger.error("Unknown thread");
-                break;
-        }
-    }
     @Override
     public String replyToCommand(String[] request, Writable wr, boolean html) {
         return switch( request[0]){
             case "st" -> getStatus(html);
-            default -> "Unkown command";
+            default -> "Unknown command";
         };
     }
 
@@ -819,6 +785,7 @@ public class DAS implements DeadThreadListener, Commandable{
     public boolean removeWritable(Writable wr) {
         return false;
     }
+
     public static void main(String[] args) {
 
         DAS das = new DAS();
