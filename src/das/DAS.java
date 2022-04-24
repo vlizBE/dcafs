@@ -168,9 +168,6 @@ public class DAS implements Commandable{
             /* Base Worker */
             addLabelWorker();
 
-            /* ValMaps */
-            loadValMaps(true);
-
             /* StreamManager */
             addStreamPool();
 
@@ -203,7 +200,7 @@ public class DAS implements Commandable{
             addCommandable(collectorPool,"mc");
 
             /* File monitor */
-            if( FileMonitor.inXML(settingsPath))
+            if( XMLfab.hasRoot(settingsPath,"dcafs","monitor") )
                 fileMonitor = new FileMonitor(settingsPath.getParent(),dQueue);
 
             /* GPIO's */
@@ -289,13 +286,7 @@ public class DAS implements Commandable{
     public void addCommandable( Commandable cmd, String... id  ){
         commandPool.addCommandable(String.join(";",id),cmd);
     }
-    /**
-     * Adds a check to do to see if it's allowed to shut down now
-     * @param sdp
-     */
-    public void addShutdownPreventing( ShutdownPreventing sdp){
-        commandPool.addShutdownPreventing(sdp);
-    }
+
     /* **************************************  R E A L T I M E V A L U E S ********************************************/
     public DataProviding getDataProvider() {
         return rtvals;
@@ -316,10 +307,6 @@ public class DAS implements Commandable{
         taskManagerPool.readFromXML();
         addCommandable("tm", taskManagerPool);
     }
-    public Optional<TaskManager> getTaskManager( String id){
-        return taskManagerPool.getTaskList(id);
-    }
-
     /* ******************************************  S T R E A M P O O L ***********************************************/
     /**
      * Adds the streampool
@@ -337,15 +324,6 @@ public class DAS implements Commandable{
             streampool.readSettingsFromXML(settingsPath);
         }
     }
-
-    public StreamManager getStreamPool() {
-        if (streampool == null) {
-            Logger.warn("No Streampool defined");
-            return null;
-        }
-        return streampool;
-    }
-
     /* *************************************  L A B E L W O R K E R **********************************************/
     /**
      * Adds the BaseWorker
@@ -359,55 +337,9 @@ public class DAS implements Commandable{
 
         addCommandable(labelWorker,"gens");
     }
-    public LabelWorker getLabelWorker() {
-        return labelWorker;
-    }
-
     public BlockingQueue<Datagram> getDataQueue() {
         addLabelWorker();
         return dQueue;
-    }
-
-    public void loadValMaps(boolean clear){
-        if( clear ){
-            settingsDoc = XMLtools.readXML(settingsPath);
-            labelWorker.clearValMaps();
-        }
-        XMLfab.getRootChildren(settingsDoc, "dcafs","valmaps","valmap")
-                .forEach( ele ->  labelWorker.addValMap( ValMap.readFromXML(ele) ) );
-
-        // Find the path ones?
-        XMLfab.getRootChildren(settingsPath, "dcafs","paths","path")
-                .forEach( ele -> {
-                        String imp = ele.getAttribute("import");
-
-                        int a=1;
-                        if( !imp.isEmpty() ){ //meaning imported
-                            String file = Path.of(imp).getFileName().toString();
-                            file = file.substring(0,file.length()-4);//remove the .xml
-
-                            for( Element vm : XMLfab.getRootChildren(Path.of(imp), "dcafs","paths","path","valmap").collect(Collectors.toList())){
-                                if( !vm.hasAttribute("id")){ //if it hasn't got an id, give it one
-                                    vm.setAttribute("id",file+"_vm"+a);
-                                    a++;
-                                }
-                                if( !vm.hasAttribute("delimiter") ) //if it hasn't got an id, give it one
-                                    vm.setAttribute("delimiter",vm.getAttribute("delimiter"));
-                                labelWorker.addValMap( ValMap.readFromXML(vm) );
-                            }
-                        }
-                        String delimiter = XMLtools.getStringAttribute(ele,"delimiter","");
-                        for( Element vm : XMLtools.getChildElements(ele,"valmap")){
-                            if( !vm.hasAttribute("id")){ //if it hasn't got an id, give it one
-                                vm.setAttribute("id",ele.getAttribute("id")+"_vm"+a);
-                                a++;
-                            }
-                            if( !vm.hasAttribute("delimiter") && !delimiter.isEmpty()) //if it hasn't got an id, give it one
-                                vm.setAttribute("delimiter",delimiter);
-                            labelWorker.addValMap( ValMap.readFromXML(vm) );
-                        }
-                    }
-            );
     }
     /* ***************************************** M Q T T ******************************************************** */
     public void addMqttPool(){
@@ -495,18 +427,6 @@ public class DAS implements Commandable{
     }
 
     /* ******************************** * S H U T D O W N S T U F F ***************************************** */
-    /**
-     * Set the reason for shutting down
-     * 
-     * @param reason The reason DAS is shutting down
-     */
-    public void setShutdownReason(String reason) {
-        this.sdReason = reason;
-        if (reason.startsWith("upgrade")) {
-            this.rebootOnShutDown = true;
-        }
-    }
-
     /**
      * Attach a hook to the shutdown process, so we're sure that all queue's etc. get
      * processed first
@@ -614,12 +534,6 @@ public class DAS implements Commandable{
 
         Logger.debug("Finished");
     }
-
-    public void haltWorkers() {
-        if (labelWorker != null)
-            labelWorker.stopWorker();
-    }
-
     /* **************************** * S T A T U S S T U F F *********************************************************/
     /**
      * Request a status message regarding the streams, databases, buffers etc

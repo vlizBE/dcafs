@@ -52,7 +52,6 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 
 	private final AtomicInteger procCount = new AtomicInteger(0);
 	private long procTime = Instant.now().toEpochMilli();
-	long waitingSince;
 
 	ThreadPoolExecutor executor = new ThreadPoolExecutor(1,
 			Math.min(3, Runtime.getRuntime().availableProcessors()), // max allowed threads
@@ -67,7 +66,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 	String lastOrigin="";
 
 	Writable spy;
-	String spyingon="";
+	String spyingOn ="";
 	/* ***************************** C O N S T R U C T O R **************************************/
 
 	/**
@@ -85,6 +84,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 		debug.scheduleAtFixedRate(new SelfCheck(),5,30,TimeUnit.MINUTES);
 
 		loadGenerics();
+		loadValMaps(true);
 	}
 	@Override
 	public void addDatagram(Datagram d){
@@ -105,15 +105,6 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 	}
 
 	/**
-	 * Set the DataProvider for the worker to use
-	 *
-	 * @param dp The implementation of the DataProviding interface
-	 */
-	public void setDataProviding(DataProviding dp) {
-		this.dp = dp;
-	}
-
-	/**
 	 * Set or remove debugmode flag
 	 * @param deb New state for the debugmode
 	 */
@@ -131,54 +122,59 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 		procTime = Instant.now().toEpochMilli(); // Overwrite for next check
 		return (int) Math.rint(a);
 	}
-
-	protected long dataAge() {
-		return (Instant.now().toEpochMilli() - waitingSince) / 1000;
-	}
-
-	/**
-	 * Stop the worker thread
-	 */
-	public void stopWorker() {
-		goOn = false;
-	}
-
 	/* ****************************************** V A L M A P S *************************************************** */
-	public ValMap addValMap(ValMap map) {
+	private ValMap addValMap(ValMap map) {
 		mappers.put(map.getID(), map);
 		Logger.info("Added generic " + map.getID());
 		return map;
 	}
-
-	public void clearValMaps() {
-		mappers.clear();
-	}
-
-	public ValMap addValMap(String id) {
-		ValMap map = new ValMap("");
-		mappers.put(id, map);
-		return map;
-	}
-
-	public String getValMapsInfo() {
-		StringJoiner join = new StringJoiner("\r\n", "Valmaps:\r\n", "\r\n");
-		for (ValMap map : mappers.values()) {
-			join.add(map.toString() + "\r\n");
+	public void loadValMaps(boolean clear){
+		var settingsDoc = XMLtools.readXML(settingsPath);
+		if( clear ){
+			mappers.clear();
 		}
-		return join.toString();
-	}
+		XMLfab.getRootChildren(settingsDoc, "dcafs","valmaps","valmap")
+				.forEach( ele ->  addValMap( ValMap.readFromXML(ele) ) );
 
+		// Find the path ones?
+		XMLfab.getRootChildren(settingsPath, "dcafs","paths","path")
+				.forEach( ele -> {
+							String imp = ele.getAttribute("import");
+
+							int a=1;
+							if( !imp.isEmpty() ){ //meaning imported
+								String file = Path.of(imp).getFileName().toString();
+								file = file.substring(0,file.length()-4);//remove the .xml
+
+								for( Element vm : XMLfab.getRootChildren(Path.of(imp), "dcafs","paths","path","valmap").collect(Collectors.toList())){
+									if( !vm.hasAttribute("id")){ //if it hasn't got an id, give it one
+										vm.setAttribute("id",file+"_vm"+a);
+										a++;
+									}
+									if( !vm.hasAttribute("delimiter") ) //if it hasn't got an id, give it one
+										vm.setAttribute("delimiter",vm.getAttribute("delimiter"));
+									addValMap( ValMap.readFromXML(vm) );
+								}
+							}
+							String delimiter = XMLtools.getStringAttribute(ele,"delimiter","");
+							for( Element vm : XMLtools.getChildElements(ele,"valmap")){
+								if( !vm.hasAttribute("id")){ //if it hasn't got an id, give it one
+									vm.setAttribute("id",ele.getAttribute("id")+"_vm"+a);
+									a++;
+								}
+								if( !vm.hasAttribute("delimiter") && !delimiter.isEmpty()) //if it hasn't got an id, give it one
+									vm.setAttribute("delimiter",delimiter);
+								addValMap( ValMap.readFromXML(vm) );
+							}
+						}
+				);
+	}
 	/* *************************** GENERICS **********************************************/
 	public Generic addGeneric(Generic gen) {
 		generics.put(gen.getID(), gen);
 		Logger.info("Added generic " + gen.getID());
 		return gen;
 	}
-
-	public void clearGenerics() {
-		generics.clear();
-	}
-
 	public String getGenericInfo() {
 		StringJoiner join = new StringJoiner("\r\n", "Generics:\r\n", "\r\n");
 		join.setEmptyValue("None yet");
@@ -187,7 +183,53 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 		}
 		return join.toString();
 	}
+	private List<Generic> getGenerics( String id ){
+		return generics.entrySet().stream().filter( set -> set.getKey().equalsIgnoreCase(id) ||set.getKey().matches(id))
+				.map(Entry::getValue).collect(Collectors.toList());
+	}
+	/**
+	 * Load the generics
+	 */
+	public void loadGenerics() {
 
+		generics.clear();
+
+		XMLfab.getRootChildren(settingsPath, "dcafs","generics","generic")
+				.forEach( ele ->  addGeneric( Generic.readFromXML(ele) ) );
+		// Find the path ones?
+		XMLfab.getRootChildren(settingsPath, "dcafs","paths","path")
+				.forEach( ele -> {
+							String imp = ele.getAttribute("import");
+
+							int a=1;
+							if( !imp.isEmpty() ){ //meaning imported
+								String file = Path.of(imp).getFileName().toString();
+								file = file.substring(0,file.length()-4);//remove the .xml
+
+								for( Element gen : XMLfab.getRootChildren(Path.of(imp), "dcafs","path","generic").collect(Collectors.toList())){
+									if( !gen.hasAttribute("id")){ //if it hasn't got an id, give it one
+										gen.setAttribute("id",file+"_gen"+a);
+										a++;
+									}
+									String delim = ((Element)gen.getParentNode()).getAttribute("delimiter");
+									if( !gen.hasAttribute("delimiter") ) //if it hasn't got an id, give it one
+										gen.setAttribute("delimiter",delim);
+									addGeneric( Generic.readFromXML(gen) );
+								}
+							}
+							String delimiter = XMLtools.getStringAttribute(ele,"delimiter","");
+							for( Element gen : XMLtools.getChildElements(ele,"generic")){
+								if( !gen.hasAttribute("id")){ //if it hasn't got an id, give it one
+									gen.setAttribute("id",ele.getAttribute("id")+"_gen"+a);
+									a++;
+								}
+								if( !gen.hasAttribute("delimiter") && !delimiter.isEmpty()) //if it hasn't got an id, give it one
+									gen.setAttribute("delimiter",delimiter);
+								addGeneric( Generic.readFromXML(gen) );
+							}
+						}
+				);
+	}
 	/* ******************************** Q U E U E S **********************************************/
 	public int getWaitingQueueSize(){
 		return executor.getQueue().size();
@@ -210,7 +252,86 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 		this.dQueue = d;
 	}
 
-	/* *******************************************************************************************/
+	/* ******************************* D E F A U L T   S T U F F **************************************** */
+	private void storeInDoubleVal(String param, String data, String origin ){
+		try{
+			var val = NumberUtils.toDouble(data,Double.NaN);
+			if( Double.isNaN(val) && NumberUtils.isCreatable(data)){
+				val = NumberUtils.createInteger(data);
+			}
+			if( !Double.isNaN(val) ){
+				dp.setDouble(param,val);
+			}else{
+				Logger.warn("Tried to convert "+data+" from "+origin+" to a double...");
+			}
+		}catch( NumberFormatException e ){
+			Logger.warn("Tried to convert "+data+" from "+origin+" to a double...");
+		}
+	}
+	private void checkRead( String from, Writable wr, String id){
+		if(wr!=null){
+			var ids = id.split(",");
+			var read = readables.get(ids[0]);
+			if( read != null && !read.isInvalid()){
+
+				read.addTarget(wr,ids.length==2?ids[1]:"*");
+				Logger.info("Added "+wr.getID()+ " to target list of "+read.getID());
+			}else{
+				Logger.error(wr.getID()+" asked for data from "+id+" but doesn't exists (anymore)");
+			}
+			readables.entrySet().removeIf( entry -> entry.getValue().isInvalid());
+		}else{
+			Logger.error("No valid writable in the datagram from "+from);
+		}
+	}
+	public void checkTelnet(Datagram d) {
+		Writable dt = d.getWritable();
+
+		if( d.getData().equalsIgnoreCase("spy:off")||d.getData().equalsIgnoreCase("spy:stop")){
+			spy.writeLine("Stopped spying...");
+			spy=null;
+			return;
+		}else if( d.getData().startsWith("spy:")){
+			spyingOn =d.getData().split(":")[1];
+			spy=d.getWritable();
+			spy.writeLine("Started spying on "+ spyingOn);
+			return;
+		}
+
+		if (!d.getData().equals("status")) {
+			String from = " for ";
+
+			if (dt != null) {
+				from += dt.getID();
+			}
+			if (!d.getData().isBlank())
+				Logger.info("Executing telnet command [" + d.getData() + "]" + from);
+		}
+
+		String response = reqData.createResponse( d, false);
+		if( spy!=null && d.getWritable()!=spy && (d.getWritable().getID().equalsIgnoreCase(spyingOn)|| spyingOn.equalsIgnoreCase("all"))){
+			spy.writeLine(TelnetCodes.TEXT_ORANGE+"Cmd: "+d.getData()+TelnetCodes.TEXT_YELLOW);
+			spy.writeLine(response);
+		}
+		String[] split = d.getLabel().split(":");
+		if (dt != null) {
+			if (!d.isSilent()) {
+				if( d.getData().startsWith("telnet:write")){
+					dt.writeString(TelnetCodes.PREV_LINE+TelnetCodes.CLEAR_LINE+response);
+				}else{
+					dt.writeLine(response);
+					dt.writeString((split.length >= 2 ? "<" + split[1] : "") + ">");
+				}
+
+			}
+		} else {
+			Logger.info(response);
+			Logger.info((split.length >= 2 ? "<" + split[1] : "") + ">");
+		}
+		procCount.incrementAndGet();
+	}
+
+	/* ************************************** RUNNABLES ******************************************************/
 	@Override
 	public void run() {
 
@@ -271,6 +392,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 							break;
 						case "telnet":
 							executor.execute(() -> checkTelnet(d) );
+							break;
 						default:
 							Logger.error("Unknown label: "+label);
 							break;
@@ -290,87 +412,6 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 			}
 		}
 	}
-
-	/* ******************************* D E F A U L T   S T U F F **************************************** */
-	private void storeInDoubleVal(String param, String data, String origin ){
-		try{
-			var val = NumberUtils.toDouble(data,Double.NaN);
-			if( Double.isNaN(val) && NumberUtils.isCreatable(data)){
-				val = NumberUtils.createInteger(data);
-			}
-			if( !Double.isNaN(val) ){
-				dp.setDouble(param,val);
-			}else{
-				Logger.warn("Tried to convert "+data+" from "+origin+" to a double...");
-			}
-		}catch( NumberFormatException e ){
-			Logger.warn("Tried to convert "+data+" from "+origin+" to a double...");
-		}
-	}
-	private void checkRead( String from, Writable wr, String id){
-		if(wr!=null){
-			var ids = id.split(",");
-			var read = readables.get(ids[0]);
-			if( read != null && !read.isInvalid()){
-
-				read.addTarget(wr,ids.length==2?ids[1]:"*");
-				Logger.info("Added "+wr.getID()+ " to target list of "+read.getID());
-			}else{
-				Logger.error(wr.getID()+" asked for data from "+id+" but doesn't exists (anymore)");
-			}
-			readables.entrySet().removeIf( entry -> entry.getValue().isInvalid());
-		}else{
-			Logger.error("No valid writable in the datagram from "+from);
-		}
-	}
-	public void checkTelnet(Datagram d) {
-		Writable dt = d.getWritable();
-
-		if( d.getData().equalsIgnoreCase("spy:off")||d.getData().equalsIgnoreCase("spy:stop")){
-			spy.writeLine("Stopped spying...");
-			spy=null;
-			return;
-		}else if( d.getData().startsWith("spy:")){
-			spyingon=d.getData().split(":")[1];
-			spy=d.getWritable();
-			spy.writeLine("Started spying on "+spyingon);
-			return;
-		}
-
-		if (!d.getData().equals("status")) {
-			String from = " for ";
-
-			if (dt != null) {
-				from += dt.getID();
-			}
-			if (!d.getData().isBlank())
-				Logger.info("Executing telnet command [" + d.getData() + "]" + from);
-		}
-
-		String response = reqData.createResponse( d, false);
-		if( spy!=null && d.getWritable()!=spy && (d.getWritable().getID().equalsIgnoreCase(spyingon)||spyingon.equalsIgnoreCase("all"))){
-			spy.writeLine(TelnetCodes.TEXT_ORANGE+"Cmd: "+d.getData()+TelnetCodes.TEXT_YELLOW);
-			spy.writeLine(response);
-		}
-		String[] split = d.getLabel().split(":");
-		if (dt != null) {
-			if (!d.isSilent()) {
-				if( d.getData().startsWith("telnet:write")){
-					dt.writeString(TelnetCodes.PREV_LINE+TelnetCodes.CLEAR_LINE+response);
-				}else{
-					dt.writeLine(response);
-					dt.writeString((split.length >= 2 ? "<" + split[1] : "") + ">");
-				}
-
-			}
-		} else {
-			Logger.info(response);
-			Logger.info((split.length >= 2 ? "<" + split[1] : "") + ">");
-		}
-		procCount.incrementAndGet();
-	}
-
-	/* ************************************** RUNNABLES ******************************************************/
 	public class SelfCheck implements Runnable {
 		public void run() {
 			Logger.info("Read count now "+readCount+", old one "+oldReadCount+ " last message processed from "+lastOrigin+ " buffersize "+dQueue.size());
@@ -414,10 +455,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 			procCount.incrementAndGet();
 		}
 	}
-	private List<Generic> getGenerics( String id ){
-		return generics.entrySet().stream().filter( set -> set.getKey().equalsIgnoreCase(id) ||set.getKey().matches(id))
-				.map(Entry::getValue).collect(Collectors.toList());
-	}
+
 	public class ProcessGeneric implements Runnable{
 		Datagram d;
 
@@ -633,50 +671,6 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 			default:
 				return UNKNOWN_CMD+": "+cmds[0];
 		}
-	}
-
-	/**
-	 * Load the generics
-	 */
-	public void loadGenerics() {
-
-		generics.clear();
-
-		XMLfab.getRootChildren(settingsPath, "dcafs","generics","generic")
-				.forEach( ele ->  addGeneric( Generic.readFromXML(ele) ) );
-		// Find the path ones?
-		XMLfab.getRootChildren(settingsPath, "dcafs","paths","path")
-				.forEach( ele -> {
-							String imp = ele.getAttribute("import");
-
-							int a=1;
-							if( !imp.isEmpty() ){ //meaning imported
-								String file = Path.of(imp).getFileName().toString();
-								file = file.substring(0,file.length()-4);//remove the .xml
-
-								for( Element gen : XMLfab.getRootChildren(Path.of(imp), "dcafs","path","generic").collect(Collectors.toList())){
-									if( !gen.hasAttribute("id")){ //if it hasn't got an id, give it one
-										gen.setAttribute("id",file+"_gen"+a);
-										a++;
-									}
-									String delim = ((Element)gen.getParentNode()).getAttribute("delimiter");
-									if( !gen.hasAttribute("delimiter") ) //if it hasn't got an id, give it one
-										gen.setAttribute("delimiter",delim);
-									addGeneric( Generic.readFromXML(gen) );
-								}
-							}
-							String delimiter = XMLtools.getStringAttribute(ele,"delimiter","");
-							for( Element gen : XMLtools.getChildElements(ele,"generic")){
-								if( !gen.hasAttribute("id")){ //if it hasn't got an id, give it one
-									gen.setAttribute("id",ele.getAttribute("id")+"_gen"+a);
-									a++;
-								}
-								if( !gen.hasAttribute("delimiter") && !delimiter.isEmpty()) //if it hasn't got an id, give it one
-									gen.setAttribute("delimiter",delimiter);
-								addGeneric( Generic.readFromXML(gen) );
-							}
-						}
-				);
 	}
 	@Override
 	public boolean removeWritable(Writable wr) {
