@@ -32,17 +32,17 @@ import java.util.concurrent.TimeUnit;
 
 public class TaskManager implements CollectorFuture {
 
-	private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(3);// scheduler for the request data action
-	private ArrayList<Task> tasks = new ArrayList<>(); 			// Storage of the tasks
-	private Map<String, TaskSet> tasksets = new HashMap<>(); 	// Storage of the tasksets
+	private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(3);// scheduler for the request data action
+	private final ArrayList<Task> tasks = new ArrayList<>(); 			// Storage of the tasks
+	private final Map<String, TaskSet> tasksets = new HashMap<>(); 	// Storage of the tasksets
 	private Path xmlPath = null; 								// Path to the xml file containing the tasks/tasksets
-	private ArrayList<CheckBlock> sharedChecks =new ArrayList<>();
+	private final ArrayList<CheckBlock> sharedChecks =new ArrayList<>();
 
 	/* The different outputs */
 	private EmailSending emailer = null;    // Reference to the email send, so emails can be send
 	private SMSSending smsSender = null; 	// Reference to the sms queue, so sms's can be send
 	private StreamManager streams; 			// Reference to the streampool, so sensors can be talked to
-	private DataProviding dp;
+	private final DataProviding dp;
 
 	private CommandPool commandPool; // Source to get the data from nexus
 	private String id;
@@ -174,16 +174,14 @@ public class TaskManager implements CollectorFuture {
 	 * the needed data
 	 * 
 	 * @param tsk The Element that contains the task info
-	 * @return True if the addition was ok
 	 */
-	public Task addTask(Element tsk) {
+	public void addTask(Element tsk) {
 		Task task = new Task(tsk, dp, sharedChecks);
 
 		if (startOnLoad && task.getTriggerType()!=TRIGGERTYPE.EXECUTE && task.isEnableOnStart()) {
 			startTask(task);
 		}
 		tasks.add(task);
-		return task;
 	}
 
 	/**
@@ -497,11 +495,11 @@ public class TaskManager implements CollectorFuture {
 		@Override
 		public void run() {
 
-			FAILREASON executed=FAILREASON.ERROR;
+			FAILREASON executed;
 			try {
 				executed = doTask(task);
 			} catch (Exception e) {
-				Logger.tag(TINY_TAG).error("Nullpointer in doTask " + e.getMessage());
+				Logger.tag(TINY_TAG).error("Null pointer in doTask " + e.getMessage());
 				return;
 			}
 
@@ -578,8 +576,10 @@ public class TaskManager implements CollectorFuture {
 		}
 	}
 	private void runFailure( TaskSet set, String reason ){
-		if( set==null)
-			Logger.tag(TINY_TAG).error(id+" -> Tried to run failure for invalid taskset");
+		if( set==null) {
+			Logger.tag(TINY_TAG).error(id + " -> Tried to run failure for invalid taskset");
+			return;
+		}
 		set.stop(reason);
 		String fs = set.getFailureTaskID();
 		if( !fs.contains(":") )
@@ -776,7 +776,7 @@ public class TaskManager implements CollectorFuture {
 						*/
 						break;
 					case MATRIX:
-						String resp="";
+						String resp;
 						if( task.value.startsWith(""+'"')){
 							resp = task.value.replace(""+'"',"");
 						}else {
@@ -1042,7 +1042,7 @@ public class TaskManager implements CollectorFuture {
 		line = line.replace("{rand20}", ""+(int)Math.rint(1+Math.random()*19));
 		line = line.replace("{rand100}", ""+(int)Math.rint(1+Math.random()*99));
 
-		String to = "";
+		String to;
 		int i = line.indexOf("{ipv4:");
 		if( i !=-1 ){
 			int end = line.substring(i).indexOf("}");
@@ -1135,8 +1135,8 @@ public class TaskManager implements CollectorFuture {
 	/**
 	 * Load an xml file containing tasks and tasksets, if clear is true all tasks and tasksets already loaded will be removed
 	 * @param path The path to the XML file
-	 * @param clear Whether or not to remove the existing tasks/tasksets
-	 * @param force Whether or not to force reload (meaning ignore active/uninterruptable)
+	 * @param clear Whether to remove the existing tasks/tasksets
+	 * @param force Whether to force reload (meaning ignore active/uninterruptable)
 	 * @return The result,true if successful or false if something went wrong
 	 */
     public boolean loadTasks(Path path, boolean clear, boolean force){				
@@ -1144,7 +1144,7 @@ public class TaskManager implements CollectorFuture {
 		if( !force ){
 			for( TaskSet set : tasksets.values() ){
 				if( set.isActive() && !set.isInterruptable() ){
-					Logger.tag("TASKS").info("Tried to reload sets while an interuptable was active. Reload denied.");
+					Logger.tag("TASKS").info("Tried to reload sets while an interruptable was active. Reload denied.");
 					return false;
 				}
 			}
