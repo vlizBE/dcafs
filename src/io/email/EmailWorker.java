@@ -62,7 +62,6 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 	static final String MAIL_SMTP_TIMEOUT = "mail.smtp.timeout";
 	static final String MAIL_SMTP_WRITETIMEOUT = "mail.smtp.writetimeout";
 
-
 	boolean busy = false; // Indicate that an email is being send to the server
 	java.util.concurrent.ScheduledFuture<?> retryFuture; // Future of the retry checking thread
 
@@ -94,6 +93,8 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 	static final String XML_PARENT_TAG = "email";
 	static final String TIMEOUT_MILLIS="10000";
 
+	private ScheduledFuture<?> slowCheck = null;
+	private ScheduledFuture<?> fastCheck = null;
 	/**
 	 * Constructor for this class
 	 * 
@@ -936,12 +937,15 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 
 			if( !ok ){ // If no connection could be made schedule a sooner retry
 				Logger.warn("Failed to connect to inbox, retry scheduled. (last ok: "+getTimeSincelastInboxConnection()+")");
-				scheduler.schedule( new Check(), 60, TimeUnit.SECONDS);
+				// Only schedule new one if none is being waited for
+				if( slowCheck == null || slowCheck.isCancelled() || slowCheck.isDone() )
+					slowCheck = scheduler.schedule( new Check(), 60, TimeUnit.SECONDS);
 			}else if( maxQuickChecks > 0){
 				// If an email was received, schedule an earlier check. This way follow ups are responded to quicker
 				maxQuickChecks--;
 				Logger.info("Still got "+maxQuickChecks+" to go...");
-				scheduler.schedule( new Check(), Math.min(checkIntervalSeconds/3, 30), TimeUnit.SECONDS);
+				if( fastCheck == null || fastCheck.isCancelled() || fastCheck.isDone() )
+					fastCheck = scheduler.schedule( new Check(), Math.min(checkIntervalSeconds/3, 30), TimeUnit.SECONDS);
 			}
 	   }
 	}
