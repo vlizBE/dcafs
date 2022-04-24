@@ -23,10 +23,8 @@ import worker.Datagram;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.time.temporal.TemporalField;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -34,27 +32,29 @@ import java.util.concurrent.TimeUnit;
 
 public class TaskManager implements CollectorFuture {
 
-	ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(3);// scheduler for the request data action
-	ArrayList<Task> tasks = new ArrayList<>(); 			// Storage of the tasks
-	Map<String, TaskSet> tasksets = new HashMap<>(); 	// Storage of the tasksets
-	Path xmlPath = null; 								// Path to the xml file containing the tasks/tasksets
-	ArrayList<CheckBlock> sharedChecks =new ArrayList<>();
+	private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(3);// scheduler for the request data action
+	private ArrayList<Task> tasks = new ArrayList<>(); 			// Storage of the tasks
+	private Map<String, TaskSet> tasksets = new HashMap<>(); 	// Storage of the tasksets
+	private Path xmlPath = null; 								// Path to the xml file containing the tasks/tasksets
+	private ArrayList<CheckBlock> sharedChecks =new ArrayList<>();
 
 	/* The different outputs */
-	EmailSending emailer = null;    // Reference to the email send, so emails can be send
-	SMSSending smsSender = null; 	// Reference to the sms queue, so sms's can be send
-	StreamManager streams; 			// Reference to the streampool, so sensors can be talked to
-	DataProviding dp;
+	private EmailSending emailer = null;    // Reference to the email send, so emails can be send
+	private SMSSending smsSender = null; 	// Reference to the sms queue, so sms's can be send
+	private StreamManager streams; 			// Reference to the streampool, so sensors can be talked to
+	private DataProviding dp;
 
-	CommandPool commandPool; // Source to get the data from nexus
-	String id;
+	private CommandPool commandPool; // Source to get the data from nexus
+	private String id;
 
 	static final String TINY_TAG = "TASK";
 
 	enum RUNTYPE {
 		ONESHOT, STEP, NOT
 	} // Current ways of going through a taskset, either oneshot (all at once) or step (task by task)
-
+	enum FAILREASON {
+		NOCON,NOREQ, NONE, ERROR
+	}
 	String workPath = "";
 
 	boolean startOnLoad = true;
@@ -497,19 +497,20 @@ public class TaskManager implements CollectorFuture {
 		@Override
 		public void run() {
 
-			boolean executed = false;
+			FAILREASON executed=FAILREASON.ERROR;
 			try {
 				executed = doTask(task);
 			} catch (Exception e) {
 				Logger.tag(TINY_TAG).error("Nullpointer in doTask " + e.getMessage());
+				return;
 			}
 
 			TaskSet set = tasksets.get(task.getTaskset());
 
-			if (executed) { // if it was executed
+			if (executed==FAILREASON.NONE) { // if it was executed
 				if (task.triggerType == TRIGGERTYPE.RETRY) {
 					switch (checkRequirements(task, false)) { // If it meets the post requirements
-						case 0: executed=false;
+						case 0: executed=FAILREASON.NOREQ;
 						case 1:
 							task.reset();
 							Task t = set.getNextTask(task.getIndexInTaskset());
@@ -520,7 +521,7 @@ public class TaskManager implements CollectorFuture {
 							}
 							break;
 						case -1:
-							executed=false;
+							executed=FAILREASON.NOREQ;
 							task.errorIncrement();
 							break;
 						default: Logger.error("Unexpected return from verify Requirement"); break;
@@ -542,7 +543,7 @@ public class TaskManager implements CollectorFuture {
 					task.runs = task.retries; //so reset
 				}
 			}
-			if (!executed) { // If it wasn't executed
+			if (executed!=FAILREASON.NONE) { // If it wasn't executed
 				boolean failure = true;
 				if (task.triggerType == TRIGGERTYPE.WHILE) {
 					Logger.tag(TINY_TAG).info("[" + id + "] " + set.getDescription() + " failed, cancelling.");
@@ -551,7 +552,7 @@ public class TaskManager implements CollectorFuture {
 					failure = false;
 					Logger.info("Requirement not met, resetting counter failed "+getCheckInfo(task.getReqIndex()));
 					task.attempts = 0; // reset the counter
-				}else if (task.triggerType == TRIGGERTYPE.RETRY || task.triggerType == TRIGGERTYPE.INTERVAL) {
+				}else if (task.triggerType == TRIGGERTYPE.RETRY || (task.triggerType == TRIGGERTYPE.INTERVAL && executed!=FAILREASON.NOREQ)) {
 					failure = false;
 					if (task.runs == 0) {
 						task.reset();
@@ -559,7 +560,7 @@ public class TaskManager implements CollectorFuture {
 						Logger.tag(TINY_TAG).error("[" + id + "] Maximum retries executed, aborting!\t" + task.toString());
 						if( task.out==OUTPUT.STREAM && !waitForRestore.contains(task.stream)) {
 							waitForRestore.add(task.stream);
-							if (waitForRestore.size()==1) // Only start this if it's not suppposed to be active
+							if (waitForRestore.size()==1) // Only start this if it's not supposed to be active
 								scheduler.schedule(new ChannelRestoreChecker(), 15, TimeUnit.SECONDS);
 						}
 						failure = true;
@@ -599,15 +600,15 @@ public class TaskManager implements CollectorFuture {
 	 * @param task The task to execute
 	 * @return True if it was executed
 	 */
-	private synchronized boolean doTask(Task task) {
+	private synchronized FAILREASON doTask(Task task) {
 
 		int ver = checkRequirements(task, true); // Verify the pre req's
 		if( ver == -1 ){
 			task.errorIncrement();
-			return false;
+			return FAILREASON.ERROR;
 		}
 		boolean verify = ver==1;
-		boolean executed = false;
+		FAILREASON executed = verify?FAILREASON.ERROR:FAILREASON.NOREQ;
 
 		if (task.skipExecutions == 0 // Check if the next execution shouldn't be skipped (related to the 'link'
 										// keyword)
@@ -616,11 +617,11 @@ public class TaskManager implements CollectorFuture {
 				&& verify // Check if the earlier executed pre req checked out
 				&& checkState(task.when)) { // Verify that the state is correct
 
-			executed = true; // First checks passed, so it will probably execute
+			executed = FAILREASON.NONE; // First checks passed, so it will probably execute
 
 			if (task.triggerType == TRIGGERTYPE.WHILE || task.triggerType == TRIGGERTYPE.WAITFOR) { // Doesn't do anything, just check
 				// Logger.tag(TINY_TAG).info("Trigger for while fired and ok")
-				return true;
+				return FAILREASON.NONE;
 			}
 			if (task.triggerType != TRIGGERTYPE.INTERVAL)
 				Logger.tag(TINY_TAG).debug("[" + id + "] Requirements met, executing task with " + task.value);
@@ -639,7 +640,7 @@ public class TaskManager implements CollectorFuture {
 					}
 				}catch( NullPointerException e){
 					Logger.error("Nullpointer trying to run startTaskset "+setid+" -> "+e.getMessage());
-					return false;
+					return FAILREASON.ERROR;
 				}
 			} else { // If not a supposed to run a taskset, check if any of the text needs to be
 						// replaced
@@ -660,7 +661,7 @@ public class TaskManager implements CollectorFuture {
 
 					if (commandPool == null) {
 						Logger.tag(TINY_TAG).warn("[" + id + "] No BaseReq (or child) defined.");
-						return false;
+						return FAILREASON.ERROR;
 					}
 					if (task.out == OUTPUT.SYSTEM || task.out == OUTPUT.STREAM ) {
 						var d = Datagram.build(fill.replace("cmd:", "").replace("\r\n", ""));
@@ -692,7 +693,7 @@ public class TaskManager implements CollectorFuture {
 					case SMS: // Send the response in an SMS
 						if (smsSender == null) {
 							Logger.tag(TINY_TAG).error("[" + id + "] Task not executed because no valid smsSender");
-							return false;
+							return FAILREASON.ERROR;
 						}
 						String sms = splits[splits.length - 1];
 						smsSender.sendSMS( task.outputRef, sms.length() > 150 ? sms.substring(0, 150) : sms );
@@ -700,7 +701,7 @@ public class TaskManager implements CollectorFuture {
 					case EMAIL: // Send the response in an email
 						if (emailer == null) {
 							Logger.tag(TINY_TAG).error("[" + id + "] Task not executed because no valid EmailSending");
-							return false;
+							return FAILREASON.ERROR;
 						}
 						response = "<html>" + response.replace("\r\n", "<br>") + "</html>";
 						response = response.replace("<html><br>", "<html>");
@@ -715,7 +716,7 @@ public class TaskManager implements CollectorFuture {
 						if (streams == null) { // Can't send anything if the streampool is not defined
 							Logger.tag(TINY_TAG).error("[" + id + "] Wanted to output to a stream (" + task.stream
 									+ "), but no StreamManager defined.");
-							return false;
+							return FAILREASON.ERROR;
 						}
 
 						if (!streams.isStreamOk(task.stream, true)) { // Can't send anything if the channel isn't
@@ -723,7 +724,7 @@ public class TaskManager implements CollectorFuture {
 							Logger.tag(TINY_TAG).error("[" + id + "] Wanted to output to a stream (" + task.stream
 									+ "), but channel not alive.");
 							task.writable = null;
-							return false;
+							return FAILREASON.NOCON;
 						}
 						boolean ok;
 						if (task.triggerType != TRIGGERTYPE.INTERVAL) { // Interval tasks are executed differently
@@ -753,7 +754,7 @@ public class TaskManager implements CollectorFuture {
 						}
 						if( !ok ){
 							Logger.error("Something wrong (ok=false)...");
-							return false;
+							return FAILREASON.ERROR;
 						}
 						break;
 					case MQTT:	
@@ -881,7 +882,7 @@ public class TaskManager implements CollectorFuture {
 			}		
 		}else{
 			if( !task.stopOnFailure() )
-				executed=true;
+				executed=FAILREASON.NONE;
 
 			if( !task.doToday ) {
 				Logger.tag(TINY_TAG).info( "["+ id +"] Not executing "+task.value +" because not allowed today.");
@@ -914,7 +915,7 @@ public class TaskManager implements CollectorFuture {
 			TaskSet set = tasksets.get( task.getTaskset() );					
 			if( set != null && set.getRunType() == RUNTYPE.STEP ) {	// If the next task in the set should be executed
 
-				if( executed && task.triggerType != TRIGGERTYPE.RETRY ){ // If the task was executed and isn't of the trigger:retry type
+				if( executed==FAILREASON.NONE && task.triggerType != TRIGGERTYPE.RETRY ){ // If the task was executed and isn't of the trigger:retry type
 					if( task.reply.isEmpty() ) {
 						Task t = set.getNextTask(task.getIndexInTaskset());
 						if (t != null) {
