@@ -75,7 +75,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		double defDouble = XMLtools.getDoubleAttribute(fab.getCurrentElement(),"realdefault",Double.NaN);
 		String defText = XMLtools.getStringAttribute(fab.getCurrentElement(),"textdefault","");
 		boolean defFlag = XMLtools.getBooleanAttribute(fab.getCurrentElement(),"flagdefault",false);
-		int defInteger = XMLtools.getIntAttribute(fab.getCurrentElement(),"integerdefault",-1);
+		int defInteger = XMLtools.getIntAttribute(fab.getCurrentElement(),"integerdefault",-999);
 
 		readingXML=true;
 		fab.getChildren("*").forEach( // The tag * is special and acts as wildcard
@@ -836,10 +836,10 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	}
 
 	/**
-	 * Alter all the values of the doubles in the given group
+	 * Alter all the values of the ints in the given group
 	 * @param group The group to alter
 	 * @param value The value to set
-	 * @return The amount of doubles updated
+	 * @return The amount of ints updated
 	 */
 	public int updateIntegerGroup(String group, int value){
 		var set = integerVals.values().stream().filter( iv -> iv.group().equalsIgnoreCase(group)).collect(Collectors.toSet());
@@ -1090,7 +1090,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 			case "rtval": case "double": case "real":
 				int s = addRequest(wr,request[0],request[1]);
 				return s!=0?"Request added to "+s+" doublevals":"Request failed";
-			case "rtvals":
+			case "rtvals": case "rvs":
 				return replyToRtvalsCmd(request,wr,html);
 			default:
 				return "unknown command "+request[0]+":"+request[1];
@@ -1411,6 +1411,10 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					String groups = String.join(html?"<br>":"\r\n",getGroups());
 					return groups.isEmpty()?"No groups yet":groups;
 				case "name"	:  return getAllIDsList(cmds[1],html);
+				case "resetgroup":
+					int a = updateIntegerGroup(cmds[1],-999);
+					a += updateDoubleGroup(cmds[1],Double.NaN);
+					return "Reset "+a+" vals.";
 			}
 		}
 		return "unknown command: "+request[0]+":"+request[1];
