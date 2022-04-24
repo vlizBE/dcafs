@@ -406,7 +406,10 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 		Element streamsElement = XMLtools.getFirstElementByTag( xml, "streams");
 		if( streamsElement!=null) {
 			retryDelayIncrement = XMLtools.getChildIntValueByTag(streamsElement, "retrydelayincrement", 5);
-			retryDelayMax = XMLtools.getChildIntValueByTag(streamsElement, "retrydelaymax", 30);
+			retryDelayMax = XMLtools.getChildIntValueByTag(streamsElement, "retrydelaymax", 60);
+		}
+		if( !streams.isEmpty()){
+			streams.values().forEach( bs -> bs.disconnect());
 		}
 		streams.clear(); // Clear out before the reread
 
@@ -501,7 +504,7 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 	public boolean addStreamToXML( String id, boolean overwrite ){
 		BaseStream stream = streams.get(id.toLowerCase());
 		if( stream == null){
-			Logger.error("No such stream to write to xml "+id);
+			Logger.warn("No such stream to write to xml "+id);
 			return false;
 		}
 

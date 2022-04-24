@@ -56,7 +56,7 @@ public class XMLfab {
         if( Files.exists(path) ){
             xmlDoc = XMLtools.readXML(path);
         }else{
-            Logger.error("No such XML "+path);
+            Logger.warn("No such XML "+path+", so creating it.");
             xmlDoc = XMLtools.createXML(path, false);
         }
     }
@@ -91,7 +91,7 @@ public class XMLfab {
     private void getRoot(String parentTag){
         this.root = XMLtools.getFirstElementByTag(xmlDoc, parentTag );
         if( root == null ){
-            Logger.error("No such root "+parentTag+ " in "+xmlPath.getFileName());
+            Logger.warn("No such root "+parentTag+ " in "+xmlPath.getFileName()+", so creating it.");
             root = xmlDoc.createElement(parentTag);
             try {
                 xmlDoc.appendChild(root);
