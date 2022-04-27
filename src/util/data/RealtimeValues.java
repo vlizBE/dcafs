@@ -91,11 +91,11 @@ public class RealtimeValues implements DataProviding, Commandable {
 							var gid = XMLtools.getStringAttribute(groupie,"id",""); // get the node id
 							// then check if it has an attribute name and use this instead if found
 							gid = id + XMLtools.getStringAttribute(groupie,"name",gid); //
-							processRtvalElement(groupie, gid.toLowerCase(), defDouble, defText, defFlag,defInteger);
+							processRtvalElement(groupie, gid, defDouble, defText, defFlag,defInteger);
 						}
 					}else { // If it isn't a group node
 						// then the id is the full id
-						processRtvalElement(rtval, id.toLowerCase(), defDouble, defText, defFlag,defInteger);
+						processRtvalElement(rtval, id, defDouble, defText, defFlag,defInteger);
 					}
 				}
 		);
@@ -689,7 +689,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 	}
 	public double getDouble(String id, double defVal, boolean createIfNew) {
 
-		DoubleVal d = doubleVals.get(id.toLowerCase());
+		DoubleVal d = doubleVals.get(id);
 		if (d == null) {
 			if( createIfNew ){
 				Logger.warn("ID "+id+" doesn't exist, creating it with value "+defVal);
@@ -858,7 +858,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 	}
 	public int getInteger(String id, int defVal, boolean createIfNew) {
 
-		IntegerVal i = integerVals.get(id.toLowerCase());
+		IntegerVal i = integerVals.get(id);
 		if (i == null) {
 			if( createIfNew ){
 				Logger.warn("ID "+id+" doesn't exist, creating it with value "+defVal);
@@ -875,9 +875,8 @@ public class RealtimeValues implements DataProviding, Commandable {
 		return texts.containsKey(id);
 	}
 	public boolean setText(String parameter, String value) {
-		final String param=parameter.toLowerCase();
 
-		if( param.isEmpty()) {
+		if( parameter.isEmpty()) {
 			Logger.error("Empty param given");
 			return false;
 		}
@@ -886,9 +885,9 @@ public class RealtimeValues implements DataProviding, Commandable {
 		boolean created = texts.put(parameter, value)==null;
 
 		if( !textRequest.isEmpty()){
-			var res = textRequest.get(param);
+			var res = textRequest.get(parameter);
 			if( res != null)
-				res.forEach( wr -> wr.writeLine(param + " : " + value));
+				res.forEach( wr -> wr.writeLine(parameter + " : " + value));
 		}
 		return created;
 	}
