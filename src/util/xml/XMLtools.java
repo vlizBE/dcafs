@@ -431,8 +431,12 @@ public class XMLtools {
 			Logger.error("Given parent is null while looking for "+attribute);
 			return def;
 		}
-		if( parent.hasAttribute(attribute))
+		if( parent.hasAttribute(attribute)) {
+			var val = parent.getAttribute(attribute);
+			if( val.isBlank() && !val.isEmpty())
+				return parent.getAttribute(attribute);
 			return parent.getAttribute(attribute).trim();
+		}
 		return def;
 	}
 	/**
