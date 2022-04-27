@@ -46,7 +46,7 @@ public class CollectorPool implements Commandable, CollectorFuture {
     @Override
     public String replyToCommand(String[] request, Writable wr, boolean html) {
         return switch( request[0] ) {
-            case "fc" -> doFileCollector(request, html);
+            case "fc" -> doFileCollectorCmd(request, html);
             case "mc" -> "No commands yet";
             default -> "Wrong commandable...";
         };
@@ -55,57 +55,81 @@ public class CollectorPool implements Commandable, CollectorFuture {
         fileCollectors.values().forEach(FileCollector::flushNow);
     }
     /* **************************** MATH COLLECTOR ********************************************** */
+
+    /**
+     * Check the settings.xml for math collectors and load them
+     */
     private void loadMathCollectors(){
         mathCollectors.clear();
         var settingsDoc = XMLtools.readXML(workPath.resolve("settings.xml"));
-        MathCollector.createFromXml( XMLfab.getRootChildren(settingsDoc,"dcafs","maths","*") ).forEach(
-                mc ->
-                {
-                    mc.addListener(this);
-                    mathCollectors.put( mc.getID(),mc);
-                    dQueue.add( Datagram.system(mc.getSource()).writable(mc) ); // request the data
-                }
-        );
+        MathCollector.createFromXml( XMLfab.getRootChildren(settingsDoc,"dcafs","maths","*") )
+                        .forEach( this::addMathCollector );
     }
-    public void addMathCollector( MathCollector mc ){
+
+    /**
+     * Add a mathcollector to the pool, add the listener and request data for it
+     * @param mc The mathcollector to add
+     */
+    private void addMathCollector( MathCollector mc ){
         mc.addListener(this);
         mathCollectors.put( mc.getID(),mc);
+        if( mc.getWritable()!=null)
+            dQueue.add( Datagram.system(mc.getSource()).writable(mc) ); // request the data
     }
     @Override
     public void collectorFinished(String id, String message, Object result) {
         String[] ids = id.split(":");
-        if(ids[0].equalsIgnoreCase("math")){
+        if(ids[0].equalsIgnoreCase("math"))
             dp.setDouble(message,(double)result);
-        }
     }
     /* *************************************** F I L E C O L L E C T O R ************************************ */
+
+    /**
+     * Check the settings.xml for filecollectors and load them
+     */
     private void loadFileCollectors(){
         fileCollectors.clear();
-        FileCollector.createFromXml( XMLfab.getRootChildren(workPath.resolve("settings.xml"),"dcafs","collectors","file"), nettyGroup,dQueue, workPath.toString() ).forEach(
-            fc ->
-            {
-                Logger.info("Created "+fc.getID());
-                fileCollectors.put(fc.getID().substring(3),fc); // remove the fc: from the front
-                dQueue.add( Datagram.system(fc.getSource()).writable(fc) ); // request the data
-            }
-        );
+        FileCollector.createFromXml(
+                XMLfab.getRootChildren(workPath.resolve("settings.xml"),"dcafs","collectors","file"),
+                        nettyGroup,
+                        dQueue,
+                        workPath.toString() )
+                .forEach( this::addFileCollector );
     }
 
-    public Optional<FileCollector> getFileCollector(String id){
-        return Optional.ofNullable(fileCollectors.get(id));
+    /**
+     * Add a filecollector to the pool, init the source
+     * @param fc The filecollector to add
+     */
+    private void addFileCollector( FileCollector fc ){
+        Logger.info("Created "+fc.getID());
+        fileCollectors.put(fc.getID().substring(3),fc); // remove the fc: from the front
+        dQueue.add( Datagram.system(fc.getSource()).writable(fc) ); // request the data
     }
-    public String getFileCollectorsList( String eol ){
+
+    /**
+     * Get a list off all active file collectors
+     * @param eol The end of line characters to use
+     * @return The list with the chosen eol characters
+     */
+    private String getFileCollectorsList( String eol ){
         StringJoiner join = new StringJoiner(eol);
         join.setEmptyValue("None yet");
         fileCollectors.forEach((key, value) -> join.add(key + " -> " + value.toString()));
         return join.toString();
     }
-    public FileCollector addFileCollector( String id ){
+
+    /**
+     * Create a file collector with the given id and add it to the pool
+     * @param id The id for the filecollector
+     * @return The created object
+     */
+    private FileCollector createFileCollector(String id ){
         var fc = new FileCollector(id,"1m",nettyGroup,dQueue);
         fileCollectors.put(id, fc);
         return fc;
     }
-    public String doFileCollector( String[] request, boolean html ) {
+    private String doFileCollectorCmd(String[] request, boolean html ) {
         String[] cmds = request[1].split(",");
         StringJoiner join = new StringJoiner(html?"<br":"\r\n");
 
@@ -131,10 +155,9 @@ public class CollectorPool implements Commandable, CollectorFuture {
                 if( cmds.length<4)
                     return "Not enough arguments given: fc:addnew,id,src,path";
                 FileCollector.addBlankToXML(XMLfab.withRoot(workPath.resolve("settings.xml"),"dcafs"),cmds[1],cmds[2],cmds[3]);
-                var fc = addFileCollector(cmds[1]);
+                var fc = createFileCollector(cmds[1]);
                 fc.addSource(cmds[2]);
                 fc.setPath( Path.of(cmds[3]), settingsPath.toString() );
-
                 return "FileCollector "+cmds[1]+" created and added to xml.";
             case "list":
                 return getFileCollectorsList(html?"<br":"\r\n");

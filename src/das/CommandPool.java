@@ -2,7 +2,6 @@ package das;
 
 import io.email.Email;
 import io.email.EmailSending;
-import io.email.EmailWorker;
 import io.Writable;
 import io.telnet.TelnetCodes;
 import org.apache.commons.lang3.math.NumberUtils;
@@ -60,7 +59,6 @@ public class CommandPool {
 			commandables.put(id,cmdbl);
 		}
 	}
-
 	public void addShutdownPreventing( ShutdownPreventing sdp){
 		if( sdps==null)
 			sdps = new ArrayList<>();
@@ -172,7 +170,6 @@ public class CommandPool {
 
 		result = switch (find) {
 			case "admin" -> doADMIN(split, wr, html);
-			case "checksum" -> doCHECKSUM(workPath, split[0]);
 			case "help", "h", "?" -> doHelp(split, html);
 			case "read" -> doREAD(split, wr);
 			case "upgrade" -> doUPGRADE(split, wr, html);
@@ -253,38 +250,6 @@ public class CommandPool {
 		}
 		return c.replyToCommand(new String[]{id,command},wr,false);
 	}
-	/* ******************************************************************************/
-	/**
-	 * Calculate the checksum of the given item, for now only rawyesterday exists
-	 * @param request The full command checksum:something
-	 * @return Calculated checksum
-	 */
-	public static String doCHECKSUM( String workPath, String request ){
-		
-		// Check for files with wildcard? 2019-07-24_RAW_0.log.zip
-		StringBuilder b = new StringBuilder();
-
-		switch( request ){
-			case "rawyesterday":
-				String yesterday = "raw"+File.separator+"zipped"+File.separator+TimeTools.formatNow( "yyyy-MM", -1)+File.separator+TimeTools.formatNow( "yyyy-MM-dd", -1)+"_RAW_x.log.zip";
-				int cnt=0;
-				String path = yesterday.replace("x", ""+cnt);
-				boolean ok = Files.exists( Path.of(workPath,path) );
-				
-				while(ok){					
-					String md5 = MathUtils.calculateMD5( Path.of(workPath,path) );
-					b.append(path).append("\t").append(md5).append("\r\n");
-					cnt++;
-					path = yesterday.replace("x", ""+cnt);
-					ok = Files.exists( Path.of(workPath,path) );
-				}
-				return b.toString();
-			case "?":
-				return "checksum:rawyesterday -> Calculate checksum of the stored raw data (WiP";	
-			default:
-				return UNKNOWN_CMD;
-		}
-	}  
 	/* ********************************************************************************************/
 	/**
 	 * Try to update a file received somehow (email or otherwise)
@@ -431,7 +396,7 @@ public class CommandPool {
 		return "Shutting down program..."+ (html?"<br>":"\r\n");
 	}
 	/**
-	 * Get the content of the help.txt
+	 * Get some basic help info
 	 * 
 	 * @param request The full command split on the first :
 	 * @param html Whether to use html for newline etc
@@ -541,7 +506,7 @@ public class CommandPool {
 					}
 					return "File not found";
 				} catch (IOException e) {
-					e.printStackTrace();
+					Logger.error(e);
 					return "Something went wrong trying to get the file";
 				}
 			case "adddebugnode":
@@ -615,7 +580,11 @@ public class CommandPool {
 		}
 	}
 
-
+	/**
+	 * Request the content of the tasks.csv file that contains info on taskset execution
+	 * @param request
+	 * @return Result of the request
+	 */
 	public String doREQTASKS( String[] request ){
 		if( request[1].equals("?") )
 			return ":x -> Send a list of all the taskset executions to x";
@@ -631,6 +600,12 @@ public class CommandPool {
 		return "Sending log of taskset execution to "+request[1];
 	}
 
+	/**
+	 * Try to put the computer to sleep, only works on linux
+	 * @param cmd Array containing sleep,rtc nr, time (fe.5m for 5 minutes)
+	 * @param wr The writable to use if anything needs it
+	 * @return Feedback
+	 */
 	public String doSLEEP( String[] cmd, Writable wr ){
 		if( cmd.length!=3 ){
 			return "admin:sleep,rtc,<time> -> Let the processor sleep for some time using an rtc fe. sleep:1,5m sleep 5min based on rtc1";

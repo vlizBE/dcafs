@@ -641,30 +641,6 @@ public class DAS implements Commandable{
         return join.toString();
     }
 
-    /**
-     * Get the settings in string format
-     * 
-     * @return The settings in string format
-     */
-    public String getSettings() {
-
-        StringJoiner join = new StringJoiner("\r\n", "\r\n", "\r\n");
-
-        if (streampool != null) {
-            join.add("----Serial & TCP & UDP PORTS----");
-            join.add(streampool.getSettings());
-        }
-        if (emailWorker != null) {
-            join.add("\r\n----Email----");
-            join.add(emailWorker.getSettings());
-            join.add(emailWorker.getEmailBook());
-        }
-        if (mqttPool !=null) {
-            join.add("\r\n----MQTT----");
-            join.add(mqttPool.getMqttBrokersInfo());
-        }
-        return join.toString();
-    }
     @Override
     public String replyToCommand(String[] request, Writable wr, boolean html) {
         return switch( request[0]){

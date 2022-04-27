@@ -359,8 +359,7 @@ public class FileCollector extends AbstractCollector{
     }
 
     /**
-     * Force the collector to flush the data, used in case of urgent flushing
-     * @return
+     * Force the collector to flush the data, used in case of urgent flushing (fe. before shutdown)
      */
     public void flushNow(){
         if( flushFuture==null||flushFuture.isCancelled() || flushFuture.isDone()) {
@@ -442,7 +441,6 @@ public class FileCollector extends AbstractCollector{
             Logger.debug("Written " + join.toString().length() + " bytes to " + dest.getFileName().toString());
 
             if( maxBytes!=-1 ){
-
                 if( Files.size(dest) >= maxBytes  ){
                     Path renamed=null;
                     for( int a=1;a<1000;a++){
@@ -451,24 +449,20 @@ public class FileCollector extends AbstractCollector{
                         if( Files.notExists(renamed) && Files.notExists(Path.of(renamed+".zip")) )
                             break;
                     }
-                    if( renamed !=null) {
-                        Logger.debug("Renamed to "+ renamed);
-                        Files.move(dest, dest.resolveSibling(renamed)); // rename the file
-                        String path ;
-                        if (zipMaxBytes) { // if wanted, zip it
-                            FileTools.zipFile(renamed);
-                            Files.deleteIfExists(renamed);
-                            path = renamed+".zip";
-                        }else{
-                            path = renamed.toString();
-                        }
-
-                        // run the triggered commands
-                        trigCmds.stream().filter( tc -> tc.trigger==TRIGGERS.MAXSIZE)
-                                .forEach(tc->dQueue.add(Datagram.system(tc.cmd.replace("{path}",path)).writable(this)));
+                    Logger.debug("Renamed to "+ renamed);
+                    Files.move(dest, dest.resolveSibling(renamed)); // rename the file
+                    String path ;
+                    if (zipMaxBytes) { // if wanted, zip it
+                        FileTools.zipFile(renamed);
+                        Files.deleteIfExists(renamed);
+                        path = renamed+".zip";
                     }else{
-                        Logger.error("Couldn't create another file "+dest.toString());
+                        path = renamed.toString();
                     }
+
+                    // run the triggered commands
+                    trigCmds.stream().filter( tc -> tc.trigger==TRIGGERS.MAXSIZE)
+                            .forEach(tc->dQueue.add(Datagram.system(tc.cmd.replace("{path}",path)).writable(this)));
                 }
             }
 

@@ -83,12 +83,12 @@ public abstract class AbstractCollector implements Writable {
     /* *********************** TIME OUT *******************************************/
     /**
      * Set a timeout for this collector so it won't gather/wait indefinitely
-     * @param timoutPeriod String representation of the period eg. 10s or 5m50s etc
+     * @param timeoutPeriod String representation of the period eg. 10s or 5m50s etc
      * @param scheduler The service to register the timeout with
      * @return The future for this timeout
      */
-    public ScheduledFuture<?> withTimeOut(String timoutPeriod, ScheduledExecutorService scheduler ){
-        secondsTimeout = TimeTools.parsePeriodStringToSeconds(timoutPeriod);
+    public ScheduledFuture<?> withTimeOut(String timeoutPeriod, ScheduledExecutorService scheduler ){
+        secondsTimeout = TimeTools.parsePeriodStringToSeconds(timeoutPeriod);
         Logger.info(id+" -> Collector started with timeout of "+secondsTimeout+"s");
         timeoutFuture = scheduler.schedule(new TimeOut(), secondsTimeout, TimeUnit.SECONDS );
         return timeoutFuture;
