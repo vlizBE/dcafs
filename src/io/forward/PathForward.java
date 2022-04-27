@@ -12,7 +12,6 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,7 +35,7 @@ public class PathForward {
 
     String id;
     ArrayList<AbstractForward> stepsForward;
-    enum SRCTYPE {REG,PLAIN,RTVALS,CMD,FILE}
+    enum SRCTYPE {REG,PLAIN,RTVALS,CMD,FILE,INVALID}
     Path workPath;
     static int READ_BUFFER_SIZE=500;
 
@@ -63,9 +62,8 @@ public class PathForward {
         var oldTargets = new ArrayList<>(targets);
         targets.clear();
 
-        if( customs!=null) { // if any future is active, stop it
-            customs.forEach(CustomSrc::stop);
-        }
+        // if any future is active, stop it
+        customs.forEach(CustomSrc::stop);
 
         if( stepsForward!=null) {// If this is a reload, reset the steps
             dQueue.add(Datagram.system("nothing").writable(stepsForward.get(0))); // stop asking for data
@@ -153,39 +151,39 @@ public class PathForward {
             if( stepsForward.isEmpty() && !src.isEmpty())
                 step.setAttribute("src","");
 
-            switch( step.getTagName() ){
-                case "filter":
-                    FilterForward ff = new FilterForward( step, dQueue );
-                    if( !src.isEmpty()){
-                        addAsTarget(ff,src);
-                    }else if( lastff != null && (!(lastStep().get() instanceof FilterForward) || lastGenMap)) {
+            switch (step.getTagName()) {
+                case "filter" -> {
+                    FilterForward ff = new FilterForward(step, dQueue);
+                    if (!src.isEmpty()) {
+                        addAsTarget(ff, src);
+                    } else if (lastff != null && (!(lastStep().isPresent()&&lastStep().get() instanceof FilterForward) || lastGenMap)) {
                         lastff.addReverseTarget(ff);
-                    }else{
-                        addAsTarget(ff,src);
+                    } else {
+                        addAsTarget(ff, src);
                     }
-                    lastff=ff;
+                    lastff = ff;
                     stepsForward.add(ff);
-                    break;
-                case "math":
-                    MathForward mf = new MathForward( step,dQueue,dataProviding );
+                }
+                case "math" -> {
+                    MathForward mf = new MathForward(step, dQueue, dataProviding);
                     mf.removeSources();
-                    addAsTarget(mf,src);
+                    addAsTarget(mf, src);
                     stepsForward.add(mf);
-                    break;
-                case "editor":
-                    var ef = new EditorForward( step,dQueue,dataProviding );
+                }
+                case "editor" -> {
+                    var ef = new EditorForward(step, dQueue, dataProviding);
                     ef.removeSources();
-                    addAsTarget(ef,src);
+                    addAsTarget(ef, src);
                     stepsForward.add(ef);
-                    break;
+                }
             }
 
         }
         if( !oldTargets.isEmpty()&&!stepsForward.isEmpty()){ // Restore old requests
-            oldTargets.forEach( wr->addTarget(wr) );
+            oldTargets.forEach(this::addTarget);
         }
         if( !lastStep().map(AbstractForward::noTargets).orElse(false) || hasLabel) {
-            if (customs == null || customs.isEmpty()) { // If no custom sources
+            if (customs.isEmpty() ) { // If no custom sources
                 dQueue.add(Datagram.system(this.src).writable(stepsForward.get(0)));
             } else {// If custom sources
                 if( !stepsForward.isEmpty()) // and there are steps
@@ -206,7 +204,7 @@ public class PathForward {
                 }
             }
         }else if( !stepsForward.isEmpty() ) {
-            lastStep().get().addTarget(f);
+            lastStep().ifPresent( ls -> ls.addTarget(f));
         }
     }
     public String debugStep( String step, Writable wr ){
@@ -273,12 +271,12 @@ public class PathForward {
 
         customs.forEach(c->join.add(c.toString()));
         if(stepsForward!=null) {
-            for (int a = 0; a < stepsForward.size(); a++) {
-                join.add("   -> " + stepsForward.get(a).toString());
+            for (AbstractForward abstractForward : stepsForward) {
+                join.add("   -> " + abstractForward.toString());
             }
+            if( !stepsForward.isEmpty() )
+                join.add( " gives the data from "+stepsForward.get(stepsForward.size()-1).getID() );
         }
-        if( !stepsForward.isEmpty() )
-            join.add( " gives the data from "+stepsForward.get(stepsForward.size()-1).getID() );
         return join.toString();
     }
     public ArrayList<Writable> getTargets(){
@@ -314,26 +312,19 @@ public class PathForward {
             for( var step : stepsForward )
                 step.removeTarget(wr);
 
-            if( lastStep().map(ls->ls.noTargets()).orElse(true) ){ // if the final step has no more targets, stop the first step
+            if( lastStep().isEmpty() )
+                return;
+            if( lastStep().map(AbstractForward::noTargets).orElse(true) ){ // if the final step has no more targets, stop the first step
                 customs.forEach(CustomSrc::stop);
             }
         }
     }
 
-    public void writeData(){
-
-        targets.removeIf( x -> !x.isConnectionValid());
-        customs.forEach( CustomSrc::write );
-
-        if( targets.isEmpty() ){
-            customs.forEach(CustomSrc::stop);
-        }
-    }
     private class CustomSrc{
         String data;
         SRCTYPE srcType;
         long intervalMillis;
-        ScheduledFuture future;
+        ScheduledFuture<?> future;
         ArrayList<String> buffer;
         ArrayList<Path> files;
         int lineCount=1;
@@ -343,36 +334,39 @@ public class PathForward {
             this.data =data;
             this.intervalMillis=intervalMillis;
             var spl = type.split(":");
-            switch(spl[0]){
-                case "rtvals": srcType=SRCTYPE.RTVALS; break;
-                case "cmd": srcType=SRCTYPE.CMD; break;
-                case "plain": srcType=SRCTYPE.PLAIN; break;
-                case "file":
-                    srcType=SRCTYPE.FILE;
-                    files=new ArrayList<>();
-                    if( !Path.of(data).isAbsolute()) {
-                        this.data = workPath.resolve(data).toString();
-                    }
-                    if( Files.isDirectory( Path.of(this.data))){
-                        try{
-                            Files.list(Path.of(this.data)).forEach(files::add);
-                        } catch (IOException e) {
-                            Logger.error(e);
+            srcType = switch (spl[0]) {
+                case "rtvals" -> SRCTYPE.RTVALS;
+                case "cmd" -> SRCTYPE.CMD;
+                case "plain" -> SRCTYPE.PLAIN;
+                case "file" ->  SRCTYPE.FILE;
+                default -> SRCTYPE.INVALID;
+            };
+            if( srcType==SRCTYPE.FILE){
+                files = new ArrayList<>();
+                if (!Path.of(data).isAbsolute()) {
+                    this.data = workPath.resolve(data).toString();
+                }
+                if (Files.isDirectory(Path.of(this.data))) {
+                    try {
+                        try( var str = Files.list(Path.of(this.data)) ){
+                            str.forEach(files::add);
                         }
-                    }else{
-                        files.add(Path.of(this.data));
+                    } catch (IOException e) {
+                        Logger.error(e);
                     }
-                    buffer=new ArrayList<>();
-                    if(spl.length==2)
-                        multiLine = NumberUtils.toInt(spl[1]);
-                    break;
-                default:
-                    Logger.error(id+ "(pf) -> no valid srctype '"+type+"'");
+                } else {
+                    files.add(Path.of(this.data));
+                }
+                buffer = new ArrayList<>();
+                if (spl.length == 2)
+                    multiLine = NumberUtils.toInt(spl[1]);
+            }else if( srcType == SRCTYPE.INVALID ){
+                Logger.error(id + "(pf) -> no valid srctype '" + type + "'");
             }
         }
         public void start(){
             if( future==null || future.isDone())
-                future = nettyGroup.scheduleAtFixedRate(()-> write(),intervalMillis,intervalMillis, TimeUnit.MILLISECONDS);
+                future = nettyGroup.scheduleAtFixedRate(this::write,intervalMillis,intervalMillis, TimeUnit.MILLISECONDS);
         }
         public void stop(){
             if( future!=null && !future.isCancelled())

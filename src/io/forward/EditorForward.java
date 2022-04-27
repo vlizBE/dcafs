@@ -470,9 +470,7 @@ public class EditorForward extends AbstractForward{
         rulesString.add( new String[]{"","tochar","convert delimited data to char's"} );
         edits.add( input -> {
             var join = new StringJoiner("");
-            Arrays.stream(input.split(delimiter)).forEach( x -> {
-                join.add( ""+(char)NumberUtils.createInteger(x).intValue());
-            });
+            Arrays.stream(input.split(delimiter)).forEach( x -> join.add( ""+(char)NumberUtils.createInteger(x).intValue()));
             return join.toString();
         } );
     }
