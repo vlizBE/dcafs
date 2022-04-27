@@ -30,15 +30,6 @@ public class FileMonitor {
         readFromXML();
     }
     /**
-     * Check if the settings.xml contains an element for the monitor
-     * @param xml The path to the settings.xml
-     * @return True if it contains a monitor node
-     */
-    public static boolean inXML( Path xml ){
-        return XMLtools.getAllElementsByTag(XMLtools.readXML( xml),"monitor").length==1;
-    }
-
-    /**
      * Read the monitor setup from settings.xml
      * @return True if read properly
      */

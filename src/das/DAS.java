@@ -3,7 +3,6 @@ package das;
 import io.Writable;
 import io.collector.CollectorPool;
 import io.email.Email;
-import io.email.EmailSending;
 import io.email.EmailWorker;
 import io.hardware.gpio.InterruptPins;
 import io.hardware.i2c.I2CWorker;
@@ -22,10 +21,8 @@ import org.tinylog.Logger;
 import org.tinylog.provider.ProviderRegistry;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import util.data.DataProviding;
 import util.data.RealtimeValues;
 import util.database.*;
-import util.task.TaskManager;
 import util.task.TaskManagerPool;
 import util.tools.TinyWrapErr;
 import util.tools.TimeTools;
@@ -42,7 +39,6 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.stream.Collectors;
 
 public class DAS implements Commandable{
 
@@ -232,14 +228,9 @@ public class DAS implements Commandable{
         if( start )
             startAll();
     }
-    public String getWorkPath(){
-        return workPath;
-    }
     public Path getSettingsPath(){
         return settingsPath;
     }
-    public DatabaseManager getDatabaseManager(){return dbManager;}
-
     /**
      * Check if the boot up was successful
      * 
@@ -273,7 +264,6 @@ public class DAS implements Commandable{
                     .comment("Defining the various streams that need to be read")
                 .build();
     }
-
     /* **************************************  C O M M A N D R E Q  ********************************************/
     /**
      * Add a commandable to the CommandPool, this is the same as adding commands to dcafs
@@ -286,12 +276,6 @@ public class DAS implements Commandable{
     public void addCommandable( Commandable cmd, String... id  ){
         commandPool.addCommandable(String.join(";",id),cmd);
     }
-
-    /* **************************************  R E A L T I M E V A L U E S ********************************************/
-    public DataProviding getDataProvider() {
-        return rtvals;
-    }
-
     /* ***************************************  T A S K M A N A G E R ********************************************/
     /**
      * Create a Taskmanager to handle tasklist scripts
@@ -374,12 +358,6 @@ public class DAS implements Commandable{
         addCommandable("email",emailWorker);
         commandPool.setEmailSender(emailWorker);
     }
-    public Optional<EmailSending> getEmailSender(){
-        if(emailWorker!=null)
-            return Optional.ofNullable(emailWorker.getSender());
-        return Optional.empty();
-    }
-
     /* *************************************  D E B U G W O R K E R ***********************************************/
     /**
      * Creates the DebugWorker
