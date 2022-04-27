@@ -60,6 +60,11 @@ public class FilterForward extends AbstractForward {
         }
         return true;
     }
+
+    /**
+     * Add a target for the data that doesn't make it through the filter
+     * @param wr The target Writable
+     */
     public void addReverseTarget(Writable wr ){
         if( !reversed.contains(wr)) {
             reversed.add(wr);
@@ -182,16 +187,12 @@ public class FilterForward extends AbstractForward {
             }
         }else if( filter.getTextContent() != null ){ // If only a single rule is defined
             String type = XMLtools.getStringAttribute(filter,"type","");
-            String delim = XMLtools.getStringAttribute(filter,"delimiter",this.delimiter);
             if( !type.isEmpty()){
-                addRule(type,filter.getTextContent(),delim);
+                addRule(type,filter.getTextContent(),XMLtools.getStringAttribute(filter,"delimiter",this.delimiter));
             }
         }
         return true;
     }
-    public void reload(){
-        rules.clear();
-    }   
     /**
      * Add a rule to the filter
      * @param type predefined type of the filter eg. start,nostart,end ...

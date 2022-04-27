@@ -250,9 +250,6 @@ public class I2CWorker implements Commandable {
     }
     /* ***************************************************************************************************** */
     /* ***************************************************************************************************** */
-
-
-
     /**
      * Converts an array of bytes to a list of ints according to the bits. Note that bytes aren't split in their nibbles
      *   fe. 10bits means take the first two bytes and shift right, then take the next two

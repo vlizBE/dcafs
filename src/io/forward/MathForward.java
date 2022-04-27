@@ -551,8 +551,8 @@ public class MathForward extends AbstractForward {
 
     /**
      * Create a static numericalval
-     * @param key
-     * @param val
+     * @param key The id  to use
+     * @param val The value
      */
     public void addNumericalRef( String key, double val){
         if( referencedNums==null)
