@@ -81,7 +81,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 		this.queryWriting=queryWriting;
 
 		Logger.info("Using " + Math.min(3, Runtime.getRuntime().availableProcessors()) + " threads");
-		debug.scheduleAtFixedRate(new SelfCheck(),5,30,TimeUnit.MINUTES);
+		debug.scheduleAtFixedRate(()->selfCheck(),5,30,TimeUnit.MINUTES);
 
 		loadGenerics();
 		loadValMaps(true);
@@ -191,44 +191,49 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 	 * Load the generics
 	 */
 	public void loadGenerics() {
-
 		generics.clear();
 
 		XMLfab.getRootChildren(settingsPath, "dcafs","generics","generic")
 				.forEach( ele ->  addGeneric( Generic.readFromXML(ele) ) );
 		// Find the path ones?
 		XMLfab.getRootChildren(settingsPath, "dcafs","paths","path")
-				.forEach( ele -> {
-							String imp = ele.getAttribute("import");
+				.forEach( ele -> readGenericElementInPath(ele));
+	}
 
-							int a=1;
-							if( !imp.isEmpty() ){ //meaning imported
-								String file = Path.of(imp).getFileName().toString();
-								file = file.substring(0,file.length()-4);//remove the .xml
+	/**
+	 * Check the element of a path for presence of generics
+	 * @param pathElement The path element to check
+	 */
+	private void readGenericElementInPath(Element pathElement){
+		String imp = pathElement.getAttribute("import");
 
-								for( Element gen : XMLfab.getRootChildren(Path.of(imp), "dcafs","path","generic").collect(Collectors.toList())){
-									if( !gen.hasAttribute("id")){ //if it hasn't got an id, give it one
-										gen.setAttribute("id",file+"_gen"+a);
-										a++;
-									}
-									String delim = ((Element)gen.getParentNode()).getAttribute("delimiter");
-									if( !gen.hasAttribute("delimiter") ) //if it hasn't got an id, give it one
-										gen.setAttribute("delimiter",delim);
-									addGeneric( Generic.readFromXML(gen) );
-								}
-							}
-							String delimiter = XMLtools.getStringAttribute(ele,"delimiter","");
-							for( Element gen : XMLtools.getChildElements(ele,"generic")){
-								if( !gen.hasAttribute("id")){ //if it hasn't got an id, give it one
-									gen.setAttribute("id",ele.getAttribute("id")+"_gen"+a);
-									a++;
-								}
-								if( !gen.hasAttribute("delimiter") && !delimiter.isEmpty()) //if it hasn't got an id, give it one
-									gen.setAttribute("delimiter",delimiter);
-								addGeneric( Generic.readFromXML(gen) );
-							}
-						}
-				);
+		int a=1;
+		if( !imp.isEmpty() ){ //meaning imported
+			var importPath = Path.of(imp);
+			String file = importPath.getFileName().toString();
+			file = file.substring(0,file.length()-4);//remove the .xml
+
+			for( Element gen : XMLfab.getRootChildren(importPath, "dcafs","path","generic").collect(Collectors.toList())){
+				if( !gen.hasAttribute("id")){ //if it hasn't got an id, give it one
+					gen.setAttribute("id",file+"_gen"+a);
+					a++;
+				}
+				String delim = ((Element)gen.getParentNode()).getAttribute("delimiter");
+				if( !gen.hasAttribute("delimiter") ) //if it hasn't got an id, give it one
+					gen.setAttribute("delimiter",delim);
+				addGeneric( Generic.readFromXML(gen) );
+			}
+		}
+		String delimiter = XMLtools.getStringAttribute(pathElement,"delimiter","");
+		for( Element gen : XMLtools.getChildElements(pathElement,"generic")){
+			if( !gen.hasAttribute("id")){ //if it hasn't got an id, give it one
+				gen.setAttribute("id",pathElement.getAttribute("id")+"_gen"+a);
+				a++;
+			}
+			if( !gen.hasAttribute("delimiter") && !delimiter.isEmpty()) //if it hasn't got an id, give it one
+				gen.setAttribute("delimiter",delimiter);
+			addGeneric( Generic.readFromXML(gen) );
+		}
 	}
 	/* ******************************** Q U E U E S **********************************************/
 	public int getWaitingQueueSize(){
@@ -355,12 +360,12 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				if( d.label.contains(":") ){
 					String readID = label.substring(label.indexOf(":")+1);
 					switch(d.label.split(":")[0]){
-						case "generic": executor.execute(new ProcessGeneric(d)); break;
+						case "generic": executor.execute( () ->processGeneric(d)); break;
 						case "double": case "real":  executor.execute(() -> storeInDoubleVal(readID,d.getData(),d.getOriginID())); break;
-						case "valmap":  executor.execute(new ProcessValmap(d)); break;
-						case "text":    executor.execute(() -> dp.setText(readID, d.data)); break;
+						case "valmap":  executor.execute( () -> processValmap(d)); break;
+						case "text":    executor.execute( () -> dp.setText(readID, d.data)); break;
 						case "read":    executor.execute( ()-> checkRead(d.getOriginID(),d.getWritable(),readID) );break;
-						case "telnet":  executor.execute(()-> checkTelnet(d)); break;
+						case "telnet":  executor.execute( ()-> checkTelnet(d)); break;
 						case "log":
 							switch(d.label.split(":")[1]){
 								case "info":Logger.info(d.getData()); break;
@@ -412,103 +417,84 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 			}
 		}
 	}
-	public class SelfCheck implements Runnable {
-		public void run() {
-			Logger.info("Read count now "+readCount+", old one "+oldReadCount+ " last message processed from "+lastOrigin+ " buffersize "+dQueue.size());
-			Logger.info("Executioner: "+ executor.getCompletedTaskCount()+" completed, "+ executor.getTaskCount()+" submitted, "
-					+ executor.getActiveCount()+"/"+ executor.getCorePoolSize()+"("+executor.getMaximumPoolSize()+")"+" active threads, "+ executor.getQueue().size()+" waiting to run");
+	public void selfCheck(){
+		Logger.info("Read count now "+readCount+", old one "+oldReadCount+ " last message processed from "+lastOrigin+ " buffersize "+dQueue.size());
+		Logger.info("Executioner: "+ executor.getCompletedTaskCount()+" completed, "+ executor.getTaskCount()+" submitted, "
+				+ executor.getActiveCount()+"/"+ executor.getCorePoolSize()+"("+executor.getMaximumPoolSize()+")"+" active threads, "+ executor.getQueue().size()+" waiting to run");
 
-			oldReadCount = readCount;
-			readCount=0;
-			lastOrigin="";
-		}
+		oldReadCount = readCount;
+		readCount=0;
+		lastOrigin="";
 	}
-	public class ProcessValmap implements Runnable {
-		Datagram d;
+	public void processValmap(Datagram d) {
+		try {
+			String valMapIDs = d.label.split(":")[1];
+			String mes = d.getData();
 
-		public ProcessValmap(Datagram d) {
-			this.d = d;
-		}
-
-		public void run() {
-			try {
-				String valMapIDs = d.label.split(":")[1];
-				String mes = d.getData();
-
-				if (mes.isBlank()) {
-					Logger.warn(valMapIDs + " -> Ignoring blank line");
-					return;
-				}
-				for (String valmapID : valMapIDs.split(",")) {
-					var map = mappers.get(valmapID);
-					if (map != null) {
-						map.apply(mes, dp);
-					}else{
-						Logger.error("ValMap requested but unknown id: " + valmapID + " -> Message: " + d.getData());
-					}
-				}
-			} catch (ArrayIndexOutOfBoundsException l) {
-				Logger.error("Generic requested (" + d.label + ") but no valid id given.");
-			} catch( Exception e){
-				Logger.error(e);
+			if (mes.isBlank()) {
+				Logger.warn(valMapIDs + " -> Ignoring blank line");
+				return;
 			}
-			procCount.incrementAndGet();
+			for (String valmapID : valMapIDs.split(",")) {
+				var map = mappers.get(valmapID);
+				if (map != null) {
+					map.apply(mes, dp);
+				}else{
+					Logger.error("ValMap requested but unknown id: " + valmapID + " -> Message: " + d.getData());
+				}
+			}
+		} catch (ArrayIndexOutOfBoundsException l) {
+			Logger.error("Generic requested (" + d.label + ") but no valid id given.");
+		} catch( Exception e){
+			Logger.error(e);
 		}
+		procCount.incrementAndGet();
 	}
 
-	public class ProcessGeneric implements Runnable{
-		Datagram d;
+	private void processGeneric(Datagram d){
+		try{
+			String mes = d.getData();
+			if( mes.isBlank() ){
+				Logger.warn( d.getOriginID() + " -> Ignoring blank line" );
+				return;
+			}
 
-		public ProcessGeneric(Datagram d){
-			this.d=d;
-		}
-
-		public void run(){
-			try{
-
-				String mes = d.getData();
-				if( mes.isBlank() ){
-					Logger.warn( d.getOriginID() + " -> Ignoring blank line" );
-					return;
+			var genericIDs = d.label.split(":")[1].split(",");
+			for( String genericID : genericIDs ){
+				var generics = getGenerics(genericID);
+				if( generics==null || generics.isEmpty() ) {
+					Logger.error("No such generic " + genericID + " for " + d.getOriginID());
+					continue;
 				}
+				Double[] doubles = (Double[]) d.getPayload();
 
-				var genericIDs = d.label.split(":")[1].split(",");
-				for( String genericID : genericIDs ){
-					var generics = getGenerics(genericID);
-					if( generics==null || generics.isEmpty() ) {
-						Logger.error("No such generic " + genericID + " for " + d.getOriginID());
-						continue;
-					}
-					Double[] doubles = (Double[]) d.getPayload();
-
-					generics.stream().forEach(
-							gen -> {
-								if ( mes.startsWith(gen.getStartsWith()) ) {
-									Object[] data = gen.apply( mes, doubles, dp, queryWriting,mqtt );
-									if (!gen.getTable().isEmpty() && gen.writesInDB()) {
-										if (gen.isTableMatch()) {
-											for( String id : gen.getDBID() )
-												queryWriting.addDirectInsert( id, gen.getTable(), data);
-										} else {
-											for( String id : gen.getDBID() ){
-												if (!queryWriting.buildInsert(id, gen.getTable(), dp, gen.macro)) {
-													Logger.error("Failed to write record for " + gen.getTable()+ " in "+id);
-												}
+				generics.stream().forEach(
+						gen -> {
+							if ( mes.startsWith(gen.getStartsWith()) ) {
+								Object[] data = gen.apply( mes, doubles, dp, queryWriting,mqtt );
+								if (!gen.getTable().isEmpty() && gen.writesInDB()) {
+									if (gen.isTableMatch()) {
+										for( String id : gen.getDBID() )
+											queryWriting.addDirectInsert( id, gen.getTable(), data);
+									} else {
+										for( String id : gen.getDBID() ){
+											if (!queryWriting.buildInsert(id, gen.getTable(), dp, gen.macro)) {
+												Logger.error("Failed to write record for " + gen.getTable()+ " in "+id);
 											}
 										}
 									}
 								}
 							}
-					);
-				}
-			}catch( ArrayIndexOutOfBoundsException e ){
-				Logger.error("Generic requested ("+d.label+") but no valid id given.");
-			} catch( Exception e){
-				Logger.error("Caught an exception when processing "+d.getData()+" from "+d.getOriginID()+" message: "+e.getMessage());
-				Logger.error(e);
+						}
+				);
 			}
-			procCount.incrementAndGet();
+		}catch( ArrayIndexOutOfBoundsException e ){
+			Logger.error("Generic requested ("+d.label+") but no valid id given.");
+		} catch( Exception e){
+			Logger.error("Caught an exception when processing "+d.getData()+" from "+d.getOriginID()+" message: "+e.getMessage());
+			Logger.error(e);
 		}
+		procCount.incrementAndGet();
 	}
 
 	/* *************************************** C O M M A N D A B L E ********************************************** */
