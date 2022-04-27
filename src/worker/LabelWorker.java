@@ -182,8 +182,12 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 
 	/* *************************** GENERICS **********************************************/
 	public Generic addGeneric(Generic gen) {
-		generics.put(gen.getID(), gen);
-		Logger.info("Added generic " + gen.getID());
+		if( generics.containsKey(gen.getID())){
+			Logger.error("Tried to add generic with same id twice: "+gen.getID());
+		}else {
+			generics.put(gen.getID(), gen);
+			Logger.info("Added generic " + gen.getID());
+		}
 		return gen;
 	}
 
@@ -657,7 +661,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 		generics.clear();
 
 		XMLfab.getRootChildren(settingsPath, "dcafs","generics","generic")
-				.forEach( ele ->  addGeneric( Generic.readFromXML(ele) ) );
+				.forEach( ele -> addGeneric( Generic.readFromXML(ele) ) );
 		// Find the path ones?
 		XMLfab.getRootChildren(settingsPath, "dcafs","paths","path")
 				.forEach( ele -> {
