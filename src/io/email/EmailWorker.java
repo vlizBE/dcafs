@@ -173,6 +173,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 	public void readFromXML(Document xmlDoc ){
 
 		xml = XMLtools.getDocPath(xmlDoc);
+		mailSession = null;
 
 		Element email = XMLtools.getFirstElementByTag( xmlDoc, XML_PARENT_TAG);	// Get the element containing the settings and references
 
@@ -480,8 +481,8 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 					return "No xml defined yet...";
 				readFromXML(XMLtools.readXML(xml));
 				return "Settings reloaded";
-			case "refs": return this.getEmailBook();
-			case "setup":case "status": return this.getSettings();
+			case "refs": return getEmailBook();
+			case "setup":case "status": return getSettings();
 			case "send":
 				if( parts.length !=4 )
 					return "Not enough arguments send,ref/email,subject,content";
