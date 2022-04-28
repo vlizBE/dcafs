@@ -1394,15 +1394,13 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 							.add(green+"  rtvals"+reg+" -> Get a listing of all rtvals")
 							.add(green+"  rtvals:groups"+reg+" -> Get a listing of all the available groups")
 							.add(green+"  rtvals:group,groupid"+reg+" -> Get a listing of all rtvals belonging to the group")
-							.add(green+"  rtvals:name,valname"+reg+" -> Get a listing of all rtvals with the given valname (independent of group)");
+							.add(green+"  rtvals:name,valname"+reg+" -> Get a listing of all rtvals with the given valname (independent of group)")
+							.add(green+"  rtvals:resetgroup,groupid"+reg+" -> Reset the integers and real/double rtvals in the given group");
 					return join.toString();
 				case "store": return  storeValsInXml(false)?"Written in xml":"Failed to write to xml";
 				case "reload":
 					readFromXML( XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals") );
 					return "Reloaded rtvals";
-				default:
-					int s =addRequest(wr,request[0],request[1]);
-					return s!=0?"Request added to "+s+" doublevals":"Request failed";
 			}
 		}else if(cmds.length==2){
 			switch(cmds[0]){
@@ -1498,7 +1496,11 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		join.setEmptyValue("None yet");
 
 		// Find & add the groups
-		getGroups().forEach( group -> join.add(getRTValsGroupList(group,showDoubles,showFlags,showTexts,html)).add("") );
+		for( var group : getGroups() ){
+			var res = getRTValsGroupList(group,showDoubles,showFlags,showTexts,html);
+			if( !res.isEmpty() && !res.equalsIgnoreCase("none yet"))
+				join.add(res).add("");
+		}
 
 		// Add the not grouped ones
 		boolean ngDoubles = doubleVals.values().stream().anyMatch( dv -> dv.group().isEmpty())&&showDoubles;
