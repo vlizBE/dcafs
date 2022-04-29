@@ -892,11 +892,12 @@ public class ForwardPool implements Commandable {
                         .getChild("path","id",cmds[1]);
                 if(ele.isEmpty())
                     return "No such path "+cmds[1];
-                paths.get(cmds[1]).readFromXML(ele.get(),settingsPath.getParent().toString());
-                return "Path reloaded";
+                if( paths.get(cmds[1]).readFromXML(ele.get(),settingsPath.getParent().toString()) )
+                    return "Path reloaded";
+                return "Path failed to reload";
             case "readfile":
 
-                return "File reading added";
+                return "File reading added (todo)";
             case "addfile":
                 if( cmds.length<2) {
                     return "To few arguments, expected pf:addfile,id,src (src is optional)";
@@ -1049,6 +1050,9 @@ public class ForwardPool implements Commandable {
                 XMLfab.withRoot(settingsPath, "dcafs", "paths").clearChildren().build();
                 filters.clear();
                 return "Paths cleared";
+            case "stop":
+                paths.values().forEach( pf -> pf.removeTarget(wr) );
+                return "Stopped sending to "+wr.getID();
             case "list":
                 StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
                 join.setEmptyValue("No paths yet");
