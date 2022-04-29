@@ -904,7 +904,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 		return result == null ? def : result;
 	}
 
-	/* ************************************ F L A G S ************************************************************* */
+	/* ************************************** F L A G S ************************************************************* */
 	public FlagVal getOrAddFlagVal( String id ){
 		if( id.isEmpty())
 			return null;
@@ -993,6 +993,18 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 
 		int size = flagVals.size();
 		getOrAddFlagVal(id).setState(state);
+		XMLfab fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
+		String[] ids = id.split("_");
+		if( ids.length>1) {
+			var opt = fab.hasChild("group", "id", ids[0]);
+			if( opt.isEmpty())
+				return false;
+			fab = opt.get();
+
+		}
+		fab.alterChild("flag", "name", ids[1]).content(""+state);
+		fab.build();
+
 		return size==flagVals.size();
 	}
 	public ArrayList<String> listFlags(){
@@ -1183,8 +1195,6 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				if( cmds.length <2)
 					return "Not enough arguments, need flags:new,id<,state> or fv:new,id<,state>";
 				setFlagState(cmds[1],Tools.parseBool( cmds.length==3?cmds[2]:"false",false));
-
-				fab.alterChild("flag","id",cmds[1]).attr("default",cmds.length==3?cmds[2]:"false").build();
 				return "Flag created/updated "+cmds[1];
 			case "raise": case "set":
 				if( cmds.length !=2)
