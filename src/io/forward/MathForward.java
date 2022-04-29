@@ -237,7 +237,7 @@ public class MathForward extends AbstractForward {
             targets.stream().filter( wr -> wr.getID().contains("telnet"))
                     .forEach( wr -> wr.writeLine(id+"'mf) No valid numbers in data after split on '"+delimiter+"'"));
             if( badDataCount>=MAX_BAD_COUNT) {
-                Logger.error(id+"(mf)-> Too many bad data received, no longer accepting data");
+                Logger.error(id+"(mf)-> Too much bad data received, no longer accepting data");
                 targets.stream().filter( wr -> wr.getID().contains("telnet"))
                         .forEach( wr -> wr.writeLine(id+"'mf) Stopped requesting data"));
                 valid=false;
@@ -245,8 +245,7 @@ public class MathForward extends AbstractForward {
             }
             return true;
         }
-
-        ops.forEach( op -> {
+        for( var op : ops ){
             if( op!=null ) {
                 var res = op.solve(bds);
                 if (res == null) {
@@ -254,7 +253,7 @@ public class MathForward extends AbstractForward {
                     Logger.error(id + "(mf) -> Failed to process " + data + " ("+badDataCount+"/"+MAX_BAD_COUNT+")");
                     targets.stream().filter( wr -> wr.getID().contains("telnet"))
                             .forEach( wr -> wr.writeLine(id+"(mf) -> Failed to process "+ data));
-
+                    break; //don't try to continue with the ops if a step failed
                 }
             }else{
                 badDataCount++;
@@ -262,7 +261,7 @@ public class MathForward extends AbstractForward {
                 targets.stream().filter( wr -> wr.getID().contains("telnet"))
                         .forEach( wr -> wr.writeLine(id+"(mf) -> Invalid op "+ data));
             }
-        } ); // Solve the operations with the converted data
+        } // Solve the operations with the converted data
         if( oldBad == badDataCount )
             badDataCount=0;
 
