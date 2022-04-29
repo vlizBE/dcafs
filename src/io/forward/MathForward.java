@@ -43,7 +43,7 @@ public class MathForward extends AbstractForward {
     }
     public MathForward(Element ele, BlockingQueue<Datagram> dQueue, DataProviding dp){
         super(dQueue,dp);
-        readFromXML(ele);
+        readOk = readFromXML(ele);
     }
     public MathForward(BlockingQueue<Datagram> dQueue, DataProviding dp){
         super(null,dp);
@@ -382,7 +382,7 @@ public class MathForward extends AbstractForward {
         exp = split[1];
 
         if( index == -1 ){
-            Logger.warn(id + " -> Bad/No index given");
+            Logger.warn(id + " -> Bad/No index given in "+expression);
         }
 
         Operation op;
@@ -421,7 +421,7 @@ public class MathForward extends AbstractForward {
         String exp = expression;
 
         if( index.equalsIgnoreCase("-1") ){
-            Logger.warn(id + " -> Bad/No index given");
+            Logger.warn(id + " -> Bad/No index given in "+cmd+"|"+expression);
         }
 
         exp=replaceReferences(exp);

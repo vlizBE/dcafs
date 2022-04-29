@@ -58,7 +58,7 @@ public class PathForward {
     public void setSrc( String src ){
         this.src=src;
     }
-    public void readFromXML( Element pathEle, String workpath ){
+    public boolean readFromXML( Element pathEle, String workpath ){
 
         var oldTargets = new ArrayList<Writable>();
 
@@ -88,7 +88,7 @@ public class PathForward {
                 Logger.info("Valid path script found at "+importPath.get());
             }else{
                 Logger.error("No valid path script found: "+importPath.get());
-                return;
+                return false;
             }
         }
 
@@ -97,7 +97,7 @@ public class PathForward {
         if( steps.size() > 0) {
             stepsForward = new ArrayList<>();
         }else{
-            return;
+            return false;
         }
 
         FilterForward lastff=null;
@@ -176,6 +176,8 @@ public class PathForward {
                     break;
                 case "editor":
                     var ef = new EditorForward( step,dQueue,dataProviding );
+                    if( !ef.readOk)
+                        return false;
                     ef.removeSources();
                     addAsTarget(ef,src);
                     stepsForward.add(ef);
@@ -196,6 +198,7 @@ public class PathForward {
             }
         }
         customs.trimToSize();
+        return true;
     }
     private void addAsTarget( AbstractForward f, String src ){
         if( !src.isEmpty() ){

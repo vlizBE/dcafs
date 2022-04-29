@@ -36,7 +36,7 @@ public abstract class AbstractForward implements Writable {
     static final protected int MAX_BAD_COUNT=5;
     protected boolean log = false;
     protected final DataProviding dataProviding;
-
+    protected boolean readOk=false;
 
     protected AbstractForward(String id, String source, BlockingQueue<Datagram> dQueue, DataProviding dataProviding ){
         this.id=id;
