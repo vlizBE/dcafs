@@ -931,6 +931,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 					}
 					fab.alterChild("flag").attr("name", val.name()).build();
 				}
+				fab.build();
 			}
 		}
 		return val;
@@ -1182,6 +1183,7 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 				if( cmds.length <2)
 					return "Not enough arguments, need flags:new,id<,state> or fv:new,id<,state>";
 				setFlagState(cmds[1],Tools.parseBool( cmds.length==3?cmds[2]:"false",false));
+
 				fab.alterChild("flag","id",cmds[1]).attr("default",cmds.length==3?cmds[2]:"false").build();
 				return "Flag created/updated "+cmds[1];
 			case "raise": case "set":
@@ -1492,9 +1494,9 @@ public class RealtimeValues implements CollectorFuture, DataProviding, Commandab
 	 */
 	public String getRtvalsList(boolean html, boolean showDoubles, boolean showFlags, boolean showTexts){
 		String eol = html?"<br>":"\r\n";
-		String title = html?"<b>Grouped</b>":TelnetCodes.TEXT_CYAN+"Grouped"+TelnetCodes.TEXT_YELLOW;
+		//String title = html?"<b>Grouped</b>":TelnetCodes.TEXT_CYAN+"Grouped"+TelnetCodes.TEXT_YELLOW;
 		String space = html?"  ":"  ";
-		StringJoiner join = new StringJoiner(eol,getGroups().isEmpty()?"":title+eol,"");
+		StringJoiner join = new StringJoiner(eol);
 		join.setEmptyValue("None yet");
 
 		// Find & add the groups
