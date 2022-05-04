@@ -437,6 +437,9 @@ public class FileCollector extends AbstractCollector{
             }
             headerChanged = false;
 
+            if( join.toString().isBlank() )// Don't write empty lines
+                return;
+
             Files.write(dest, join.toString().getBytes(charSet), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
             Logger.debug("Written " + join.toString().length() + " bytes to " + dest.getFileName().toString());
 
