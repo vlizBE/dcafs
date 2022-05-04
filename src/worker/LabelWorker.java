@@ -17,7 +17,6 @@ import util.tools.TimeTools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 
-import javax.xml.crypto.Data;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
@@ -666,13 +665,17 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 		XMLfab.getRootChildren(settingsPath, "dcafs","paths","path")
 				.forEach( ele -> {
 							String imp = ele.getAttribute("import");
+							var importPath = Path.of(imp);
+							if( !importPath.isAbsolute())
+								importPath = settingsPath.getParent().resolve(imp);
 
+							Logger.info("Looking in "+importPath+" for generics");
 							int a=1;
 							if( !imp.isEmpty() ){ //meaning imported
-								String file = Path.of(imp).getFileName().toString();
+								String file = importPath.getFileName().toString();
 								file = file.substring(0,file.length()-4);//remove the .xml
 
-								for( Element gen : XMLfab.getRootChildren(Path.of(imp), "dcafs","path","generic").collect(Collectors.toList())){
+								for( Element gen : XMLfab.getRootChildren(importPath, "dcafs","path","generic").collect(Collectors.toList())){
 									if( !gen.hasAttribute("id")){ //if it hasn't got an id, give it one
 										gen.setAttribute("id",file+"_gen"+a);
 										a++;
