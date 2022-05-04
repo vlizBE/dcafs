@@ -133,7 +133,7 @@ public class CollectorPool implements Commandable, CollectorFuture {
         String[] cmds = request[1].split(",");
         StringJoiner join = new StringJoiner(html?"<br":"\r\n");
 
-        Optional<FileCollector>  fco = Optional.ofNullable(fileCollectors.get(cmds[1]));
+        Optional<FileCollector>  fco = Optional.ofNullable(cmds.length>2?fileCollectors.get(cmds[1]):null);
         var settingsPath = workPath.resolve("settings.xml");
         switch( cmds[0] ) {
             case "?":
