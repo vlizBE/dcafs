@@ -178,7 +178,7 @@ public class CommandPool {
 			case "sd" -> doShutDown(split, wr, html);
 			case "serialports" -> Tools.getSerialPorts(html);
 			case "conv" -> Tools.convertCoords(split[1].split(";"));
-			case "", "stop" -> {
+			case "", "stop", "nothing" -> {
 				stopCommandable.forEach(c -> c.replyToCommand(new String[]{"", ""}, wr, false));
 				yield "Clearing requests";
 			}
