@@ -21,7 +21,20 @@ From 0.5.0 onwards, this should be better documented...
   * Code cleanup
     * Bring javadoc up to date
 
-## 0.11.10 (work in progress)
+## 0.11.10 (04/05/2022)
+
+- Possibly breaking, rtvals are now case-sensitive
+- Added file monitor, if a given file is changed execute a cmd (fe. if a task xml is changed, reload the tasklist)
+  - No cmd/telnet interface yet
+  
+### Fixes
+- Flags are now added properly to the xml
+- Flags:list no longer shows 'none yet' for groups without flags
+- FileCollector no long has empty lines if dcafs is restarted before a write was done
+- Interval tasks can now fail on req/check without increasing the error count (5 errors cancels the interval)
+- Generics no longer overwrite if identical id's are used, will give error instead
+- Emailworker reload cmd wasn't actually reloading 
+- MathForward stops executing an operation if a step failed instead of working with null's
 
 ## 0.11.9 (28/03/22)
 
