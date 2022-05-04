@@ -27,7 +27,7 @@ public class EditorForward extends AbstractForward{
     }
     public EditorForward(Element ele, BlockingQueue<Datagram> dQueue, DataProviding dataProviding  ){
         super(dQueue,dataProviding);
-        readFromXML(ele);
+        readOk = readFromXML(ele);
     }
     /**
      * Read an editor from an element in the xml
@@ -139,11 +139,11 @@ public class EditorForward extends AbstractForward{
             // Process all the types except 'start'
             XMLtools.getChildElements(editor, "edit").forEach( this::processNode );
         }else{
-            processNode(editor);
+            return processNode(editor);
         }
         return true;
     }
-    private void processNode( Element edit ){
+    private boolean processNode( Element edit ){
         String deli = XMLtools.getStringAttribute(edit,"delimiter",delimiter);
         String content = edit.getTextContent();
         String from = XMLtools.getStringAttribute(edit,"from",",");
@@ -156,7 +156,7 @@ public class EditorForward extends AbstractForward{
 
         if( content == null ){
             Logger.error(id+" -> Missing content in an edit.");
-            return;
+            return false;
         }
         if( index == -1 ){
             index=0;
@@ -244,9 +244,10 @@ public class EditorForward extends AbstractForward{
                 converToAscii(deli);
                 Logger.info(id + " -> Added conversion to char");
             default:
-                Logger.error(id+" -> Unknown type used : "+edit.getAttribute("type"));
-                break;
+                Logger.error(id+" -> Unknown type used : '"+edit.getAttribute("type")+"'");
+                return false;
         }
+        return true;
     }
     public void addCharSplit( String deli, String positions){
         rulesString.add( new String[]{"","charsplit","At "+positions+" to "+deli} );

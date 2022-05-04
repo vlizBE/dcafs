@@ -98,6 +98,7 @@ public class FileTools {
      * @return List of read lines or an empty list of none were read
      */
     public static ArrayList<String> readLines( Path path, int start, int amount) {
+
         var read = new ArrayList<String>();
         if( start==0) {
             Logger.error( "Readlines should start at 1, not 0");
@@ -111,11 +112,15 @@ public class FileTools {
         if( start<0 || amount<0 )
             return read;
              
-        try( var lines = Files.lines((path)) ){
-            lines.skip(start-1)
-                 .limit( amount )
-                 .forEach( read::add );
-            return read;     
+        try( var lines = Files.lines(path, StandardCharsets.UTF_8) ) {
+                var d = lines.skip(start - 1)
+                        .limit(amount);
+                        try{
+                            d.forEach( x-> read.add(x));
+                        }catch(UncheckedIOException e){
+                            Logger.error("Issue reading from "+start);
+                        }
+            return read;
         } catch (IOException ex) {
             Logger.error(ex);
             return read;

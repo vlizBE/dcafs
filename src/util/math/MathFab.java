@@ -238,7 +238,7 @@ public class MathFab {
                         Logger.error(a+" -> array: null");
                     }
                 }
-                Logger.error(e);
+                Logger.error(e.getMessage());
                 return null;
             }
         }

@@ -16,7 +16,7 @@ public class Datagram {
     byte[] raw;              // Raw received data
     double messValue = 0;    // Alternative data
     int priority = 1;        // The priority of the data source
-    String label;            // The label of the data source
+    String label="";            // The label of the data source
     int timeOffset = 0;      // The offset, only used for debug work (simulate arrival delays)
     String originID ="";     // ID of the origin of the message
     long timestamp;          // Timestamp when the data was received

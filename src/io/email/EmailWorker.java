@@ -45,7 +45,7 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 
     /* Outbox */
 	MailBox outbox = new MailBox();
-	boolean outboxAuth = false; // Whether or not to authenticate
+	boolean outboxAuth = false; // Whether to authenticate
 
 	/* Inbox */
 	MailBox inbox = new MailBox();
@@ -97,7 +97,7 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 	/**
 	 * Constructor for this class
 	 * 
-	 * @param settingsPath   the path to the xml with the settings
+	 * @param settingsPath the path to the xml with the settings
 	 * @param dQueue the queue processed by a @see BaseWorker
 	 */
 	public EmailWorker(Path settingsPath, BlockingQueue<Datagram> dQueue) {
@@ -153,6 +153,7 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 	public boolean readFromXML(){
 
 		Element email = XMLtools.getFirstElementByTag( XMLtools.readXML(settingsPath), XML_PARENT_TAG);	// Get the element containing the settings and references
+		mailSession = null;
 
 		if( email == null)
 			return false;
@@ -474,8 +475,8 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 					return "No xml defined yet...";
 				readFromXML();
 				return "Settings reloaded";
-			case "refs": return this.getEmailBook();
-			case "setup":case "status": return this.getSettings();
+			case "refs": return getEmailBook();
+			case "setup":case "status": return getSettings();
 			case "send":
 				if( cmds.length !=4 )
 					return "Not enough arguments send,ref/email,subject,content";

@@ -254,7 +254,11 @@ public class Generic {
                                     dp.setInteger( ref, (int)data[a] );
                                 }else{
                                     data[a]=null;
-                                    Logger.error(id +" -> Failed to convert "+split[entry.index]+" to int for "+ ref);
+                                    if( split[entry.index].isEmpty()){
+                                        Logger.error(id +" -> Got an empty value at "+ entry.index+" instead of int for "+ ref);
+                                    }else{
+                                        Logger.error(id +" -> Failed to convert "+split[entry.index]+" to int for "+ ref);
+                                    }
                                 }
                             }
                             break;
@@ -268,7 +272,11 @@ public class Generic {
                                 dp.getOrAddDoubleVal( ref ).updateValue( val );
                             }else{
                                 data[a]=null;
-                                Logger.error(id +" -> Failed to convert "+split[entry.index]+" to real for "+ ref);
+                                if( split[entry.index].isEmpty()){
+                                    Logger.error(id +" -> Got an empty value at "+ entry.index+" instead of real for "+ ref);
+                                }else{
+                                    Logger.error(id +" -> Failed to convert "+split[entry.index]+" to real for "+ ref);
+                                }
                             }
                             break;                
                     case TEXT: case TAG:
