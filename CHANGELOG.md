@@ -25,16 +25,12 @@ From 0.5.0 onwards, this should be better documented...
 - Moved methods in CommandPool that can be static to Tools package
 - Removed cyclic redundancy between CommandPool and Das
 
-
-
 ## 0.11.x
 - Goals for this version series (removed when they are done)
   * Code cleanup
     * Bring javadoc up to date
 
 ## 0.11.10 (work in progress)
-
-Moved to java 17 (new LTS)
 
 ### File monitor 
 - Simple class that watches files for modification and executes a cmd on event

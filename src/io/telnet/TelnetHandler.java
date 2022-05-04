@@ -271,7 +271,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
         }
 	}
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
        ctx.flush();
     }
 
@@ -285,10 +285,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 			ctx.flush();
 		}
 	}
-	
-	/* ***************************************************************************************************************/
 	/* *************************************** W R I T A B L E  ******************************************************/
-	/* ***************************************************************************************************************/
 	/**
 	 * Sending data that will be appended by the default newline string.
 	 * @param message The data to send.
@@ -331,28 +328,6 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 		return this;
 	}
 	/* ***********************************************************************************************************/
-	/* ****************************************** I N H E R I T A N C E ******************************************/
-	/* ***********************************************************************************************************/
-	/**
-	 * Add an ip to the ignore list, mostly used to prevent checkers to flood the logs with status messages 
-	 * @param ip The IP to ignore
-	 */
-	public void addIgnoreIP( String ip ){
-		ignoreIP.add(ip);
-	}
-	/**
-	 * Check to see if an ip is part of the ignore list
-	 * @param ip The IP to check
-	 * @return True if it is, false if not
-	 */
-	protected boolean notIgnoredIP( String ip ){
-		ip=ip.substring(1);
-		for( String ignore : ignoreIP ){
-			if( ip.startsWith(ignore) && !ignore.isBlank() )
-				return false;
-		}
-		return true;
-	}
 	/**
 	 * Change the title of the handler, title is used for telnet client etc representation
 	 * @param title The new title
@@ -368,9 +343,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 		return title;
 	}
 
-	/* ***********************************************************************************************************/
 	/* ************************************* S T A T U S *********************************************************/
-	/* ***********************************************************************************************************/
 	/**
 	 * Get the channel object
 	 * @return The channel

@@ -473,7 +473,7 @@ public class DAS implements Commandable{
         Logger.info("Shut Down Hook Attached.");
     }
 
-    /* ******************************  * T H R E A D I N G *****************************************/
+    /* ******************************* T H R E A D I N G *****************************************/
     /**
      * Start all the threads
      */
