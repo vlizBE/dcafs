@@ -120,27 +120,27 @@
 	  <dependency>
 		  <groupId>io.netty</groupId>
 		  <artifactId>netty-common</artifactId>
-		  <version>4.1.75.Final</version>
+		  <version>4.1.76.Final</version>
 	  </dependency>
 	  <dependency>
 		  <groupId>io.netty</groupId>
 		  <artifactId>netty-buffer</artifactId>
-		  <version>4.1.75.Final</version>
+		  <version>4.1.76.Final</version>
 	  </dependency>
 	  <dependency>
 		  <groupId>io.netty</groupId>
 		  <artifactId>netty-transport</artifactId>
-		  <version>4.1.75.Final</version>
+		  <version>4.1.76.Final</version>
 	  </dependency>
 	  <dependency>
 		  <groupId>io.netty</groupId>
 		  <artifactId>netty-handler</artifactId>
-		  <version>4.1.75.Final</version>
+		  <version>4.1.76.Final</version>
 	  </dependency>
 	  <dependency>
 		  <groupId>io.netty</groupId>
 		  <artifactId>netty-codec</artifactId>
-		  <version>4.1.75.Final</version>
+		  <version>4.1.76.Final</version>
 	  </dependency>
 	  <!-- https://mvnrepository.com/artifact/com.microsoft.sqlserver/mssql-jdbc -->
 	  <dependency>
@@ -183,7 +183,7 @@
 	<dependency>
 		<groupId>org.mariadb.jdbc</groupId>
 		<artifactId>mariadb-java-client</artifactId>
-		<version>3.0.3</version>
+		<version>3.0.4</version>
 	</dependency>
 	<!-- https://mvnrepository.com/artifact/org.eclipse.paho/org.eclipse.paho.client.mqttv3 -->
 	<dependency>
@@ -195,7 +195,7 @@
 	  <dependency>
 		  <groupId>org.postgresql</groupId>
 		  <artifactId>postgresql</artifactId>
-		  <version>42.3.3</version>
+		  <version>42.3.4</version>
 	  </dependency>
   </dependencies>
 </project>
