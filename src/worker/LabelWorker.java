@@ -210,16 +210,20 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 	 */
 	private void readGenericElementInPath(Element pathElement){
 		String imp = pathElement.getAttribute("import");
+		String setId=pathElement.getAttribute("id");
 
 		int a=1;
 		if( !imp.isEmpty() ){ //meaning imported
 			var importPath = Path.of(imp);
-			String file = importPath.getFileName().toString();
-			file = file.substring(0,file.length()-4);//remove the .xml
+
+			var sub = XMLfab.getRootChildren(importPath, "dcafs","path").findFirst();
+			if( sub.isPresent() ){
+				setId = XMLtools.getStringAttribute(sub.get(),"id",pathElement.getAttribute("id"));
+			}
 
 			for( Element gen : XMLfab.getRootChildren(importPath, "dcafs","path","generic").collect(Collectors.toList())){
 				if( !gen.hasAttribute("id")){ //if it hasn't got an id, give it one
-					gen.setAttribute("id",file+"_gen"+a);
+					gen.setAttribute("id",setId+"_gen"+a);
 					a++;
 				}
 				String delim = ((Element)gen.getParentNode()).getAttribute("delimiter");
