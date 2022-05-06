@@ -113,12 +113,12 @@ public class PathForward {
             // Check if the next step is a generic, if so change the label attribute of the current step
             if( a<steps.size()-1 ){
                 var next = steps.get(a+1);
-                if(next.getTagName().equalsIgnoreCase("generic")){
-                    if( !step.hasAttribute("label")) {
-                        var genid = next.getAttribute("id");
-                        genid = genid.isEmpty()?id+"_gen"+gens:genid;
-                        gens++;
-                        step.setAttribute("label", "generic:" + genid);
+                if(next.getTagName().equalsIgnoreCase("generic")){// Next element is a generic
+                    if( !step.hasAttribute("label")) { // If this step doesn't have a label
+                        var genid = next.getAttribute("id"); // get the id of the generic
+                        genid = genid.isEmpty()?id+"_gen"+gens:genid; // If no id is given, take the path id and append gen
+                        gens++; // increase the total gen count
+                        step.setAttribute("label", "generic:" + genid); //alter this step label to the gen
                     }
                 }
                 if(next.getTagName().equalsIgnoreCase("valmap")){
