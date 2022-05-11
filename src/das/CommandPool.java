@@ -6,7 +6,6 @@ import io.Writable;
 import io.telnet.TelnetCodes;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
-import util.math.MathUtils;
 import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.tools.Tools;
@@ -178,6 +177,7 @@ public class CommandPool {
 			case "sd" -> doShutDown(split, wr, html);
 			case "serialports" -> Tools.getSerialPorts(html);
 			case "conv" -> Tools.convertCoords(split[1].split(";"));
+			case "ts" -> doTimeStamping( split );
 			case "", "stop", "nothing" -> {
 				stopCommandable.forEach(c -> c.replyToCommand(new String[]{"", ""}, wr, false));
 				yield "Clearing requests";
@@ -251,6 +251,16 @@ public class CommandPool {
 		return c.replyToCommand(new String[]{id,command},wr,false);
 	}
 	/* ********************************************************************************************/
+	/**
+	 * Updates or create a text val with the current timestamp
+	 * @param request Array with [0]=ts and [1]=id of the textval
+	 * @return Nothing useful
+	 */
+	public String doTimeStamping( String[] request){
+		String cmd = "tv:create,"+request[1]+","+TimeTools.formatShortUTCNow();
+		dQueue.add( Datagram.system(cmd) );
+		return "update attempted";
+	}
 	/**
 	 * Try to update a file received somehow (email or otherwise)
 	 * Current options: dcafs,script and settings (dcafs is wip)
