@@ -130,7 +130,7 @@ public class FileTools {
                 var d = lines.skip(start - 1)
                         .limit(amount);
                         try{
-                            d.forEach( x-> read.add(x));
+                            d.forEach(read::add);
                         }catch(UncheckedIOException e){
                             Logger.error("Issue reading from "+start);
                         }

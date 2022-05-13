@@ -172,7 +172,7 @@ public class XMLfab {
      */
     public static Stream<Element> getRootChildren( Path xmlPath, String... roots){
         if( Files.notExists(xmlPath) ){
-            Logger.error("No such xml file: "+xmlPath);
+            Logger.error("No such xml file: "+xmlPath+", looking for "+String.join("->",roots));
             return new ArrayList<Element>().stream();
         }
 
