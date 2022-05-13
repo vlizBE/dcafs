@@ -88,7 +88,21 @@ public class FileTools {
             Logger.error(ex);
             return false;
         }
-    } 
+    }
+
+    /**
+     * Check how many lines the given file contains
+     * @param file The path to the file
+     * @return The amount of lines or -1 if failed
+     */
+    public static long getLineCount( Path file ){
+        try{
+            return Files.lines(file).parallel().count();
+        } catch (IOException ex) {
+            Logger.error(ex);
+            return -1;
+        }
+    }
     /**
      * Read amount of lines from a file starting at start
      * 
