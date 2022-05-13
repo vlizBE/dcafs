@@ -143,10 +143,13 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 
 							int a=1;
 							if( !imp.isEmpty() ){ //meaning imported
-								String file = Path.of(imp).getFileName().toString();
+								var importPath = Path.of(imp);
+								if( !importPath.isAbsolute())
+									importPath = settingsPath.getParent().resolve(importPath);
+								String file = importPath.getFileName().toString();
 								file = file.substring(0,file.length()-4);//remove the .xml
 
-								for( Element vm : XMLfab.getRootChildren(Path.of(imp), "dcafs","paths","path","valmap").collect(Collectors.toList())){
+								for( Element vm : XMLfab.getRootChildren(importPath, "dcafs","paths","path","valmap").collect(Collectors.toList())){
 									if( !vm.hasAttribute("id")){ //if it hasn't got an id, give it one
 										vm.setAttribute("id",file+"_vm"+a);
 										a++;
