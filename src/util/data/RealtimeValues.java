@@ -1234,7 +1234,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 		String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
 
 		double result;
-		var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
+
 		var join = new StringJoiner(html?"<br>":"\r\n");
 		switch( cmds[0] ){
 			case "?":
@@ -1267,6 +1267,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 				if( vals.length==1)
 					return "Incorrect param:value pair: "+cmds[2];
 				return getDoubleVal(cmds[1]).map( dv -> {
+					var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
 					if( vals[0].equals("scale")) {
 						dv.fractionDigits(NumberUtils.toInt(vals[1]));
 						fab.alterChild("real","id",cmds[1]).attr("scale",dv.scale()).build();
