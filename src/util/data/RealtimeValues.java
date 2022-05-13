@@ -18,6 +18,7 @@ import util.xml.XMLtools;
 import worker.Datagram;
 
 import java.nio.file.Path;
+import java.sql.Time;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
@@ -1492,7 +1493,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 	public String getRtvalsList(boolean html, boolean showDoubles, boolean showFlags, boolean showTexts){
 		String eol = html?"<br>":"\r\n";
 		String space = html?"  ":"  ";
-		StringJoiner join = new StringJoiner(eol);
+		StringJoiner join = new StringJoiner(eol,"Status at "+ TimeTools.formatShortUTCNow()+eol+eol,"");
 		join.setEmptyValue("None yet");
 
 		// Find & add the groups
@@ -1504,7 +1505,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 
 		// Add the not grouped ones
 		boolean ngDoubles = doubleVals.values().stream().anyMatch( dv -> dv.group().isEmpty())&&showDoubles;
-		boolean ngTexts = texts.keySet().stream().anyMatch(k -> k.contains("_"))&&showTexts;
+		boolean ngTexts = !texts.keySet().stream().anyMatch(k -> k.contains("_"))&&showTexts;
 		boolean ngFlags = flagVals.values().stream().anyMatch( fv -> fv.group().isEmpty())&&showFlags;
 
 		if( ngDoubles || ngTexts || ngFlags) {
