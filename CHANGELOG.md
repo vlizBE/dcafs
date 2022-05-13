@@ -18,10 +18,9 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 1.0.0
 - Updated dependencies
-- Rewrote emailworker a bit, needs testing
-
+- Rewrote emailworker a bit
 - Now using java 17 (new lts)
-- Updated dependencies
+
 - Clean up, remove unused stuff etc
 - Removed DigiWorker and other things related to sms
 - Moved methods in CommandPool that can be static to Tools package
@@ -29,7 +28,8 @@ From 0.5.0 onwards, this should be better documented...
 
 ### Fixes
 - Generics in a path got the id from the filename instead of the id
-
+- Here and there the relative paths weren't converted to correct absolute ones
+- 
 ## 0.11.x
 - Goals for this version series (removed when they are done)
   * Code cleanup
