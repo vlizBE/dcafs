@@ -14,7 +14,6 @@ import java.util.concurrent.BlockingQueue;
 
 public class ModbusTCP extends TcpHandler{
     int index=0;
-    long timestamp;
     byte[] rec = new byte[512];
     byte[] header=new byte[]{0,1,0,0,0,0,0};
     String[] origin = new String[]{"","","","reg","AI",""};
@@ -34,7 +33,7 @@ public class ModbusTCP extends TcpHandler{
             listeners.forEach( l-> l.notifyActive(id));
         }
 
-        long p = Instant.now().toEpochMilli() - timestamp;	// Calculate the time between 'now' and when the previous message was received
+        long p = Instant.now().toEpochMilli() - timeStamp;	// Calculate the time between 'now' and when the previous message was received
         if( p >= 0 ){	// If this time is valid
             passed = p; // Store it
         }
@@ -43,7 +42,7 @@ public class ModbusTCP extends TcpHandler{
                 Logger.info("delay passed: "+passed+" rec:"+data.length);
             index=0;
         }
-        timestamp = Instant.now().toEpochMilli();    		    // Store the timestamp of the received message
+        timeStamp = Instant.now().toEpochMilli();    		    // Store the timestamp of the received message
 
         for( byte b : data ){
 
