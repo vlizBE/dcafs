@@ -16,6 +16,10 @@ From 0.5.0 onwards, this should be better documented...
 * Rework the TaskManager ( > 1.0.0 )
 * Zigbee support ( > 1.0.0 )
 
+### To fix
+- raw: can't be stopped
+- default for generic val
+
 ## 1.0.0
 - Updated dependencies
 - Rewrote emailworker a bit
@@ -29,7 +33,9 @@ From 0.5.0 onwards, this should be better documented...
 ### Fixes
 - Generics in a path got the id from the filename instead of the id
 - Here and there the relative paths weren't converted to correct absolute ones
-- 
+- ModbusTCP didn't use the inherited timestamp field
+- raw: stops again when issueing empty cmd
+
 ## 0.11.x
 - Goals for this version series (removed when they are done)
   * Code cleanup

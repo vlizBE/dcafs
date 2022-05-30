@@ -301,6 +301,7 @@ public class DAS implements Commandable{
         addCommandable(streampool,"ss","streams","");
         addCommandable(streampool,"s_","h_");
         addCommandable(streampool,"rios","raw","stream");
+        addCommandable(streampool,"");
 
         if (debug) {
             streampool.enableDebug();
