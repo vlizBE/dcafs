@@ -37,8 +37,8 @@ public class PathForward {
     ArrayList<AbstractForward> stepsForward;
     enum SRCTYPE {REG,PLAIN,RTVALS,CMD,FILE,INVALID}
     Path workPath;
-    static int READ_BUFFER_SIZE=1000;
-    static long SKIPLINES = 50000;
+    static int READ_BUFFER_SIZE=2500;
+    static long SKIPLINES = 0;
 
     public PathForward(DataProviding dataProviding, BlockingQueue<Datagram> dQueue, EventLoopGroup nettyGroup ){
         this.dataProviding = dataProviding;
@@ -421,10 +421,12 @@ public class PathForward {
                                 lineCount += buffer.size();
                                 if( buffer.size() < READ_BUFFER_SIZE ){
                                     dQueue.add( Datagram.system("telnet:broadcast,info,"+id+" processed "+files.get(0)));
+                                    Logger.info("Finished processing "+files.get(0));
                                     files.remove(0);
                                     lineCount = 1;
                                     if( buffer.isEmpty()) {
                                         if (!files.isEmpty()) {
+                                            Logger.info("Started processing "+files.get(0));
                                             buffer.addAll(FileTools.readLines(files.get(0), lineCount, READ_BUFFER_SIZE));
                                             lineCount += buffer.size();
                                         }else{
@@ -441,8 +443,6 @@ public class PathForward {
                                 dQueue.add( Datagram.build(line).label(label));
                             }
                             sendLines++;
-                            if( sendLines % 10==0)
-                                Logger.info("Send: "+sendLines+" lines, linecount: "+lineCount);
                         }
                     }catch(Exception e){
                         Logger.error(e);
