@@ -201,7 +201,14 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 		generics.clear();
 
 		XMLfab.getRootChildren(settingsPath, "dcafs","generics","generic")
-				.forEach( ele ->  addGeneric( Generic.readFromXML(ele) ) );
+				.forEach( ele ->  {
+					var gen = Generic.readFromXML(ele);
+					if( !gen.getID().isEmpty()) {
+						addGeneric(gen);
+					}else{
+						Logger.error("Tried to read generic without id!");
+					}
+				} );
 		// Find the path ones?
 		XMLfab.getRootChildren(settingsPath, "dcafs","paths","path")
 				.forEach( ele -> readGenericElementInPath(ele));
