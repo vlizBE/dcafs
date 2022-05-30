@@ -37,7 +37,8 @@ public class PathForward {
     ArrayList<AbstractForward> stepsForward;
     enum SRCTYPE {REG,PLAIN,RTVALS,CMD,FILE,INVALID}
     Path workPath;
-    static int READ_BUFFER_SIZE=500;
+    static int READ_BUFFER_SIZE=2500;
+    static long SKIPLINES = 0;
 
     public PathForward(DataProviding dataProviding, BlockingQueue<Datagram> dQueue, EventLoopGroup nettyGroup ){
         this.dataProviding = dataProviding;
@@ -75,15 +76,18 @@ public class PathForward {
         String delimiter = XMLtools.getStringAttribute(pathEle,"delimiter","");
         this.src = XMLtools.getStringAttribute(pathEle,"src","");
 
-        var importPath = XMLtools.getPathAttribute(pathEle,"import",Path.of(workpath));
-        if( importPath.isPresent() ) {
-            var p = XMLfab.getRootChildren(importPath.get(),"dcafs","path").findFirst();
+        var importPathOpt = XMLtools.getPathAttribute(pathEle,"import",Path.of(workpath));
+        if( importPathOpt.isPresent() ) {
+            var importPath = importPathOpt.get();
+            if( !importPath.isAbsolute()) // If the path isn't absolute
+                importPath = workPath.resolve(importPath); // Make it so
+            var p = XMLfab.getRootChildren(importPath,"dcafs","path").findFirst();
             if(p.isPresent()) {
                 pathEle = p.get();
                 delimiter = XMLtools.getStringAttribute(pathEle,"delimiter","");
-                Logger.info("Valid path script found at "+importPath.get());
+                Logger.info("Valid path script found at "+importPath);
             }else{
-                Logger.error("No valid path script found: "+importPath.get());
+                Logger.error("No valid path script found: "+importPath);
                 return false;
             }
         }
@@ -106,7 +110,8 @@ public class PathForward {
             if(step.getTagName().equalsIgnoreCase("customsrc")){
                 addCustomSrc( step.getTextContent(),
                               XMLtools.getStringAttribute(step,"interval","1s"),
-                              XMLtools.getStringAttribute(step,"type","plain"));
+                              XMLtools.getStringAttribute(step,"type","plain"),
+                              XMLtools.getStringAttribute(step,"label",""));
                 continue;
             }
 
@@ -256,13 +261,13 @@ public class PathForward {
         }
         return null;
     }
-    public void addCustomSrc( String data, String interval, String type){
+    public void addCustomSrc( String data, String interval, String type, String label){
         if( data.contains("{") && data.contains("}")) {
             type ="rtvals";
         }else if(type.equalsIgnoreCase("rtvals")){
             type="plain";
         }
-        customs.add( new CustomSrc(data,type,TimeTools.parsePeriodStringToMillis(interval)) );
+        customs.add( new CustomSrc(data,type,TimeTools.parsePeriodStringToMillis(interval),"") );
     }
 
     public String toString(){
@@ -324,17 +329,22 @@ public class PathForward {
     }
 
     private class CustomSrc{
-        String data;
+        String pathOrData;
         SRCTYPE srcType;
         long intervalMillis;
         ScheduledFuture<?> future;
         ArrayList<String> buffer;
         ArrayList<Path> files;
         int lineCount=1;
+        long totalLines=0;
+        long sendLines=0;
         int multiLine=1;
+        String label="";
+        boolean readOnce=false;
 
-        public CustomSrc( String data, String type, long intervalMillis){
-            this.data =data;
+        public CustomSrc( String data, String type, long intervalMillis, String label){
+            pathOrData = data;
+            this.label=label;
             this.intervalMillis=intervalMillis;
             var spl = type.split(":");
             srcType = switch (spl[0]) {
@@ -346,19 +356,22 @@ public class PathForward {
             };
             if( srcType==SRCTYPE.FILE){
                 files = new ArrayList<>();
-                if (!Path.of(data).isAbsolute()) {
-                    this.data = workPath.resolve(data).toString();
+                var p = Path.of(pathOrData);
+                if (!p.isAbsolute()) {
+                    p = workPath.resolve(data);
                 }
-                if (Files.isDirectory(Path.of(this.data))) {
+                if (Files.isDirectory(p)) {
                     try {
-                        try( var str = Files.list(Path.of(this.data)) ){
+                        try( var str = Files.list(p) ){
                             str.forEach(files::add);
                         }
                     } catch (IOException e) {
                         Logger.error(e);
                     }
                 } else {
-                    files.add(Path.of(this.data));
+                    files.add(p);
+                   // totalLines=FileTools.getLineCount(p);
+                   // Logger.info("Line count: "+ totalLines);
                 }
                 buffer = new ArrayList<>();
                 if (spl.length == 2)
@@ -382,13 +395,13 @@ public class PathForward {
 
             switch( srcType){
                 case CMD:
-                    targets.forEach(t->dQueue.add( Datagram.build(data).label("telnet").writable(t))); break;
+                    targets.forEach(t->dQueue.add( Datagram.build(pathOrData).label("telnet").writable(t))); break;
                 case RTVALS:
-                    var write = dataProviding.parseRTline(data,"-999");
+                    var write = dataProviding.parseRTline(pathOrData,"-999");
                     targets.forEach( x -> x.writeLine(write));
                     break;
                 default:
-                case PLAIN: targets.forEach( x -> x.writeLine(data)); break;
+                case PLAIN: targets.forEach( x -> x.writeLine(pathOrData)); break;
                 case FILE:
                     try {
                         for( int a=0;a<multiLine;a++){
@@ -398,14 +411,22 @@ public class PathForward {
                                     dQueue.add( Datagram.system("telnet:broadcast,info,"+id+" finished."));
                                     return;
                                 }
-                                buffer.addAll(FileTools.readLines(files.get(0), lineCount, READ_BUFFER_SIZE));
+                                if( SKIPLINES==0 ) {
+                                    buffer.addAll( FileTools.readLines(files.get(0), lineCount, READ_BUFFER_SIZE));
+                                }else{
+                                    if( !readOnce )
+                                        buffer.addAll( FileTools.readSubsetLines( files.get(0),10,SKIPLINES));
+                                    readOnce=true;
+                                }
                                 lineCount += buffer.size();
                                 if( buffer.size() < READ_BUFFER_SIZE ){
                                     dQueue.add( Datagram.system("telnet:broadcast,info,"+id+" processed "+files.get(0)));
+                                    Logger.info("Finished processing "+files.get(0));
                                     files.remove(0);
                                     lineCount = 1;
                                     if( buffer.isEmpty()) {
                                         if (!files.isEmpty()) {
+                                            Logger.info("Started processing "+files.get(0));
                                             buffer.addAll(FileTools.readLines(files.get(0), lineCount, READ_BUFFER_SIZE));
                                             lineCount += buffer.size();
                                         }else{
@@ -418,6 +439,10 @@ public class PathForward {
                             }
                             String line = buffer.remove(0);
                             targets.forEach( wr-> wr.writeLine(line));
+                            if( !label.isEmpty()){
+                                dQueue.add( Datagram.build(line).label(label));
+                            }
+                            sendLines++;
                         }
                     }catch(Exception e){
                         Logger.error(e);
@@ -426,7 +451,7 @@ public class PathForward {
             }
         }
         public String toString(){
-            return "Reads '"+data+"' every "+TimeTools.convertPeriodtoString(intervalMillis,TimeUnit.MILLISECONDS);
+            return "Reads '"+ pathOrData +"' every "+TimeTools.convertPeriodtoString(intervalMillis,TimeUnit.MILLISECONDS);
         }
     }
 }

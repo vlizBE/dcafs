@@ -25,7 +25,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
 
     /* Min max*/
     private double min=Double.MAX_VALUE;
-    private double max=Double.MIN_VALUE;
+    private double max=-1*Double.MAX_VALUE;
     private boolean keepMinMax=false;
 
     /* History */

@@ -143,10 +143,13 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 
 							int a=1;
 							if( !imp.isEmpty() ){ //meaning imported
-								String file = Path.of(imp).getFileName().toString();
+								var importPath = Path.of(imp);
+								if( !importPath.isAbsolute())
+									importPath = settingsPath.getParent().resolve(importPath);
+								String file = importPath.getFileName().toString();
 								file = file.substring(0,file.length()-4);//remove the .xml
 
-								for( Element vm : XMLfab.getRootChildren(Path.of(imp), "dcafs","paths","path","valmap").collect(Collectors.toList())){
+								for( Element vm : XMLfab.getRootChildren(importPath, "dcafs","paths","path","valmap").collect(Collectors.toList())){
 									if( !vm.hasAttribute("id")){ //if it hasn't got an id, give it one
 										vm.setAttribute("id",file+"_vm"+a);
 										a++;
@@ -198,10 +201,18 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 		generics.clear();
 
 		XMLfab.getRootChildren(settingsPath, "dcafs","generics","generic")
-				.forEach( ele ->  addGeneric( Generic.readFromXML(ele) ) );
+				.forEach( ele ->  {
+					var gen = Generic.readFromXML(ele);
+					if( !gen.getID().isEmpty()) {
+						addGeneric(gen);
+					}else{
+						Logger.error("Tried to read generic without id!");
+					}
+				} );
 		// Find the path ones?
 		XMLfab.getRootChildren(settingsPath, "dcafs","paths","path")
 				.forEach( ele -> readGenericElementInPath(ele));
+		Logger.info("Finished loading generics.");
 	}
 
 	/**
@@ -215,10 +226,17 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 		int a=1;
 		if( !imp.isEmpty() ){ //meaning imported
 			var importPath = Path.of(imp);
-
+			if(  !importPath.isAbsolute() ) {
+				Logger.info("Import path: "+importPath+" isn't absolute, altering");
+				importPath = settingsPath.getParent().resolve(importPath);
+				Logger.info("Altered to "+importPath);
+			}
 			var sub = XMLfab.getRootChildren(importPath, "dcafs","path").findFirst();
 			if( sub.isPresent() ){
 				setId = XMLtools.getStringAttribute(sub.get(),"id",pathElement.getAttribute("id"));
+			}else{
+				Logger.error("No such xml file: "+importPath+", aborting.");
+				return;
 			}
 
 			for( Element gen : XMLfab.getRootChildren(importPath, "dcafs","path","generic").collect(Collectors.toList())){

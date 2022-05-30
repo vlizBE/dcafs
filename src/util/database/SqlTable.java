@@ -10,6 +10,7 @@ import util.xml.XMLtools;
 
 import java.sql.PreparedStatement;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -520,7 +521,9 @@ public class SqlTable {
                        // return -3;
                     }
                     Column c = columns.get(colIndex);
-                    try{     
+                    try{
+                        if( d[index] instanceof OffsetDateTime )
+                            d[index]=asTimestamp((OffsetDateTime) d[index]);
                         ps.setObject( index+1,d[index] );
                         index++;
                     }catch( java.lang.ClassCastException | NullPointerException e){
@@ -537,6 +540,13 @@ public class SqlTable {
             } 
         }
         return count;
+    }
+    public static Timestamp asTimestamp(OffsetDateTime offsetDateTime) {
+        if (offsetDateTime != null) {
+            return Timestamp.valueOf(offsetDateTime.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime());
+        }
+        else
+            return null;
     }
     public int fillStatement( PreparedStatement ps ) {
         return fillStatement( "",ps);

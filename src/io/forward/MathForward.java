@@ -420,7 +420,7 @@ public class MathForward extends AbstractForward {
         String exp = expression;
 
         if( index.equalsIgnoreCase("-1") ){
-            Logger.warn(id + " -> Bad/No index given in "+cmd+"|"+expression);
+            Logger.warn(id + " -> Bad/No index given in '"+cmd+"'|"+expression+" for "+type);
         }
 
         exp=replaceReferences(exp);

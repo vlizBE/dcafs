@@ -88,7 +88,21 @@ public class FileTools {
             Logger.error(ex);
             return false;
         }
-    } 
+    }
+
+    /**
+     * Check how many lines the given file contains
+     * @param file The path to the file
+     * @return The amount of lines or -1 if failed
+     */
+    public static long getLineCount( Path file ){
+        try{
+            return Files.lines(file).parallel().count();
+        } catch (IOException ex) {
+            Logger.error(ex);
+            return -1;
+        }
+    }
     /**
      * Read amount of lines from a file starting at start
      * 
@@ -116,7 +130,7 @@ public class FileTools {
                 var d = lines.skip(start - 1)
                         .limit(amount);
                         try{
-                            d.forEach( x-> read.add(x));
+                            d.forEach(read::add);
                         }catch(UncheckedIOException e){
                             Logger.error("Issue reading from "+start);
                         }
@@ -125,7 +139,32 @@ public class FileTools {
             Logger.error(ex);
             return read;
         }
-    }  
+    }
+    public static ArrayList<String> readSubsetLines( Path path, int amount, long skip) throws UncheckedIOException, IOException {
+        var read = new ArrayList<String>();
+        long count=0;
+        if( Files.notExists(path)){
+            Logger.error("Tried to read lines from "+path+" but no such file");
+            return read;
+        }
+        var f = Files.newBufferedReader(path);
+        while(true) {
+            Logger.info("Next "+amount+" at "+count+", total: "+read.size());
+            for (int a = 0; a < amount; a++) {
+                String line = f.readLine();
+                if (line == null)
+                    return read;
+                read.add(f.readLine());
+                count++;
+            }
+            for (int b = 0; b < skip; b++) {
+                String line = f.readLine();
+                if (line == null)
+                    return read;
+                count++;
+            }
+        }
+    }
     /**
      * Read the file 'in' and only keep the lines containing 'cont' then write those to 'out' with the system dependent newline
      * @param in The path to read
