@@ -3,6 +3,7 @@ package das;
 import io.Writable;
 import io.collector.CollectorPool;
 import io.email.Email;
+import io.email.EmailSending;
 import io.email.EmailWorker;
 import io.hardware.gpio.InterruptPins;
 import io.hardware.i2c.I2CWorker;
@@ -228,6 +229,7 @@ public class DAS implements Commandable{
         if( start )
             startAll();
     }
+    public String getVersion(){return version;}
     public Path getWorkPath(){
         return Path.of(workPath);
     }
@@ -309,6 +311,11 @@ public class DAS implements Commandable{
             streampool.readSettingsFromXML(settingsPath);
         }
     }
+    /* ***************************************** D B M  ******************************************************** */
+    public DatabaseManager getDatabaseManager(){
+        return dbManager;
+    }
+
     /* *************************************  L A B E L W O R K E R **********************************************/
     /**
      * Adds the BaseWorker
@@ -322,6 +329,10 @@ public class DAS implements Commandable{
 
         addCommandable(labelWorker,"gens");
     }
+    public void setLabelSubWorker( LabelSubWorker sub ){
+        labelWorker.setSubWorker(sub);
+    }
+
     public BlockingQueue<Datagram> getDataQueue() {
         addLabelWorker();
         return dQueue;
@@ -358,6 +369,9 @@ public class DAS implements Commandable{
         emailWorker = new EmailWorker(settingsPath, dQueue);
         addCommandable("email",emailWorker);
         commandPool.setEmailSender(emailWorker);
+    }
+    public EmailSending getEmailSender(){
+        return emailWorker;
     }
     /* *************************************  D E B U G W O R K E R ***********************************************/
     /**
@@ -485,13 +499,13 @@ public class DAS implements Commandable{
             new Thread(labelWorker, "BaseWorker").start();// Start the thread
         }
         if (debug && debugWorker == null) {
-            Logger.info("Debug mode but no debugworker created...");
+            Logger.info("Debug mode but no debug worker created...");
         } else if (debugWorker != null) {
             if (debug || log) {
                 Logger.info("Starting DebugWorker...");
                 debugWorker.start();// Start the thread
             } else {
-                Logger.info("Not in debug mode, not starting debugworker...");
+                Logger.info("Not in debug mode, not starting debug worker...");
             }
         }
         if (trans != null && trans.isActive()) {
