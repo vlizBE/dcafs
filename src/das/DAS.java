@@ -76,7 +76,7 @@ public class DAS implements Commandable{
     private boolean bootOK = false; // Flag to show if booting went ok
     String sdReason = "Unwanted shutdown."; // Reason for shutdown of das, default is unwanted
 
-    BlockingQueue<Datagram> dQueue = new LinkedBlockingQueue<>();
+    private BlockingQueue<Datagram> dQueue = new LinkedBlockingQueue<>();
     boolean rebootOnShutDown = false;
     private InterruptPins isrs;
 
@@ -84,7 +84,7 @@ public class DAS implements Commandable{
     private FileMonitor fileMonitor;
 
     /* Threading */
-    EventLoopGroup nettyGroup = new NioEventLoopGroup(); // Single group so telnet,trans and streampool can share it
+    private EventLoopGroup nettyGroup = new NioEventLoopGroup(); // Single group so telnet,trans and streampool can share it
 
     public DAS() {
 
@@ -161,7 +161,7 @@ public class DAS implements Commandable{
             /* MQTT worker */
             addMqttPool();
 
-            /* Base Worker */
+            /* Label Worker */
             addLabelWorker();
 
             /* StreamManager */
@@ -228,6 +228,9 @@ public class DAS implements Commandable{
         if( start )
             startAll();
     }
+    public Path getWorkPath(){
+        return Path.of(workPath);
+    }
     public Path getSettingsPath(){
         return settingsPath;
     }
@@ -236,9 +239,7 @@ public class DAS implements Commandable{
      *
      * @return True if boot went fine
      */
-    public boolean hasBootedOk() {
-        return bootOK;
-    }
+    public boolean hasBootedOk() { return bootOK; }
 
     /**
      * Check if running in debug mode
@@ -256,7 +257,6 @@ public class DAS implements Commandable{
 
     /* ************************************  X M L *****************************************************/
     private void createXML() {
-       
        XMLfab.withRoot(settingsPath, "dcafs")
                 .addParentToRoot("settings")
                     .addChild("mode","normal")
@@ -264,7 +264,7 @@ public class DAS implements Commandable{
                     .comment("Defining the various streams that need to be read")
                 .build();
     }
-    /* **************************************  C O M M A N D R E Q  ********************************************/
+    /* **************************************  C O M M A N D P O O L ********************************************/
     /**
      * Add a commandable to the CommandPool, this is the same as adding commands to dcafs
      * @param id The unique start command (so whatever is in front of the : )
@@ -337,7 +337,7 @@ public class DAS implements Commandable{
      * 
      * @param port The port the server will be listening on
      */
-    public void addTransServer(int port) {
+    private void addTransServer(int port) {
 
         Logger.info("Adding TransServer");
         trans = new TcpServer(settingsPath, nettyGroup);
