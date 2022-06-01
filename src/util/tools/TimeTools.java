@@ -208,7 +208,7 @@ public class TimeTools {
                     hs = res/60;
                 }
                 if( hs>23 ){
-                    first = first.plusDays(1).withHour( hs-24 );
+                    first = first.plusDays(hs/24).withHour( hs%24 );
                 }else{
                     first = first.withHour( hs );
                 }
@@ -344,7 +344,7 @@ public class TimeTools {
         long total=0;
         
     	try {
-            if( d != -1 ){ // If H is present in the string
+            if( d != -1 ){ // If D is present in the string
                 total += Tools.parseInt( period.substring(0, d), 0 ); // get the number in front and multiply for h->s
                 d+=1;// increment the index to skip te letter
             }else{
