@@ -233,10 +233,10 @@ public class DAS implements Commandable{
     }
     /**
      * Check if the boot up was successful
-     * 
+     *
      * @return True if boot went fine
      */
-    public boolean isOk() {
+    public boolean hasBootedOk() {
         return bootOK;
     }
 
@@ -255,7 +255,7 @@ public class DAS implements Commandable{
     }
 
     /* ************************************  X M L *****************************************************/
-    public void createXML() {
+    private void createXML() {
        
        XMLfab.withRoot(settingsPath, "dcafs")
                 .addParentToRoot("settings")
@@ -280,7 +280,7 @@ public class DAS implements Commandable{
     /**
      * Create a Taskmanager to handle tasklist scripts
      */
-    public void addTaskManager() {
+    private void addTaskManager() {
 
         taskManagerPool = new TaskManagerPool(workPath, rtvals, commandPool);
 
@@ -295,7 +295,7 @@ public class DAS implements Commandable{
     /**
      * Adds the streampool
      */
-    public void addStreamPool() {
+    private void addStreamPool() {
 
         streampool = new StreamManager(dQueue, rtvals.getIssuePool(), nettyGroup);
         addCommandable(streampool,"ss","streams","");
@@ -313,7 +313,7 @@ public class DAS implements Commandable{
     /**
      * Adds the BaseWorker
      */
-    public void addLabelWorker() {
+    private void addLabelWorker() {
         if (this.labelWorker == null)
             labelWorker = new LabelWorker(settingsPath,dQueue,rtvals,dbManager);
         labelWorker.setCommandReq(commandPool);
@@ -327,7 +327,7 @@ public class DAS implements Commandable{
         return dQueue;
     }
     /* ***************************************** M Q T T ******************************************************** */
-    public void addMqttPool(){
+    private void addMqttPool(){
         mqttPool = new MqttPool(settingsPath,rtvals,dQueue);
         addCommandable("mqtt", mqttPool);
     }
@@ -352,7 +352,7 @@ public class DAS implements Commandable{
     /**
      * Adds an EmailWorker
      */
-    public void addEmailWorker() {
+    private void addEmailWorker() {
         Logger.info("Adding EmailWorker");
         addLabelWorker();
         emailWorker = new EmailWorker(settingsPath, dQueue);
@@ -363,7 +363,7 @@ public class DAS implements Commandable{
     /**
      * Creates the DebugWorker
      */
-    public void addDebugWorker() {
+    private void addDebugWorker() {
         Logger.info("Adding DebugWorker");
         addLabelWorker();
 
@@ -377,7 +377,7 @@ public class DAS implements Commandable{
     /**
      * Create the telnet server
      */
-    public void addTelnetServer() {
+    private void addTelnetServer() {
 
         if( bootOK) {
             telnet = new TelnetServer(this.getDataQueue(), settingsPath, nettyGroup);
@@ -391,7 +391,7 @@ public class DAS implements Commandable{
     /**
      * Create the I2CWorker
      */
-    public void addI2CWorker() {
+    private void addI2CWorker() {
         if( i2cWorker!=null)
             return;
 
