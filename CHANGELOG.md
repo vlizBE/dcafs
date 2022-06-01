@@ -30,6 +30,10 @@ From 0.5.0 onwards, this should be better documented...
 - Moved methods in CommandPool that can be static to Tools package
 - Removed cyclic redundancy between CommandPool and Das
 
+### Rtvals
+- The response now starts with the current datetime
+- No longer show ungrouped when there's a grouped textval
+
 ### Fixes
 - Generics in a path got the id from the filename instead of the id
 - Here and there the relative paths weren't converted to correct absolute ones
