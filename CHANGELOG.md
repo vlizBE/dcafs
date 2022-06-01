@@ -17,7 +17,6 @@ From 0.5.0 onwards, this should be better documented...
 * Zigbee support ( > 1.0.0 )
 
 ### To fix
-- raw: can't be stopped
 - default for generic val
 
 ## 1.0.0
@@ -39,6 +38,7 @@ From 0.5.0 onwards, this should be better documented...
 - Here and there the relative paths weren't converted to correct absolute ones
 - ModbusTCP didn't use the inherited timestamp field
 - raw: stops again when issueing empty cmd
+- Interval task with delay more than 48 hours now works properly
 
 ## 0.11.x
 - Goals for this version series (removed when they are done)
