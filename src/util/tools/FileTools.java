@@ -7,11 +7,14 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.Charset;
+import java.nio.charset.MalformedInputException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -115,7 +118,7 @@ public class FileTools {
 
         var read = new ArrayList<String>();
         if( start==0) {
-            Logger.error( "Readlines should start at 1, not 0");
+            Logger.error( "Readlines should start at 1, not 0 for "+path);
             return read;
         }
         if( Files.notExists(path)){
@@ -143,8 +146,8 @@ public class FileTools {
             }
         } catch (IOException ex) {
             Logger.error(ex);
-            return read;
         }
+        return false;
     }
     public static ArrayList<String> readSubsetLines( Path path, int amount, long skip) throws UncheckedIOException, IOException {
         var read = new ArrayList<String>();
