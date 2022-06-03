@@ -17,8 +17,8 @@ From 0.5.0 onwards, this should be better documented...
 * Zigbee support ( > 1.0.0 )
 
 ### To fix
-- raw: can't be stopped
 - default for generic val
+- cmd !idle not used properly when disconnected/reconnected
 
 ## 1.0.0
 - Updated dependencies
@@ -29,7 +29,8 @@ From 0.5.0 onwards, this should be better documented...
 - Removed DigiWorker and other things related to sms
 - Moved methods in CommandPool that can be static to Tools package
 - Removed cyclic redundancy between CommandPool and Das
-
+- 'raw:' can be stopped again
+- 
 ### Fixes
 - Generics in a path got the id from the filename instead of the id
 - Here and there the relative paths weren't converted to correct absolute ones
