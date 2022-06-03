@@ -1529,7 +1529,15 @@ public class RealtimeValues implements DataProviding, Commandable {
 						.map(fv->space + fv.name() + " : " + fv).sorted().forEach(join::add);
 			}
 		}
-		return join.toString();
+		String result = join.toString();
+		if( !html)
+			return result;
+
+		// Try to fix some symbols to correct html counterpart
+		result = result.replace("°C","&#8451"); // fix the °C
+		result = result.replace("m²","&#13217;"); // Fix m²
+		result = result.replace("m³","&#13221;"); // Fix m³
+		return result;
 	}
 
 	/**

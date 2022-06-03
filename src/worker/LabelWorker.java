@@ -67,6 +67,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 
 	Writable spy;
 	String spyingOn ="";
+	LabelSubWorker subWorker;
 	/* ***************************** C O N S T R U C T O R **************************************/
 
 	/**
@@ -85,6 +86,9 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 
 		loadGenerics();
 		loadValMaps(true);
+	}
+	public void setSubWorker( LabelSubWorker sub ){
+		subWorker=sub;
 	}
 	@Override
 	public void addDatagram(Datagram d){
@@ -400,7 +404,8 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 							}
 							break;
 						default:
-							Logger.error("Unknown label: "+label);
+							if( subWorker != null && !subWorker.processDatagram(d) )
+								Logger.error("Unknown label: "+label);
 							break;
 					}
 				}else {
@@ -425,7 +430,8 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 							executor.execute(() -> checkTelnet(d) );
 							break;
 						default:
-							Logger.error("Unknown label: "+label);
+							if( subWorker != null && !subWorker.processDatagram(d) )
+								Logger.error("Unknown label: "+label);
 							break;
 					}
 				}
