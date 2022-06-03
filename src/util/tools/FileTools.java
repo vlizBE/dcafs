@@ -125,16 +125,22 @@ public class FileTools {
 
         if( start<0 || amount<0 )
             return read;
-             
-        try( var lines = Files.lines(path, StandardCharsets.UTF_8) ) {
-                var d = lines.skip(start - 1)
-                        .limit(amount);
-                        try{
-                            d.forEach(read::add);
-                        }catch(UncheckedIOException e){
-                            Logger.error("Issue reading from "+start);
-                        }
-            return read;
+
+        if( !readLimitedLines(path,start, StandardCharsets.UTF_8,read) ){
+            Logger.info("Retrying with ISO_8859_1");
+            readLimitedLines(path,start, StandardCharsets.ISO_8859_1,read );
+        }
+        return read;
+    }
+    private static boolean readLimitedLines( Path path, int start, Charset cs, ArrayList<String> read){
+        try( var lines = Files.lines(path, cs) ) {
+            try{
+                var l = lines.skip(start - 1);
+                read.addAll(l.toList());
+                return true;
+            }catch ( UncheckedIOException d ) {
+                Logger.error("Malformed Failed reading with (charset) " + cs + " while reading " + path);
+            }
         } catch (IOException ex) {
             Logger.error(ex);
             return read;
