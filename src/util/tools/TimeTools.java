@@ -161,8 +161,8 @@ public class TimeTools {
     /**
      * Calculate the delay till the next occurrence of a 'clean' interval start
      * fe. 60000 = 10min => if now 13:42, next at 13:50 or 8min so 8*60*1000
-     * @param interval_millis
-     * @return Amount of millis calculated
+     * @param interval_millis The interval in milliseconds
+     * @return Amount of millis calculated till next
      */
     public static long millisDelayToCleanTime( long interval_millis ){
         LocalDateTime now = LocalDateTime.now();
@@ -241,7 +241,7 @@ public class TimeTools {
     	return LocalDateTime.now(ZoneOffset.UTC).getDayOfWeek();    
     }
     /**
-     * Convert the string repr of a time unit to the time unit object
+     * Convert the string representation of a time unit to the time unit object
      * @param unit The string to convert
      * @param def The time unit to return in case of failure
      * @return The resulting time unit
