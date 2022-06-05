@@ -7,11 +7,14 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.Charset;
+import java.nio.charset.MalformedInputException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -115,7 +118,7 @@ public class FileTools {
 
         var read = new ArrayList<String>();
         if( start==0) {
-            Logger.error( "Readlines should start at 1, not 0");
+            Logger.error( "Readlines should start at 1, not 0 for "+path);
             return read;
         }
         if( Files.notExists(path)){
@@ -125,20 +128,26 @@ public class FileTools {
 
         if( start<0 || amount<0 )
             return read;
-             
-        try( var lines = Files.lines(path, StandardCharsets.UTF_8) ) {
-                var d = lines.skip(start - 1)
-                        .limit(amount);
-                        try{
-                            d.forEach(read::add);
-                        }catch(UncheckedIOException e){
-                            Logger.error("Issue reading from "+start);
-                        }
-            return read;
+
+        if( !readLimitedLines(path,start, StandardCharsets.UTF_8,read) ){
+            Logger.info("Retrying with ISO_8859_1");
+            readLimitedLines(path,start, StandardCharsets.ISO_8859_1,read );
+        }
+        return read;
+    }
+    private static boolean readLimitedLines( Path path, int start, Charset cs, ArrayList<String> read){
+        try( var lines = Files.lines(path, cs) ) {
+            try{
+                var l = lines.skip(start - 1);
+                read.addAll(l.toList());
+                return true;
+            }catch ( UncheckedIOException d ) {
+                Logger.error("Malformed Failed reading with (charset) " + cs + " while reading " + path);
+            }
         } catch (IOException ex) {
             Logger.error(ex);
-            return read;
         }
+        return false;
     }
     public static ArrayList<String> readSubsetLines( Path path, int amount, long skip) throws UncheckedIOException, IOException {
         var read = new ArrayList<String>();

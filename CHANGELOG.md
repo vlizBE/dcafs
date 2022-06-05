@@ -18,6 +18,7 @@ From 0.5.0 onwards, this should be better documented...
 
 ### To fix
 - default for generic val
+- cmd !idle not used properly when disconnected/reconnected
 
 ## 1.0.0
 - Updated dependencies

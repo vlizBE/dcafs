@@ -239,7 +239,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 						}
 					case 'F':
 						if( !hasFlag(id))
-							setFlagState(id,false);
+							getOrAddFlagVal(id).setState(false);
 						line = line.replace(word, isFlagUp(id) ? "1" : "0");
 						break;
 					case 't': case 'T':
@@ -967,9 +967,9 @@ public class RealtimeValues implements DataProviding, Commandable {
 	public boolean raiseFlag( String... flags ){
 		int cnt = flagVals.size();
 		for( var f : flags) {
-			setFlagState(f,true);
+			getOrAddFlagVal(f).setState(true);
 		}
-		return cnt!= flagVals.size();
+		return cnt != flagVals.size();
 	}
 	/**
 	 * Lowers a flag or clears a bool.
@@ -979,7 +979,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 	public boolean lowerFlag( String... flag ){
 		int cnt = flagVals.size();
 		for( var f : flag){
-			setFlagState(f,false);
+			getOrAddFlagVal(f).setState(false);
 		}
 		return cnt!= flagVals.size();
 	}
@@ -993,17 +993,16 @@ public class RealtimeValues implements DataProviding, Commandable {
 
 		int size = flagVals.size();
 		getOrAddFlagVal(id).setState(state);
-		XMLfab fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
-		String[] ids = id.split("_");
-		if( ids.length>1) {
+		//XMLfab fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
+		//String[] ids = id.split("_");
+		/*if( ids.length>1) {
 			var opt = fab.hasChild("group", "id", ids[0]);
 			if( opt.isEmpty())
 				return false;
 			fab = opt.get();
-
-		}
-		fab.alterChild("flag", "name", ids[1]).content(""+state);
-		fab.build();
+		}*/
+		//fab.alterChild("flag", "name", ids[1]).content(""+state);
+		//fab.build();
 
 		return size==flagVals.size();
 	}
@@ -1183,7 +1182,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 			case "new":
 				if( cmds.length <2)
 					return "Not enough arguments, need flags:new,id<,state> or fv:new,id<,state>";
-				setFlagState(cmds[1],Tools.parseBool( cmds.length==3?cmds[2]:"false",false));
+				getOrAddFlagVal(cmds[1]).setState(Tools.parseBool( cmds.length==3?cmds[2]:"false",false));
 				return "Flag created/updated "+cmds[1];
 			case "raise": case "set":
 				if( cmds.length !=2)
