@@ -73,6 +73,9 @@ public class Waypoints implements Commandable {
         }
         return false;
     }
+    public Collection<Waypoint> items(){
+        return wps.values();
+    }
     public boolean readFromXML(DataProviding rtvals){
         return readFromXML(rtvals,true);
     }
