@@ -328,8 +328,8 @@ public class Task implements Comparable<Task>{
 						unit = TimeUnit.MILLISECONDS;
 						startDelay = -1;	// So first occurrence is not at 0!
 					}else{//Delay and interval
-						interval = TimeTools.parsePeriodStringToMillis(items[0]);
-						startDelay = TimeTools.parsePeriodStringToMillis(items[1]);
+						startDelay = TimeTools.parsePeriodStringToMillis(items[0]);
+						interval = TimeTools.parsePeriodStringToMillis(items[1]);
 						unit = TimeUnit.MILLISECONDS;
 					}
     				triggerType =TRIGGERTYPE.INTERVAL;
