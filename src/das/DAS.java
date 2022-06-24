@@ -312,6 +312,9 @@ public class DAS implements Commandable{
             streampool.readSettingsFromXML(settingsPath);
         }
     }
+    public StreamManager getStreampool(){
+        return streampool;
+    }
     /* ***************************************** D B M  ******************************************************** */
     public DatabaseManager getDatabaseManager(){
         return dbManager;
