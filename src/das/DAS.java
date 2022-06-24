@@ -11,6 +11,7 @@ import io.matrix.MatrixClient;
 import io.mqtt.MqttPool;
 import io.stream.StreamManager;
 import io.forward.ForwardPool;
+import util.data.DataProviding;
 import util.tools.FileMonitor;
 import io.stream.tcp.TcpServer;
 import io.telnet.TelnetCodes;
@@ -418,7 +419,10 @@ public class DAS implements Commandable{
         i2cWorker = new I2CWorker(settingsPath, dQueue);
         addCommandable("i2c",i2cWorker);
     }
-
+    /* ******************************** R E A L T I M E  D A T A  ******************************************* */
+    public DataProviding getDataProvider(){
+        return rtvals;
+    }
     /* ******************************** * S H U T D O W N S T U F F ***************************************** */
     /**
      * Attach a hook to the shutdown process, so we're sure that all queue's etc. get
