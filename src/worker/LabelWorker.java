@@ -605,7 +605,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				}
 			case "addblank": case "addgen": case "add":
 				if( cmds.length < 4 )
-					return "Not enough arguments, must be gens:"+cmds[0]+",id,src,format,delimiter";
+					return "Not enough arguments, must be gens:"+cmds[0]+",id,group,format,delimiter";
 
 				var delimiter=request[1].endsWith(",")?",":cmds[cmds.length-1];
 				int forms=cmds.length-1;
@@ -616,7 +616,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				if( generics.containsKey(cmds[1]))
 					return "This id is already used, try another.";
 
-				if( Generic.addBlankToXML(XMLfab.withRoot(settingsPath, "dcafs","generics"), cmds[1],"",
+				if( Generic.addBlankToXML(XMLfab.withRoot(settingsPath, "dcafs","generics"), cmds[1],cmds[2],
 					ArrayUtils.subarray(cmds,3,forms),delimiter)){
 					loadGenerics();
 					var ps = cmds[2].split(":");
@@ -626,7 +626,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 						case "filter": case "editor": case "math": case "stream": case "path":
 							dQueue.add(Datagram.system(ps[0]+"s:alter,"+ps[1]+",label:generic:"+cmds[1]).writable(wr));
 					}
-					return "Generic added, to set the group use gens:alter,"+cmds[1]+",group:";
+					return "Generic added";
 				}
 				return "Failed to write generic";
 			case "alter":
