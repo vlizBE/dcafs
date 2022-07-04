@@ -178,6 +178,8 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 	}
 	/* *************************** GENERICS **********************************************/
 	public Generic addGeneric(Generic gen) {
+		if( gen == null)
+			return null;
 		if( generics.containsKey(gen.getID())){
 			Logger.error("Tried to add generic with same id twice: "+gen.getID());
 		}else {
@@ -207,7 +209,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 		XMLfab.getRootChildren(settingsPath, "dcafs","generics","generic")
 				.forEach( ele ->  {
 					var gen = Generic.readFromXML(ele);
-					if( !gen.getID().isEmpty()) {
+					if( gen!=null && !gen.getID().isEmpty()) {
 						if( generics.containsKey(gen.getID())){
 							Logger.error("Tried to add generic with duplicate ID: "+gen.getID());
 						}else {
@@ -615,6 +617,8 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				}
 				if( generics.containsKey(cmds[1]))
 					return "This id is already used, try another.";
+				if( cmds[2].contains("_"))
+					return "Group name can't contain '_' (underscore), try again?";
 
 				if( Generic.addBlankToXML(XMLfab.withRoot(settingsPath, "dcafs","generics"), cmds[1],cmds[2],
 					ArrayUtils.subarray(cmds,3,forms),delimiter)){

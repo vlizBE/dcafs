@@ -83,8 +83,14 @@ public class Generic {
         macroRef=value;
         return this;
     }
-    public void setDefaultGroup( String group ){
+    public boolean setDefaultGroup( String group ){
+        if( group.contains("_")){
+            Logger.error("Generic " +id+" has a group name with an underscore, this isn't allowed! Trimming");
+            group = group.split("_")[0];
+            return false;
+        }
         this.group=group;
+        return true;
     }
     /**
      * Add looking for a real/double on the given index
@@ -337,7 +343,7 @@ public class Generic {
             join.add("Store in "+String.join(",",dbid)+":"+table+" " );
         }
         if( !group.isEmpty())
-            join.add(" for group "+group+" ");
+            join.add(" for group '"+group+"' ");
 
         if (!influxID.isEmpty() ){
             join.add(" Store in InfluxDB "+influxID+":"+table+" ");
@@ -365,7 +371,8 @@ public class Generic {
     public static Generic readFromXML( Element gen ){
 
         Generic generic = Generic.create(gen.getAttribute("id"));
-        generic.setDefaultGroup(gen.getAttribute("group"));
+        if( !generic.setDefaultGroup(gen.getAttribute("group")))
+            return null;
         generic.setDelimiter(XMLtools.getStringAttribute(gen,"delimiter",","));
         generic.setStartsWith(gen.getAttribute("startswith"));
         generic.setMQTTID(gen.getAttribute("mqtt"));

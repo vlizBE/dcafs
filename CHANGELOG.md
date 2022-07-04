@@ -40,16 +40,19 @@ From 0.5.0 onwards, this should be better documented...
 - ModbusTCP didn't use the inherited timestamp field
 - raw: stops again when issueing empty cmd
 - Interval task with delay more than 48 hours now works properly
-- Generics: can't add a generic with duplicate id through telnet
-- Generics: when two generics are in xml with same id, only first is used.
+**Generics**
+- can't add a generic with duplicate id through telnet
+- when two generics are in xml with same id, only first is used.
 This is mentioned in the errorlog
+- gens:addgen now actually uses the given group
+- Group can't contain _, this is now enforced
 - 
 ## 0.11.x
 - Goals for this version series (removed when they are done)
   * Code cleanup
     * Bring javadoc up to date
 
-## 0.11.10 (work in progress)
+## 0.11.10 (04/05/2022)
 
 ### File monitor 
 - Simple class that watches files for modification and executes a cmd on event
