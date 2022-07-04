@@ -48,6 +48,8 @@ public class Generic {
     String macroRef="";
     int macroIndex=-1;
 
+    private long uses=0;
+
     static final String INDEX_STRING = "index";
 
     public static Generic create( String id){        
@@ -206,7 +208,7 @@ public class Generic {
      * @return an array with the data
      */
     public Object[] apply(String line, Double[] doubles, DataProviding dp, QueryWriting queryWriting, MqttWriting mqtt){
-         
+        uses++;
         for( Filter filter : filters ){
             line = filter.apply(line);
         }
@@ -341,7 +343,7 @@ public class Generic {
             join.add(" Store in InfluxDB "+influxID+":"+table+" ");
         }
         join.add("has delimiter '"+delimiter+"'"+(startsWith.isBlank()?"":"and starts with '"+startsWith+"'") );
-
+        join.add("Invoked "+uses+" times");
         join.add("\r\n");
 
         if( !filters.isEmpty() ){

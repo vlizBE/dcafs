@@ -394,7 +394,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				if( d.label.contains(":") ){
 					String readID = label.substring(label.indexOf(":")+1);
 					switch(d.label.split(":")[0]){
-						case "generic": executor.execute( () ->processGeneric(d)); break;
+						case "generic": executor.execute( () -> processGeneric(d)); break;
 						case "double": case "real":  executor.execute(() -> storeInDoubleVal(readID,d.getData(),d.getOriginID())); break;
 						case "valmap":  executor.execute( () -> processValmap(d)); break;
 						case "text":    executor.execute( () -> dp.setText(readID, d.data)); break;
