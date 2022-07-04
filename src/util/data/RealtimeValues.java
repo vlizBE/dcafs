@@ -1133,7 +1133,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 						.add( green+"  tv:reqs"+reg+" -> Get a listing of the requests active");
 				return join.toString();
 			case "list":
-				return String.join(html?"<br>":"\r\n",getRtvalsList(html,false,false,true));
+				return String.join(html?"<br>":"\r\n",getRtvalsList(html,false,false,true, true));
 			case "reqs":
 				textRequest.forEach((rq, list) -> join.add(rq +" -> "+list.size()+" requesters"));
 				return join.toString();
@@ -1178,7 +1178,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 						.add( green+"  fv:list"+reg+" -> Give a listing of all current flags and their state");
 				return join.toString();
 			case "list":
-				return getRtvalsList(html,false,true,false);
+				return getRtvalsList(html,false,true,false,false);
 			case "new":
 				if( cmds.length <2)
 					return "Not enough arguments, need flags:new,id<,state> or fv:new,id<,state>";
@@ -1250,7 +1250,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 						.add( green+"  dv:list"+reg+" -> Get a listing of currently stored texts")
 						.add( green+"  dv:reqs"+reg+" -> Get a listing of all the requests currently active");
 				return join.toString();
-			case "list": return getRtvalsList(html,true,false,false);
+			case "list": return getRtvalsList(html,true,false,false, false);
 			case "new": case "create":
 				result=0;
 				if( cmds.length==3 ) {
@@ -1373,7 +1373,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 	public String replyToRtvalsCmd( String[] request, Writable wr, boolean html ){
 
 		if( request[1].isEmpty())
-			return getRtvalsList(html,true,true,true);
+			return getRtvalsList(html,true,true,true, true);
 
 		String[] cmds = request[1].split(",");
 
@@ -1405,7 +1405,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 			}
 		}else if(cmds.length==2){
 			switch(cmds[0]){
-				case "group":  return getRTValsGroupList(cmds[1],true,true,true,html);
+				case "group":  return getRTValsGroupList(cmds[1],true,true,true,true,html);
 				case "groups":
 					String groups = String.join(html?"<br>":"\r\n",getGroups());
 					return groups.isEmpty()?"No groups yet":groups;
@@ -1424,7 +1424,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 	 * @param html Use html formatting or telnet
 	 * @return The listing
 	 */
-	public String getRTValsGroupList(String group, boolean showDoubles, boolean showFlags, boolean showTexts, boolean html) {
+	public String getRTValsGroupList(String group, boolean showDoubles, boolean showFlags, boolean showTexts, boolean showInts, boolean html) {
 		String eol = html ? "<br>" : "\r\n";
 		String title = html ? "<b>Group: " + group + "</b>" : TelnetCodes.TEXT_CYAN + "Group: " + group + TelnetCodes.TEXT_YELLOW;
 		String space = html ? "  " : "  ";
@@ -1442,6 +1442,12 @@ public class RealtimeValues implements DataProviding, Commandable {
 					})
 					.map(dv -> space + dv.name() + " : " + dv) //Change it to strings
 					.forEach(join::add); // Then add the sorted strings
+		}
+		if( showInts ){
+			integerVals.values().stream().filter(iv -> iv.group().equalsIgnoreCase(group))
+					.sorted()
+					.map(iv -> space + iv.name() + " : "+ iv ) // change it to strings
+					.forEach(join::add);
 		}
 		if( showTexts ) {
 			texts.entrySet().stream().filter(ent -> ent.getKey().startsWith(group + "_"))
@@ -1489,7 +1495,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 	 * @param html If true will use html newline etc
 	 * @return The listing
 	 */
-	public String getRtvalsList(boolean html, boolean showDoubles, boolean showFlags, boolean showTexts){
+	public String getRtvalsList(boolean html, boolean showDoubles, boolean showFlags, boolean showTexts, boolean showInts){
 		String eol = html?"<br>":"\r\n";
 		String space = html?"  ":"  ";
 		StringJoiner join = new StringJoiner(eol,"Status at "+ TimeTools.formatShortUTCNow()+eol+eol,"");
@@ -1497,7 +1503,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 
 		// Find & add the groups
 		for( var group : getGroups() ){
-			var res = getRTValsGroupList(group,showDoubles,showFlags,showTexts,html);
+			var res = getRTValsGroupList(group,showDoubles,showFlags,showTexts,showInts,html);
 			if( !res.isEmpty() && !res.equalsIgnoreCase("none yet"))
 				join.add(res).add("");
 		}
