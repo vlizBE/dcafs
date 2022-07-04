@@ -40,7 +40,10 @@ From 0.5.0 onwards, this should be better documented...
 - ModbusTCP didn't use the inherited timestamp field
 - raw: stops again when issueing empty cmd
 - Interval task with delay more than 48 hours now works properly
-
+- Generics: can't add a generic with duplicate id through telnet
+- Generics: when two generics are in xml with same id, only first is used.
+This is mentioned in the errorlog
+- 
 ## 0.11.x
 - Goals for this version series (removed when they are done)
   * Code cleanup

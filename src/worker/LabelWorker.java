@@ -208,7 +208,11 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				.forEach( ele ->  {
 					var gen = Generic.readFromXML(ele);
 					if( !gen.getID().isEmpty()) {
-						addGeneric(gen);
+						if( generics.containsKey(gen.getID())){
+							Logger.error("Tried to add generic with duplicate ID: "+gen.getID());
+						}else {
+							addGeneric(gen);
+						}
 					}else{
 						Logger.error("Tried to read generic without id!");
 					}
@@ -601,7 +605,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				}
 			case "addblank": case "addgen": case "add":
 				if( cmds.length < 4 )
-					return "Not enough arguments, must be gens:addgen,id,src,format,delimiter";
+					return "Not enough arguments, must be gens:"+cmds[0]+",id,src,format,delimiter";
 
 				var delimiter=request[1].endsWith(",")?",":cmds[cmds.length-1];
 				int forms=cmds.length-1;
@@ -609,6 +613,9 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 					delimiter = ",";
 					forms++;
 				}
+				if( generics.containsKey(cmds[1]))
+					return "This id is already used, try another.";
+
 				if( Generic.addBlankToXML(XMLfab.withRoot(settingsPath, "dcafs","generics"), cmds[1],"",
 					ArrayUtils.subarray(cmds,3,forms),delimiter)){
 					loadGenerics();
