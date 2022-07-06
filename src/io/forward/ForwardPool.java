@@ -369,7 +369,7 @@ public class ForwardPool implements Commandable {
                         .add("  ef:edits -> Get a list of all possible edit operations")
                         .add("  ef:addedit,id,type:value -> Add an edit of the given value, use type:? for format");
                 return join.toString();
-            case "addblank": case "addeditor": case "add":
+            case "addblank": case "addeditor": case "add": case "new":
                 if( cmds.length<2)
                     return "Not enough arguments, needs to be ef:addeditor,id<,src,>";
                 if( getEditorForward(cmds[1]).isPresent() )
@@ -726,7 +726,7 @@ public class ForwardPool implements Commandable {
                 if( getFilterForward(cmds[1]).map(f -> f.addSource(source) ).orElse(false) )
                     return "Source added";
                 return "Failed to add source, no such filter.";
-            case "addblank": case "addfilter": case "add":
+            case "addblank": case "addfilter": case "add": case "new":
                 if( cmds.length<2)
                     return "Not enough arguments, needs to be ff/filters:addfilter,id<,src,>";
                 if( getFilterForward(cmds[1]).isPresent() )
@@ -945,7 +945,7 @@ public class ForwardPool implements Commandable {
                 dQueue.add( Datagram.system("gens:reload") );
                 readPathsFromXML();
                 return "New path file added and reloaded";
-            case "addblank": case "addpath": case "add":
+            case "addblank": case "addpath": case "add": case "new":
                 blank=true;
                 if( cmds.length<2) {
                     return "To few arguments, expected pf:add,id,src";
