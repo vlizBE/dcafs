@@ -1483,6 +1483,8 @@ public class RealtimeValues implements DataProviding, Commandable {
 		}
 		doubleVals.values().stream().filter( dv -> dv.name().matches(regex))
 				.forEach(dv -> join.add(space+(dv.group().isEmpty()?"":dv.group()+" -> ")+dv.name()+" : "+dv));
+		integerVals.values().stream().filter( iv -> iv.name().matches(regex))
+				.forEach(iv -> join.add(space+(iv.group().isEmpty()?"":iv.group()+" -> ")+iv.name()+" : "+iv));
 		texts.entrySet().stream().filter(ent -> ent.getKey().matches(regex))
 				.forEach( ent -> join.add( space+ent.getKey().replace("_","->")+" : "+ent.getValue()) );
 		flagVals.values().stream().filter(fv -> fv.name().matches(regex))
@@ -1512,6 +1514,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 		boolean ngDoubles = doubleVals.values().stream().anyMatch( dv -> dv.group().isEmpty())&&showDoubles;
 		boolean ngTexts = !texts.keySet().stream().anyMatch(k -> k.contains("_"))&&showTexts;
 		boolean ngFlags = flagVals.values().stream().anyMatch( fv -> fv.group().isEmpty())&&showFlags;
+		boolean ngIntegers = integerVals.values().stream().anyMatch( iv -> iv.group().isEmpty())&&showInts;
 
 		if( ngDoubles || ngTexts || ngFlags) {
 			join.add("");
@@ -1520,6 +1523,11 @@ public class RealtimeValues implements DataProviding, Commandable {
 			if (ngDoubles) {
 				join.add(html ? "<b>Doubles</b>" : TelnetCodes.TEXT_BLUE + "Doubles" + TelnetCodes.TEXT_YELLOW);
 				doubleVals.values().stream().filter(dv -> dv.group().isEmpty())
+						.map(dv->space + dv.name() + " : " + dv).sorted().forEach(join::add);
+			}
+			if (ngIntegers){
+				join.add(html ? "<b>Integers</b>" : TelnetCodes.TEXT_BLUE + "Integers" + TelnetCodes.TEXT_YELLOW);
+				integerVals.values().stream().filter(dv -> dv.group().isEmpty())
 						.map(dv->space + dv.name() + " : " + dv).sorted().forEach(join::add);
 			}
 			if (ngTexts) {
@@ -1554,6 +1562,10 @@ public class RealtimeValues implements DataProviding, Commandable {
 		var groups = doubleVals.values().stream()
 				.map(DoubleVal::group)
 				.filter(group -> !group.isEmpty()).distinct().collect(Collectors.toList());
+		integerVals.values().stream()
+				.map(IntegerVal::group)
+				.filter(group -> !group.isEmpty()).distinct()
+				.forEach(groups::add);
 		texts.keySet().stream()
 						.filter( k -> k.contains("_"))
 						.map( k -> k.split("_")[0] )
