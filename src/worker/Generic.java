@@ -262,6 +262,7 @@ public class Generic {
                                     dp.setInteger( ref, (int)data[a] );
                                 }else{
                                     data[a]=null;
+                                    dp.setInteger( ref, Integer.MAX_VALUE );
                                     if( split[entry.index].isEmpty()){
                                         Logger.error(id +" -> Got an empty value at "+ entry.index+" instead of int for "+ ref);
                                     }else{
@@ -280,6 +281,7 @@ public class Generic {
                                 dp.getOrAddDoubleVal( ref ).updateValue( val );
                             }else{
                                 data[a]=null;
+                                dp.getOrAddDoubleVal( ref ).updateValue( Double.NaN );
                                 if( split[entry.index].isEmpty()){
                                     Logger.error(id +" -> Got an empty value at "+ entry.index+" instead of real for "+ ref);
                                 }else{
