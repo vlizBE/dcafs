@@ -19,13 +19,15 @@ From 0.5.0 onwards, this should be better documented...
 ### To fix
 - default for generic val
 - cmd !idle not used properly when disconnected/reconnected
+- integerval telnet interface?
 
 ## 1.0.0
 - Updated dependencies
-- Rewrote emailworker a bit
 - Now using java 17 (new lts)
 
+### General
 - Clean up, remove unused stuff etc
+- Rewrote emailworker a bit
 - Removed DigiWorker and other things related to sms
 - Moved methods in CommandPool that can be static to Tools package
 - Removed cyclic redundancy between CommandPool and Das
@@ -33,21 +35,23 @@ From 0.5.0 onwards, this should be better documented...
 ### Rtvals
 - The response now starts with the current datetime
 - No longer show ungrouped when there's a grouped textval
-- IntegerVals now show up in the rtvals listing
+- IntegerVals now show up in the rtvals listing and are available for
+the rtvals commands
 
-### Fixes
-- Generics in a path got the id from the filename instead of the id
-- Here and there the relative paths weren't converted to correct absolute ones
-- ModbusTCP didn't use the inherited timestamp field
-- raw: stops again when issueing empty cmd
-- Interval task with delay more than 48 hours now works properly
-**Generics**
-- can't add a generic with duplicate id through telnet
-- when two generics are in xml with same id, only first is used.
-This is mentioned in the errorlog
+### Generics
+- Can't add a generic with duplicate id through telnet
+- When two generics are in xml with same id, only first is used.
+  This is mentioned in the errorlog
 - gens:addgen now actually uses the given group
 - Group can't contain _, this is now enforced
-- 
+- Generics inside a path now get the id from the path id instead of the file
+- If a value wasn't found, the rtvals are updated with NaN if double/real or Max_integer for integer 
+### Other fixes
+- Here and there the relative paths weren't converted to correct absolute ones
+- ModbusTCP didn't use the inherited timestamp field
+- raw: stops again when issue'ing empty cmd
+- Interval task with delay more than 48 hours now works properly  
+
 ## 0.11.x
 - Goals for this version series (removed when they are done)
   * Code cleanup
