@@ -52,7 +52,7 @@ public class FilterForward extends AbstractForward {
             reversed.removeIf( t-> !t.writeLine(data) );
         }
 
-        if( targets.isEmpty() && label.isEmpty() && !log && reversed.isEmpty() ){
+        if( noTargets() && reversed.isEmpty() ){
             valid=false;
             if( deleteNoTargets )
                 dQueue.add( Datagram.system("ff:remove,"+id));
