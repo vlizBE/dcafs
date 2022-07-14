@@ -2,7 +2,6 @@ package util.data;
 
 import org.tinylog.Logger;
 import util.math.MathUtils;
-import util.task.Task;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
@@ -15,7 +14,7 @@ import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-public class DoubleVal extends AbstractVal implements NumericVal{
+public class RealVal extends AbstractVal implements NumericVal{
 
     private double value;
 
@@ -35,32 +34,32 @@ public class DoubleVal extends AbstractVal implements NumericVal{
     private ArrayList<TriggeredCmd> triggered;
     enum TRIGGERTYPE {ALWAYS,CHANGED,STDEV,COMP};
 
-    private DoubleVal(){}
+    private RealVal(){}
 
     /**
-     * Constructs a new DoubleVal with the given group and name
+     * Constructs a new RealVal with the given group and name
      *
-     * @param group The group this DoubleVal belongs to
-     * @param name The name for the DoubleVal
-     * @return The constructed DoubleVal
+     * @param group The group this RealVal belongs to
+     * @param name The name for the RealVal
+     * @return The constructed RealVal
      */
-    public static DoubleVal newVal(String group, String name){
-        return new DoubleVal().group(group).name(name);
+    public static RealVal newVal(String group, String name){
+        return new RealVal().group(group).name(name);
     }
 
     /**
-     * Construct a new DoubleVal with the given id which is the combination of the group and name separated with an
+     * Construct a new RealVal with the given id which is the combination of the group and name separated with an
      * underscore
      * @param combined group + underscore + name = id
-     * @return the constructed DoubleVal
+     * @return the constructed RealVal
      */
-    public static DoubleVal newVal(String combined){
+    public static RealVal newVal(String combined){
         int us = combined.indexOf("_");
 
         if( us != -1) { // If this contains an underscore, split it
-            return new DoubleVal().group(combined.substring(0,us)).name(combined.substring(us+1));
+            return new RealVal().group(combined.substring(0,us)).name(combined.substring(us+1));
         }
-        return new DoubleVal().name(combined);// If no underscore, this means no group id given
+        return new RealVal().name(combined);// If no underscore, this means no group id given
     }
     /* ********************************* Constructing ************************************************************ */
 
@@ -69,7 +68,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * @param name The new name
      * @return This object with altered name
      */
-    public DoubleVal name(String name){
+    public RealVal name(String name){
         this.name=name;
         return this;
     }
@@ -78,7 +77,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * @param group The new group
      * @return This object with altered group
      */
-    public DoubleVal group(String group){
+    public RealVal group(String group){
         this.group=group;
         return this;
     }
@@ -88,7 +87,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * @param unit The unit for the value
      * @return This object with updated unit
      */
-    public DoubleVal unit(String unit){
+    public RealVal unit(String unit){
         this.unit=unit;
         return this;
     }
@@ -98,7 +97,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * @param val The new value
      * @return This object after updating the value etc
      */
-    public DoubleVal value( double val ){
+    public RealVal value(double val ){
 
         /* Keep history of passed values */
         if( keepHistory!=0 ) {
@@ -136,7 +135,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * @param defVal The default value
      * @return This object after altering the defValue if not NaN
      */
-    public DoubleVal defValue( double defVal){
+    public RealVal defValue(double defVal){
         if( !Double.isNaN(defVal) ) { // If the given value isn't NaN
             this.defVal = defVal;
             if( Double.isNaN(value))
@@ -146,7 +145,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
     }
 
     /**
-     * Reset this DoubleVal to its default value
+     * Reset this RealVal to its default value
      */
     @Override
     public void reset(){
@@ -161,7 +160,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * @param fd The amount of digits
      * @return This object after setting the digits
      */
-    public DoubleVal fractionDigits(int fd){
+    public RealVal fractionDigits(int fd){
         this.digits=fd;
         return this;
     }
@@ -170,7 +169,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * Enable keeping track of the max and min values received since last reset
      * @return This object but with min max enabled
      */
-    public DoubleVal keepMinMax(){
+    public RealVal keepMinMax(){
         keepMinMax=true;
         return this;
     }
@@ -326,11 +325,11 @@ public class DoubleVal extends AbstractVal implements NumericVal{
         return MathUtils.calcStandardDeviation(history,digits==-1?5:digits+2);
     }
     /**
-     * Compare two DoubleVal's based on their values
-     * @param dv The DoubleVal to compare to
+     * Compare two RealVal's based on their values
+     * @param dv The RealVal to compare to
      * @return True if they have the same value
      */
-    public boolean equals( DoubleVal dv){
+    public boolean equals( RealVal dv){
         return Double.compare(value,dv.value())==0;
     }
 

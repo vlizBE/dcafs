@@ -1,7 +1,7 @@
 package io.forward;
 
 import util.data.DataProviding;
-import util.data.DoubleVal;
+import util.data.RealVal;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
@@ -562,7 +562,7 @@ public class MathForward extends AbstractForward {
                 return;
             }
         }
-        referencedNums.add( DoubleVal.newVal("matrix",key).value(val) );
+        referencedNums.add( RealVal.newVal("matrix",key).value(val) );
     }
     /**
      * Build the BigDecimal array base on received data and the local references.
@@ -602,10 +602,10 @@ public class MathForward extends AbstractForward {
             if (p.length == 2) {
                 switch(p[0]){
                     case "d": case "double": case "r":
-                        dataProviding.getDoubleVal(p[1]).ifPresent( referencedNums::add );
+                        dataProviding.getRealVal(p[1]).ifPresent( referencedNums::add );
                         break;
                     case "D":
-                        referencedNums.add( dataProviding.getOrAddDoubleVal(p[1]) );
+                        referencedNums.add( dataProviding.getOrAddRealVal(p[1]) );
                         break;
                     case "f": case "flag":
                         dataProviding.getFlagVal(p[1]).ifPresent( referencedNums::add );
@@ -692,7 +692,7 @@ public class MathForward extends AbstractForward {
         int scale=-1;
         String ori;          // The expression before it was decoded mainly for listing purposes
         String cmd ="";      // Command in which to replace the $ with the result
-        DoubleVal update;
+        RealVal update;
         BigDecimal directSet;
 
         public Operation(String ori,int index){
@@ -703,7 +703,7 @@ public class MathForward extends AbstractForward {
                 try {
                     String sub = ori.substring(ori.indexOf(":") + 1, ori.indexOf("}"));
                     if (ori.startsWith("{d")) {
-                        dataProviding.getDoubleVal(sub)
+                        dataProviding.getRealVal(sub)
                                 .ifPresent(dv -> {
                                     update = dv;
                                     doUpdate = true;
@@ -711,7 +711,7 @@ public class MathForward extends AbstractForward {
                         if (!doUpdate)
                             Logger.warn("Asking to update {d:" + ori.substring(ori.indexOf(":") + 1, ori.indexOf("}") + 1) + " but doesn't exist");
                     } else if (ori.startsWith("{D:")) {
-                        update = dataProviding.getOrAddDoubleVal(sub);
+                        update = dataProviding.getOrAddRealVal(sub);
                         doUpdate = true;
                     }
                 }catch(IndexOutOfBoundsException e ){
@@ -744,7 +744,7 @@ public class MathForward extends AbstractForward {
 
             if( ((cmd.startsWith("doubles:update")||cmd.startsWith("dv")) && cmd.endsWith(",$"))  ){
                 String val = cmd.substring(8).split(",")[1];
-                this.cmd = dataProviding.getDoubleVal(val).map( dv-> {
+                this.cmd = dataProviding.getRealVal(val).map(dv-> {
                     update=dv;
                     doUpdate=true;
                     return "";

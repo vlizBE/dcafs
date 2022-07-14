@@ -2,7 +2,7 @@ package util.gis;
 
 import das.Commandable;
 import util.data.DataProviding;
-import util.data.DoubleVal;
+import util.data.RealVal;
 import io.Writable;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
@@ -29,9 +29,9 @@ public class Waypoints implements Commandable {
     static final String XML_TRAVEL = "travel";
     static final String XML_CHILD_TAG = "waypoint";
 
-    DoubleVal latitude;
-    DoubleVal longitude;
-    DoubleVal sog;
+    RealVal latitude;
+    RealVal longitude;
+    RealVal sog;
 
     ScheduledExecutorService scheduler;
     int checkInterval=15;
@@ -96,9 +96,9 @@ public class Waypoints implements Commandable {
 
         if( rtvals!=null) {
             Logger.info("Looking for lat, lon, sog");
-            latitude = rtvals.getOrAddDoubleVal(XMLtools.getStringAttribute(wpts, "latval", ""));
-            longitude = rtvals.getOrAddDoubleVal(XMLtools.getStringAttribute(wpts, "lonval", ""));
-            sog = rtvals.getOrAddDoubleVal(XMLtools.getStringAttribute(wpts, "sogval", ""));
+            latitude = rtvals.getOrAddRealVal(XMLtools.getStringAttribute(wpts, "latval", ""));
+            longitude = rtvals.getOrAddRealVal(XMLtools.getStringAttribute(wpts, "lonval", ""));
+            sog = rtvals.getOrAddRealVal(XMLtools.getStringAttribute(wpts, "sogval", ""));
         }
 
         Logger.info("Reading Waypoints");

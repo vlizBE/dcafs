@@ -3,8 +3,6 @@ package util.data;
 import das.Commandable;
 import das.IssuePool;
 import io.Writable;
-import io.collector.CollectorFuture;
-import io.collector.MathCollector;
 import io.telnet.TelnetCodes;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
@@ -18,7 +16,6 @@ import util.xml.XMLtools;
 import worker.Datagram;
 
 import java.nio.file.Path;
-import java.sql.Time;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
@@ -35,8 +32,8 @@ import java.util.stream.Collectors;
 public class RealtimeValues implements DataProviding, Commandable {
 
 	/* Data stores */
-	private final ConcurrentHashMap<String, DoubleVal> doubleVals = new ConcurrentHashMap<>(); // doubles
-	private final ConcurrentHashMap<String, IntegerVal> integerVals = new ConcurrentHashMap<>(); // doubles
+	private final ConcurrentHashMap<String, RealVal> realVals = new ConcurrentHashMap<>(); // doubles
+	private final ConcurrentHashMap<String, IntegerVal> integerVals = new ConcurrentHashMap<>(); // integers
 	private final ConcurrentHashMap<String, String> texts = new ConcurrentHashMap<>(); // strings
 	private final ConcurrentHashMap<String, FlagVal> flagVals = new ConcurrentHashMap<>(); // booleans
 
@@ -50,7 +47,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 	private final Path settingsPath;
 
 	/* Patterns */
-	private final Pattern words = Pattern.compile("[a-zA-Z]+[_:0-9]*[a-zA-Z0-9]+\\d*"); // find references to doublevals etc
+	private final Pattern words = Pattern.compile("[a-zA-Z]+[_:0-9]*[a-zA-Z0-9]+\\d*"); // find references to *val
 
 	/* Other */
 	private final BlockingQueue<Datagram> dQueue; // Used to issue triggered cmd's
@@ -73,7 +70,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 	 */
 	public void readFromXML( XMLfab fab ){
 
-		double defDouble = XMLtools.getDoubleAttribute(fab.getCurrentElement(),"realdefault",Double.NaN);
+		double defReal = XMLtools.getDoubleAttribute(fab.getCurrentElement(),"realdefault",Double.NaN);
 		String defText = XMLtools.getStringAttribute(fab.getCurrentElement(),"textdefault","");
 		boolean defFlag = XMLtools.getBooleanAttribute(fab.getCurrentElement(),"flagdefault",false);
 		int defInteger = XMLtools.getIntAttribute(fab.getCurrentElement(),"integerdefault",-999);
@@ -92,11 +89,11 @@ public class RealtimeValues implements DataProviding, Commandable {
 							var gid = XMLtools.getStringAttribute(groupie,"id",""); // get the node id
 							// then check if it has an attribute name and use this instead if found
 							gid = id + XMLtools.getStringAttribute(groupie,"name",gid); //
-							processRtvalElement(groupie, gid, defDouble, defText, defFlag,defInteger);
+							processRtvalElement(groupie, gid, defReal, defText, defFlag,defInteger);
 						}
 					}else { // If it isn't a group node
 						// then the id is the full id
-						processRtvalElement(rtval, id, defDouble, defText, defFlag,defInteger);
+						processRtvalElement(rtval, id, defReal, defText, defFlag,defInteger);
 					}
 				}
 		);
@@ -107,11 +104,11 @@ public class RealtimeValues implements DataProviding, Commandable {
 	 * Process a Val node
 	 * @param rtval The node to process
 	 * @param id The id of the Val
-	 * @param defDouble The default double value
+	 * @param defReal The default real value
 	 * @param defText The default text value
 	 * @param defFlag The default boolean value
 	 */
-	private void processRtvalElement(Element rtval, String id, double defDouble, String defText, boolean defFlag, int defInteger ){
+	private void processRtvalElement(Element rtval, String id, double defReal, String defText, boolean defFlag, int defInteger ){
 		switch( rtval.getTagName() ){
 			case "double": case "real":
 				// Both attributes fractiondigits and scale are valid, so check for both
@@ -119,33 +116,33 @@ public class RealtimeValues implements DataProviding, Commandable {
 				if( scale == -1)
 					scale = XMLtools.getIntAttribute(rtval,"scale",-1);
 
-				if( !hasDouble(id)) // If it doesn't exist yet
-					setDouble(id,defDouble,true); // create it
-				var dv = getDoubleVal(id).get();//
-				dv.reset(); // reset needed if this is called because of reload
-				dv.name(XMLtools.getChildValueByTag(rtval,"name",dv.name()))
-						.group(XMLtools.getChildValueByTag(rtval,"group",dv.group()))
+				if( !hasReal(id)) // If it doesn't exist yet
+					setReal(id,defReal,true); // create it
+				var rv = getRealVal(id).get();//
+				rv.reset(); // reset needed if this is called because of reload
+				rv.name(XMLtools.getChildValueByTag(rtval,"name",rv.name()))
+						.group(XMLtools.getChildValueByTag(rtval,"group",rv.group()))
 						.unit(XMLtools.getStringAttribute(rtval,"unit",""))
 						.fractionDigits(scale)
-						.defValue(XMLtools.getDoubleAttribute(rtval,"default",defDouble));
+						.defValue(XMLtools.getDoubleAttribute(rtval,"default",defReal));
 
 					String options = XMLtools.getStringAttribute(rtval,"options","");
 					for( var opt : options.split(",")){
 						var arg = opt.split(":");
 						switch( arg[0]){
-							case "minmax":  dv.keepMinMax(); break;
-							case "time":    dv.keepTime();   break;
-							case "scale":	dv.fractionDigits( NumberUtils.toInt(arg[1],-1)); break;
-							case "order":   dv.order( NumberUtils.toInt(arg[1],-1)); break;
-							case "history": dv.enableHistory( NumberUtils.toInt(arg[1],-1)); break;
+							case "minmax":  rv.keepMinMax(); break;
+							case "time":    rv.keepTime();   break;
+							case "scale":	rv.fractionDigits( NumberUtils.toInt(arg[1],-1)); break;
+							case "order":   rv.order( NumberUtils.toInt(arg[1],-1)); break;
+							case "history": rv.enableHistory( NumberUtils.toInt(arg[1],-1)); break;
 						}
 					}
 				if( !XMLtools.getChildElements(rtval,"cmd").isEmpty() )
-					dv.enableTriggeredCmds(dQueue);
+					rv.enableTriggeredCmds(dQueue);
 				for( Element trigCmd : XMLtools.getChildElements(rtval,"cmd")){
 					String trig = trigCmd.getAttribute("when");
 					String cmd = trigCmd.getTextContent();
-					dv.addTriggeredCmd(trig,cmd);
+					rv.addTriggeredCmd(trig,cmd);
 				}
 				break;
 			case "integer":case "int":
@@ -200,7 +197,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 	/* ************************************* P A R S I N G ********************************************************* */
 	/**
 	 * Simple version of the parse realtime line, just checks all the words to see if any matches the hashmaps.
-	 * It assumes all words are double, but also allows for d:id,t:id and f:id or D: or F: if it should create them
+	 * It assumes all words are real, but also allows for d:id,t:id and f:id or D: or F: if it should create them
 	 * @param line The line to parse
 	 * @param error The line to return on an error or 'ignore' if errors should be ignored
 	 * @return The (possibly) altered line
@@ -214,13 +211,13 @@ public class RealtimeValues implements DataProviding, Commandable {
 				var id = word.split(":")[1];
 				switch( word.charAt(0) ) {
 					case 'd': case 'r':
-						if( !hasDouble(id)) {
-							Logger.error("No such double "+id+", extracted from "+line);
+						if( !hasReal(id)) {
+							Logger.error("No such real "+id+", extracted from "+line);
 							if( !error.equalsIgnoreCase("ignore"))
 								return error;
 						}
 					case 'D': case 'R':
-						line = line.replace(word,""+getOrAddDoubleVal(id).value());
+						line = line.replace(word,""+ getOrAddRealVal(id).value());
 						break;
 					case 'i':
 						if( !hasInteger(id)) {
@@ -258,7 +255,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 						break;
 				}
 			}else { // If it doesn't contain : it could be anything...
-				var d = getDouble(word, Double.NaN); // First check if it's a double
+				var d = getReal(word, Double.NaN); // First check if it's a real
 				if (!Double.isNaN(d)) {
 					line = line.replace(word, "" + d);
  				} else { // if not
@@ -272,10 +269,10 @@ public class RealtimeValues implements DataProviding, Commandable {
 						} else if (hasFlag(word)) { // if it isn't a text, check if it's a flag
 							line = line.replace(word, isFlagUp(word) ? "1" : "0");
 						} else if (error.equalsIgnoreCase("create")) { // if still not found and error is set to create
-							// add it as a double
-							getOrAddDoubleVal(word).updateValue(0);
-							Logger.warn("Created doubleval " + word + " with value 0");
-							line = line.replace(word, "0"); // default of a double is 0
+							// add it as a real
+							getOrAddRealVal(word).updateValue(0);
+							Logger.warn("Created realval " + word + " with value 0");
+							line = line.replace(word, "0"); // default of a real is 0
 						} else if (!error.equalsIgnoreCase("ignore")) { // if it's not ignore
 							Logger.error("Couldn't process " + word + " found in " + line); // log it and abort
 							return error;
@@ -290,7 +287,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 	/**
 	 * Stricter version to parse a realtime line, must contain the references within { }
 	 * Options are:
-	 * - DoubleVal: {d:id} and {double:id} if it should already exist, or {D:id} if it should be created if new (value is 0.0)
+	 * - RealVal: {d:id} and {real:id} if it should already exist, or {D:id} if it should be created if new (value is 0.0)
 	 * - FlagVal: {f:id} or {b:id} and {flag:id} if it should already exist, or {F:id} if it should be created if new (state will be false)
 	 * This also checks for {utc}/{utclong},{utcshort} to insert current timestamp
 	 * @param line The original line to parse/alter
@@ -308,7 +305,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 				switch (p[0]) {
 					case "d": case "D": case "r": case "R":
 					case "double": case "real": {
-						var d = p[0].equals("D")||p[0].equals("R")?getOrAddDoubleVal(p[1]).value():getDouble(p[1], Double.NaN);
+						var d = p[0].equals("D")||p[0].equals("R")? getOrAddRealVal(p[1]).value(): getReal(p[1], Double.NaN);
 						if (!Double.isNaN(d) || !error.isEmpty())
 							line = line.replace("{" + p[0] + ":" + p[1] + "}", Double.isNaN(d) ? error : "" + d);
 						break;
@@ -354,7 +351,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 	 * the reference with i followed by the index in nums+offset. {D:id} and {F:id} will add the rtvals if they don't
 	 * exist yet.
 	 *
-	 * fe. {d:temp}+30, nums still empty and offset 1: will add the DoubleVal temp to nums and alter exp to i1 + 30
+	 * fe. {d:temp}+30, nums still empty and offset 1: will add the RealVal temp to nums and alter exp to i1 + 30
 	 * @param exp The expression to check
 	 * @param nums The Arraylist to hold the numerical values
 	 * @param offset The index offset to apply
@@ -364,14 +361,14 @@ public class RealtimeValues implements DataProviding, Commandable {
 		if( nums==null)
 			nums = new ArrayList<>();
 
-		// Find all the double/flag pairs
+		// Find all the real/flag pairs
 		var pairs = Tools.parseKeyValue(exp,true); // Add those of the format {d:id}
 		//pairs.addAll( Tools.parseKeyValueNoBrackets(exp) ); // Add those of the format d:id
 
 		for( var p : pairs ) {
 			boolean ok=false;
 			if (p.length == 2) {
-				for( int pos=0;pos<nums.size();pos++ ){ // go through the known doubleVals
+				for( int pos=0;pos<nums.size();pos++ ){ // go through the known realVals
 					var d = nums.get(pos);
 					if( d.id().equalsIgnoreCase(p[1])) { // If a match is found
 						exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + (offset + pos));
@@ -385,7 +382,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 				int index;
 				switch(p[0]){
 					case "d": case "double": case "D": case "r": case "R": case "real":
-						var d = p[0].equalsIgnoreCase("D")||p[0].equalsIgnoreCase("R")?Optional.of(getOrAddDoubleVal(p[1])):getDoubleVal(p[1]);
+						var d = p[0].equalsIgnoreCase("D")||p[0].equalsIgnoreCase("R")?Optional.of(getOrAddRealVal(p[1])): getRealVal(p[1]);
 						if( d.isPresent() ){
 							index = nums.indexOf(d.get());
 							if(index==-1){
@@ -395,8 +392,8 @@ public class RealtimeValues implements DataProviding, Commandable {
 							index += offset;
 							exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + index);
 						}else{
-							Logger.error("Couldn't find a doubleval/real with id "+p[1]);
-							errorLog.add("Couldn't find a doubleval/real with id "+p[1]);
+							Logger.error("Couldn't find a real with id "+p[1]);
+							errorLog.add("Couldn't find a real with id "+p[1]);
 							return "";
 						}
 						break;
@@ -480,7 +477,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 					return "";
 				}
 			}else{
-				var d = getDoubleVal(fl);
+				var d = getRealVal(fl);
 				if( d.isPresent() ){
 					index = nums.indexOf(d.get());
 					if(index==-1){
@@ -500,8 +497,8 @@ public class RealtimeValues implements DataProviding, Commandable {
 						index += offset;
 						exp = exp.replace(fl, "i" + index);
 					}else{
-						Logger.error("Couldn't find a doubleval with id "+fl);
-						errorLog.add("Couldn't find a DoubleVal  with id "+fl);
+						Logger.error("Couldn't find a realval with id "+fl);
+						errorLog.add("Couldn't find a RealVal  with id "+fl);
 						return "";
 					}
 					return exp;
@@ -517,7 +514,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 		return j;
 	}
 	/**
-	 * Look for a numerical val (i.e. DoubleVal, IntegerVal or FlagVal) with the given id
+	 * Look for a numerical val (i.e. RealVal, IntegerVal or FlagVal) with the given id
 	 * @param id The id to look for
 	 * @return An optional Numericalval that's empty if nothing was found
 	 */
@@ -529,25 +526,25 @@ public class RealtimeValues implements DataProviding, Commandable {
 				case "i": case "int": case "integer":
 					return Optional.ofNullable(integerVals.get(id));
 				case "d":case "double": case "r": case "real":
-					return Optional.ofNullable(doubleVals.get(id));
+					return Optional.ofNullable(realVals.get(id));
 				case "f": case "flag": case "b":
 					return Optional.ofNullable(flagVals.get(id));
 			}
 			return Optional.empty();
-		} // If it isn't inside { } just check if a match is found in the DoubleVals and then the FlagVals
-		return getDoubleVal(id).map( d -> Optional.of((NumericVal)d)).orElse(Optional.ofNullable((flagVals.get(id))));
+		} // If it isn't inside { } just check if a match is found in the realVals and then the FlagVals
+		return getRealVal(id).map(d -> Optional.of((NumericVal)d)).orElse(Optional.ofNullable((flagVals.get(id))));
 	}
 	/* ************************************ D O U B L E V A L ***************************************************** */
 
 	/**
-	 * Retrieve a DoubleVal from the hashmap based on the id
+	 * Retrieve a RealVal from the hashmap based on the id
 	 * @param id The reference with which the object was stored
-	 * @return The requested DoubleVal or null if not found
+	 * @return The requested RealVal or null if not found
 	 */
-	public Optional<DoubleVal> getDoubleVal( String id ){
-		if( doubleVals.get(id)==null)
-			Logger.error( "Tried to retrieve non existing doubleval "+id);
-		return Optional.ofNullable(doubleVals.get(id));
+	public Optional<RealVal> getRealVal(String id ){
+		if( realVals.get(id)==null)
+			Logger.error( "Tried to retrieve non existing realval "+id);
+		return Optional.ofNullable(realVals.get(id));
 	}
 
 	/**
@@ -555,21 +552,21 @@ public class RealtimeValues implements DataProviding, Commandable {
 	 * @param id The group_name or just name of the val
 	 * @return The object if found or made or null if something went wrong
 	 */
-	public DoubleVal getOrAddDoubleVal( String id ){
+	public RealVal getOrAddRealVal(String id ){
 		if( id.isEmpty())
 			return null;
 
-		var val = doubleVals.get(id);
+		var val = realVals.get(id);
 		if( val==null){
-			val = DoubleVal.newVal(id);
-			doubleVals.put(id,val);
+			val = RealVal.newVal(id);
+			realVals.put(id,val);
 			if( !readingXML ){
 				var fab = XMLfab.withRoot(settingsPath, "dcafs","settings","rtvals");
 
 				if( fab.hasChild("real","id",id).isEmpty()){
 					if( val.group().isEmpty()) {
 						if( fab.hasChild("real","id",id).isEmpty()) {
-							Logger.info("doubleval new, adding to xml :"+id);
+							Logger.info("realval new, adding to xml :"+id);
 							fab.addChild("real").attr("id", id).attr("unit", val.unit()).build();
 						}
 					}else{
@@ -583,7 +580,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 							fab.selectChildAsParent("group","id",val.group())
 									.ifPresent( f->{
 										if( f.hasChild("real","name",name).isEmpty()) {
-											Logger.info("doubleval new, adding to xml :"+id);
+											Logger.info("realval new, adding to xml :"+id);
 											fab.addChild("real").attr("name", name).attr("unit", unit).build();
 										}
 									});
@@ -594,21 +591,21 @@ public class RealtimeValues implements DataProviding, Commandable {
 		}
 		return val;
 	}
-	public boolean renameDouble( String from, String to, boolean alterXml){
-		if( hasDouble(to) ){
+	public boolean renameReal(String from, String to, boolean alterXml){
+		if( hasReal(to) ){
 			return false;
 		}
-		var dv = getDoubleVal(from);
-		if( dv.isPresent() ){
-			// Alter the DoubleVal
-			doubleVals.remove(from); // Remove it from the list
+		var rv = getRealVal(from);
+		if( rv.isPresent() ){
+			// Alter the RealVal
+			realVals.remove(from); // Remove it from the list
 			var name = to;
 			if( name.contains("_") )
 				name = name.substring(name.indexOf("_")+1);
 			String newName = name;
-			String oriName = dv.get().name();
-			dv.get().name(name);
-			doubleVals.put(to,dv.get()); // Add it renamed
+			String oriName = rv.get().name();
+			rv.get().name(name);
+			realVals.put(to,rv.get()); // Add it renamed
 
 			// Correct the XML
 			if( alterXml ) {
@@ -628,8 +625,8 @@ public class RealtimeValues implements DataProviding, Commandable {
 		}
 		return true;
 	}
-	public boolean hasDouble( String id){
-		return doubleVals.containsKey(id);
+	public boolean hasReal(String id){
+		return realVals.containsKey(id);
 	}
 	/**
 	 * Sets the value of a parameter (in a hashmap)
@@ -638,63 +635,63 @@ public class RealtimeValues implements DataProviding, Commandable {
 	 * @param createIfNew Whether to create a new object if none was found
 	 * @return True if it was created
 	 */
-	private boolean setDouble(String id, double value, boolean createIfNew) {
+	private boolean setReal(String id, double value, boolean createIfNew) {
 
 		if( id.isEmpty()) {
 			Logger.error("Empty id given");
 			return false;
 		}
-		DoubleVal d;
+		RealVal r;
 		if( createIfNew ) {
-			d = getOrAddDoubleVal(id);
+			r = getOrAddRealVal(id);
 		}else{
-			d = doubleVals.get(id);
+			r = realVals.get(id);
 		}
 
-		if( d==null ) {
-			Logger.error("No such double "+id+" yet, create it first");
+		if( r==null ) {
+			Logger.error("No such real "+id+" yet, create it first");
 			return false;
 		}
-		d.updateValue(value);
+		r.updateValue(value);
 		return true;
 	}
-	public boolean setDouble(String id, double value){
-		return setDouble(id,value,true);
+	public boolean setReal(String id, double value){
+		return setReal(id,value,true);
 	}
-	public boolean updateDouble(String id, double value) {
+	public boolean updateReal(String id, double value) {
 		if( id.isEmpty())
 			return false;
-		return !setDouble(id,value,false);
+		return !setReal(id,value,false);
 	}
 
 	/**
-	 * Alter all the values of the doubles in the given group
+	 * Alter all the values of the reals in the given group
 	 * @param group The group to alter
 	 * @param value The value to set
-	 * @return The amount of doubles updated
+	 * @return The amount of reals updated
 	 */
-	public int updateDoubleGroup(String group, double value){
-		var set = doubleVals.values().stream().filter( dv -> dv.group().equalsIgnoreCase(group)).collect(Collectors.toSet());
-		set.forEach(dv->dv.updateValue(value));
+	public int updateRealGroup(String group, double value){
+		var set = realVals.values().stream().filter(rv -> rv.group().equalsIgnoreCase(group)).collect(Collectors.toSet());
+		set.forEach(rv->rv.updateValue(value));
 		return set.size();
 	}
 	/**
-	 * Get the value of a double
+	 * Get the value of a real
 	 *
 	 * @param id The id to get the value of
 	 * @param bad The value to return of the id wasn't found
 	 * @return The value found or the bad value
 	 */
-	public double getDouble(String id, double bad) {
-		return getDouble(id,bad,false);
+	public double getReal(String id, double bad) {
+		return getReal(id,bad,false);
 	}
-	public double getDouble(String id, double defVal, boolean createIfNew) {
+	public double getReal(String id, double defVal, boolean createIfNew) {
 
-		DoubleVal d = doubleVals.get(id);
+		RealVal d = realVals.get(id);
 		if (d == null) {
 			if( createIfNew ){
 				Logger.warn("ID "+id+" doesn't exist, creating it with value "+defVal);
-				setDouble(id,defVal,true);
+				setReal(id,defVal,true);
 			}else{
 				Logger.debug("No such id: " + id);
 			}
@@ -769,7 +766,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 		}
 		var iv = getIntegerVal(from);
 		if( iv.isPresent() ){
-			// Alter the DoubleVal
+			// Alter the RealVal
 			integerVals.remove(from); // Remove it from the list
 			var name = to;
 			if( name.contains("_") )
@@ -821,7 +818,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 		}
 
 		if( d==null ) {
-			Logger.error("No such double "+id+" yet, create it first");
+			Logger.error("No such real "+id+" yet, create it first");
 			return false;
 		}
 		d.updateValue(value);
@@ -863,7 +860,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 		if (i == null) {
 			if( createIfNew ){
 				Logger.warn("ID "+id+" doesn't exist, creating it with value "+defVal);
-				setDouble(id,defVal,true);
+				setReal(id,defVal,true);
 			}else{
 				Logger.debug("No such id: " + id);
 			}
@@ -1019,9 +1016,9 @@ public class RealtimeValues implements DataProviding, Commandable {
 		XMLfab fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
 		if( clearFirst ) // If it needs to cleared first, remove child nodes
 			fab.clearChildren();
-		var vals = doubleVals.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Entry::getValue).collect(Collectors.toList());
-		for( var dv : vals ){
-			dv.storeInXml(fab);
+		var vals = realVals.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Entry::getValue).collect(Collectors.toList());
+		for( var rv : vals ){
+			rv.storeInXml(fab);
 		}
 		var keys = texts.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Entry::getKey).collect(Collectors.toList());
 		for( var dt : keys ){
@@ -1051,11 +1048,11 @@ public class RealtimeValues implements DataProviding, Commandable {
 
 		switch (type) {
 			case "rtval": case "double": case "real":
-				var list = doubleVals.entrySet().stream()
+				var list = realVals.entrySet().stream()
 							.filter(e -> e.getKey().matches(req)) // matches the req
 							.map( e->e.getValue()) // Only care about the values
 							.collect(Collectors.toList());
-				list.forEach( dv -> dv.addTarget(writable));
+				list.forEach( rv -> rv.addTarget(writable));
 				return list.size();
 			case "text":
 				var t = textRequest.get(req);
@@ -1082,15 +1079,15 @@ public class RealtimeValues implements DataProviding, Commandable {
 	public String replyToCommand(String[] request, Writable wr, boolean html) {
 
 		switch( request[0] ){
-			case "doubles": case "dv":
-				return replyToDoublesCmd(request,html);
+			case "doubles": case "dv": case "rv": case "reals":
+				return replyToRealsCmd(request,html);
 			case "texts": case "tv":
 				return replyToTextsCmd(request,html);
 			case "flags": case "fv":
 				return replyToFlagsCmd(request,html);
 			case "rtval": case "double": case "real":
 				int s = addRequest(wr,request[0],request[1]);
-				return s!=0?"Request added to "+s+" doublevals":"Request failed";
+				return s!=0?"Request added to "+s+" realvals":"Request failed";
 			case "rtvals": case "rvs":
 				return replyToRtvalsCmd(request,wr,html);
 			default:
@@ -1098,7 +1095,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 		}
 	}
 	public boolean removeWritable(Writable writable ) {
-		doubleVals.values().forEach( dv -> dv.removeTarget(writable));
+		realVals.values().forEach(rv -> rv.removeTarget(writable));
 		textRequest.forEach( (key, list) -> list.remove(writable));
 		return true;
 	}
@@ -1210,7 +1207,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 					return "Not enough arguments, fv:addcmd,id,when:cmd";
 				var fv = flagVals.get(cmds[1]);
 				if( fv==null)
-					return "No such double: "+cmds[1];
+					return "No such real: "+cmds[1];
 				String cmd = request[1].substring(request[1].indexOf(":")+1);
 				String when = cmds[2].substring(0,cmds[2].indexOf(":"));
 				if( !fv.hasTriggeredCmds())
@@ -1223,7 +1220,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 		}
 		return "unknown command "+request[0]+":"+request[1];
 	}
-	public String replyToDoublesCmd(String[] request, boolean html ){
+	public String replyToRealsCmd(String[] request, boolean html ){
 		if( request[1].isEmpty())
 			request[1]="list";
 
@@ -1234,21 +1231,21 @@ public class RealtimeValues implements DataProviding, Commandable {
 		String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
 
 		double result;
-
+		String p0 = request[0];
 		var join = new StringJoiner(html?"<br>":"\r\n");
 		switch( cmds[0] ){
 			case "?":
-				join.add(ora+"Note: both dv and doubles are valid starters"+reg)
+				join.add(ora+"Note: both rv and reals are valid starters"+reg)
 						.add( cyan+" Create or alter"+reg)
-						.add( green+"  dv:new,id,value"+reg+" -> Create a new double (or update) with the given id/value")
-						.add( green+"  dv:update,id,value"+reg+" -> Update an existing double, do nothing if not found")
-						.add( green+"  dv:addcmd,id,when:cmd"+reg+" -> Add a cmd with the given trigger to id")
-						.add( green+"  dv:alter,id,param:value"+reg+" -> Alter some of the params of id, currently scale and unit are possible")
-						.add( green+"  dv:updategroup,groupid,value"+reg+" -> Update all DoubleVals that belong to the groupid with the given value")
+						.add( green+"  "+p0+":new,id,value"+reg+" -> Create a new real (or update) with the given id/value")
+						.add( green+"  "+p0+":update,id,value"+reg+" -> Update an existing real, do nothing if not found")
+						.add( green+"  "+p0+":addcmd,id,when:cmd"+reg+" -> Add a cmd with the given trigger to id")
+						.add( green+"  "+p0+":alter,id,param:value"+reg+" -> Alter some of the params of id, currently scale and unit are possible")
+						.add( green+"  "+p0+":updategroup,groupid,value"+reg+" -> Update all RealVals that belong to the groupid with the given value")
 						.add("").add( cyan+" Get info"+reg)
-				  	    .add( green+"  dv:?"+reg+" -> Show this message" )
-						.add( green+"  dv:list"+reg+" -> Get a listing of currently stored texts")
-						.add( green+"  dv:reqs"+reg+" -> Get a listing of all the requests currently active");
+				  	    .add( green+"  "+p0+":?"+reg+" -> Show this message" )
+						.add( green+"  "+p0+":list"+reg+" -> Get a listing of currently stored texts")
+						.add( green+"  "+p0+":reqs"+reg+" -> Get a listing of all the requests currently active");
 				return join.toString();
 			case "list": return getRtvalsList(html,true,false,false, false);
 			case "new": case "create":
@@ -1258,58 +1255,58 @@ public class RealtimeValues implements DataProviding, Commandable {
 					if (Double.isNaN(result))
 						return "Failed to process expression";
 				}
-				getOrAddDoubleVal(cmds[1]).updateValue(result);
-				return "DoubleVal set to "+result;
+				getOrAddRealVal(cmds[1]).updateValue(result);
+				return "RealVal set to "+result;
 			case "alter":
 				if( cmds.length<3)
-					return "Not enough arguments: doubles:alter,id,param:value";
+					return "Not enough arguments: reals:alter,id,param:value";
 				var vals = cmds[2].split(":");
 				if( vals.length==1)
 					return "Incorrect param:value pair: "+cmds[2];
-				return getDoubleVal(cmds[1]).map( dv -> {
+				return getRealVal(cmds[1]).map(rv -> {
 					var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
 					if( vals[0].equals("scale")) {
-						dv.fractionDigits(NumberUtils.toInt(vals[1]));
-						fab.alterChild("real","id",cmds[1]).attr("scale",dv.scale()).build();
-						return "Scaling for " +cmds[1]+" set to " + dv.scale() + " digits";
+						rv.fractionDigits(NumberUtils.toInt(vals[1]));
+						fab.alterChild("real","id",cmds[1]).attr("scale",rv.scale()).build();
+						return "Scaling for " +cmds[1]+" set to " + rv.scale() + " digits";
 					}else if( vals[0].equals("unit")) {
 						fab.alterChild("real","id",cmds[1]).attr("unit",vals[1]).build();
 						return "Unit for "+cmds[1]+" set to "+vals[1];
 					}else{
 						return "Unknown param: "+vals[0];
 					}
-				}).orElse("No such DoubleVal");
+				}).orElse("No such RealVal");
 			case "update":
-				if( !hasDouble(cmds[1]) )
+				if( !hasReal(cmds[1]) )
 					return "No such id "+cmds[1];
 				result = processExpression(cmds[2],false);
 				if( Double.isNaN(result) )
 					return "Unknown id(s) in the expression "+cmds[2];
-				updateDouble(cmds[1],result);
+				updateReal(cmds[1],result);
 				return cmds[1]+" updated to "+result;
 			case "updategroup":
-				int up = updateDoubleGroup(cmds[1], NumberUtils.createDouble(cmds[2]));
+				int up = updateRealGroup(cmds[1], NumberUtils.createDouble(cmds[2]));
 				if( up == 0)
-					return "No double's updated";
-				return "Updated "+up+" doubles";
+					return "No real's updated";
+				return "Updated "+up+" reals";
 			case "addcmd":
 				if( cmds.length < 3)
-					return "Not enough arguments, dv:addcmd,id,when:cmd";
-				var dv = doubleVals.get(cmds[1]);
-				if( dv==null)
-					return "No such double: "+cmds[1];
+					return "Not enough arguments, rv:addcmd,id,when:cmd";
+				var rv = realVals.get(cmds[1]);
+				if( rv==null)
+					return "No such real: "+cmds[1];
 				String cmd = request[1].substring(request[1].indexOf(":")+1);
 				String when = cmds[2].substring(0,cmds[2].indexOf(":"));
-				if( !dv.hasTriggeredCmds())
-					dv.enableTriggeredCmds(dQueue);
-				dv.addTriggeredCmd(when,cmd);
+				if( !rv.hasTriggeredCmds())
+					rv.enableTriggeredCmds(dQueue);
+				rv.addTriggeredCmd(when,cmd);
 				XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals")
 						.selectChildAsParent("real","id",cmds[1])
 						.ifPresent( f -> f.addChild("cmd",cmd).attr("when",when).build());
 				return "Cmd added";
 			case "reqs":
 				join.setEmptyValue("None yet");
-				doubleVals.forEach((id, d) -> join.add(id +" -> "+d.getTargets()));
+				realVals.forEach((id, d) -> join.add(id +" -> "+d.getTargets()));
 				return join.toString();
 			default:
 				return "unknown command: "+request[0]+":"+request[1];
@@ -1319,8 +1316,8 @@ public class RealtimeValues implements DataProviding, Commandable {
 		double result=Double.NaN;
 
 		if( create ) {
-			exp = exp.replace("d:","D:");
-			exp = exp.replace("double:","D:");
+			exp = exp.replace("r:","R:");
+			exp = exp.replace("real:","R:");
 			exp = exp.replace("f:","F:");
 			exp = exp.replace("flag:","F:");
 		}
@@ -1336,8 +1333,8 @@ public class RealtimeValues implements DataProviding, Commandable {
 		var parts = MathUtils.extractParts(exp);
 		if( parts.size()==1 ){
 			if( !NumberUtils.isCreatable(exp)) {
-				if( hasDouble(exp) || create ) {
-					result = getDouble(exp, 0, create);
+				if( hasReal(exp) || create ) {
+					result = getReal(exp, 0, create);
 				}else{
 					return Double.NaN;
 				}
@@ -1346,15 +1343,15 @@ public class RealtimeValues implements DataProviding, Commandable {
 			}
 		}else if (parts.size()==3){
 			if( !NumberUtils.isCreatable(parts.get(0))) {
-				if( hasDouble(parts.get(0)) || create ) {
-					parts.set(0, "" + getDouble(parts.get(0), 0, create));
+				if( hasReal(parts.get(0)) || create ) {
+					parts.set(0, "" + getReal(parts.get(0), 0, create));
 				}else{
 					return Double.NaN;
 				}
 			}
 			if( !NumberUtils.isCreatable(parts.get(2))) {
-				if( hasDouble(parts.get(2)) || create ) {
-					parts.set(2, "" + getDouble(parts.get(2), 0, create));
+				if( hasReal(parts.get(2)) || create ) {
+					parts.set(2, "" + getReal(parts.get(2), 0, create));
 				}else{
 					return Double.NaN;
 				}
@@ -1396,7 +1393,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 							.add(green+"  rtvals:groups"+reg+" -> Get a listing of all the available groups")
 							.add(green+"  rtvals:group,groupid"+reg+" -> Get a listing of all rtvals belonging to the group")
 							.add(green+"  rtvals:name,valname"+reg+" -> Get a listing of all rtvals with the given valname (independent of group)")
-							.add(green+"  rtvals:resetgroup,groupid"+reg+" -> Reset the integers and real/double rtvals in the given group");
+							.add(green+"  rtvals:resetgroup,groupid"+reg+" -> Reset the integers and real rtvals in the given group");
 					return join.toString();
 				case "store": return  storeValsInXml(false)?"Written in xml":"Failed to write to xml";
 				case "reload":
@@ -1412,7 +1409,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 				case "name"	:  return getAllIDsList(cmds[1],html);
 				case "resetgroup":
 					int a = updateIntegerGroup(cmds[1],-999);
-					a += updateDoubleGroup(cmds[1],Double.NaN);
+					a += updateRealGroup(cmds[1],Double.NaN);
 					return "Reset "+a+" vals.";
 			}
 		}
@@ -1424,23 +1421,23 @@ public class RealtimeValues implements DataProviding, Commandable {
 	 * @param html Use html formatting or telnet
 	 * @return The listing
 	 */
-	public String getRTValsGroupList(String group, boolean showDoubles, boolean showFlags, boolean showTexts, boolean showInts, boolean html) {
+	public String getRTValsGroupList(String group, boolean showReals, boolean showFlags, boolean showTexts, boolean showInts, boolean html) {
 		String eol = html ? "<br>" : "\r\n";
 		String title = html ? "<b>Group: " + group + "</b>" : TelnetCodes.TEXT_CYAN + "Group: " + group + TelnetCodes.TEXT_YELLOW;
 		String space = html ? "  " : "  ";
 
 		StringJoiner join = new StringJoiner(eol, title + eol, "");
 		join.setEmptyValue("None yet");
-		if (showDoubles){
-			doubleVals.values().stream().filter(dv -> dv.group().equalsIgnoreCase(group))
-					.sorted((dv1, dv2) -> {
-						if (dv1.order() != dv2.order()) {
-							return Integer.compare(dv1.order(), dv2.order());
+		if (showReals){
+			realVals.values().stream().filter(rv -> rv.group().equalsIgnoreCase(group))
+					.sorted((rv1, rv2) -> {
+						if (rv1.order() != rv2.order()) {
+							return Integer.compare(rv1.order(), rv2.order());
 						} else {
-							return dv1.name().compareTo(dv2.name());
+							return rv1.name().compareTo(rv2.name());
 						}
 					})
-					.map(dv -> space + dv.name() + " : " + dv) //Change it to strings
+					.map(rv -> space + rv.name() + " : " + rv) //Change it to strings
 					.forEach(join::add); // Then add the sorted strings
 		}
 		if( showInts ){
@@ -1481,8 +1478,8 @@ public class RealtimeValues implements DataProviding, Commandable {
 		}else{
 			regex=name;
 		}
-		doubleVals.values().stream().filter( dv -> dv.name().matches(regex))
-				.forEach(dv -> join.add(space+(dv.group().isEmpty()?"":dv.group()+" -> ")+dv.name()+" : "+dv));
+		realVals.values().stream().filter(rv -> rv.name().matches(regex))
+				.forEach(rv -> join.add(space+(rv.group().isEmpty()?"":rv.group()+" -> ")+rv.name()+" : "+rv));
 		integerVals.values().stream().filter( iv -> iv.name().matches(regex))
 				.forEach(iv -> join.add(space+(iv.group().isEmpty()?"":iv.group()+" -> ")+iv.name()+" : "+iv));
 		texts.entrySet().stream().filter(ent -> ent.getKey().matches(regex))
@@ -1493,11 +1490,11 @@ public class RealtimeValues implements DataProviding, Commandable {
 	}
 
 	/**
-	 * Get the full listing of all doubles,flags and text, so both grouped and ungrouped
+	 * Get the full listing of all reals,flags and text, so both grouped and ungrouped
 	 * @param html If true will use html newline etc
 	 * @return The listing
 	 */
-	public String getRtvalsList(boolean html, boolean showDoubles, boolean showFlags, boolean showTexts, boolean showInts){
+	public String getRtvalsList(boolean html, boolean showReals, boolean showFlags, boolean showTexts, boolean showInts){
 		String eol = html?"<br>":"\r\n";
 		String space = html?"  ":"  ";
 		StringJoiner join = new StringJoiner(eol,"Status at "+ TimeTools.formatShortUTCNow()+eol+eol,"");
@@ -1505,30 +1502,30 @@ public class RealtimeValues implements DataProviding, Commandable {
 
 		// Find & add the groups
 		for( var group : getGroups() ){
-			var res = getRTValsGroupList(group,showDoubles,showFlags,showTexts,showInts,html);
+			var res = getRTValsGroupList(group,showReals,showFlags,showTexts,showInts,html);
 			if( !res.isEmpty() && !res.equalsIgnoreCase("none yet"))
 				join.add(res).add("");
 		}
 
 		// Add the not grouped ones
-		boolean ngDoubles = doubleVals.values().stream().anyMatch( dv -> dv.group().isEmpty())&&showDoubles;
+		boolean ngReals = realVals.values().stream().anyMatch(rv -> rv.group().isEmpty())&&showReals;
 		boolean ngTexts = !texts.keySet().stream().anyMatch(k -> k.contains("_"))&&showTexts;
 		boolean ngFlags = flagVals.values().stream().anyMatch( fv -> fv.group().isEmpty())&&showFlags;
 		boolean ngIntegers = integerVals.values().stream().anyMatch( iv -> iv.group().isEmpty())&&showInts;
 
-		if( ngDoubles || ngTexts || ngFlags) {
+		if( ngReals || ngTexts || ngFlags) {
 			join.add("");
 			join.add(html ? "<b>Ungrouped</b>" : TelnetCodes.TEXT_CYAN + "Ungrouped" + TelnetCodes.TEXT_YELLOW);
 
-			if (ngDoubles) {
-				join.add(html ? "<b>Doubles</b>" : TelnetCodes.TEXT_BLUE + "Doubles" + TelnetCodes.TEXT_YELLOW);
-				doubleVals.values().stream().filter(dv -> dv.group().isEmpty())
-						.map(dv->space + dv.name() + " : " + dv).sorted().forEach(join::add);
+			if (ngReals) {
+				join.add(html ? "<b>Reals</b>" : TelnetCodes.TEXT_BLUE + "Reals" + TelnetCodes.TEXT_YELLOW);
+				realVals.values().stream().filter(rv -> rv.group().isEmpty())
+						.map(rv->space + rv.name() + " : " + rv).sorted().forEach(join::add);
 			}
 			if (ngIntegers){
 				join.add(html ? "<b>Integers</b>" : TelnetCodes.TEXT_BLUE + "Integers" + TelnetCodes.TEXT_YELLOW);
-				integerVals.values().stream().filter(dv -> dv.group().isEmpty())
-						.map(dv->space + dv.name() + " : " + dv).sorted().forEach(join::add);
+				integerVals.values().stream().filter(iv -> iv.group().isEmpty())
+						.map(iv->space + iv.name() + " : " + iv).sorted().forEach(join::add);
 			}
 			if (ngTexts) {
 				join.add("");
@@ -1559,8 +1556,8 @@ public class RealtimeValues implements DataProviding, Commandable {
 	 * @return The list of the groups
 	 */
 	public List<String> getGroups(){
-		var groups = doubleVals.values().stream()
-				.map(DoubleVal::group)
+		var groups = realVals.values().stream()
+				.map(RealVal::group)
 				.filter(group -> !group.isEmpty()).distinct().collect(Collectors.toList());
 		integerVals.values().stream()
 				.map(IntegerVal::group)

@@ -3,7 +3,7 @@ package util.taskblocks;
 import org.apache.commons.lang3.StringUtils;
 import org.tinylog.Logger;
 import util.data.DataProviding;
-import util.data.DoubleVal;
+import util.data.RealVal;
 import util.math.MathUtils;
 import util.tools.Tools;
 
@@ -40,7 +40,7 @@ public class CheckBlock extends AbstractBlock{
         if( sharedMem==null)
             sharedMem = new ArrayList<>();
         while( sharedMem.size()<=index)
-            sharedMem.add(DoubleVal.newVal("i"+sharedMem.size()).value(0));
+            sharedMem.add(RealVal.newVal("i"+sharedMem.size()).value(0));
         sharedMem.get(index).updateValue(val);
         return true;
     }

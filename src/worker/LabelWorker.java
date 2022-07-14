@@ -301,7 +301,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				val = NumberUtils.createInteger(data);
 			}
 			if( !Double.isNaN(val) ){
-				dp.setDouble(param,val);
+				dp.setReal(param,val);
 			}else{
 				Logger.warn("Tried to convert "+data+" from "+origin+" to a double...");
 			}
@@ -656,8 +656,8 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 									if( !cmds[i+2].equalsIgnoreCase(".")) {
 										var gr = f.getAttribute("group");
 										gr=(gr.isEmpty()?"":gr+"_");
-										if( !dp.hasDouble(gr+cmds[i + 2])){
-											dp.renameDouble( gr+f.getTextContent(),gr+cmds[i + 2],false );
+										if( !dp.hasReal(gr+cmds[i + 2])){
+											dp.renameReal( gr+f.getTextContent(),gr+cmds[i + 2],false );
 											f.setTextContent(cmds[i + 2]);
 										}else{
 											return "Failed to rename to already existing one";

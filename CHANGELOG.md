@@ -46,11 +46,13 @@ the rtvals commands
 - Group can't contain _, this is now enforced
 - Generics inside a path now get the id from the path id instead of the file
 - If a value wasn't found, the rtvals are updated with NaN if double/real or Max_integer for integer 
+
 ### Other fixes
 - Here and there the relative paths weren't converted to correct absolute ones
 - ModbusTCP didn't use the inherited timestamp field
 - raw: stops again when issue'ing empty cmd
 - Interval task with delay more than 48 hours now works properly  
+- Forwards, now giving a label with xf:alter does request src
 
 ## 0.11.x
 - Goals for this version series (removed when they are done)
