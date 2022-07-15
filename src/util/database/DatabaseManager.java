@@ -443,7 +443,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
                         .add("  macro -> an at runtime determined value that can be used to define the rtval reference").add("");
                 join.add(TelnetCodes.TEXT_GREEN+"Connect to a database"+TelnetCodes.TEXT_YELLOW)
                         .add("  dbm:addmssql,id,db name,ip:port,user:pass -> Adds a MSSQL server on given ip:port with user:pass")
-                        .add("  dbm:addmysql,id,db name,ip:port,user:pass -> Adds a MSSQL server on given ip:port with user:pass")
+                        .add("  dbm:addmysql,id,db name,ip:port,user:pass -> Adds a MySQL server on given ip:port with user:pass")
                         .add("  dbm:addmariadb,id,db name,ip:port,user:pass -> Adds a MariaDB server on given ip:port with user:pass")
                         .add("  dbm:addsqlite,id(,filename) -> Creates an empty sqlite database, filename and extension optional default db/id.sqlite")
                         .add("  dbm:addinfluxdb,id,db name,ip:port,user:pass -> Adds a Influxdb server on given ip:port with user:pass")
@@ -609,13 +609,15 @@ public class DatabaseManager implements QueryWriting, Commandable {
                                 for( int a=2;a<cmds.length;a++){
                                     var spl = cmds[a].split(":");
                                     switch(spl[0]){
-                                        case "ts":spl[0]="timestamp";break;
-                                        case "i":spl[0]="integer";break;
-                                        case "r": case "d":spl[0]="real";break;
-                                        case "t":spl[0]="text";break;
-                                        case "udt":spl[0]="utcdatetime";break;
-                                        case "ldt":spl[0]="localdatetime";break;
+                                        case "timestamp":case "ts":spl[0]="timestamp";break;
+                                        case "integer":case "i":spl[0]="integer";break;
+                                        case "real": case "r": case "d":spl[0]="real";break;
+                                        case "text": case "t":spl[0]="text";break;
+                                        case "utc":spl[0]="utcnow";break;
+                                        case "ltc":spl[0]="localdtnow";break;
                                         case "dt":spl[0]="datetime";break;
+                                        default:
+                                            return "Invalid column type: "+spl[0];
                                     }
                                     fab.addChild(spl[0], spl[1]);
                                     if( spl.length==3)

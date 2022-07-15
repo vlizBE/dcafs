@@ -1050,13 +1050,20 @@ public class RealtimeValues implements DataProviding, Commandable {
 	public int addRequest(Writable writable, String type, String req) {
 
 		switch (type) {
-			case "rtval": case "double": case "real":
+			case "double": case "real":
 				var list = doubleVals.entrySet().stream()
 							.filter(e -> e.getKey().matches(req)) // matches the req
 							.map( e->e.getValue()) // Only care about the values
 							.collect(Collectors.toList());
 				list.forEach( dv -> dv.addTarget(writable));
 				return list.size();
+			case "int":
+				var ints=integerVals.entrySet().stream()
+						.filter(e -> e.getKey().matches(req)) // matches the req
+						.map( e->e.getValue()) // Only care about the values
+						.collect(Collectors.toList());
+				ints.forEach( iv -> iv.addTarget(writable));
+				return ints.size();
 			case "text":
 				var t = textRequest.get(req);
 				if( t == null) {

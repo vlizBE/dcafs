@@ -743,6 +743,7 @@ public class SqlTable {
         for( char c : format.toCharArray() ){
             switch(c){
                 case 't': fab.addChild( "timestamp","columnname"); break;
+                case 'u': fab.addChild( "utcnow","columnname"); break;
                 case 'r': fab.addChild( "real","columnname"); break;
                 case 'i': fab.addChild( "integer","columnname"); break;
                 case 'c': fab.addChild( "text","columnname"); break;

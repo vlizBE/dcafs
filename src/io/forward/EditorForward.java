@@ -53,6 +53,7 @@ public class EditorForward extends AbstractForward{
                 .add("charsplit -> Splits the given data on the char positions and combines with first used delimiter")
                 .add("    fe. <edit type='charsplit'>1,4,7 </edit>  --> 1,6:2,5:1,2")
                 .add("redate -> Get the value at index according to delimiter, then go 'from' one date(time) format to the format in the value given")
+                .add("    fe. <edit type='redate' from='yy:dd:MM' >dd_MMMM_yy</edit>  --> 25_december_16")
                 .add("retime -> Same as redate but for only time")
                 .add("    fe. <edit type='retime' from='HH:mm:ss' >HH-mm</edit>  --> 16-25")
                 .add("replace -> Replace 'find' with the value given (NOTE: 'Value given' can't be a whitespace character)")

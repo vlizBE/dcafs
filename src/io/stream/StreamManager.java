@@ -637,9 +637,9 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 					.add("   - an eol (end of line), the default is crlf")
 					.add("   - ...");
 				join.add("").add(TelnetCodes.TEXT_GREEN+"Add new streams"+TelnetCodes.TEXT_YELLOW)
-					.add(" ss:addtcp,id,ip:port,label -> Add a TCP stream to xml and try to connect")
-					.add(" ss:addudp,id,ip:port,label -> Add a UDP stream to xml and connect")
-					.add(" ss:addserial,id,port:baudrate,label -> Add a serial stream to xml and try to connect" )
+					.add(" ss:addtcp,id,ip:port(,label) -> Add a TCP stream to xml (optional label) and try to connect")
+					.add(" ss:addudp,id,ip:port(,label) -> Add a UDP stream to xml (optional label) and connect")
+					.add(" ss:addserial,id,port:baudrate(,label) -> Add a serial stream to xml (optional label) and try to connect" )
 					.add(" ss:addlocal,id,label,source -> Add a internal stream that handles internal data")
 				.add("").add(TelnetCodes.TEXT_GREEN+"Info about streams"+TelnetCodes.TEXT_YELLOW)
 					.add(" ss:labels -> get active labels.")
@@ -736,9 +736,9 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 				stream.addTriggeredAction(event,cmd);
 				return fab.build()?"Trigger added":"Altering xml failed";
 			case "alter":
-				stream = streams.get(cmds[1].toLowerCase());
 				if( cmds.length != 3)
 					return "Bad amount of arguments, should be ss:alter,id,param:value";
+				stream = streams.get(cmds[1].toLowerCase());
 
 				if( stream == null )
 					return "No such stream: "+cmds[1];
