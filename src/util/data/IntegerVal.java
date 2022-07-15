@@ -34,21 +34,21 @@ public class IntegerVal extends AbstractVal implements NumericVal{
     enum TRIGGERTYPE {ALWAYS,CHANGED,STDEV,COMP};
 
     /**
-     * Constructs a new DoubleVal with the given group and name
+     * Constructs a new RealVal with the given group and name
      *
-     * @param group The group this DoubleVal belongs to
-     * @param name The name for the DoubleVal
-     * @return The constructed DoubleVal
+     * @param group The group this RealVal belongs to
+     * @param name The name for the RealVal
+     * @return The constructed RealVal
      */
     public static IntegerVal newVal(String group, String name){
         return new IntegerVal().group(group).name(name);
     }
 
     /**
-     * Construct a new DoubleVal with the given id which is the combination of the group and name separated with an
+     * Construct a new RealVal with the given id which is the combination of the group and name separated with an
      * underscore
      * @param combined group + underscore + name = id
-     * @return the constructed DoubleVal
+     * @return the constructed RealVal
      */
     public static IntegerVal newVal(String combined){
         int us = combined.indexOf("_");
@@ -150,7 +150,7 @@ public class IntegerVal extends AbstractVal implements NumericVal{
         return super.enableHistory(count);
     }
     /**
-     * Reset this DoubleVal to its default value
+     * Reset this RealVal to its default value
      */
     @Override
     public void reset(){
@@ -323,7 +323,7 @@ public class IntegerVal extends AbstractVal implements NumericVal{
     private class TriggeredCmd{
         String cmd; // The cmd to issue
         String ori; // The compare before it was converted to a function (for toString purposes)
-        DoubleVal.TRIGGERTYPE type;
+        RealVal.TRIGGERTYPE type;
         Function<Double,Boolean> comp; // The compare after it was converted to a function
         boolean triggered=false; // The last result of the comparison
 
@@ -336,13 +336,13 @@ public class IntegerVal extends AbstractVal implements NumericVal{
         public TriggeredCmd( String cmd, String trigger){
             this.cmd=cmd;
             this.ori=trigger;
-            type= DoubleVal.TRIGGERTYPE.COMP;
+            type= RealVal.TRIGGERTYPE.COMP;
             switch( trigger ){
-                case "": case "always": type= DoubleVal.TRIGGERTYPE.ALWAYS; break;
-                case "changed": type= DoubleVal.TRIGGERTYPE.CHANGED; break;
+                case "": case "always": type= RealVal.TRIGGERTYPE.ALWAYS; break;
+                case "changed": type= RealVal.TRIGGERTYPE.CHANGED; break;
                 default:
                     if( trigger.contains("stdev")) {
-                        type = DoubleVal.TRIGGERTYPE.STDEV;
+                        type = RealVal.TRIGGERTYPE.STDEV;
                         trigger=trigger.replace("stdev","");
                     }
                     comp= MathUtils.parseSingleCompareFunction(trigger);

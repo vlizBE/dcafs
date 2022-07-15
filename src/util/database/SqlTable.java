@@ -647,7 +647,7 @@ public class SqlTable {
                             val = NumberUtils.toInt(def);
                     }
                 }else if( col.type == COLUMN_TYPE.REAL){
-                    var dvOpt = dp.getDoubleVal(ref);
+                    var dvOpt = dp.getRealVal(ref);
                     val = dvOpt.isPresent()?dvOpt.get().value():null;
                     if( val==null && col.hasDefault )
                         val = NumberUtils.createDouble(def);

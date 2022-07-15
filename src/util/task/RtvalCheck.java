@@ -137,7 +137,7 @@ public class RtvalCheck {
             }else if( is.get(a).startsWith("issue:")){
                 vals[a] = dp.getActiveIssues().contains(is.get(a).substring(5))?1.0:0;
             }else{
-                vals[a] = dp.getDouble(is.get(a),-999);
+                vals[a] = dp.getReal(is.get(a),-999);
             }
         }
         for( var comp : comparisons ){
@@ -163,7 +163,7 @@ public class RtvalCheck {
             }else if( i.startsWith("issue:")){
                 rep=rep.replace(i,dp.getActiveIssues().contains(i.substring(5))?"true":"false");
             }else{
-                rep=rep.replace(i,""+dp.getDouble(i,-999));
+                rep=rep.replace(i,""+dp.getReal(i,-999));
             }
         }
         return ori +" -> "+rep + "=> "+test(dp);

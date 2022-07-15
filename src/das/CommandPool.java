@@ -436,7 +436,6 @@ public class CommandPool {
 						.add("   -> raw:streamid -> Show the data received at the stream with the given id eg. raw:gps")
 						.add("   -> raw:label:streamlabel -> Show the data received at the streams with the given label")
 						.add("   -> mqtt:forward,id -> Show the data received from the mqtt broker with the given id")
-						.add("   -> mqtt:forward,id -> Show the data received from the mqtt broker with the given id")
 						.add("   -> i2c:forward,id -> Show the data received from the i2c device with the given id");
 					join.add(TelnetCodes.TEXT_GREEN+"3) Alter the data stream to a delimited set of values"+TelnetCodes.TEXT_YELLOW)
 						.add("   -> Use MathForward to apply arithmetic operations on it, see mf:?")

@@ -1,7 +1,6 @@
 package util.data;
 
 import das.IssuePool;
-import util.gis.Waypoint;
 import util.gis.Waypoints;
 import util.xml.XMLfab;
 
@@ -19,16 +18,16 @@ public interface DataProviding {
     String buildNumericalMem( String exp, ArrayList<NumericVal> nums, int offset);
 
     /* Double */
-    Optional<DoubleVal> getDoubleVal(String param );
-    DoubleVal getOrAddDoubleVal( String id );
-    boolean renameDouble( String from, String to, boolean alterXml);
-    boolean hasDouble( String id);
-    double getDouble(String id, double defVal, boolean createIfNew);
-    double getDouble(String id, double bad);
+    Optional<RealVal> getRealVal(String param );
+    RealVal getOrAddRealVal(String id );
+    boolean renameReal(String from, String to, boolean alterXml);
+    boolean hasReal(String id);
+    double getReal(String id, double defVal, boolean createIfNew);
+    double getReal(String id, double bad);
 
-    boolean setDouble(String id, double value);
-    boolean updateDouble(String id, double bad);
-    int updateDoubleGroup(String group, double value);
+    boolean setReal(String id, double value);
+    boolean updateReal(String id, double bad);
+    int updateRealGroup(String group, double value);
 
     /* Integer */
     Optional<IntegerVal> getIntegerVal(String param );

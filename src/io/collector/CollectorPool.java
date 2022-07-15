@@ -80,7 +80,7 @@ public class CollectorPool implements Commandable, CollectorFuture {
     public void collectorFinished(String id, String message, Object result) {
         String[] ids = id.split(":");
         if(ids[0].equalsIgnoreCase("math"))
-            dp.setDouble(message,(double)result);
+            dp.setReal(message,(double)result);
     }
     /* *************************************** F I L E C O L L E C T O R ************************************ */
 

@@ -274,14 +274,14 @@ public class Generic {
                     case REAL:
                             if( doubles!=null && doubles.length>entry.index && doubles[entry.index]!=null){
                                 data[a]=doubles[entry.index];
-                                dp.getOrAddDoubleVal( ref ).updateValue( doubles[entry.index] );
+                                dp.getOrAddRealVal( ref ).updateValue( doubles[entry.index] );
                             }else if( NumberUtils.isCreatable(split[entry.index])) {
                                 val = NumberUtils.toDouble(split[entry.index], val);
                                 data[a] = val;
-                                dp.getOrAddDoubleVal( ref ).updateValue( val );
+                                dp.getOrAddRealVal( ref ).updateValue( val );
                             }else{
                                 data[a]=null;
-                                dp.getOrAddDoubleVal( ref ).updateValue( Double.NaN );
+                                dp.getOrAddRealVal( ref ).updateValue( Double.NaN );
                                 if( split[entry.index].isEmpty()){
                                     Logger.error(id +" -> Got an empty value at "+ entry.index+" instead of real for "+ ref);
                                 }else{
