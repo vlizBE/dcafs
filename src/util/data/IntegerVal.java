@@ -58,6 +58,9 @@ public class IntegerVal extends AbstractVal implements NumericVal{
         }
         return new IntegerVal().name(combined);// If no underscore, this means no group id given
     }
+    public String getID(){
+        return group+"_"+name;
+    }
     /* ********************************* Constructing ************************************************************ */
 
     /**

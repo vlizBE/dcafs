@@ -47,20 +47,6 @@ public class RealVal extends AbstractVal implements NumericVal{
         return new RealVal().group(group).name(name);
     }
 
-    /**
-     * Construct a new RealVal with the given id which is the combination of the group and name separated with an
-     * underscore
-     * @param combined group + underscore + name = id
-     * @return the constructed RealVal
-     */
-    public static RealVal newVal(String combined){
-        int us = combined.indexOf("_");
-
-        if( us != -1) { // If this contains an underscore, split it
-            return new RealVal().group(combined.substring(0,us)).name(combined.substring(us+1));
-        }
-        return new RealVal().name(combined);// If no underscore, this means no group id given
-    }
     /* ********************************* Constructing ************************************************************ */
 
     /**
@@ -160,7 +146,7 @@ public class RealVal extends AbstractVal implements NumericVal{
      * @param fd The amount of digits
      * @return This object after setting the digits
      */
-    public RealVal fractionDigits(int fd){
+    public RealVal scale(int fd){
         this.digits=fd;
         return this;
     }
@@ -216,6 +202,9 @@ public class RealVal extends AbstractVal implements NumericVal{
             }
         }
     }
+    public String getID(){
+        return group+"_"+name;
+    }
     /* ***************************************** U S I N G ********************************************************** */
 
     /**
@@ -224,13 +213,11 @@ public class RealVal extends AbstractVal implements NumericVal{
      * @return True when
      */
     public boolean storeInXml( XMLfab fab ){
-        if( !group.isEmpty()) {
-            fab.alterChild("group","id",group)
-                    .down(); // Go down in the group
-            fab.alterChild("real").attr("name",name);
-        }else{
-            fab.alterChild("real").attr("id",id());
-        }
+
+        fab.alterChild("group","id",group)
+                .down(); // Go down in the group
+        fab.alterChild("real").attr("name",name);
+
         fab.attr("unit",unit);
         if( digits !=-1)
             fab.attr("scale",digits);
@@ -241,11 +228,12 @@ public class RealVal extends AbstractVal implements NumericVal{
         fab.up();
         if( !group.isEmpty())
             fab.up(); // Go back up to rtvals
+        fab.build();
         return true;
     }
 
     /**
-     * Get a , delimited string with all the used options
+     * Get a delimited string with all the used options
      * @return The options in a listing or empty if none are used
      */
     private String getOptions(){

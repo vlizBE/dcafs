@@ -11,6 +11,7 @@ import das.CommandPool;
 import io.mqtt.MqttWriting;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
+import util.data.RealVal;
 import util.database.QueryWriting;
 import util.tools.TimeTools;
 import util.xml.XMLfab;
@@ -294,19 +295,30 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 	}
 
 	/* ******************************* D E F A U L T   S T U F F **************************************** */
-	private void storeInDoubleVal(String param, String data, String origin ){
+	private void storeInRealVal(String param, String data, String origin ){
 		try{
+			String[] ids = param.split(",");
+
+			String group = ids.length==1?"":ids[0];
+			String name = ids.length==1?ids[0]:ids[1];
+			String id = group+"_"+name;
+
 			var val = NumberUtils.toDouble(data,Double.NaN);
 			if( Double.isNaN(val) && NumberUtils.isCreatable(data)){
 				val = NumberUtils.createInteger(data);
 			}
+
 			if( !Double.isNaN(val) ){
-				dp.setReal(param,val);
+				if( dp.hasReal(id)){
+					dp.updateReal(id,val);
+				}else{
+					dp.addRealVal( RealVal.newVal(group,name).value(val));
+				}
 			}else{
-				Logger.warn("Tried to convert "+data+" from "+origin+" to a double...");
+				Logger.warn("Tried to convert "+data+" from "+origin+" to a double, but got NaN");
 			}
 		}catch( NumberFormatException e ){
-			Logger.warn("Tried to convert "+data+" from "+origin+" to a double...");
+			Logger.warn("Tried to convert "+data+" from "+origin+" to a double, but got numberformatexception");
 		}
 	}
 	private void checkRead( String from, Writable wr, String id){
@@ -397,7 +409,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 					String readID = label.substring(label.indexOf(":")+1);
 					switch(d.label.split(":")[0]){
 						case "generic": executor.execute( () -> processGeneric(d)); break;
-						case "double": case "real":  executor.execute(() -> storeInDoubleVal(readID,d.getData(),d.getOriginID())); break;
+						case "double": case "real":  executor.execute(() -> storeInRealVal(readID,d.getData(),d.getOriginID())); break;
 						case "valmap":  executor.execute( () -> processValmap(d)); break;
 						case "text":    executor.execute( () -> dp.setText(readID, d.data)); break;
 						case "read":    executor.execute( ()-> checkRead(d.getOriginID(),d.getWritable(),readID) );break;
