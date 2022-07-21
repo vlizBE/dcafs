@@ -103,14 +103,11 @@ public class XMLfab {
     }
 
     /**
-     * Check if a document contains the requested roots
-     * @param xmlDoc The document to check
+     * Check if a document contains the requested roots, creating nodes as needed
+     * @param xmlPath The path to check
      * @param roots The roots to find
      * @return True if found
      */
-    public static boolean hasRoot( Document xmlDoc, String... roots){
-        return new XMLfab(xmlDoc,false).hasRoots(roots);
-    }
     public static boolean hasRoot( Path xmlPath, String... roots){
         return new XMLfab(xmlPath).hasRoots(roots);
     }
@@ -130,7 +127,7 @@ public class XMLfab {
     }
 
     /**
-     * Start a Mathfab based on the xml found at the path and after traversing the given roots/branches
+     * Start a XMLfab based on the xml found at the path and after traversing the given roots/branches
      * @param xmlPath The path on which to find the xml file
      * @param roots The roots to look for
      * @return The fab found
@@ -163,7 +160,7 @@ public class XMLfab {
         return this;
     }
     /**
-     * Get a Element stream with all the elements that match the last item of the given root.
+     * Get an Element stream with all the elements that match the last item of the given root.
      * fe. trunk,branch,twig will return all the twig elements
      * Note that twig can be * because this is considered a special tag that acts as a wildcard
      * @param xmlPath The path to the document
@@ -191,7 +188,7 @@ public class XMLfab {
     }
 
     /**
-     * Get a Element stream with all the elements that match the last item of the given root.
+     * Get an Element stream with all the elements that match the last item of the given root.
      * fe. trunk,branch,twig will return all the twig elements.
      * Note that twig can be * because this is considered a special tag that acts as a wildcard
      * @param xml The source document
