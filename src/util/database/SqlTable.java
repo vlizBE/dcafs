@@ -719,7 +719,7 @@ public class SqlTable {
          */
         public String toString(){ 
             
-            if( type == COLUMN_TYPE.TIMESTAMP && !server ) // Timestamp should be timestamp on a server
+            if( (type == COLUMN_TYPE.TIMESTAMP||type == COLUMN_TYPE.LOCALDTNOW || type== COLUMN_TYPE.UTCDTNOW) && !server ) // Timestamp should be timestamp on a server
                 return title+" TEXT" + (unique?" UNIQUE":"") + (notnull?" NOT NULL":"")+(primary?" PRIMARY KEY":"");
             if( type == COLUMN_TYPE.EPOCH )
                 return title+" REAL" + (unique?" UNIQUE":"") + (notnull?" NOT NULL":"")+(primary?" PRIMARY KEY":"");
