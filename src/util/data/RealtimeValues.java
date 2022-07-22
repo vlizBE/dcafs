@@ -1375,7 +1375,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 
 		// Add the not grouped ones
 		boolean ngReals = realVals.values().stream().anyMatch(rv -> rv.group().isEmpty())&&showReals;
-		boolean ngTexts = texts.keySet().stream().anyMatch(k -> k.contains("_"))&&showTexts;
+		boolean ngTexts = !texts.isEmpty() && !texts.keySet().stream().anyMatch(k -> k.contains("_")) && showTexts;
 		boolean ngFlags = flagVals.values().stream().anyMatch( fv -> fv.group().isEmpty())&&showFlags;
 		boolean ngIntegers = integerVals.values().stream().anyMatch( iv -> iv.group().isEmpty())&&showInts;
 
@@ -1424,10 +1424,12 @@ public class RealtimeValues implements DataProviding, Commandable {
 	public List<String> getGroups(){
 		var groups = realVals.values().stream()
 				.map(RealVal::group)
-				.filter(group -> !group.isEmpty()).distinct().collect(Collectors.toList());
+				.filter(group -> !group.isEmpty()).distinct()
+				.collect(Collectors.toList());
 		integerVals.values().stream()
 				.map(IntegerVal::group)
-				.filter(group -> !group.isEmpty()).distinct()
+				.filter(group -> !group.isEmpty() && !groups.contains(group))
+				.distinct()
 				.forEach(groups::add);
 		texts.keySet().stream()
 						.filter( k -> k.contains("_"))
