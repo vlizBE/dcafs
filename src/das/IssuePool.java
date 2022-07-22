@@ -373,6 +373,8 @@ public class IssuePool implements Commandable{
             active = false;
             totalCycles++;
             lastEndTime = dt;
+            if( lastStartTime==null)
+                return false;
             totalActiveTime += Duration.between(lastStartTime, lastEndTime).getSeconds();
             if( stopCmds != null)
                 stopCmds.forEach( c -> dQueue.add(Datagram.system(c)));

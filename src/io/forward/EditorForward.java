@@ -10,6 +10,7 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.StringJoiner;
@@ -306,9 +307,11 @@ public class EditorForward extends AbstractForward{
         {
             String[] split = input.split(deli);
             if( split.length > index){
-                split[index] = TimeTools.reformatDate(split[index],from,to);
-                if( split[index].isEmpty())
+                split[index] = TimeTools.reformatDate(split[index], from, to);
+                if( split[index].isEmpty()) {
+                    Logger.error( getID() + " -> Failed to convert datetime "+split[index]);
                     return input;
+                }
                 return String.join(delimiter,split);
             }
             Logger.error(id+" -> To few elements after split for redate");

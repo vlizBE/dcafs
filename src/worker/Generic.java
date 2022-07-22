@@ -260,7 +260,8 @@ public class Generic {
                             if( dp.hasInteger(ref) ){
                                 dp.updateInteger(ref,(int)val);
                             }else{
-                                dp.addIntegerVal( IntegerVal.newVal(entry.group, entry.name).value((int)val) );
+                                var iv = IntegerVal.newVal(entry.group, entry.name).value((int)val);
+                                dp.addIntegerVal( iv, true );
                             }
                             break;
                     case REAL:
@@ -278,9 +279,9 @@ public class Generic {
                             }
                             data[a] = val;
                             if( dp.hasReal(ref) ){
-                                dp.updateReal(ref,doubles[entry.index]);
+                                dp.updateReal(ref,val);
                             }else{
-                                dp.addRealVal(RealVal.newVal(entry.group, entry.name).value(doubles[entry.index]));
+                                dp.addRealVal(RealVal.newVal(entry.group, entry.name).value(val),true);
                             }
                             break;                
                     case TEXT: case TAG:
@@ -549,10 +550,10 @@ public class Generic {
         }
 
         public String toString(){
-            return "At ["+index+"] get a "+type+" called "+ name + (group.isEmpty()?"":" in group '"+group+"'");
+            return "At ["+index+"] get a "+type+" called "+ name + (group.isEmpty()?" in default group":" in group '"+group+"'");
         }
         public String getID(){
-            return group.isEmpty()? name :group+"_"+ name;
+            return group.isEmpty()? name:group+"_"+name;
         }
     }
 }

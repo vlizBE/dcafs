@@ -24,6 +24,7 @@ From 0.5.0 onwards, this should be better documented...
 ## 1.0.0
 - Updated dependencies
 - Now using java 17 (new lts)
+- DoubleVal is now RealView, so real is used throughout instead of mix of double/real
 
 ### General
 - Clean up, remove unused stuff etc
@@ -37,6 +38,8 @@ From 0.5.0 onwards, this should be better documented...
 - No longer show ungrouped when there's a grouped textval
 - IntegerVals now show up in the rtvals listing and are available for
 the rtvals commands
+- Group is now mandatory (empty group also exists)
+- Removed the option to use {D:...} etc, rtvals need be be defined instead
 
 ### Generics
 - Can't add a generic with duplicate id through telnet

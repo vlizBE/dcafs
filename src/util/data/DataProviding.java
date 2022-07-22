@@ -19,7 +19,7 @@ public interface DataProviding {
 
     /* Real */
     Optional<RealVal> getRealVal(String id );
-    boolean addRealVal( RealVal rv );
+    boolean addRealVal( RealVal rv, boolean storeInXML );
     boolean renameReal(String from, String to, boolean alterXml);
     boolean hasReal(String id);
     double getReal(String id, double bad);
@@ -29,7 +29,7 @@ public interface DataProviding {
     /* Integer */
     Optional<IntegerVal> getIntegerVal(String id );
     IntegerVal addIntegerVal( String group, String name );
-    public IntegerVal addIntegerVal( IntegerVal iv );
+    IntegerVal addIntegerVal(IntegerVal iv, boolean storeInXML);
     boolean renameInteger( String from, String to, boolean alterXml);
     boolean hasInteger( String id);
     int getInteger(String id, int bad);

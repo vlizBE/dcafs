@@ -151,8 +151,9 @@ public class DAS implements Commandable{
             /* CommandPool */
             commandPool = new CommandPool( workPath, dQueue );
             addCommandable(rtvals.getIssuePool(),"issue","issues");
-            addCommandable("flags;fv;reals;real;rv;texts;tv",rtvals);
+            addCommandable("flags;fv;reals;real;rv;texts;tv;int;integer",rtvals);
             addCommandable(rtvals,"rtval","rtvals");
+            addCommandable("stop",rtvals);
             addCommandable( "wpts",rtvals.enableWaypoints(nettyGroup) );
             addCommandable(dbManager,"dbm","myd");
             addCommandable(this,"st");

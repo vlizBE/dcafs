@@ -190,10 +190,10 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 		return gen;
 	}
 	public String getGenericInfo() {
-		StringJoiner join = new StringJoiner("\r\n", "Generics:\r\n", "\r\n");
+		StringJoiner join = new StringJoiner("\r\n", "Generics:\r\n", "");
 		join.setEmptyValue("None yet");
 		for (Generic gen : generics.values()) {
-			join.add(gen.toString() + "\r\n");
+			join.add(gen.toString());
 		}
 		return join.toString();
 	}
@@ -312,7 +312,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 				if( dp.hasReal(id)){
 					dp.updateReal(id,val);
 				}else{
-					dp.addRealVal( RealVal.newVal(group,name).value(val));
+					dp.addRealVal( RealVal.newVal(group,name).value(val),true);
 				}
 			}else{
 				Logger.warn("Tried to convert "+data+" from "+origin+" to a double, but got NaN");

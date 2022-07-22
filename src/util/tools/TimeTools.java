@@ -49,7 +49,7 @@ public class TimeTools {
      * @param outputFormat The desired format for the timestamp
      * @return The input timestamp with the desired output format
      */
-    public static String reformatDate(String date, String inputFormat, String outputFormat) {
+    public static String reformatDate(String date, String inputFormat, String outputFormat){
         try{
             LocalDateTime dt = LocalDateTime.parse(date, DateTimeFormatter.ofPattern(inputFormat).withLocale(Locale.ENGLISH));
             if (dt != null) {
@@ -62,7 +62,7 @@ public class TimeTools {
                     if (dt != null)
                         return dt.format( DateTimeFormatter.ofPattern(outputFormat) );
                 }catch(DateTimeParseException f) {
-                    Logger.error(f);
+                    Logger.error(f.getMessage());
                 }
             }else{
                 Logger.error(e);

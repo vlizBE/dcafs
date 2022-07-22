@@ -44,21 +44,9 @@ public class IntegerVal extends AbstractVal implements NumericVal{
         return new IntegerVal().group(group).name(name);
     }
 
-    /**
-     * Construct a new RealVal with the given id which is the combination of the group and name separated with an
-     * underscore
-     * @param combined group + underscore + name = id
-     * @return the constructed RealVal
-     */
-    public static IntegerVal newVal(String combined){
-        int us = combined.indexOf("_");
-
-        if( us != -1) { // If this contains an underscore, split it
-            return new IntegerVal().group(combined.substring(0,us)).name(combined.substring(us+1));
-        }
-        return new IntegerVal().name(combined);// If no underscore, this means no group id given
-    }
     public String getID(){
+        if( group.isEmpty())
+            return name;
         return group+"_"+name;
     }
     /* ********************************* Constructing ************************************************************ */
@@ -205,22 +193,18 @@ public class IntegerVal extends AbstractVal implements NumericVal{
      * @return True when
      */
     public boolean storeInXml( XMLfab fab ){
-        if( !group.isEmpty()) {
-            fab.alterChild("group","id",group)
+
+        fab.alterChild("group","id",group)
                     .down(); // Go down in the group
-            fab.alterChild("integer").attr("name",name);
-        }else{
-            fab.alterChild("integer").attr("id",id());
-        }
+        fab.alterChild("integer").attr("name",name);
+
         fab.attr("unit",unit);
 
         var opts = getOptions();
         if( !opts.isEmpty())
             fab.attr("options",opts);
         storeTriggeredCmds(fab.down());
-        fab.up();
-        if( !group.isEmpty())
-            fab.up(); // Go back up to rtvals
+        fab.build();
         return true;
     }
     /**

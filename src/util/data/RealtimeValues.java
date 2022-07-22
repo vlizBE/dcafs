@@ -79,11 +79,11 @@ public class RealtimeValues implements DataProviding, Commandable {
 		readingXML=true;
 		fab.getChildren("group").forEach( // The tag * is special and acts as wildcard
 				rtval -> {
+					// Both id and name are valid attributes for the node name that forms the full id
+					var groupName = XMLtools.getStringAttribute(rtval,"id",""); // get the node id
+					groupName = XMLtools.getStringAttribute(rtval,"name",groupName);
 					for( var groupie : XMLtools.getChildElements(rtval)){ // Get the nodes inside the group node
-						// Both id and name are valid attributes for the node name that forms the full id
 						// First check if id is used
-						var groupName = XMLtools.getStringAttribute(groupie,"id",""); // get the node id
-						groupName = XMLtools.getStringAttribute(groupie,"name",groupName);
 						processRtvalElement(groupie, groupName, defReal, defText, defFlag,defInteger);
 					}
 				}
@@ -100,13 +100,16 @@ public class RealtimeValues implements DataProviding, Commandable {
 	 * @param defFlag The default boolean value
 	 */
 	private void processRtvalElement(Element rtval, String group, double defReal, String defText, boolean defFlag, int defInteger ){
-		String name = XMLtools.getChildValueByTag(rtval,"name","");
-		String id = group+"_"+name;
+		String name = XMLtools.getStringAttribute(rtval,"name","");
+		name = XMLtools.getStringAttribute(rtval,"id",name);
+		if( name.isEmpty())
+			name = rtval.getTextContent();
+		String id = group.isEmpty()?name:group+"_"+name;
 
 		switch( rtval.getTagName() ){
 			case "double": case "real":
 				if( !hasReal(id)) // If it doesn't exist yet
-					addRealVal( RealVal.newVal(group,name)); // create it
+					addRealVal( RealVal.newVal(group,name),false); // create it
 
 				var rv = getRealVal(id).get();
 
@@ -136,7 +139,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 				break;
 			case "integer": case "int":
 				if( !hasInteger(id)) // If it doesn't exist yet
-					addIntegerVal(group,name); // create it
+					addIntegerVal( IntegerVal.newVal(group,name),false); // create it
 
 				var iv = getIntegerVal(id).get();//
 
@@ -516,9 +519,11 @@ public class RealtimeValues implements DataProviding, Commandable {
 	/* ************************************ R E A L V A L ***************************************************** */
 
 	@Override
-	public boolean addRealVal(RealVal rv) {
+	public boolean addRealVal(RealVal rv, boolean storeInXML) {
 		if( realVals.containsKey(rv.getID()))
 			return false;
+		if(storeInXML)
+			rv.storeInXml(XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals"));
 		return realVals.put(rv.getID(),rv)==null;
 	}
 
@@ -643,21 +648,24 @@ public class RealtimeValues implements DataProviding, Commandable {
 	/**
 	 * Retrieves the id or adds it if it doesn't exist yet
 	 * @param iv The IntegerVal to add
+	 * @param xmlStore Whether it needs to be stored in xml
 	 * @return The object if found or made or null if something went wrong
 	 */
-	public IntegerVal addIntegerVal( IntegerVal iv ){
+	public IntegerVal addIntegerVal( IntegerVal iv, boolean xmlStore ){
 		if( iv==null)
 			return null;
 
 		var val = integerVals.get(iv.getID());
 		if( !integerVals.containsKey(iv.getID())){
 			integerVals.put(iv.getID(),iv);
+			if(xmlStore)
+				iv.storeInXml(XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals"));
 			return iv;
 		}
 		return val;
 	}
 	public IntegerVal addIntegerVal( String group, String name ){
-		return addIntegerVal( IntegerVal.newVal(group,name));
+		return addIntegerVal( IntegerVal.newVal(group,name),true);
 	}
 	public boolean renameInteger( String from, String to, boolean alterXml){
 		if( hasInteger(to) ){
@@ -857,17 +865,6 @@ public class RealtimeValues implements DataProviding, Commandable {
 
 		int size = flagVals.size();
 		getOrAddFlagVal(id).setState(state);
-		//XMLfab fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
-		//String[] ids = id.split("_");
-		/*if( ids.length>1) {
-			var opt = fab.hasChild("group", "id", ids[0]);
-			if( opt.isEmpty())
-				return false;
-			fab = opt.get();
-		}*/
-		//fab.alterChild("flag", "name", ids[1]).content(""+state);
-		//fab.build();
-
 		return size==flagVals.size();
 	}
 	public ArrayList<String> listFlags(){
@@ -915,12 +912,17 @@ public class RealtimeValues implements DataProviding, Commandable {
 
 		switch (type) {
 			case "rtval": case "double": case "real":
-				var list = realVals.entrySet().stream()
-							.filter(e -> e.getKey().matches(req)) // matches the req
-							.map( e->e.getValue()) // Only care about the values
-							.collect(Collectors.toList());
-				list.forEach( rv -> rv.addTarget(writable));
-				return list.size();
+				var rv = realVals.get(req);
+				if( rv==null)
+					return 0;
+				rv.addTarget(writable);
+				return 1;
+			case "int": case "integer":
+				var iv = integerVals.get(req);
+				if( iv==null)
+					return 0;
+				iv.addTarget(writable);
+				return 1;
 			case "text":
 				var t = textRequest.get(req);
 				if( t == null) {
@@ -940,7 +942,11 @@ public class RealtimeValues implements DataProviding, Commandable {
 		}
 		return 0;
 	}
-
+	public void removeRequests( Writable wr ){
+		realVals.values().forEach( rv -> rv.removeTarget(wr));
+		integerVals.values().forEach( iv -> iv.removeTarget(wr));
+		textRequest.forEach( (k,v) -> v.remove(wr));
+	}
 	/* ************************** C O M M A N D A B L E ***************************************** */
 	@Override
 	public String replyToCommand(String[] request, Writable wr, boolean html) {
@@ -952,11 +958,14 @@ public class RealtimeValues implements DataProviding, Commandable {
 				return replyToTextsCmd(request,html);
 			case "flags": case "fv":
 				return replyToFlagsCmd(request,html);
-			case "rtval": case "double": case "real":
+			case "rtval": case "double": case "real": case "int": case "integer":
 				int s = addRequest(wr,request[0],request[1]);
 				return s!=0?"Request added to "+s+" realvals":"Request failed";
 			case "rtvals": case "rvs":
 				return replyToRtvalsCmd(request,wr,html);
+			case "":
+				removeRequests(wr);
+				return "";
 			default:
 				return "unknown command "+request[0]+":"+request[1];
 		}
@@ -1122,42 +1131,10 @@ public class RealtimeValues implements DataProviding, Commandable {
 					return "Not enough arguments given, "+request[0]+":new,id(,value)";
 
 				rv = RealVal.newVal(cmds[1], cmds[2]);
-				if( addRealVal(rv) ) {
-					rv.storeInXml(XMLfab.withRoot(settingsPath, "dcafs", "settings", "rtvals"));
+				if( addRealVal(rv,true) ) {
 					return "New realVal added " + rv.getID() + ", stored in xml";
 				}
 				return "Real already exists";
-
-			/*case "alter":
-				if( cmds.length<3)
-					return "Not enough arguments: "+request[0]+":alter,id,param:value";
-				var vals = cmds[2].split(":");
-				if( vals.length==1)
-					return "Incorrect param:value pair: "+cmds[2];
-				if( !hasReal(cmds[1]))
-					return "No such real yet.";
-				var realVal = getRealVal(cmds[1]).get();
-				var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
-				var fabOpt = fab.selectChildAsParent("group","name",realVal.group());
-				if( fabOpt.isEmpty())
-					return "No such group node";
-				fab = fabOpt.get();
-				fabOpt = fab.hasChild("real","name",realVal.name());
-				if( fabOpt.isEmpty() )
-					return "No such child in the given group";
-				fab=fabOpt.get();
-				switch( vals[0]){
-					case "scale":
-						realVal.scale(NumberUtils.toInt(vals[1]));
-						fab.alterChild("real","id",cmds[1]).attr("scale",realVal.scale()).build();
-						return "Scaling for " +cmds[1]+" set to " + realVal.scale() + " digits";
-					case "unit":
-						realVal.unit(vals[1]);
-						fab.alterChild("real","id",cmds[1]).attr("unit",vals[1]).build();
-						return "Unit for "+cmds[1]+" set to "+vals[1];
-					default:
-						return "unknown parameter: "+vals[0];
-				}*/
 			case "alter":
 				if( cmds.length<3)
 					return "Not enough arguments: "+request[0]+":alter,id,param:value";
@@ -1326,7 +1303,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 		if( showInts ){
 			integerVals.values().stream().filter(iv -> iv.group().equalsIgnoreCase(group))
 					.sorted()
-					.map(iv -> space + iv.name() + " : "+ iv ) // change it to strings
+					.map(iv -> space + iv.name() + " : "+ iv.intValue() ) // change it to strings
 					.forEach(join::add);
 		}
 		if( showTexts ) {
@@ -1392,33 +1369,33 @@ public class RealtimeValues implements DataProviding, Commandable {
 
 		// Add the not grouped ones
 		boolean ngReals = realVals.values().stream().anyMatch(rv -> rv.group().isEmpty())&&showReals;
-		boolean ngTexts = !texts.keySet().stream().anyMatch(k -> k.contains("_"))&&showTexts;
+		boolean ngTexts = texts.keySet().stream().anyMatch(k -> k.contains("_"))&&showTexts;
 		boolean ngFlags = flagVals.values().stream().anyMatch( fv -> fv.group().isEmpty())&&showFlags;
 		boolean ngIntegers = integerVals.values().stream().anyMatch( iv -> iv.group().isEmpty())&&showInts;
 
-		if( ngReals || ngTexts || ngFlags) {
+		if( ngReals || ngTexts || ngFlags || ngIntegers ) {
 			join.add("");
-			join.add(html ? "<b>Ungrouped</b>" : TelnetCodes.TEXT_CYAN + "Ungrouped" + TelnetCodes.TEXT_YELLOW);
+			join.add(html ? "<b>Ungrouped</b>" : TelnetCodes.TEXT_ORANGE + "Ungrouped" + TelnetCodes.TEXT_YELLOW);
 
 			if (ngReals) {
-				join.add(html ? "<b>Reals</b>" : TelnetCodes.TEXT_BLUE + "Reals" + TelnetCodes.TEXT_YELLOW);
+				join.add(html ? "<b>Reals</b>" : TelnetCodes.TEXT_MAGENTA + "Reals" + TelnetCodes.TEXT_YELLOW);
 				realVals.values().stream().filter(rv -> rv.group().isEmpty())
 						.map(rv->space + rv.name() + " : " + rv).sorted().forEach(join::add);
 			}
 			if (ngIntegers){
-				join.add(html ? "<b>Integers</b>" : TelnetCodes.TEXT_BLUE + "Integers" + TelnetCodes.TEXT_YELLOW);
+				join.add(html ? "<b>Integers</b>" : TelnetCodes.TEXT_MAGENTA + "Integers" + TelnetCodes.TEXT_YELLOW);
 				integerVals.values().stream().filter(iv -> iv.group().isEmpty())
 						.map(iv->space + iv.name() + " : " + iv).sorted().forEach(join::add);
 			}
 			if (ngTexts) {
 				join.add("");
-				join.add(html ? "<b>Texts</b>" : TelnetCodes.TEXT_BLUE + "Texts" + TelnetCodes.TEXT_YELLOW);
+				join.add(html ? "<b>Texts</b>" : TelnetCodes.TEXT_MAGENTA + "Texts" + TelnetCodes.TEXT_YELLOW);
 				texts.entrySet().stream().filter(e -> !e.getKey().contains("_"))
 						.map( e -> space + e.getKey() + " : " + e.getValue()).sorted().forEach(join::add);
 			}
 			if (ngFlags) {
 				join.add("");
-				join.add(html ? "<b>Flags</b>" : TelnetCodes.TEXT_BLUE + "Flags" + TelnetCodes.TEXT_YELLOW);
+				join.add(html ? "<b>Flags</b>" : TelnetCodes.TEXT_MAGENTA + "Flags" + TelnetCodes.TEXT_YELLOW);
 				flagVals.values().stream().filter(fv -> fv.group().isEmpty())
 						.map(fv->space + fv.name() + " : " + fv).sorted().forEach(join::add);
 			}
