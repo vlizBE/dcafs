@@ -28,10 +28,6 @@ public class SqlTable {
     boolean ifnotexists = false;
     boolean server = false;
 
-    ArrayList<Object[]> data = new ArrayList<>(); // The data for the default insert statement
-    String prepStatement = "";  // The default insert statement
-
-    PrepStatement defaultPrep;
     HashMap<String,PrepStatement> preps = new HashMap<>();
     String lastError="";
 
@@ -295,18 +291,6 @@ public class SqlTable {
         return this;
     }
 
-    /**
-     * Add a column that contains timestamp data in text format, using the given
-     * alias to link to rtvals
-     * 
-     * @param title The title of the oolumn
-     * @param alias The alias to use to find the data
-     * @return This object
-     */
-    public SqlTable addTimestamp(String title, String alias) {
-        addColumn(new Column(title, alias, COLUMN_TYPE.TIMESTAMP));
-        return this;
-    }
     public SqlTable addLocalDateTime(String title, String alias,boolean now) {
         addColumn(new Column(title, alias, now?COLUMN_TYPE.LOCALDTNOW:COLUMN_TYPE.DATETIME));
         return this;
@@ -327,22 +311,6 @@ public class SqlTable {
         return this;
     }
 
-    /**
-     * Add a column that contains timestamp data in integer format, using the given
-     * alias to link to rtvals
-     * 
-     * @param title The title of the column
-     * @param alias The alias to use to find the data
-     * @return This object
-     */
-    public SqlTable addEpochMillis(String title, String alias) {
-        addColumn(new Column(title, alias, COLUMN_TYPE.EPOCH));
-        return this;
-    }
-    public SqlTable addObject(String title, String alias) {
-        addColumn(new Column(title, alias, COLUMN_TYPE.INTEGER));
-        return this;
-    }
     public SqlTable withDefault(String def) {
         int index = columns.size() - 1;
         columns.get(index).setDefault(def);
@@ -400,16 +368,6 @@ public class SqlTable {
         columns.removeIf(x -> x.title.equalsIgnoreCase(title));
         return a - columns.size();
     }
-
-    /**
-     * Get the amount of columns in this table
-     * 
-     * @return The column count
-     */
-    public int getColumnCount() {
-        return columns.size();
-    }
-
     /**
      * Check if this table has columns
      * 
@@ -457,19 +415,6 @@ public class SqlTable {
         return join.toString();
     }
 
-    /**
-     * Get a stringjoiner that has been set up to create the INSERT statement but
-     * needs the values added
-     * 
-     * @return The stringjoiner to create the INSERT statement
-     */
-    public StringJoiner getInsertJoiner() {
-        StringJoiner cols = new StringJoiner(",");
-        for (Column col : columns) {
-            cols.add(col.title);
-        }
-        return new StringJoiner(",", "INSERT INTO " + name + " (" + cols + ") VALUES (", ");");
-    }
     public int getRecordCount() {        
         return preps.values().stream().mapToInt( p -> p.getData().size()).sum();        
     }
@@ -548,9 +493,6 @@ public class SqlTable {
         else
             return null;
     }
-    public int fillStatement( PreparedStatement ps ) {
-        return fillStatement( "",ps);
-    }
     public int clearRecords( String id, long[] updateCounts ){
         PrepStatement prep = preps.get(id);
         if( prep==null){
@@ -597,9 +539,6 @@ public class SqlTable {
      * @param dp The DataProviding object containing the values
      * @return The INSERT statement or an empty string if a value wasn't found
      */
-    public boolean buildInsert(DataProviding dp ){
-        return buildInsert("",dp,"");
-    }
     public boolean buildInsert( DataProviding dp ,String macro ){
         return buildInsert("",dp,macro);
     }
@@ -653,10 +592,16 @@ public class SqlTable {
                         val = NumberUtils.createDouble(def);
                 }else if( col.type == COLUMN_TYPE.LOCALDTNOW){
                     val = OffsetDateTime.now();
+                    if( !server )
+                        val = val.toString();
                 }else if( col.type == COLUMN_TYPE.UTCDTNOW){
                     val = OffsetDateTime.now(ZoneOffset.UTC);
+                    if( !server )
+                        val = val.toString();
                 }else if( col.type == COLUMN_TYPE.DATETIME){
                     val = TimeTools.parseDateTime(dp.getText(ref,""),"yyyy-MM-dd HH:mm:ss.SSS");
+                    if( !server )
+                        val = val.toString();
                 }
             }catch( NullPointerException e ){
                 Logger.error("Null pointer when looking for "+ref + " type:"+col.type);
