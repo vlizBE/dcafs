@@ -44,7 +44,7 @@ import java.util.concurrent.*;
 
 public class DAS implements Commandable{
 
-    private static final String version = "1.0.0b";
+    private static final String version = "1.0.0d";
 
     private Path settingsPath = Path.of("settings.xml");
     private String workPath=Path.of("").toString();
@@ -151,7 +151,7 @@ public class DAS implements Commandable{
             /* CommandPool */
             commandPool = new CommandPool( workPath, dQueue );
             addCommandable(rtvals.getIssuePool(),"issue","issues");
-            addCommandable("flags;fv;doubles;double;dv;texts;tv",rtvals);
+            addCommandable("flags;fv;reals;real;rv;texts;tv",rtvals);
             addCommandable(rtvals,"rtval","rtvals");
             addCommandable( "wpts",rtvals.enableWaypoints(nettyGroup) );
             addCommandable(dbManager,"dbm","myd");

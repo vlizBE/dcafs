@@ -62,7 +62,7 @@ public class ValMap {
         if (mapped != null) {
             if (!mapped.rtval.isEmpty()) {
                 try {
-                    dp.setReal(mapped.rtval, NumberUtils.createDouble(pair[1]));
+                    dp.updateReal(mapped.rtval, NumberUtils.createDouble(pair[1]));
                 } catch (NumberFormatException e) {
                     Logger.error(id + " -> No valid number in " + data);
                 }

@@ -17,27 +17,23 @@ public interface DataProviding {
     Optional<NumericVal> getNumericVal( String id);
     String buildNumericalMem( String exp, ArrayList<NumericVal> nums, int offset);
 
-    /* Double */
-    Optional<RealVal> getRealVal(String param );
-    RealVal getOrAddRealVal(String id );
+    /* Real */
+    Optional<RealVal> getRealVal(String id );
+    boolean addRealVal( RealVal rv );
     boolean renameReal(String from, String to, boolean alterXml);
     boolean hasReal(String id);
-    double getReal(String id, double defVal, boolean createIfNew);
     double getReal(String id, double bad);
-
-    boolean setReal(String id, double value);
-    boolean updateReal(String id, double bad);
+    boolean updateReal(String id, double value);
     int updateRealGroup(String group, double value);
 
     /* Integer */
-    Optional<IntegerVal> getIntegerVal(String param );
-    IntegerVal getOrAddIntegerVal( String id );
+    Optional<IntegerVal> getIntegerVal(String id );
+    IntegerVal addIntegerVal( String group, String name );
+    public IntegerVal addIntegerVal( IntegerVal iv );
     boolean renameInteger( String from, String to, boolean alterXml);
     boolean hasInteger( String id);
-    int getInteger(String id, int defVal, boolean createIfNew);
     int getInteger(String id, int bad);
 
-    boolean setInteger(String id, int value);
     boolean updateInteger(String id, int bad);
     int updateIntegerGroup(String group, int value);
 

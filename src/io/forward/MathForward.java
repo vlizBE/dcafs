@@ -604,14 +604,11 @@ public class MathForward extends AbstractForward {
                     case "d": case "double": case "r":
                         dataProviding.getRealVal(p[1]).ifPresent( referencedNums::add );
                         break;
-                    case "D":
-                        referencedNums.add( dataProviding.getOrAddRealVal(p[1]) );
+                    case "i": case "int":
+                        dataProviding.getIntegerVal(p[1]).ifPresent( referencedNums::add );
                         break;
                     case "f": case "flag":
                         dataProviding.getFlagVal(p[1]).ifPresent( referencedNums::add );
-                        break;
-                    case "F":
-                        referencedNums.add( dataProviding.getOrAddFlagVal(p[1]));
                         break;
                     default:
                         Logger.error(id+" (mf)-> Operation containing unknown pair: "+p[0]+":"+p[1]);
@@ -692,7 +689,7 @@ public class MathForward extends AbstractForward {
         int scale=-1;
         String ori;          // The expression before it was decoded mainly for listing purposes
         String cmd ="";      // Command in which to replace the $ with the result
-        RealVal update;
+        NumericVal update;
         BigDecimal directSet;
 
         public Operation(String ori,int index){
@@ -702,6 +699,7 @@ public class MathForward extends AbstractForward {
             if( ori.contains(":") && ori.indexOf(":")<ori.indexOf("=") ) { // If this contains : it means it has a reference
                 try {
                     String sub = ori.substring(ori.indexOf(":") + 1, ori.indexOf("}"));
+
                     if (ori.startsWith("{d")) {
                         dataProviding.getRealVal(sub)
                                 .ifPresent(dv -> {
@@ -709,10 +707,17 @@ public class MathForward extends AbstractForward {
                                     doUpdate = true;
                                 });
                         if (!doUpdate)
-                            Logger.warn("Asking to update {d:" + ori.substring(ori.indexOf(":") + 1, ori.indexOf("}") + 1) + " but doesn't exist");
-                    } else if (ori.startsWith("{D:")) {
-                        update = dataProviding.getOrAddRealVal(sub);
-                        doUpdate = true;
+                            Logger.error("Asking to update {d:" + ori.substring(ori.indexOf(":") + 1, ori.indexOf("}") + 1) + " but doesn't exist");
+                    } else if (ori.startsWith("{i")) {
+                        dataProviding.getIntegerVal(sub)
+                                .ifPresent(iv -> {
+                                    update = iv;
+                                    doUpdate = true;
+                                });
+                        if (!doUpdate)
+                            Logger.error("Asking to update {i:" + ori.substring(ori.indexOf(":") + 1, ori.indexOf("}") + 1) + " but doesn't exist");
+                    }else{
+                        Logger.error( "No idea what to do with "+ori);
                     }
                 }catch(IndexOutOfBoundsException e ){
                     Logger.error( id+" (mf) -> Index out of bounds: "+e.getMessage());

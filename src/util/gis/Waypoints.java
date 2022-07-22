@@ -96,9 +96,18 @@ public class Waypoints implements Commandable {
 
         if( rtvals!=null) {
             Logger.info("Looking for lat, lon, sog");
-            latitude = rtvals.getOrAddRealVal(XMLtools.getStringAttribute(wpts, "latval", ""));
-            longitude = rtvals.getOrAddRealVal(XMLtools.getStringAttribute(wpts, "lonval", ""));
-            sog = rtvals.getOrAddRealVal(XMLtools.getStringAttribute(wpts, "sogval", ""));
+            var latOpt = rtvals.getRealVal( XMLtools.getStringAttribute(wpts, "latval", ""));
+            var longOpt = rtvals.getRealVal(XMLtools.getStringAttribute(wpts, "lonval", ""));
+            var sogOpt = rtvals.getRealVal(XMLtools.getStringAttribute(wpts, "sogval", ""));
+
+            if( latOpt.isEmpty() || longOpt.isEmpty() || sogOpt.isEmpty() ){
+                Logger.error( "No corresponding lat/lon/sog realVals found for waypoints");
+                return false;
+            }
+
+            latitude = latOpt.get();
+            longitude = longOpt.get();
+            sog = sogOpt.get();
         }
 
         Logger.info("Reading Waypoints");
@@ -130,7 +139,7 @@ public class Waypoints implements Commandable {
     }
     /**
      * Write the waypoint data to the file it was read fom originally
-     * @param includeTemp Whether or not to also include the temp waypoints
+     * @param includeTemp Whether to also include the temp waypoints
      * @return True if successful
      */
     public boolean storeInXML( boolean includeTemp ){

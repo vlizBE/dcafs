@@ -40,7 +40,7 @@ public class CheckBlock extends AbstractBlock{
         if( sharedMem==null)
             sharedMem = new ArrayList<>();
         while( sharedMem.size()<=index)
-            sharedMem.add(RealVal.newVal("i"+sharedMem.size()).value(0));
+            sharedMem.add(RealVal.newVal("","i"+sharedMem.size()).value(0));
         sharedMem.get(index).updateValue(val);
         return true;
     }

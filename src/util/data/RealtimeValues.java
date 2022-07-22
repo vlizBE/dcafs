@@ -11,6 +11,7 @@ import util.gis.Waypoints;
 import util.math.MathUtils;
 import util.tools.TimeTools;
 import util.tools.Tools;
+import util.xml.XMLdigger;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
@@ -76,24 +77,14 @@ public class RealtimeValues implements DataProviding, Commandable {
 		int defInteger = XMLtools.getIntAttribute(fab.getCurrentElement(),"integerdefault",-999);
 
 		readingXML=true;
-		fab.getChildren("*").forEach( // The tag * is special and acts as wildcard
+		fab.getChildren("group").forEach( // The tag * is special and acts as wildcard
 				rtval -> {
-					String id = XMLtools.getStringAttribute(rtval,"id",""); // get the id of the node
-					if( id.isEmpty()) // Can't do anything without an id
-						return;
-					if( rtval.getTagName().equals("group")){ // If the node is a group node
-						id += "_"; // The id we got is the group id, so add an underscore for the full id with name
-						for( var groupie : XMLtools.getChildElements(rtval)){ // Get the nodes inside the group node
-							// Both id and name are valid attributes for the node name that forms the full id
-							// First check if id is used
-							var gid = XMLtools.getStringAttribute(groupie,"id",""); // get the node id
-							// then check if it has an attribute name and use this instead if found
-							gid = id + XMLtools.getStringAttribute(groupie,"name",gid); //
-							processRtvalElement(groupie, gid, defReal, defText, defFlag,defInteger);
-						}
-					}else { // If it isn't a group node
-						// then the id is the full id
-						processRtvalElement(rtval, id, defReal, defText, defFlag,defInteger);
+					for( var groupie : XMLtools.getChildElements(rtval)){ // Get the nodes inside the group node
+						// Both id and name are valid attributes for the node name that forms the full id
+						// First check if id is used
+						var groupName = XMLtools.getStringAttribute(groupie,"id",""); // get the node id
+						groupName = XMLtools.getStringAttribute(groupie,"name",groupName);
+						processRtvalElement(groupie, groupName, defReal, defText, defFlag,defInteger);
 					}
 				}
 		);
@@ -103,28 +94,26 @@ public class RealtimeValues implements DataProviding, Commandable {
 	/**
 	 * Process a Val node
 	 * @param rtval The node to process
-	 * @param id The id of the Val
+	 * @param group The group of the Val
 	 * @param defReal The default real value
 	 * @param defText The default text value
 	 * @param defFlag The default boolean value
 	 */
-	private void processRtvalElement(Element rtval, String id, double defReal, String defText, boolean defFlag, int defInteger ){
+	private void processRtvalElement(Element rtval, String group, double defReal, String defText, boolean defFlag, int defInteger ){
+		String name = XMLtools.getChildValueByTag(rtval,"name","");
+		String id = group+"_"+name;
+
 		switch( rtval.getTagName() ){
 			case "double": case "real":
-				// Both attributes fractiondigits and scale are valid, so check for both
-				int scale = XMLtools.getIntAttribute(rtval,"fractiondigits",-1);
-				if( scale == -1)
-					scale = XMLtools.getIntAttribute(rtval,"scale",-1);
-
 				if( !hasReal(id)) // If it doesn't exist yet
-					setReal(id,defReal,true); // create it
-				var rv = getRealVal(id).get();//
+					addRealVal( RealVal.newVal(group,name)); // create it
+
+				var rv = getRealVal(id).get();
+
 				rv.reset(); // reset needed if this is called because of reload
-				rv.name(XMLtools.getChildValueByTag(rtval,"name",rv.name()))
-						.group(XMLtools.getChildValueByTag(rtval,"group",rv.group()))
-						.unit(XMLtools.getStringAttribute(rtval,"unit",""))
-						.fractionDigits(scale)
-						.defValue(XMLtools.getDoubleAttribute(rtval,"default",defReal));
+				rv.unit(XMLtools.getStringAttribute(rtval,"unit",""))
+				  .scale(XMLtools.getIntAttribute(rtval,"scale",-1))
+				  .defValue(XMLtools.getDoubleAttribute(rtval,"default",defReal));
 
 					String options = XMLtools.getStringAttribute(rtval,"options","");
 					for( var opt : options.split(",")){
@@ -132,7 +121,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 						switch( arg[0]){
 							case "minmax":  rv.keepMinMax(); break;
 							case "time":    rv.keepTime();   break;
-							case "scale":	rv.fractionDigits( NumberUtils.toInt(arg[1],-1)); break;
+							case "scale":	rv.scale( NumberUtils.toInt(arg[1],-1)); break;
 							case "order":   rv.order( NumberUtils.toInt(arg[1],-1)); break;
 							case "history": rv.enableHistory( NumberUtils.toInt(arg[1],-1)); break;
 						}
@@ -145,15 +134,15 @@ public class RealtimeValues implements DataProviding, Commandable {
 					rv.addTriggeredCmd(trig,cmd);
 				}
 				break;
-			case "integer":case "int":
+			case "integer": case "int":
 				if( !hasInteger(id)) // If it doesn't exist yet
-					setInteger(id,defInteger,true); // create it
+					addIntegerVal(group,name); // create it
+
 				var iv = getIntegerVal(id).get();//
+
 				iv.reset(); // reset needed if this is called because of reload
-				iv.name(XMLtools.getChildValueByTag(rtval,"name",iv.name()))
-						.group(XMLtools.getChildValueByTag(rtval,"group",iv.group()))
-						.unit(XMLtools.getStringAttribute(rtval,"unit",""))
-						.defValue(XMLtools.getIntAttribute(rtval,"default",defInteger));
+				iv.unit(XMLtools.getStringAttribute(rtval,"unit",""))
+				  .defValue(XMLtools.getIntAttribute(rtval,"default",defInteger));
 
 				String opts = XMLtools.getStringAttribute(rtval,"options","");
 				for( var opt : opts.split(",")){
@@ -197,7 +186,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 	/* ************************************* P A R S I N G ********************************************************* */
 	/**
 	 * Simple version of the parse realtime line, just checks all the words to see if any matches the hashmaps.
-	 * It assumes all words are real, but also allows for d:id,t:id and f:id or D: or F: if it should create them
+	 * It assumes all words are reals, but also allows for d:id,t:id and f:id
 	 * @param line The line to parse
 	 * @param error The line to return on an error or 'ignore' if errors should be ignored
 	 * @return The (possibly) altered line
@@ -209,24 +198,25 @@ public class RealtimeValues implements DataProviding, Commandable {
 		for( var word : found ){
 			if( word.contains(":")){ // Check if the word contains a : with means it's {d:id} etc
 				var id = word.split(":")[1];
+				String repl="";
 				switch( word.charAt(0) ) {
 					case 'd': case 'r':
-						if( !hasReal(id)) {
-							Logger.error("No such real "+id+", extracted from "+line);
-							if( !error.equalsIgnoreCase("ignore"))
+						if( hasReal(id) ) { // ID found
+							repl = ""+getReal(id,Double.NaN);
+						}else{
+							Logger.error("No such real "+id+", extracted from "+line); // notify
+							if( !error.equalsIgnoreCase("ignore")) // if errors should be ignored
 								return error;
 						}
-					case 'D': case 'R':
-						line = line.replace(word,""+ getOrAddRealVal(id).value());
 						break;
 					case 'i':
-						if( !hasInteger(id)) {
-							Logger.error("No such integer "+id+", extracted from "+line);
-							if( !error.equalsIgnoreCase("ignore"))
+						if( hasInteger(id) ) { // ID found
+							repl = "" + getInteger(id,Integer.MAX_VALUE);
+						}else{
+							Logger.error("No such integer "+id+", extracted from "+line); // notify
+							if( !error.equalsIgnoreCase("ignore")) // if errors should be ignored
 								return error;
 						}
-					case 'I':
-						line = line.replace(word,""+getOrAddIntegerVal(id).value());
 						break;
 					case 'f':
 						if( !hasFlag(id)) {
@@ -234,10 +224,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 							if( !error.equalsIgnoreCase("ignore"))
 								return error;
 						}
-					case 'F':
-						if( !hasFlag(id))
-							getOrAddFlagVal(id).setState(false);
-						line = line.replace(word, isFlagUp(id) ? "1" : "0");
+						repl = isFlagUp(id) ? "1" : "0";
 						break;
 					case 't': case 'T':
 						var te = texts.get(id);
@@ -254,25 +241,20 @@ public class RealtimeValues implements DataProviding, Commandable {
 						}
 						break;
 				}
+				if( !repl.isEmpty() )
+					line = line.replace(word,repl);
 			}else { // If it doesn't contain : it could be anything...
-				var d = getReal(word, Double.NaN); // First check if it's a real
-				if (!Double.isNaN(d)) {
-					line = line.replace(word, "" + d);
+				if (hasReal(word)) { //first check for real
+					line = line.replace(word, "" + getReal(word,Double.NaN));
  				} else { // if not
-					var i = getInteger(word,Integer.MAX_VALUE);
-					if( i != Integer.MAX_VALUE){
-						line = line.replace(word, "" + i);
+					if( hasInteger(word)){
+						line = line.replace(word, "" + getInteger(word,-999));
 					}else {
 						var t = getText(word, ""); // check if it's a text
-						if (!t.isEmpty()) {
-							line = line.replace(word, t);
+						if (hasText(word)) { //next, try text
+							line = line.replace(word, getText(word,""));
 						} else if (hasFlag(word)) { // if it isn't a text, check if it's a flag
 							line = line.replace(word, isFlagUp(word) ? "1" : "0");
-						} else if (error.equalsIgnoreCase("create")) { // if still not found and error is set to create
-							// add it as a real
-							getOrAddRealVal(word).updateValue(0);
-							Logger.warn("Created realval " + word + " with value 0");
-							line = line.replace(word, "0"); // default of a real is 0
 						} else if (!error.equalsIgnoreCase("ignore")) { // if it's not ignore
 							Logger.error("Couldn't process " + word + " found in " + line); // log it and abort
 							return error;
@@ -303,16 +285,14 @@ public class RealtimeValues implements DataProviding, Commandable {
 		for( var p : pairs ){
 			if(p.length==2) {
 				switch (p[0]) {
-					case "d": case "D": case "r": case "R":
-					case "double": case "real": {
-						var d = p[0].equals("D")||p[0].equals("R")? getOrAddRealVal(p[1]).value(): getReal(p[1], Double.NaN);
+					case "d": case "r": case "double": case "real": {
+						var d = getReal(p[1], Double.NaN);
 						if (!Double.isNaN(d) || !error.isEmpty())
 							line = line.replace("{" + p[0] + ":" + p[1] + "}", Double.isNaN(d) ? error : "" + d);
 						break;
 					}
-					case "i": case "I":
-					case "int": case "integer": {
-						var i = p[0].equals("I")?getOrAddIntegerVal(p[1]).intValue():getInteger(p[1], Integer.MAX_VALUE);
+					case "i": case "int": case "integer": {
+						var i =getInteger(p[1], Integer.MAX_VALUE);
 						if (i != Integer.MAX_VALUE)
 							line = line.replace("{" + p[0] + ":" + p[1] + "}",  "" + i);
 						break;
@@ -323,9 +303,8 @@ public class RealtimeValues implements DataProviding, Commandable {
 						if (!t.isEmpty())
 							line = line.replace("{" + p[0] + ":" + p[1] + "}", t);
 						break;
-					case "f": case "F": case "b":
-					case "flag": {
-						var d = p[0].equalsIgnoreCase("F")?Optional.of(getOrAddFlagVal(p[1])):getFlagVal(p[1]);
+					case "f":  case "b":case "flag": {
+						var d = getFlagVal(p[1]);
 						var r = d.map(FlagVal::toString).orElse(error);
 						if (!r.isEmpty())
 							line = line.replace("{" + p[0] + ":" + p[1] + "}", r);
@@ -381,8 +360,8 @@ public class RealtimeValues implements DataProviding, Commandable {
 					continue;
 				int index;
 				switch(p[0]){
-					case "d": case "double": case "D": case "r": case "R": case "real":
-						var d = p[0].equalsIgnoreCase("D")||p[0].equalsIgnoreCase("R")?Optional.of(getOrAddRealVal(p[1])): getRealVal(p[1]);
+					case "d": case "double": case "r": case "real":
+						var d = getRealVal(p[1]);
 						if( d.isPresent() ){
 							index = nums.indexOf(d.get());
 							if(index==-1){
@@ -397,8 +376,8 @@ public class RealtimeValues implements DataProviding, Commandable {
 							return "";
 						}
 						break;
-					case "int": case "i": case "I": case "INT":
-						var ii = p[0].startsWith("I:")?Optional.of(getOrAddIntegerVal(p[1])):getIntegerVal(p[1]);
+					case "int": case "i":
+						var ii = getIntegerVal(p[1]);
 						if( ii.isPresent() ){
 							index = nums.indexOf(ii.get());
 							if(index==-1){
@@ -413,8 +392,8 @@ public class RealtimeValues implements DataProviding, Commandable {
 							return "";
 						}
 						break;
-					case "f": case "flag": case "b": case "F":
-						var f = p[0].equalsIgnoreCase("F")?Optional.of(getOrAddFlagVal(p[1])):getFlagVal(p[1]);
+					case "f": case "flag": case "b":
+						var f = getFlagVal(p[1]);
 						if( f.isPresent() ){
 							index = nums.indexOf(f.get());
 							if(index==-1){
@@ -534,7 +513,14 @@ public class RealtimeValues implements DataProviding, Commandable {
 		} // If it isn't inside { } just check if a match is found in the realVals and then the FlagVals
 		return getRealVal(id).map(d -> Optional.of((NumericVal)d)).orElse(Optional.ofNullable((flagVals.get(id))));
 	}
-	/* ************************************ D O U B L E V A L ***************************************************** */
+	/* ************************************ R E A L V A L ***************************************************** */
+
+	@Override
+	public boolean addRealVal(RealVal rv) {
+		if( realVals.containsKey(rv.getID()))
+			return false;
+		return realVals.put(rv.getID(),rv)==null;
+	}
 
 	/**
 	 * Retrieve a RealVal from the hashmap based on the id
@@ -548,49 +534,12 @@ public class RealtimeValues implements DataProviding, Commandable {
 	}
 
 	/**
-	 * Retrieves the id or adds it if it doesn't exist yet
-	 * @param id The group_name or just name of the val
-	 * @return The object if found or made or null if something went wrong
+	 * Rename a real
+	 * @param from The old name
+	 * @param to The new name
+	 * @param alterXml Whether to also alter the xml
+	 * @return True if ok
 	 */
-	public RealVal getOrAddRealVal(String id ){
-		if( id.isEmpty())
-			return null;
-
-		var val = realVals.get(id);
-		if( val==null){
-			val = RealVal.newVal(id);
-			realVals.put(id,val);
-			if( !readingXML ){
-				var fab = XMLfab.withRoot(settingsPath, "dcafs","settings","rtvals");
-
-				if( fab.hasChild("real","id",id).isEmpty()){
-					if( val.group().isEmpty()) {
-						if( fab.hasChild("real","id",id).isEmpty()) {
-							Logger.info("realval new, adding to xml :"+id);
-							fab.addChild("real").attr("id", id).attr("unit", val.unit()).build();
-						}
-					}else{
-						if( fab.hasChild("group","id",val.group()).isEmpty() ){
-							fab.addChild("group").attr("id",val.group()).down();
-							if( fab.hasChild("real","id",val.name()).isEmpty() )
-								fab.addChild("real").attr("name", val.name()).attr("unit", val.unit()).build();
-						}else{
-							String name = val.name();
-							String unit = val.unit();
-							fab.selectChildAsParent("group","id",val.group())
-									.ifPresent( f->{
-										if( f.hasChild("real","name",name).isEmpty()) {
-											Logger.info("realval new, adding to xml :"+id);
-											fab.addChild("real").attr("name", name).attr("unit", unit).build();
-										}
-									});
-						}
-					}
-				}
-			}
-		}
-		return val;
-	}
 	public boolean renameReal(String from, String to, boolean alterXml){
 		if( hasReal(to) ){
 			return false;
@@ -629,25 +578,18 @@ public class RealtimeValues implements DataProviding, Commandable {
 		return realVals.containsKey(id);
 	}
 	/**
-	 * Sets the value of a parameter (in a hashmap)
+	 * Sets the value of a real (in a hashmap)
 	 * @param id The parameter name
 	 * @param value The value of the parameter
-	 * @param createIfNew Whether to create a new object if none was found
 	 * @return True if it was created
 	 */
-	private boolean setReal(String id, double value, boolean createIfNew) {
+	public boolean updateReal(String id, double value) {
 
 		if( id.isEmpty()) {
 			Logger.error("Empty id given");
 			return false;
 		}
-		RealVal r;
-		if( createIfNew ) {
-			r = getOrAddRealVal(id);
-		}else{
-			r = realVals.get(id);
-		}
-
+		RealVal r = realVals.get(id);
 		if( r==null ) {
 			Logger.error("No such real "+id+" yet, create it first");
 			return false;
@@ -655,15 +597,6 @@ public class RealtimeValues implements DataProviding, Commandable {
 		r.updateValue(value);
 		return true;
 	}
-	public boolean setReal(String id, double value){
-		return setReal(id,value,true);
-	}
-	public boolean updateReal(String id, double value) {
-		if( id.isEmpty())
-			return false;
-		return !setReal(id,value,false);
-	}
-
 	/**
 	 * Alter all the values of the reals in the given group
 	 * @param group The group to alter
@@ -679,22 +612,13 @@ public class RealtimeValues implements DataProviding, Commandable {
 	 * Get the value of a real
 	 *
 	 * @param id The id to get the value of
-	 * @param bad The value to return of the id wasn't found
+	 * @param defVal The value to return of the id wasn't found
 	 * @return The value found or the bad value
 	 */
-	public double getReal(String id, double bad) {
-		return getReal(id,bad,false);
-	}
-	public double getReal(String id, double defVal, boolean createIfNew) {
+	public double getReal(String id, double defVal) {
 
 		RealVal d = realVals.get(id);
 		if (d == null) {
-			if( createIfNew ){
-				Logger.warn("ID "+id+" doesn't exist, creating it with value "+defVal);
-				setReal(id,defVal,true);
-			}else{
-				Logger.debug("No such id: " + id);
-			}
 			return defVal;
 		}
 		if (Double.isNaN(d.value())) {
@@ -718,47 +642,22 @@ public class RealtimeValues implements DataProviding, Commandable {
 
 	/**
 	 * Retrieves the id or adds it if it doesn't exist yet
-	 * @param id The group_name or just name of the val
+	 * @param iv The IntegerVal to add
 	 * @return The object if found or made or null if something went wrong
 	 */
-	public IntegerVal getOrAddIntegerVal( String id ){
-		if( id.isEmpty())
+	public IntegerVal addIntegerVal( IntegerVal iv ){
+		if( iv==null)
 			return null;
 
-		var val = integerVals.get(id);
-		if( val==null){
-			val = IntegerVal.newVal(id);
-			integerVals.put(id,val);
-			if( !readingXML ){
-				var fab = XMLfab.withRoot(settingsPath, "dcafs","settings","rtvals");
-
-				if( fab.hasChild("int","id",id).isEmpty()){
-					if( val.group().isEmpty()) {
-						if( fab.hasChild("int","id",id).isEmpty()) {
-							Logger.info("New integer, adding to xml :"+id);
-							fab.addChild("int").attr("id", id).attr("unit", val.unit()).build();
-						}
-					}else{
-						if( fab.hasChild("group","id",val.group()).isEmpty() ){
-							fab.addChild("group").attr("id",val.group()).down();
-							if( fab.hasChild("int","id",val.name()).isEmpty() )
-								fab.addChild("int").attr("name", val.name()).attr("unit", val.unit()).build();
-						}else{
-							String name = val.name();
-							String unit = val.unit();
-							fab.selectChildAsParent("group","id",val.group())
-									.ifPresent( f->{
-										if( f.hasChild("int","name",name).isEmpty()) {
-											Logger.info("New integer, adding to xml :"+id);
-											fab.addChild("int").attr("name", name).attr("unit", unit).build();
-										}
-									});
-						}
-					}
-				}
-			}
+		var val = integerVals.get(iv.getID());
+		if( !integerVals.containsKey(iv.getID())){
+			integerVals.put(iv.getID(),iv);
+			return iv;
 		}
 		return val;
+	}
+	public IntegerVal addIntegerVal( String group, String name ){
+		return addIntegerVal( IntegerVal.newVal(group,name));
 	}
 	public boolean renameInteger( String from, String to, boolean alterXml){
 		if( hasInteger(to) ){
@@ -799,38 +698,15 @@ public class RealtimeValues implements DataProviding, Commandable {
 	}
 	/**
 	 * Sets the value of a parameter (in a hashmap)
-	 * @param id The parameter name
-	 * @param value The value of the parameter
-	 * @param createIfNew Whether to create a new object if none was found
-	 * @return True if it was created
+	 * @param id The integerval id
+	 * @param value the new value
+	 * @return True if it was updated
 	 */
-	private boolean setInteger(String id, int value, boolean createIfNew) {
-
-		if( id.isEmpty()) {
-			Logger.error("Empty id given");
-			return false;
-		}
-		IntegerVal d;
-		if( createIfNew ) {
-			d = getOrAddIntegerVal(id);
-		}else{
-			d = integerVals.get(id);
-		}
-
-		if( d==null ) {
-			Logger.error("No such real "+id+" yet, create it first");
-			return false;
-		}
-		d.updateValue(value);
-		return true;
-	}
-	public boolean setInteger(String id, int value){
-		return setInteger(id,value,true);
-	}
 	public boolean updateInteger(String id, int value) {
-		if( id.isEmpty())
+		if( !integerVals.containsKey(id))
 			return false;
-		return !setInteger(id,value,false);
+		integerVals.get(id).value(value);
+		return true;
 	}
 
 	/**
@@ -848,22 +724,13 @@ public class RealtimeValues implements DataProviding, Commandable {
 	 * Get the value of an integer
 	 *
 	 * @param id The id to get the value of
-	 * @param bad The value to return of the id wasn't found
 	 * @return The value found or the bad value
 	 */
-	public int getInteger(String id, int bad) {
-		return getInteger(id,bad,false);
-	}
-	public int getInteger(String id, int defVal, boolean createIfNew) {
+	public int getInteger(String id, int defVal) {
 
 		IntegerVal i = integerVals.get(id);
 		if (i == null) {
-			if( createIfNew ){
-				Logger.warn("ID "+id+" doesn't exist, creating it with value "+defVal);
-				setReal(id,defVal,true);
-			}else{
-				Logger.debug("No such id: " + id);
-			}
+			Logger.debug("No such id: " + id);
 			return defVal;
 		}
 		return i.intValue();
@@ -1231,13 +1098,14 @@ public class RealtimeValues implements DataProviding, Commandable {
 		String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
 
 		double result;
+		RealVal rv;
 		String p0 = request[0];
 		var join = new StringJoiner(html?"<br>":"\r\n");
 		switch( cmds[0] ){
 			case "?":
 				join.add(ora+"Note: both rv and reals are valid starters"+reg)
 						.add( cyan+" Create or alter"+reg)
-						.add( green+"  "+p0+":new,id,value"+reg+" -> Create a new real (or update) with the given id/value")
+						.add( green+"  "+p0+":new,group,name"+reg+" -> Create a new real with the given group & name")
 						.add( green+"  "+p0+":update,id,value"+reg+" -> Update an existing real, do nothing if not found")
 						.add( green+"  "+p0+":addcmd,id,when:cmd"+reg+" -> Add a cmd with the given trigger to id")
 						.add( green+"  "+p0+":alter,id,param:value"+reg+" -> Alter some of the params of id, currently scale and unit are possible")
@@ -1250,36 +1118,79 @@ public class RealtimeValues implements DataProviding, Commandable {
 			case "list": return getRtvalsList(html,true,false,false, false);
 			case "new": case "create":
 				result=0;
-				if( cmds.length==3 ) {
-					result = processExpression(cmds[2], true);
-					if (Double.isNaN(result))
-						return "Failed to process expression";
+				if( cmds.length!=3 )
+					return "Not enough arguments given, "+request[0]+":new,id(,value)";
+
+				rv = RealVal.newVal(cmds[1], cmds[2]);
+				if( addRealVal(rv) ) {
+					rv.storeInXml(XMLfab.withRoot(settingsPath, "dcafs", "settings", "rtvals"));
+					return "New realVal added " + rv.getID() + ", stored in xml";
 				}
-				getOrAddRealVal(cmds[1]).updateValue(result);
-				return "RealVal set to "+result;
-			case "alter":
+				return "Real already exists";
+
+			/*case "alter":
 				if( cmds.length<3)
-					return "Not enough arguments: reals:alter,id,param:value";
+					return "Not enough arguments: "+request[0]+":alter,id,param:value";
 				var vals = cmds[2].split(":");
 				if( vals.length==1)
 					return "Incorrect param:value pair: "+cmds[2];
-				return getRealVal(cmds[1]).map(rv -> {
-					var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
-					if( vals[0].equals("scale")) {
-						rv.fractionDigits(NumberUtils.toInt(vals[1]));
-						fab.alterChild("real","id",cmds[1]).attr("scale",rv.scale()).build();
-						return "Scaling for " +cmds[1]+" set to " + rv.scale() + " digits";
-					}else if( vals[0].equals("unit")) {
+				if( !hasReal(cmds[1]))
+					return "No such real yet.";
+				var realVal = getRealVal(cmds[1]).get();
+				var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
+				var fabOpt = fab.selectChildAsParent("group","name",realVal.group());
+				if( fabOpt.isEmpty())
+					return "No such group node";
+				fab = fabOpt.get();
+				fabOpt = fab.hasChild("real","name",realVal.name());
+				if( fabOpt.isEmpty() )
+					return "No such child in the given group";
+				fab=fabOpt.get();
+				switch( vals[0]){
+					case "scale":
+						realVal.scale(NumberUtils.toInt(vals[1]));
+						fab.alterChild("real","id",cmds[1]).attr("scale",realVal.scale()).build();
+						return "Scaling for " +cmds[1]+" set to " + realVal.scale() + " digits";
+					case "unit":
+						realVal.unit(vals[1]);
 						fab.alterChild("real","id",cmds[1]).attr("unit",vals[1]).build();
 						return "Unit for "+cmds[1]+" set to "+vals[1];
-					}else{
-						return "Unknown param: "+vals[0];
+					default:
+						return "unknown parameter: "+vals[0];
+				}*/
+			case "alter":
+				if( cmds.length<3)
+					return "Not enough arguments: "+request[0]+":alter,id,param:value";
+				var vals = cmds[2].split(":");
+				if( vals.length==1)
+					return "Incorrect param:value pair: "+cmds[2];
+				if( !hasReal(cmds[1]))
+					return "No such real yet.";
+				var realVal = getRealVal(cmds[1]).get();
+				var digger = XMLdigger.digRoot(settingsPath,"dcafs")
+						.goDown("settings","rtvals")
+						.goDown("group","name",realVal.group())
+						.goDown("real","name",realVal.name());
+				if( digger.isValid() ){
+					switch( vals[0]){
+						case "scale":
+							realVal.scale(NumberUtils.toInt(vals[1]));
+							break;
+						case "unit":
+							realVal.unit(vals[1]);
+							break;
+						default:
+							return "unknown parameter: "+vals[0];
 					}
-				}).orElse("No such RealVal");
+					digger.alterAttrAndBuild(vals[0],vals[1]);
+					return "Altered "+vals[0]+ " to "+ vals[1];
+				}else{
+					return "No valid nodes found";
+				}
 			case "update":
 				if( !hasReal(cmds[1]) )
 					return "No such id "+cmds[1];
-				result = processExpression(cmds[2],false);
+				result = processExpression(cmds[2]);
 				if( Double.isNaN(result) )
 					return "Unknown id(s) in the expression "+cmds[2];
 				updateReal(cmds[1],result);
@@ -1292,7 +1203,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 			case "addcmd":
 				if( cmds.length < 3)
 					return "Not enough arguments, rv:addcmd,id,when:cmd";
-				var rv = realVals.get(cmds[1]);
+				rv = realVals.get(cmds[1]);
 				if( rv==null)
 					return "No such real: "+cmds[1];
 				String cmd = request[1].substring(request[1].indexOf(":")+1);
@@ -1312,56 +1223,28 @@ public class RealtimeValues implements DataProviding, Commandable {
 				return "unknown command: "+request[0]+":"+request[1];
 		}
 	}
-	private double processExpression( String exp, boolean create ){
+	private double processExpression( String expr ){
 		double result=Double.NaN;
 
-		if( create ) {
-			exp = exp.replace("r:","R:");
-			exp = exp.replace("real:","R:");
-			exp = exp.replace("f:","F:");
-			exp = exp.replace("flag:","F:");
-		}
+		expr = parseRTline(expr,"");
+		expr = expr.replace("true","1");
+		expr = expr.replace("false","0");
 
-		exp = parseRTline(exp,"");
-		exp=exp.replace("true","1");
-		exp=exp.replace("false","0");
+		expr = simpleParseRT(expr,""); // Replace all references with actual numbers if possible
 
-		exp = simpleParseRT(exp,create?"create":"");
-		if( exp.isEmpty())
+		if( expr.isEmpty()) // If any part of the conversion failed
 			return result;
 
-		var parts = MathUtils.extractParts(exp);
+		var parts = MathUtils.extractParts(expr);
 		if( parts.size()==1 ){
-			if( !NumberUtils.isCreatable(exp)) {
-				if( hasReal(exp) || create ) {
-					result = getReal(exp, 0, create);
-				}else{
-					return Double.NaN;
-				}
-			}else{
-				result = NumberUtils.createDouble(exp);
-			}
+			result = NumberUtils.createDouble(expr);
 		}else if (parts.size()==3){
-			if( !NumberUtils.isCreatable(parts.get(0))) {
-				if( hasReal(parts.get(0)) || create ) {
-					parts.set(0, "" + getReal(parts.get(0), 0, create));
-				}else{
-					return Double.NaN;
-				}
-			}
-			if( !NumberUtils.isCreatable(parts.get(2))) {
-				if( hasReal(parts.get(2)) || create ) {
-					parts.set(2, "" + getReal(parts.get(2), 0, create));
-				}else{
-					return Double.NaN;
-				}
-			}
 			result = Objects.requireNonNull(MathUtils.decodeDoublesOp(parts.get(0), parts.get(2), parts.get(1), 0)).apply(new Double[]{});
 		}else{
 			try {
-				result = MathUtils.simpleCalculation(exp, Double.NaN, false);
+				result = MathUtils.simpleCalculation(expr, Double.NaN, false);
 			}catch(IndexOutOfBoundsException e){
-				Logger.error("Index out of bounds while processing "+exp);
+				Logger.error("Index out of bounds while processing "+expr);
 				return Double.NaN;
 			}
 		}
