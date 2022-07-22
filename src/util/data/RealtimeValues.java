@@ -1442,7 +1442,13 @@ public class RealtimeValues implements DataProviding, Commandable {
 		}
 		if( showInts ){
 			integerVals.values().stream().filter(iv -> iv.group().equalsIgnoreCase(group))
-					.sorted()
+					.sorted((iv1, iv2) -> {
+						if (iv1.order() != iv2.order()) {
+							return Integer.compare(iv1.order(), iv2.order());
+						} else {
+							return iv1.name().compareTo(iv2.name());
+						}
+					})
 					.map(iv -> space + iv.name() + " : "+ iv ) // change it to strings
 					.forEach(join::add);
 		}
