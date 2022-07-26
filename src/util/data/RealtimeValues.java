@@ -896,17 +896,6 @@ public class RealtimeValues implements DataProviding, Commandable {
 		return true;
 	}
 	/* ******************************************************************************************************/
-	/**
-	 * Get the current timestamp in db approved format, this should be overridden if
-	 * a gps is present
-	 * 
-	 * @return The timestamp in a sql valid format yyyy-MM-dd HH:mm:ss.SSS
-	 */
-	public synchronized String getTimeStamp() {
-		return LocalDateTime.now(ZoneOffset.UTC).format(TimeTools.LONGDATE_FORMATTER_UTC);
-	}
-
-	/* ******************************************************************************************************/
 
 	public int addRequest(Writable writable, String type, String req) {
 
