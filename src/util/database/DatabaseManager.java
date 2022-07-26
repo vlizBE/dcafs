@@ -610,7 +610,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
                                     var spl = cmds[a].split(":");
                                     switch(spl[0]){
                                         case "timestamp":case "ts":spl[0]="timestamp";break;
-                                        case "integer":case "i":spl[0]="integer";break;
+                                        case "integer": case "int": case "i":spl[0]="integer";break;
                                         case "real": case "r": case "d":spl[0]="real";break;
                                         case "text": case "t":spl[0]="text";break;
                                         case "utc":spl[0]="utcnow";break;
@@ -663,7 +663,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
      * Respons to MySQLdump related commands
      * @param request The command
      * @param wr The writable that gave the command
-     * @param html Respons in html or not
+     * @param html Response in html or not
      * @return The response
      */
     public String doMYsqlDump(String[] request, Writable wr, boolean html ){
