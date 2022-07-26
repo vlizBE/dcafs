@@ -16,8 +16,7 @@ From 0.5.0 onwards, this should be better documented...
 * Rework the TaskManager ( > 1.0.0 )
 * Zigbee support ( > 1.0.0 )
 
-### To fix
-- default for generic val
+### To do/fix
 - cmd !idle not used properly when disconnected/reconnected
 - integerval telnet interface?
 
@@ -36,7 +35,6 @@ From 0.5.0 onwards, this should be better documented...
 
 ### Rtvals
 - The response now starts with the current datetime
-- No longer show ungrouped when there's a grouped textval
 - IntegerVals now show up in the rtvals listing and are available for
 the rtvals commands
 - Group is now mandatory (empty group also exists)
