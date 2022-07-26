@@ -682,6 +682,8 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 							dp.storeValsInXml(true);
 							loadGenerics();
 							return "Names set, generics reloaded";
+						case "delim":
+							attr="delimiter";
 						case "group": // if
 						case "db":
 						case "delimiter":
