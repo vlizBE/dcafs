@@ -351,7 +351,11 @@ public class Generic {
             join.add(" Store in InfluxDB "+influxID+":"+table+" ");
         }
         join.add("has delimiter '"+delimiter+"'"+(startsWith.isBlank()?"":"and starts with '"+startsWith+"'") );
-        join.add(", used "+uses+" times");
+        if( uses == 0 ){
+            join.add(", not used yet.");
+        }else{
+            join.add(", used "+uses+" times.");
+        }
         join.add("\r\n");
 
         if( !filters.isEmpty() ){
