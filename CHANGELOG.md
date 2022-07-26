@@ -24,7 +24,7 @@ From 0.5.0 onwards, this should be better documented...
 ## 1.0.0
 - Updated dependencies
 - Now using java 17 (new lts)
-- DoubleVal is now RealView, so real is used throughout instead of mix of double/real
+- DoubleVal is now RealVal, so real is used throughout instead of mix of double/real
 
 ### General
 - Clean up, remove unused stuff etc
@@ -32,6 +32,7 @@ From 0.5.0 onwards, this should be better documented...
 - Removed DigiWorker and other things related to sms
 - Moved methods in CommandPool that can be static to Tools package
 - Removed cyclic redundancy between CommandPool and Das
+- Alias in database table is replaced with rtval, but alias will still be read (backwards compatible)
 
 ### Rtvals
 - The response now starts with the current datetime
@@ -40,13 +41,15 @@ From 0.5.0 onwards, this should be better documented...
 the rtvals commands
 - Group is now mandatory (empty group also exists)
 - Removed the option to use {D:...} etc, rtvals need be be defined instead
+- fixed: Empty ungrouped texts no longer show in list
+- fixed: int/real mix in group no longer cause duplicate entries
+- fixed: rtvals:name now works again with *
 
 ### Generics
 - Can't add a generic with duplicate id through telnet
 - When two generics are in xml with same id, only first is used.
   This is mentioned in the errorlog
 - gens:addgen now actually uses the given group
-- Group can't contain _, this is now enforced
 - Generics inside a path now get the id from the path id instead of the file
 - If a value wasn't found, the rtvals are updated with NaN if double/real or Max_integer for integer 
 
