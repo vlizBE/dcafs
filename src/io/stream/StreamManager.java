@@ -623,42 +623,48 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 		if( cmds.length > 1 ){				
 			device = cmds[1].replace(" ", "").toLowerCase(); // Remove spaces
 		}
+
+		String cyan = html?"":TelnetCodes.TEXT_CYAN;
+		String green=html?"":TelnetCodes.TEXT_GREEN;
+		String ora = html?"":TelnetCodes.TEXT_ORANGE;
+		String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
+
 		StringJoiner join = new StringJoiner(nl);
 		BaseStream stream;
 		XMLfab fab;
 
 		switch( cmds[0] ){
 			case "?":
-				join.add(TelnetCodes.TEXT_RESET+TelnetCodes.TEXT_GREEN+"General info"+TelnetCodes.TEXT_YELLOW)
+				join.add(TelnetCodes.TEXT_RESET+ora+"Notes"+reg)
 					.add("-> ss: and streams: do the same thing")
 					.add("-> Every stream has at least:")
 					.add("   - a unique id which is used to identify it")
 					.add("   - a label which is used to determine how the data is processed")
 					.add("   - an eol (end of line), the default is crlf")
 					.add("   - ...");
-				join.add("").add(TelnetCodes.TEXT_GREEN+"Add new streams"+TelnetCodes.TEXT_YELLOW)
-					.add(" ss:addtcp,id,ip:port(,label) -> Add a TCP stream to xml (optional label) and try to connect")
-					.add(" ss:addudp,id,ip:port(,label) -> Add a UDP stream to xml (optional label) and connect")
-					.add(" ss:addserial,id,port:baudrate(,label) -> Add a serial stream to xml (optional label) and try to connect" )
-					.add(" ss:addlocal,id,label,source -> Add a internal stream that handles internal data")
-				.add("").add(TelnetCodes.TEXT_GREEN+"Info about streams"+TelnetCodes.TEXT_YELLOW)
-					.add(" ss:labels -> get active labels.")
-					.add(" ss:buffers -> Get confirm buffers.")
-					.add(" ss:status -> Get streamlist.")
-					.add(" ss:requests -> Get an overview of all the datarequests held by the streams")
-				.add("").add(TelnetCodes.TEXT_GREEN+"Interact with stream objects"+TelnetCodes.TEXT_YELLOW)
-					.add(" ss:recon,id -> Try reconnecting the stream")
-					.add(" ss:reload<,id> -> Reload the stream with the given id or all if no id is specified.")
-					.add(" ss:store,id -> Update the xml entry for this stream")
-					.add(" ss:alter,id,parameter:value -> Alter the given parameter options label,baudrate,ttl")
-					.add(" ss:addwrite,id,when:data -> Add a triggered write, possible when are hello (stream opened) and wakeup (stream idle)")
-					.add(" ss:addcmd,id,when:data -> Add a triggered cmd, possible when are open,idle,!idle,close")
-				.add("").add(TelnetCodes.TEXT_GREEN+"Route data from or to a stream"+TelnetCodes.TEXT_YELLOW)
-					.add(" ss:forward,source,id -> Forward the data from a source to the stream, source can be any object that accepts a writable")
-					.add(" ss:connect,id1,if2 -> Data is interchanged between the streams with the given id's")
-					.add(" ss:echo,id -> Toggles that all the data received on this stream will be returned to sender")
-					.add(" ss:send,id,data(,reply) -> Send the given data to the id with optional reply")
-				.add("").add(TelnetCodes.TEXT_GREEN+"Send data to stream via telnet"+TelnetCodes.TEXT_YELLOW)
+				join.add("").add(cyan+"Add new streams"+reg)
+					.add(green+" ss:addtcp,id,ip:port<,label> "+reg+"-> Add a TCP stream to xml (optional label) and try to connect")
+					.add(green+" ss:addudp,id,ip:port<,label> "+reg+"-> Add a UDP stream to xml (optional label) and connect")
+					.add(green+" ss:addserial,id,port:baudrate<,label>"+reg+" -> Add a serial stream to xml (optional label) and try to connect" )
+					.add(green+" ss:addlocal,id,label,source "+reg+"-> Add a internal stream that handles internal data")
+				.add("").add(cyan+"Info about streams"+reg)
+					.add(green+" ss:labels "+reg+"-> get active labels.")
+					.add(green+" ss:buffers "+reg+"-> Get confirm buffers.")
+					.add(green+" ss:status "+reg+"-> Get streamlist.")
+					.add(green+" ss:requests "+reg+"-> Get an overview of all the datarequests held by the streams")
+				.add("").add(cyan+"Interact with stream objects"+reg)
+					.add(green+" ss:recon,id "+reg+"-> Try reconnecting the stream")
+					.add(green+" ss:reload<,id> "+reg+"-> Reload the stream with the given id or all if no id is specified.")
+					.add(green+" ss:store,id "+reg+"-> Update the xml entry for this stream")
+					.add(green+" ss:alter,id,parameter:value "+reg+"-> Alter the given parameter options label,baudrate,ttl")
+					.add(green+" ss:addwrite,id,when:data "+reg+"-> Add a triggered write, possible when are hello (stream opened) and wakeup (stream idle)")
+					.add(green+" ss:addcmd,id,when:data "+reg+"-> Add a triggered cmd, possible when are open,idle,!idle,close")
+				.add("").add(cyan+"Route data from or to a stream"+reg)
+					.add(green+" ss:forward,source,id "+reg+"-> Forward the data from a source to the stream, source can be any object that accepts a writable")
+					.add(green+" ss:connect,id1,if2 "+reg+"-> Data is interchanged between the streams with the given id's")
+					.add(green+" ss:echo,id "+reg+"-> Toggles that all the data received on this stream will be returned to sender")
+					.add(green+" ss:send,id,data(,reply) "+reg+"-> Send the given data to the id with optional reply")
+				.add("").add(cyan+"Send data to stream via telnet"+reg)
 					.add("Option 1) First get the index of the streams with ss or streams")
 					.add("          Then use Sx:data to send data to the given stream (eol will be added)")
 					.add("Option 2) ss:send,id,data -> Send the data to the given stream and append eol"+TelnetCodes.TEXT_BRIGHT);

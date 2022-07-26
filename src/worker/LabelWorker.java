@@ -560,17 +560,22 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 		StringJoiner join = new StringJoiner(html?"<br":"\r\n");
 		String[] cmds = request[1].split(",");
 
+		String cyan = html?"":TelnetCodes.TEXT_CYAN;
+		String green=html?"":TelnetCodes.TEXT_GREEN;
+		String ora = html?"":TelnetCodes.TEXT_ORANGE;
+		String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
+
 		switch(cmds[0]){
 			case "?":
 				join.add("")
-						.add(TelnetCodes.TEXT_RED+"Purpose"+TelnetCodes.TEXT_YELLOW)
+						.add(TelnetCodes.TEXT_RED+"Purpose"+reg)
 						.add("  Generics (gens) are used to take delimited data and store it as rtvals or in a database.");
-				join.add(TelnetCodes.TEXT_BLUE+"Notes"+TelnetCodes.TEXT_YELLOW)
+				join.add(ora+"Notes"+reg)
 						.add("  - ...");
-				join.add("").add(TelnetCodes.TEXT_GREEN+"Create a Generic"+TelnetCodes.TEXT_YELLOW)
-						.add("  gens:fromtable,dbid,dbtable,gen id[,delimiter] -> Create a generic according to a table, delim is optional, def is ','")
-						.add("  gens:fromdb,dbid,delimiter -> Create a generic with chosen delimiter for each table if there's no such generic yet")
-						.add("  gens:addgen,id,group,format,delimiter -> Create a blank generic with the given id, group and format")
+				join.add("").add(cyan+"Creation"+reg)
+						.add(green+"  gens:fromtable,dbid,dbtable,gen id[,delimiter] "+reg+"-> Create a generic according to a table, delim is optional, def is ','")
+						.add(green+"  gens:fromdb,dbid,delimiter "+reg+"-> Create a generic with chosen delimiter for each table if there's no such generic yet")
+						.add(green+"  gens:addgen,id,group,format,delimiter "+reg+"-> Create a blank generic with the given id, group and format")
 						.add("      The format consists of a letter, followed by a number and then a word and this is repeated with , as delimiter")
 						.add("      The letter is the type of value, the number the index in the array of received data and the word is the name/id of the value")
 						.add("      So for example: i2temp,r5offset  -> integer on index 2 with name temp, real on 5 with name offset")
@@ -582,11 +587,11 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 						.add("       eg. 1234,temp,19.2,hum,55 ( with 1234 = serial number")
 						.add("           -> serial number,title,temperature reading,title,humidity reading")
 						.add("           -> m0,r2temp,i4hum");
-				join.add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW);
-				join.add("  gens:? -> Show this info")
-						.add("  gens:reload -> Reloads all generics")
-						.add("  gens:alter,id,param:value -> Change a parameter of the specified generic")
-						.add("  gens:list -> Lists all generics");
+				join.add("").add(cyan+"Other"+reg);
+				join.add(green+"  gens:? "+reg+"-> Show this info")
+						.add(green+"  gens:reload "+reg+"-> Reloads all generics")
+						.add(green+"  gens:alter,id,param:value "+reg+"-> Change a parameter of the specified generic")
+						.add(green+"  gens:list "+reg+"-> Lists all generics");
 
 				return join.toString();
 			case "reload":
