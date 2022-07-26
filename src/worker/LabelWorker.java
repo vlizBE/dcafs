@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
  *
  * @author Michiel TJampens @vliz
  */
-public class LabelWorker implements Runnable, Labeller, Commandable {
+public class LabelWorker implements Runnable, Commandable {
 
 	static final String UNKNOWN_CMD = "unknown command";
 
@@ -68,7 +68,6 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 
 	Writable spy;
 	String spyingOn ="";
-	LabelSubWorker subWorker;
 	/* ***************************** C O N S T R U C T O R **************************************/
 
 	/**
@@ -88,14 +87,6 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 		loadGenerics();
 		loadValMaps(true);
 	}
-	public void setSubWorker( LabelSubWorker sub ){
-		subWorker=sub;
-	}
-	@Override
-	public void addDatagram(Datagram d){
-		dQueue.add(d);
-	}
-
 	public void setMqttWriter( MqttWriting mqtt){
 		this.mqtt=mqtt;
 	}
@@ -115,17 +106,6 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 	 */
 	public void setDebugging(boolean deb) {
 		this.debugMode = deb;
-	}
-
-	public synchronized int getProcCount(int seconds) {
-		double a = procCount.get();
-		long passed = (Instant.now().toEpochMilli() - procTime) / 1000; //seconds since last check
-
-		a /= (double) passed;
-		a *= seconds;
-		procCount.set(0);    // Clear the count
-		procTime = Instant.now().toEpochMilli(); // Overwrite for next check
-		return (int) Math.rint(a);
 	}
 	/* ****************************************** V A L M A P S *************************************************** */
 	private ValMap addValMap(ValMap map) {
@@ -232,7 +212,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 	 */
 	private void readGenericElementInPath(Element pathElement){
 		String imp = pathElement.getAttribute("import");
-		String setId=pathElement.getAttribute("id");
+		String setId;
 
 		int a=1;
 		if( !imp.isEmpty() ){ //meaning imported
@@ -422,8 +402,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 							}
 							break;
 						default:
-							if( subWorker != null && !subWorker.processDatagram(d) )
-								Logger.error("Unknown label: "+label);
+							Logger.error("Unknown label: "+label);
 							break;
 					}
 				}else {
@@ -448,8 +427,7 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 							executor.execute(() -> checkTelnet(d) );
 							break;
 						default:
-							if( subWorker != null && !subWorker.processDatagram(d) )
-								Logger.error("Unknown label: "+label);
+							Logger.error("Unknown label: "+label);
 							break;
 					}
 				}
@@ -551,11 +529,11 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 	@Override
 	public String replyToCommand(String[] request, Writable wr, boolean html) {
 		if ("gens".equals(request[0])) {
-			return doGENericS(request, wr, html);
+			return replyToGenCmds(request, wr, html);
 		}
 		return "unknown command: "+request[0]+":"+request[1];
 	}
-	public String doGENericS( String[] request, Writable wr, boolean html ){
+	public String replyToGenCmds(String[] request, Writable wr, boolean html ){
 
 		StringJoiner join = new StringJoiner(html?"<br":"\r\n");
 		String[] cmds = request[1].split(",");
@@ -713,7 +691,6 @@ public class LabelWorker implements Runnable, Labeller, Commandable {
 					return "Added/changed attribute and reloaded";
 				}
 				return "No such node found";
-
 			case "list":
 				return getGenericInfo();
 			default:

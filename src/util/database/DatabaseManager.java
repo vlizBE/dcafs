@@ -417,7 +417,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
     public String replyToCommand(String[] request, Writable wr, boolean html) {
 
         if( request[0].equalsIgnoreCase("myd"))
-            return doMYsqlDump(request,wr,html);
+            return doMYsqlDump(request);
 
         String[] cmds = request[1].split(",");
 
@@ -598,8 +598,6 @@ public class DatabaseManager implements QueryWriting, Commandable {
                     return "Needs to be columtype:columnname";
                 String dbid =  cmds[1].contains(":")?cmds[1].split(":")[0]:"";
                 String table = cmds[1].contains(":")?cmds[1].split(":")[1]:cmds[1];
-                String[] col = cmds[2].split(":");
-                String alias = cmds.length==4?cmds[3]:"";
 
                 fab = XMLfab.withRoot(settingsPath,"databases");
 
@@ -667,11 +665,9 @@ public class DatabaseManager implements QueryWriting, Commandable {
     /**
      * Respons to MySQLdump related commands
      * @param request The command
-     * @param wr The writable that gave the command
-     * @param html Response in html or not
      * @return The response
      */
-    public String doMYsqlDump(String[] request, Writable wr, boolean html ){
+    public String doMYsqlDump(String[] request ){
         String[] cmds = request[1].split(",");
         switch( cmds[0] ){
             case "?": 	return " myd:run,dbid,path -> Run the mysqldump process for the given database";

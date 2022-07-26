@@ -490,11 +490,6 @@ public class RealtimeValues implements DataProviding, Commandable {
 		nums.trimToSize();
 		return exp;
 	}
-	public String getErrrorLog(){
-		var j = String.join("\r\n",errorLog);
-		errorLog.clear();
-		return j;
-	}
 	/**
 	 * Look for a numerical val (i.e. RealVal, IntegerVal or FlagVal) with the given id
 	 * @param id The id to look for

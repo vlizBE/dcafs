@@ -219,16 +219,6 @@ public class SQLiteDB extends SQLDB{
         return true;  
     }
     /**
-     * Prepares a SQLiteTable object for a table with the given name, which will be using 'IF NOT EXISTS'
-     * @param table The title of the table
-     * @return The SQLiteTable object
-     */
-    public SqlTable addTableIfNotExists( String table ){
-        tables.put( table, SqlTable.withName(table));
-        tables.get(table).enableIfnotexists();
-        return tables.get(table);
-    }
-    /**
      * Read the rollover and table settings from the given xml element
      * @param dbe The element with the setup info
      * @return true if successful
@@ -408,18 +398,6 @@ public class SQLiteDB extends SQLDB{
         Logger.info("Updated filename after rollover to "+getPath());
         return true;
     }
-
-    /**
-     * Create a view in this database
-     * @param name The name of the view
-     * @param query The query for the view
-     * @return This database
-     */
-    public SQLiteDB addView( String name, String query ){
-        addQuery("CREATE VIEW IF NOT EXISTS "+name+" AS "+query);
-        return this;
-    }
-
     /**
      * Check if this SQLite uses rollover
      * @return True if it has rollover

@@ -358,18 +358,6 @@ public class SqlTable {
         columns.get(columns.size() - 1).unique = unique;
         return this;
     }
-
-    /**
-     * Remove a single column from the table format
-     * 
-     * @param title The
-     * @return
-     */
-    public int removeColumn(String title) {
-        int a = columns.size();
-        columns.removeIf(x -> x.title.equalsIgnoreCase(title));
-        return a - columns.size();
-    }
     /**
      * Check if this table has columns
      * 
@@ -751,33 +739,7 @@ public class SqlTable {
         }
         return fab.build();
     }
-    /**
-     * Creates a template for a prepared statement of an INSERT query
-     * @param id The id of this preparedstatement with which it can be referenced
-     * @param params The columns that this statement will provide data to
-     * @return True if all columns were found
-     */
-    public boolean buildInsertStatement( String id, String... params){
 
-        PrepStatement stat = buildPrep(params);
-        
-        if( stat.getIndexes().size()!=params.length ){
-            Logger.error("Couldn't find all parameters");
-            return false;
-        }
-        
-        preps.put(id, stat);
-
-        StringJoiner qMarks = new StringJoiner(",", "", ");");
-        StringJoiner cols = new StringJoiner(",", "INSERT INTO " + name + " (", ") VALUES (");
-        stat.getIndexes().forEach(c -> {
-            qMarks.add("?");
-            cols.add( columns.get(c).title );
-        });
-        stat.setStatement( cols + qMarks.toString() );
-
-        return true;
-    }
     private void buildDefStatement(){
         PrepStatement stat = preps.get("");
 

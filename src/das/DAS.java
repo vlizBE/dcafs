@@ -334,9 +334,6 @@ public class DAS implements Commandable{
 
         addCommandable(labelWorker,"gens");
     }
-    public void setLabelSubWorker( LabelSubWorker sub ){
-        labelWorker.setSubWorker(sub);
-    }
 
     public BlockingQueue<Datagram> getDataQueue() {
         addLabelWorker();
@@ -503,8 +500,8 @@ public class DAS implements Commandable{
     public void startAll() {
 
         if (labelWorker != null) {
-            Logger.info("Starting BaseWorker...");
-            new Thread(labelWorker, "BaseWorker").start();// Start the thread
+            Logger.info("Starting LabelWorker...");
+            new Thread(labelWorker, "LabelWorker").start();// Start the thread
         }
         if (debug && debugWorker == null) {
             Logger.info("Debug mode but no debug worker created...");
@@ -657,7 +654,7 @@ public class DAS implements Commandable{
      */
     public String getQueueSizes() {
         StringJoiner join = new StringJoiner("\r\n", "", "\r\n");
-        join.add("Data buffer: " + this.dQueue.size() + " in receive buffer and "+ labelWorker.getWaitingQueueSize()+" waiting...");
+        join.add("Data buffer: " + dQueue.size() + " in receive buffer and "+ labelWorker.getWaitingQueueSize()+" waiting...");
 
         if (emailWorker != null)
             join.add("Email backlog: " + emailWorker.getRetryQueueSize() );

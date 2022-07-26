@@ -56,7 +56,7 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 	private final LinkedHashMap<String,BaseStream> streams = new LinkedHashMap<>();
 
 	private Path settingsPath = Path.of("settings.xml"); // Path to the xml file
-	private boolean debug = false; // Whether or not in debug mode, gives more feedback
+	private boolean debug = false; // Whether in debug mode, gives more feedback
 
 	private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(); // scheduler for the connection attempts
 	private static final String XML_PARENT_TAG="streams";
@@ -161,15 +161,6 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 			join.add( "S" + (a++) + ":" + id);
 		}
 		return join.toString();
-	}
-	/**
-	 * Get a list of all the StreamDescriptors available
-	 * 
-	 * @return A String with a line for each StreamDescriptor which looks like
-	 *         Sxx=id
-	 */
-	public String getStreamList() {
-		return getStreamList(false);
 	}
 	/**
 	 * Get a list of all currently active labels
@@ -380,13 +371,6 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 			return "Failed to read xml";
 		}
 	}
-	/**
-	 * Disconnect a stream
-	 * @param id The id of the stream to disconnect
-	 */
-	private void disconnectStream( String id ){
-		getStream(id).ifPresent(BaseStream::disconnect);
-	}
 	/* ***************************** A D D I N G C H A N N E L S ******************************************/
 	/**
 	 * Add the streams by reading the settings.xml
@@ -585,15 +569,6 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 		return isStreamOk(id,false);
 	}
 
-	/**
-	 * Checks if the given stream is from the Modbus TCP type
-	 * @param id The id of the stream
-	 * @return True if it's modbus
-	 */
-	public boolean isModbus( String id ){
-		BaseStream base = streams.get(id.toLowerCase());
-		return base.getClass() == ModbusTCPStream.class;
-	}
 	/* ***************************************************************************************************** */
 	@Override
 	public String replyToCommand(String[] request, Writable wr, boolean html) {
