@@ -435,32 +435,37 @@ public class DatabaseManager implements QueryWriting, Commandable {
             user = user.substring(0,user.indexOf(":"));
         }
 
+        String cyan = html?"":TelnetCodes.TEXT_CYAN;
+        String green=html?"":TelnetCodes.TEXT_GREEN;
+        String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
+
         switch( cmds[0] ){
             case "?":
-                join.add(TelnetCodes.TEXT_MAGENTA+"The databasemanager connects to databases, handles queries and fetches table information");
-                join.add(TelnetCodes.TEXT_GREEN+"Glossary"+TelnetCodes.TEXT_YELLOW)
-                        .add("  alias -> the alias of a column is the reference to use instead of the column name to find the rtval, empty is not used")
+                join.add(TelnetCodes.TEXT_MAGENTA+"The databasemanager connects to databases, handles queries and fetches table information.\r\n");
+                join.add(TelnetCodes.TEXT_ORANGE+"Notes"+reg)
+                        .add("  rtval -> the rtval of a column is the id to look for in the rtvals instead of the default tablename_column")
                         .add("  macro -> an at runtime determined value that can be used to define the rtval reference").add("");
-                join.add(TelnetCodes.TEXT_GREEN+"Connect to a database"+TelnetCodes.TEXT_YELLOW)
-                        .add("  dbm:addmssql,id,db name,ip:port,user:pass -> Adds a MSSQL server on given ip:port with user:pass")
-                        .add("  dbm:addmysql,id,db name,ip:port,user:pass -> Adds a MySQL server on given ip:port with user:pass")
-                        .add("  dbm:addmariadb,id,db name,ip:port,user:pass -> Adds a MariaDB server on given ip:port with user:pass")
-                        .add("  dbm:addsqlite,id(,filename) -> Creates an empty sqlite database, filename and extension optional default db/id.sqlite")
-                        .add("  dbm:addinfluxdb,id,db name,ip:port,user:pass -> Adds a Influxdb server on given ip:port with user:pass")
-                        .add("").add(TelnetCodes.TEXT_GREEN+"Working with tables"+TelnetCodes.TEXT_YELLOW)
-                        .add("  dbm:addtable,id,tablename,format (format eg. tirc timestamp(auto filled system time),int,real,char/text)")
-                        .add("  dbm:addcol,<dbid:>tablename,columntype:columnname<:alias>,... (columntypes r(eal),t(ime)s(tamp),i(nteger),t(ext)")
-                        .add("  dbm:tablexml,id,tablename -> Write the table in memory to the xml file, use * as tablename for all")
-                        .add("  dbm:tables,id -> Get info about the given id (tables etc)")
-                        .add("  dbm:fetch,id -> Read the tables from the database directly, not overwriting stored ones.")
-                        .add("  dbm:store,dbId,tableid -> Trigger a insert for the database and table given")
-                        .add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW)
-                        .add("  dbm:addserver,id -> Adds a blank database server node to xml")
-                        .add("  dbm:addrollover,id,count,unit,pattern -> Add rollover to a SQLite database")
-                        .add("  dbm:alter,id,param:value -> Alter things like idle, flush and batch (still todo)")
-                        .add("  dbm:reload,id -> (Re)loads the database with the given id fe. after changing the xml")
-                        .add("  dbm:status -> Show the status of all managed database connections")
-                        .add("  st -> Show the current status of the databases (among other things)");
+                join.add(cyan+"Connect to a database"+reg)
+                        .add(green+"  dbm:addmssql,id,db name,ip:port,user:pass "+reg+"-> Adds a MSSQL server on given ip:port with user:pass")
+                        .add(green+"  dbm:addmysql,id,db name,ip:port,user:pass "+reg+"-> Adds a MySQL server on given ip:port with user:pass")
+                        .add(green+"  dbm:addmariadb,id,db name,ip:port,user:pass "+reg+"-> Adds a MariaDB server on given ip:port with user:pass")
+                        .add(green+"  dbm:addsqlite,id(,filename) "+reg+"-> Creates an empty sqlite database, filename and extension optional default db/id.sqlite")
+                        .add(green+"  dbm:addinfluxdb,id,db name,ip:port,user:pass "+reg+"-> Adds a Influxdb server on given ip:port with user:pass")
+                        .add("").add(cyan+"Working with tables"+reg)
+                        .add(green+"  dbm:addtable,id,tablename "+reg+"-> Adds a table to the given database id")
+                        .add(green+"  dbm:addcol,<dbid:>tablename,columntype:columnname<:rtval> "+reg+"-> Add a column to the given table")
+                        .add(      "        - columntypes: r(eal),t(ime)s(tamp),i(nteger),t(ext), utc(now)")
+                        .add(green+"  dbm:tablexml,id,tablename "+reg+"-> Write the table in memory to the xml file, use * as tablename for all")
+                        .add(green+"  dbm:tables,id "+reg+"-> Get info about the given id (tables etc)")
+                        .add(green+"  dbm:fetch,id "+reg+"-> Read the tables from the database directly, not overwriting stored ones.")
+                        .add(green+"  dbm:store,dbId,tableid "+reg+"-> Trigger a insert for the database and table given")
+                        .add("").add(cyan+"Other"+reg)
+                        .add(green+"  dbm:addserver,id "+reg+"-> Adds a blank database server node to xml")
+                        .add(green+"  dbm:addrollover,id,count,unit,pattern "+reg+"-> Add rollover to a SQLite database")
+                        .add(green+"  dbm:alter,id,param:value "+reg+"-> Alter things like idle, flush and batch (still todo)")
+                        .add(green+"  dbm:reload,id "+reg+"-> (Re)loads the database with the given id fe. after changing the xml")
+                        .add(green+"  dbm:status "+reg+"-> Show the status of all managed database connections")
+                        .add(green+"  st "+reg+"-> Show the current status of the databases (among other things)");
                 return join.toString();
             case "reload":
                 if( cmds.length<2)
