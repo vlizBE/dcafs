@@ -1339,7 +1339,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 		join.setEmptyValue("No matches found");
 
 		String regex;
-		if( name.contains("*")&& name.contains(".*")) {
+		if( name.contains("*") && !name.contains(".*")) {
 			regex = name.replace("*", ".*");
 		}else{
 			regex=name;
@@ -1381,7 +1381,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 
 		if( ngReals || ngTexts || ngFlags || ngIntegers ) {
 			join.add("");
-			join.add(html ? "<b>Ungrouped</b>" : TelnetCodes.TEXT_ORANGE + "Ungrouped" + TelnetCodes.TEXT_YELLOW);
+			join.add(html ? "<b>Default group</b>" : TelnetCodes.TEXT_ORANGE + "Default group" + TelnetCodes.TEXT_YELLOW);
 
 			if (ngReals) {
 				join.add(html ? "<b>Reals</b>" : TelnetCodes.TEXT_MAGENTA + "Reals" + TelnetCodes.TEXT_YELLOW);
