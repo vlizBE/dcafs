@@ -46,7 +46,7 @@ public class FileMonitor {
             String val = XMLtools.getChildValueByTag(file,"onmodify","");
             if( val.isBlank())
                 continue;
-            var mon = new ReactionInfo(p.get(),val);
+            var mon = new ReactionInfo(p.get(), val);
             files.add( mon );
             watcher.submit(() -> watch(mon));
         }
@@ -57,7 +57,7 @@ public class FileMonitor {
             try {
                 service = FileSystems.getDefault().newWatchService();
                 Files.createFile(p);
-                var mon = new ReactionInfo(p,act,false);
+                var mon = new ReactionInfo(p, act, false);
                 files.add( mon );
                 watcher.submit(() -> watch(mon));
             } catch (IOException e) {
@@ -112,9 +112,7 @@ public class FileMonitor {
             }
             // reset the key
             wk.reset();
-        }catch(InterruptedException e){
-            Logger.error(e);
-        } catch (IOException e) {
+        }catch(InterruptedException | IOException e){
             Logger.error(e);
         }
         watcher.schedule(()->watch(mon),Math.max(blank,1), TimeUnit.SECONDS);
@@ -123,8 +121,8 @@ public class FileMonitor {
     /**
      * Simple class to contain all required info on what to do after an event
      */
-    private class ReactionInfo {
-        private Path file;
+    private static class ReactionInfo {
+        private final Path file;
         private Function<String, Integer> action;
         private String cmd="";
         private long position=-1;

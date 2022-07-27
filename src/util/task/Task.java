@@ -5,7 +5,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.data.DataProviding;
-import util.data.NumericVal;
 import util.taskblocks.CheckBlock;
 import util.tools.TimeTools;
 import util.tools.Tools;
@@ -102,10 +101,10 @@ public class Task implements Comparable<Task>{
 			unit = period.getValue();
 			runs = XMLtools.getIntAttribute(tsk,"checks",1);
 
-			switch( tsk.getTagName() ){
+			switch (tsk.getTagName()) {
 				//case "retry": triggerType =TRIGGERTYPE.RETRY; break;
-				case "while": triggerType =TRIGGERTYPE.WHILE; break;
-				case "waitfor": triggerType =TRIGGERTYPE.WAITFOR; break;
+				case "while" -> triggerType = TRIGGERTYPE.WHILE;
+				case "waitfor" -> triggerType = TRIGGERTYPE.WAITFOR;
 			}
 			var check = XMLtools.getStringAttribute(tsk,"check","");
 			if( !check.isEmpty() ){
@@ -213,11 +212,11 @@ public class Task implements Comparable<Task>{
 			/* Link related items */
 			if(!link.isBlank()) { // If link is actually mentioned
 				String[] linking = link.toLowerCase().split(":");
-				switch(linking[0]) {
-					case "disable24h": 		linktype=LINKTYPE.DISABLE_24H; 		break; // Disable for 24hours
-					case "nottoday": 		linktype=LINKTYPE.NOT_TODAY;  		break; // Disable for the rest of the day (UTC)
-					case "donow": 	   		linktype=LINKTYPE.DO_NOW; 	 		break; // Execute the linked task now
-					case "skipone":			linktype=LINKTYPE.SKIP_ONE; 	 		break; // Skip one execution of the linked task
+				switch (linking[0]) {
+					case "disable24h" -> linktype = LINKTYPE.DISABLE_24H;// Disable for 24hours
+					case "nottoday" -> linktype = LINKTYPE.NOT_TODAY;// Disable for the rest of the day (UTC)
+					case "donow" -> linktype = LINKTYPE.DO_NOW;// Execute the linked task now
+					case "skipone" -> linktype = LINKTYPE.SKIP_ONE;// Skip one execution of the linked task
 				}
 				link = linking[1];
 			}
@@ -308,10 +307,10 @@ public class Task implements Comparable<Task>{
     				if( items.length > 1 ) {
 						runs = Tools.parseInt(items[1], -1);
 					}
-    				switch( cmd ){
-						case "retry": triggerType =TRIGGERTYPE.RETRY; break;
-						case "while": triggerType =TRIGGERTYPE.WHILE; break;
-						case "waitfor": triggerType =TRIGGERTYPE.WAITFOR; break;
+					switch (cmd) {
+						case "retry" -> triggerType = TRIGGERTYPE.RETRY;
+						case "while" -> triggerType = TRIGGERTYPE.WHILE;
+						case "waitfor" -> triggerType = TRIGGERTYPE.WAITFOR;
 					}
 					break;
 				case "delay":	/* delay:5m3s */
@@ -377,35 +376,33 @@ public class Task implements Comparable<Task>{
 			String[] o = output.split(":");
 			if( o.length>=2)
 				outputRef=o[1];
-			switch( o[0].toLowerCase() ){
-				case "file":
+			switch (o[0].toLowerCase()) {
+				case "file" -> {
 					out = OUTPUT.FILE;
 					outputFile = Path.of(o[1]);
-					break;
-				case "email": out = OUTPUT.EMAIL; break;
-				case "sms": out = OUTPUT.SMS; break;
-				case "channel":	case "stream":					
+				}
+				case "email" -> out = OUTPUT.EMAIL;
+				case "sms" -> out = OUTPUT.SMS;
+				case "channel", "stream" -> {
 					out = OUTPUT.STREAM;
 					stream = o[1].toLowerCase();
-					break;
-				case "matrix":
+				}
+				case "matrix" -> {
 					out = OUTPUT.MATRIX;
 					stream = o[1].toLowerCase();
-					break;
-				case "log": out = OUTPUT.LOG; break;
-				case "manager":	out = OUTPUT.MANAGER;break;
-				case "mqtt": 
+				}
+				case "log" -> out = OUTPUT.LOG;
+				case "manager" -> out = OUTPUT.MANAGER;
+				case "mqtt" -> {
 					out = OUTPUT.MQTT;
 					stream = o[1].toLowerCase();
-					break;
-				case "i2c": 
-					out = OUTPUT.I2C; 
-					stream = o.length==2?o[1].toLowerCase():""; 
-					break;
-				case "telnet":
-					out = OUTPUT.TELNET;
-					break;
-				case "system": case "": default: out = OUTPUT.SYSTEM; break;
+				}
+				case "i2c" -> {
+					out = OUTPUT.I2C;
+					stream = o.length == 2 ? o[1].toLowerCase() : "";
+				}
+				case "telnet" -> out = OUTPUT.TELNET;
+				default -> out = OUTPUT.SYSTEM;
 			}
 		}
 	}	
@@ -507,19 +504,17 @@ public class Task implements Comparable<Task>{
 		//}else{
 			suffix +=".";
 		//}
-		switch( out ) {
-			case STREAM: return "Sending '"+ value.replace("\r", "").replace("\n", "")+"' to "+stream + suffix;
-			case EMAIL:   return "Emailing '"+ value +"' to "+outputRef + suffix;
-			case FILE:    return "Writing '"+ value +"' in " + outputFile + suffix;
-			case SMS:	  return "SMS "+ value +" to "+outputRef + suffix;
-			case LOG:	  return "Logging: '"+ value +"' to "+outputRef+suffix;
-			case MANAGER: return "Executing manager command: '"+ value +"'  "+ suffix;
-			case MQTT:	  return "Executing mqtt command: '"+ value +"'  "+ suffix;
-			case I2C:	  return "Sending "+ value +" to I2C device "+ suffix;
-			case TELNET:  return "Sending "+value+ " to telnet sessions at level "+outputRef+suffix;
-			case SYSTEM:
-			default:
-				return "Executing '"+ value +"'" + suffix ;
-		}	
+		return switch (out) {
+			case STREAM -> "Sending '" + value.replace("\r", "").replace("\n", "") + "' to " + stream + suffix;
+			case EMAIL -> "Emailing '" + value + "' to " + outputRef + suffix;
+			case FILE -> "Writing '" + value + "' in " + outputFile + suffix;
+			case SMS -> "SMS " + value + " to " + outputRef + suffix;
+			case LOG -> "Logging: '" + value + "' to " + outputRef + suffix;
+			case MANAGER -> "Executing manager command: '" + value + "'  " + suffix;
+			case MQTT -> "Executing mqtt command: '" + value + "'  " + suffix;
+			case I2C -> "Sending " + value + " to I2C device " + suffix;
+			case TELNET -> "Sending " + value + " to telnet sessions at level " + outputRef + suffix;
+			default -> "Executing '" + value + "'" + suffix;
+		};
 	}
 }

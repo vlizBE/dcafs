@@ -391,15 +391,14 @@ public class DatabaseManager implements QueryWriting, Commandable {
                 return false;
             fab.selectChildAsParent("sqlite","id",id);
         }
-        SqlTable.addBlankToXML( fab,table,format );
-        return true;
+        return SqlTable.addBlankToXML( fab,table,format );
     }
     /* ********************************** C O M M A N D A B L E *********************************************** */
 
     /**
-     * Not used
-     * @param wr
-     * @return
+     * Not used, but needs to be implemented
+     * @param wr The writable to remove
+     * @return True if it was removed
      */
     @Override
     public boolean removeWritable(Writable wr) {
@@ -422,7 +421,6 @@ public class DatabaseManager implements QueryWriting, Commandable {
         String[] cmds = request[1].split(",");
 
         StringJoiner join = new StringJoiner(html?"<br":"\r\n");
-        Database db=null;
 
         String id = cmds.length>=2?cmds[1]:"";
         String dbName = cmds.length>=3?cmds[2]:"";
@@ -679,8 +677,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
                     return "No such database "+cmds[1];
                 if( dbOpt.get() instanceof SQLiteDB )
                     return "Database is an sqlite, not mysql/mariadb";
-                if( dbOpt.get() instanceof SQLDB ){
-                    SQLDB sql =(SQLDB)dbOpt.get();
+                if(dbOpt.get() instanceof SQLDB sql){
                     if( sql.isMySQL() ){
                         // do the dump
                         String os = System.getProperty("os.name").toLowerCase();

@@ -18,7 +18,7 @@ import java.util.*;
 
 public class SqlTable {
 
-    String name = "";
+    String name;
 
     enum COLUMN_TYPE {
         INTEGER, REAL, TEXT, TIMESTAMP, EPOCH, OBJECT, LOCALDTNOW, UTCDTNOW, DATETIME
@@ -122,7 +122,7 @@ public class SqlTable {
             }
         }
         if (ok)
-            return Optional.ofNullable(table);
+            return Optional.of(table);
         return Optional.empty();
     }
 
@@ -452,9 +452,6 @@ public class SqlTable {
             int index = 0;
             try {
                 for ( int colIndex : prep.getIndexes() ) {
-                    if(  d[index] == null){
-                       // return -3;
-                    }
                     Column c = columns.get(colIndex);
                     try{
                         if( d[index] instanceof OffsetDateTime )
@@ -571,7 +568,6 @@ public class SqlTable {
                     if( ivOpt.isPresent()) {
                         val = ivOpt.get().value();
                     }else{
-                        val = null;
                         if( col.hasDefault )
                             val = NumberUtils.toInt(def);
                     }
@@ -631,9 +627,9 @@ public class SqlTable {
             this.type=type;
             switch( type ){
                 case TIMESTAMP: case EPOCH: notnull=true; break; // these aren't allowed to be null by default
-                case INTEGER: 
-                case REAL: 
-                case TEXT: 
+                case INTEGER:
+                case REAL:
+                case TEXT:
                 default:
                     break;
             }
@@ -676,13 +672,13 @@ public class SqlTable {
         fab.addChild("table").attr("name",tableName).down();
 
         for( char c : format.toCharArray() ){
-            switch(c){
-                case 't': fab.addChild( "timestamp","columnname"); break;
-                case 'u': fab.addChild( "utcnow","columnname"); break;
-                case 'r': fab.addChild( "real","columnname"); break;
-                case 'i': fab.addChild( "integer","columnname"); break;
-                case 'c': fab.addChild( "text","columnname"); break;
-                case 'm': fab.addChild( "epochmillis","columnname"); break;
+            switch (c) {
+                case 't' -> fab.addChild("timestamp", "columnname");
+                case 'u' -> fab.addChild("utcnow", "columnname");
+                case 'r' -> fab.addChild("real", "columnname");
+                case 'i' -> fab.addChild("integer", "columnname");
+                case 'c' -> fab.addChild("text", "columnname");
+                case 'm' -> fab.addChild("epochmillis", "columnname");
             }
         }
         return fab.build();
@@ -750,19 +746,6 @@ public class SqlTable {
             cols.add( columns.get(c).title );
         });
         stat.setStatement( cols + qMarks.toString() );
-    }
-    private PrepStatement buildPrep( String... params ){
-        PrepStatement stat = new PrepStatement();
-        for( String col : params ){
-            for( int a=0;a<columns.size();a++){
-                if( columns.get(a).title.equalsIgnoreCase(col) ){
-                    stat.addColumn(a);
-                    Logger.info("Found column "+col+" at index "+a);
-                    break;
-                }
-            }
-        }
-        return stat;
     }
     private static class PrepStatement{
         ArrayList<Object[]> data = new ArrayList<>();

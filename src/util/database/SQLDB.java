@@ -47,31 +47,32 @@ public class SQLDB extends Database{
         this.pass=pass;
         this.dbName=dbName;
 
-        switch( type ){
-            case MYSQL:
-                irl="jdbc:mysql://" + address + (address.contains(":")?"/":":3306/") + dbName;
-                tableRequest="SHOW FULL TABLES;";
-                columnRequest="SHOW COLUMNS FROM ";
-                break;
-            case MSSQL:
+        switch (type) {
+            case MYSQL -> {
+                irl = "jdbc:mysql://" + address + (address.contains(":") ? "/" : ":3306/") + dbName;
+                tableRequest = "SHOW FULL TABLES;";
+                columnRequest = "SHOW COLUMNS FROM ";
+            }
+            case MSSQL -> {
                 irl = "jdbc:sqlserver://" + address + (dbName.isBlank() ? "" : ";database=" + dbName);
-                tableRequest="SELECT * FROM information_schema.tables";
-                columnRequest="";
-                break;
-            case MARIADB:
-                irl="jdbc:mariadb://" + address + (address.contains(":")?"/":":3306/") + dbName;
-                tableRequest="SHOW FULL TABLES;";
-                columnRequest="SHOW COLUMNS FROM ";
-                break;
-            case POSTGRESQL:
-                irl="jdbc:postgresql://"+ address + (address.contains(":")?"/":":5432/")+dbName;
-                tableRequest="SELECT table_name FROM information_schema.tables WHERE NOT table_schema='pg_catalog'AND NOT table_schema='information_schema';";
-                columnRequest="SELECT column_name,udt_name,is_nullable,is_identity FROM information_schema.columns WHERE table_name=";
-                break;
-            default:
-                tableRequest="";
-                columnRequest="";
-                Logger.error(id+" (db) -> Unknown database type: "+type);
+                tableRequest = "SELECT * FROM information_schema.tables";
+                columnRequest = "";
+            }
+            case MARIADB -> {
+                irl = "jdbc:mariadb://" + address + (address.contains(":") ? "/" : ":3306/") + dbName;
+                tableRequest = "SHOW FULL TABLES;";
+                columnRequest = "SHOW COLUMNS FROM ";
+            }
+            case POSTGRESQL -> {
+                irl = "jdbc:postgresql://" + address + (address.contains(":") ? "/" : ":5432/") + dbName;
+                tableRequest = "SELECT table_name FROM information_schema.tables WHERE NOT table_schema='pg_catalog'AND NOT table_schema='information_schema';";
+                columnRequest = "SELECT column_name,udt_name,is_nullable,is_identity FROM information_schema.columns WHERE table_name=";
+            }
+            default -> {
+                tableRequest = "";
+                columnRequest = "";
+                Logger.error(id + " (db) -> Unknown database type: " + type);
+            }
         }
     }
     protected SQLDB(){
@@ -135,16 +136,10 @@ public class SQLDB extends Database{
         }        
        
         try {
-            switch( type ){ // Set the class according to the database, might not be needed anymore
-                case MSSQL:	  
-                    Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");  
-                    break;
-                case MYSQL: case MARIADB:
-                    Class.forName("org.mariadb.jdbc.Driver");                       
-                    break;
-                case POSTGRESQL:
-                    Class.forName("org.postgresql.Driver");
-                    break;
+            switch (type) { // Set the class according to the database, might not be needed anymore
+                case MSSQL -> Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+                case MYSQL, MARIADB -> Class.forName("org.mariadb.jdbc.Driver");
+                case POSTGRESQL -> Class.forName("org.postgresql.Driver");
             }
 		} catch (ClassNotFoundException ex) {
             Logger.error( id+"(db) -> Driver issue with SQLite!" );
@@ -268,7 +263,6 @@ public class SQLDB extends Database{
      */
     @Override
     public int buildGenericsFromTables(XMLfab fab, boolean overwrite, String delimiter) {
-        var ele = fab.getChildren("generic");
         int cnt=0; // keep track of the amount of generics build
         for( var table : tables.values()){ // Go through the tables
             boolean found = fab.getChildren("generic").stream().anyMatch(
@@ -475,7 +469,7 @@ public class SQLDB extends Database{
         } catch (SQLException e) {
             Logger.error(id+"(db) -> Error running query: "+query+" -> "+e.getErrorCode());
         }
-        return Optional.ofNullable(data);
+        return Optional.of(data);
     }
 
     public synchronized boolean buildInsert(String table, DataProviding dp, String macro) {
@@ -568,25 +562,27 @@ public class SQLDB extends Database{
 
         SQLDB db;
         String type = dbe.getAttribute("type");								    	// Set the database type:mssql,mysql or mariadb
-        switch( type.toLowerCase() ){
-            case "mssql": db = SQLDB.asMSSQL(address, dbname, user, pass); break;
-            case "mysql": db = SQLDB.asMYSQL(address, dbname, user, pass); break;
-            case "mariadb": db = SQLDB.asMARIADB(address, dbname, user, pass); break;
-            case "postgresql": db = SQLDB.asPOSTGRESQL(address, dbname, user, pass); break;
-            default:
-                Logger.error("Invalid database type: "+type);
-                return null;         
+        switch (type.toLowerCase()) {
+            case "mssql" -> db = SQLDB.asMSSQL(address, dbname, user, pass);
+            case "mysql" -> db = SQLDB.asMYSQL(address, dbname, user, pass);
+            case "mariadb" -> db = SQLDB.asMARIADB(address, dbname, user, pass);
+            case "postgresql" -> db = SQLDB.asPOSTGRESQL(address, dbname, user, pass);
+            default -> {
+                Logger.error("Invalid database type: " + type);
+                return null;
+            }
         }
 
         db.id = dbe.getAttribute("id");
 
         /* Setup */
-        db.readFlushSetup(XMLtools.getFirstChildByTag(dbe, "flush"));
+        if( !db.readFlushSetup(XMLtools.getFirstChildByTag(dbe, "flush")))
+            Logger.info("No flush setup read");
         // How many seconds before the connection is considered idle (and closed)
         db.idleTime = (int)TimeTools.parsePeriodStringToSeconds(XMLtools.getChildValueByTag(dbe,"idleclose","5m"));
 
         /* Tables */
-        XMLtools.getChildElements(dbe,"table").stream().forEach( x -> SqlTable.readFromXml(x).ifPresent(table ->
+        XMLtools.getChildElements(dbe,"table").forEach(x -> SqlTable.readFromXml(x).ifPresent(table ->
         {
             table.toggleServer();
             db.tables.put(table.name,table);
@@ -674,9 +670,8 @@ public class SQLDB extends Database{
     /**
      * Check and update the current state of the database
      * @param secondsPassed How many seconds passed since the last check (interval so fixed)
-     * @throws Exception Catch any exception so the thread doesn't get killed
      */
-    public void checkState( int secondsPassed ) throws Exception{
+    public void checkState( int secondsPassed ) {
         switch(state){
             case FLUSH_REQ: // Required a flush
                 if( !simpleQueries.isEmpty() ) {
@@ -809,7 +804,7 @@ public class SQLDB extends Database{
     /**
      * Execute queries in a batch
      * @param queries The queries to execute
-     * @return
+     * @return True if all ok
      */
     private boolean doBatchRun(ArrayList<String> queries){
 
@@ -844,7 +839,6 @@ public class SQLDB extends Database{
                             queries.set(x, "");
                         }
                     }
-                    batchOk = false;
                 }
                 con.setAutoCommit(auto);
             } catch (SQLException e) {

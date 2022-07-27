@@ -176,7 +176,7 @@ public class CommandPool {
 			case "reqtasks" -> doREQTASKS(split);
 			case "sd" -> doShutDown(split, wr, html);
 			case "serialports" -> Tools.getSerialPorts(html);
-			case "conv" -> Tools.convertCoords(split[1].split(";"));
+			case "conv" -> Tools.convertCoordinates(split[1].split(";"));
 			case "ts" -> doTimeStamping( split );
 			case "", "stop", "nothing" -> {
 				stopCommandable.forEach(c -> c.replyToCommand(new String[]{"", ""}, wr, false));

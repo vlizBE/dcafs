@@ -255,7 +255,8 @@ public class SQLiteDB extends SQLDB{
             }
         }
         /* Setup */
-        db.readFlushSetup(XMLtools.getFirstChildByTag(dbe, "flush"));
+        if( !db.readFlushSetup(XMLtools.getFirstChildByTag(dbe, "flush")))
+            Logger.info("No flush setup read");
 
         // How many seconds before the connection is considered idle (and closed)
         db.idleTime = (int)TimeTools.parsePeriodStringToSeconds(XMLtools.getChildValueByTag(dbe,"idleclose","5m"));
@@ -411,7 +412,7 @@ public class SQLiteDB extends SQLDB{
      * the tables - if the rollover is every x months, schedule the next one
      */
     private class DoRollOver implements Runnable {
-        boolean renew=true;
+        boolean renew;
 
         public DoRollOver( boolean renew ){
             this.renew=renew;
@@ -425,7 +426,7 @@ public class SQLiteDB extends SQLDB{
             if(renew)
                 updateFileName(rolloverTimestamp); // first update the filename
 
-            getTables().forEach( t -> t.clearReadFromDB()); // Otherwise they won't get generated
+            getTables().forEach(SqlTable::clearReadFromDB); // Otherwise they won't get generated
 
             disconnect();// then disconnect, this also flushes the queries first
             Logger.info("Disconnected to connect to new one...");

@@ -17,12 +17,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Optional;
 import java.util.StringJoiner;
 
 public class TaskManagerPool implements Commandable {
 
-    private String workPath;
+    private final String workPath;
     HashMap<String, TaskManager> tasklists = new HashMap<>();
     DataProviding dp;
     CommandPool cmdReq;
@@ -67,9 +66,6 @@ public class TaskManagerPool implements Commandable {
         tasklists.put(id,tl);
         return tl;
     }
-    public Optional<TaskManager> getTaskList(String id ){
-        return Optional.ofNullable(tasklists.get(id));
-    }
     public TaskManager addTaskList( String id, Path scriptPath){
         var tm = new TaskManager(id,dp,cmdReq);
         tm.setScriptPath(scriptPath);
@@ -84,39 +80,6 @@ public class TaskManagerPool implements Commandable {
         Logger.info("Checking for tasklists with keyword " + keyword);
         tasklists.forEach( (k, v) -> v.startKeywordTask(keyword) );
     }
-
-    /**
-     * Change a state stored by the TaskManagers
-     *
-     * @param state The format needs to be identifier:state
-     */
-    public void changeManagersState(String state) {
-        tasklists.values().forEach(v -> v.changeState(state));
-    }
-
-    /**
-     * Reload the script of a given TaskManager
-     *
-     * @param id The id of the manager
-     * @return Result of the attempt
-     */
-    public String reloadTasklist(String id) {
-        if (id.endsWith(".xml")) {
-            for (TaskManager t : tasklists.values()) {
-                if (t.getXMLPath().toString().endsWith(id)) {
-                    return t.reloadTasks() ? "Tasks loaded successfully." : "Tasks loading failed.";
-                }
-            }
-
-            addTaskList(id.replace(".xml", ""), Path.of(workPath,"scripts", id));
-            return "No TaskManager associated with the script, creating one.";
-        }
-        TaskManager tm = tasklists.get(id);
-        if (tm == null)
-            return "Unknown manager.";
-        return tm.reloadTasks() ? "Tasks loaded successfully." : "Tasks loading failed.";
-    }
-
     /**
      * Try to start the given taskset in all the tasklists
      * @param taskset The taskset to start

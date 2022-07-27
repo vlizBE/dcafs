@@ -1,7 +1,6 @@
 package util.task;
 
 import org.tinylog.Logger;
-import util.data.DataProviding;
 import util.task.TaskManager.RUNTYPE;
 
 import java.util.ArrayList;
@@ -13,8 +12,8 @@ public class TaskSet {
     private RUNTYPE run = RUNTYPE.ONESHOT;
     private final ArrayList<Task> tasks = new ArrayList<>();
     private String failureTask = null;
-    private String id="";
-    private String description="";
+    private final String id;
+    private final String description;
     int index=0;
     int repeat = -1;
     private boolean active = false;
@@ -48,9 +47,7 @@ public class TaskSet {
     public void setManagerID( String manID ){
         managerID=manID;
     } 
-    public static TaskSet createSet( String name, String shortName, RUNTYPE run, int repeats ){
-        return new TaskSet(name,shortName,run,repeats);
-    }
+
     public void addTask( Task t ) {
         if( run != RUNTYPE.NOT)
             t.setTaskset( id, tasks.size() );			
@@ -59,11 +56,7 @@ public class TaskSet {
     public List<Task> getTasks(){
         return tasks;
     }
-    public Task getTask( int index ) {
-        if( index >= tasks.size())
-            return null;
-        return tasks.get(index);
-    }
+
     public Optional<Task> getTaskByID( String id ){
         return tasks.stream().filter( t-> t.id.equalsIgnoreCase(id)).findFirst();
     }
@@ -102,9 +95,6 @@ public class TaskSet {
     }
     public int getTaskCount() {
         return tasks.size();
-    }
-    public void setStepped() {
-        run = RUNTYPE.STEP;
     }
     public void setRepeat( int reps ) {
         this.repeat=reps;

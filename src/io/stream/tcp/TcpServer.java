@@ -149,6 +149,7 @@ public class TcpServer implements StreamListener, Commandable {
 
 							TransHandler handler = new TransHandler("system", dQueue);
 							handler.setListener(TcpServer.this);
+							handler.setEventLoopGroup(workerGroup);
 							clients.add(handler);
 
 							ch.pipeline().addLast(handler);

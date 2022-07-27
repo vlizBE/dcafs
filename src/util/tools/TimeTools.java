@@ -546,7 +546,7 @@ public class TimeTools {
 		}
 		return amount+"h";
     }
-    /*********************** C A L C U L A T I O N S *******************************************/
+    /* ********************** C A L C U L A T I O N S ****************************************** */
     /**
      * Calculates the seconds till a certain time in UTC
      * @param time The time in standard format

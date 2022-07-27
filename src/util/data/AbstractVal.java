@@ -39,7 +39,6 @@ public abstract class AbstractVal {
     }
     /**
      * Enable keeping time of the last value update
-     * @return This object but with time keeping enabled
      */
     public void keepTime(){
         keepTime=true;

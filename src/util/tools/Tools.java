@@ -315,17 +315,14 @@ public class Tools {
     }
     public static ArrayList<String> extractMatches(String txt, String regex ){
         try {
-            var pat = Pattern.compile(regex);
-            if (pat != null) {
-                return pat.matcher(txt)
-                        .results()
-                        .map(MatchResult::group)
-                        .collect(Collectors.toCollection(ArrayList::new));
-            }
+            return Pattern.compile(regex).matcher(txt)
+                    .results()
+                    .map(MatchResult::group)
+                    .collect(Collectors.toCollection(ArrayList::new));
         }catch( Exception e){
             Logger.error(e);
         }
-        return new ArrayList<String>();
+        return new ArrayList<>();
     }
 
     /**
@@ -339,16 +336,14 @@ public class Tools {
     public static String alterMatches(String txt, String filter, String regex, String prepend, String append ){
         try {
             var pat = Pattern.compile(regex);
-            if (pat != null) {
-                var res = pat.matcher(txt)
-                        .results()
-                        .map(MatchResult::group)
-                        .filter( s -> s.matches(filter))
-                        .collect(Collectors.toCollection(ArrayList::new));
+            var res = pat.matcher(txt)
+                    .results()
+                    .map(MatchResult::group)
+                    .filter( s -> s.matches(filter))
+                    .collect(Collectors.toCollection(ArrayList::new));
 
-                for( var r : res ){
-                    txt=txt.replace(r,prepend+r+append);
-                }
+            for( var r : res ){
+                txt=txt.replace(r,prepend+r+append);
             }
         }catch( Exception e){
             Logger.error(e);
@@ -726,8 +721,8 @@ public class Tools {
 
     /**
      * List all the currently active threads
-     * @param html Whether or not it should be html or standard eol
-     * @return
+     * @param html Whether it should be html or standard eol
+     * @return List of currently active threads
      */
     public static String listThreads( boolean html ){
         StringJoiner join = new StringJoiner(html ? "<br>" : "\r\n");
@@ -740,17 +735,17 @@ public class Tools {
     }
 
     /**
-     * Converts coords to the deg min.min format
-     * @param coords The coords to convert
+     * Converts coordinates to the deg min.min format
+     * @param coordinates The coordinates to convert
      * @return The result
      */
-    public static String convertCoords( String[] coords){
+    public static String convertCoordinates(String[] coordinates){
 
         BigDecimal bd60 = BigDecimal.valueOf(60);
         StringBuilder b = new StringBuilder();
         ArrayList<Double> degrees = new ArrayList<>();
 
-        for( String item : coords ){
+        for( String item : coordinates ){
             String[] nrs = item.split(" ");
             if( nrs.length == 1){//meaning degrees!
                 degrees.add(Tools.parseDouble(nrs[0], 0));

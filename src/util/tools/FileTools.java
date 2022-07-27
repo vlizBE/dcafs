@@ -8,21 +8,17 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.Charset;
-import java.nio.charset.MalformedInputException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 public class FileTools {
 
-    /************************************************************************************************************/
-    /******************************** R E A D / W R I T E *******************************************************/
-    /************************************************************************************************************/
+    /* ******************************* R E A D / W R I T E ****************************************************** */
     /**
      * Method that opens a file (or creates it and needed directories) and appends the data to it
      * 

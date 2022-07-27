@@ -738,24 +738,6 @@ public class TaskManager implements CollectorFuture {
 							return FAILREASON.ERROR;
 						}
 						break;
-					case MQTT:	
-					/*
-						MqttWorker mqtt = reqData.das.mqttWorkers.get( task.outputRef );
-						String[] tosend = task.txt.split(";");											
-						if (tosend.length == 2){
-							if( NumberUtils.isCreatable(tosend[1])){
-								mqtt.addWork( new MqttWork( tosend[0],tosend[1] ) );
-							}else{
-								double val = rtvals.getRealtimeValue(tosend[1],Double.NaN);
-								if( !Double.isNaN(val)){
-									mqtt.addWork( new MqttWork( tosend[0],val ) );
-								}else{
-									Logger.tag(TINY_TAG).error("Non existing rtvals requested: "+tosend[1]);
-								}
-							}
-						}
-						*/
-						break;
 					case MATRIX:
 						String resp;
 						if( task.value.startsWith(""+'"')){
@@ -775,18 +757,16 @@ public class TaskManager implements CollectorFuture {
 							device = spl[0];
 							mess = spl[1];
 						}
-						switch( task.outputRef ){
-							case "info":	// Just note the info
-								Logger.tag(TINY_TAG).info("["+ id +"] "+device+"\t"+mess);
-							break;
-							case "warn":	// Note the warning
-								Logger.tag(TINY_TAG).warn("TaskManager.reportIssue\t["+ id +"] "+device+"\t"+mess);
-							break;
-							case "error":	// Note the error and send email								
-								Logger.tag(TINY_TAG).error("TaskManager.reportIssue\t["+ id +"] "+device+"\t"+mess);
-								emailer.sendEmail( Email.toAdminAbout(device+" -> "+mess) );
-							break;
-							default: Logger.error("Tried to use unknown outputref: "+task.outputRef); break;
+						switch (task.outputRef) {
+							case "info" ->    // Just note the info
+									Logger.tag(TINY_TAG).info("[" + id + "] " + device + "\t" + mess);
+							case "warn" ->    // Note the warning
+									Logger.tag(TINY_TAG).warn("TaskManager.reportIssue\t[" + id + "] " + device + "\t" + mess);
+							case "error" -> {    // Note the error and send email
+								Logger.tag(TINY_TAG).error("TaskManager.reportIssue\t[" + id + "] " + device + "\t" + mess);
+								emailer.sendEmail(Email.toAdminAbout(device + " -> " + mess));
+							}
+							default -> Logger.error("Tried to use unknown outputref: " + task.outputRef);
 						}
 						break;
 					case TELNET:
@@ -799,29 +779,29 @@ public class TaskManager implements CollectorFuture {
 							break;
 						}
 
-						switch( com[0] ){
-							case "raiseflag": dp.raiseFlag(com[1]);break;
-							case "lowerflag": dp.lowerFlag(com[1]); break;
-							case "start": startTaskset(com[1]); break;
-							case "stop": 
-								int a = stopTaskSet( com[1] );
-								if( a == -1 ){
-									Logger.tag(TINY_TAG).warn("Failed to stop the taskset '"+com[1]+"' because not found");
-								}else{
-									Logger.tag(TINY_TAG).info("Stopped the tasket '"+com[1]+"' and "+a+" running tasks.");
+						switch (com[0]) {
+							case "raiseflag" -> dp.raiseFlag(com[1]);
+							case "lowerflag" -> dp.lowerFlag(com[1]);
+							case "start" -> startTaskset(com[1]);
+							case "stop" -> {
+								int a = stopTaskSet(com[1]);
+								if (a == -1) {
+									Logger.tag(TINY_TAG).warn("Failed to stop the taskset '" + com[1] + "' because not found");
+								} else {
+									Logger.tag(TINY_TAG).info("Stopped the tasket '" + com[1] + "' and " + a + " running tasks.");
 								}
-								break;
-							default:
+							}
+							default -> {
 								TaskSet set = this.tasksets.get(com[0].toLowerCase());
-								if( set != null){
-									Optional<Task> t = set.getTaskByID(com[1].toLowerCase());							
-									if( t.isPresent() && this.startTask( t.get() ) ){
-										Logger.tag(TINY_TAG).info("Started Managed task:"+com[1]);
+								if (set != null) {
+									Optional<Task> t = set.getTaskByID(com[1].toLowerCase());
+									if (t.isPresent() && this.startTask(t.get())) {
+										Logger.tag(TINY_TAG).info("Started Managed task:" + com[1]);
 									}
-								}else{
-									Logger.tag(TINY_TAG).warn("Failed to start managed taskset, not found: "+com[0]);
+								} else {
+									Logger.tag(TINY_TAG).warn("Failed to start managed taskset, not found: " + com[0]);
 								}
-							break;
+							}
 						}
 						break;
 					case I2C:
@@ -914,15 +894,6 @@ public class TaskManager implements CollectorFuture {
 	}
 
 	/* **************************************** UTILITY *******************************************************/
-	/**
-	 * Checks if a taskset with the given shortname exists
-	 * @param shortname Shortname to look for
-	 * @return TRue if it exists
-	 */
-	public boolean tasksetExists( String shortname ){
-		return this.tasksets.get(shortname)!=null;
-	}
-
 	/**
 	 * Get a listing of all the managed tasks
 	 * @param eol Characters to use for End Of Line
@@ -1188,20 +1159,17 @@ public class TaskManager implements CollectorFuture {
 				String failure = el.getAttribute("failure");						
 				int repeats = XMLtools.getIntAttribute(el, "repeat", 0);
 
-				RUNTYPE run ;				
-				switch( el.getAttribute("run") ) {
-					case "step": 	
-						run = RUNTYPE.STEP;
-						break;
-					case "no":case "not":
-						run=RUNTYPE.NOT;
-						repeats=0;
-						break;
-					default: 
-					case "oneshot":
-						run = RUNTYPE.ONESHOT;	
-						repeats=0;	
-						break;
+				RUNTYPE run ;
+				switch (el.getAttribute("run")) {
+					case "step" -> run = RUNTYPE.STEP;
+					case "no", "not" -> {
+						run = RUNTYPE.NOT;
+						repeats = 0;
+					}
+					default -> { // oneshot is the default
+						run = RUNTYPE.ONESHOT;
+						repeats = 0;
+					}
 				}
 				TaskSet set = addTaskSet(tasksetID, description,  run, repeats, failure);
 				set.setReqIndex( reqIndex );
