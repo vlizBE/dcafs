@@ -32,7 +32,6 @@ public class RealVal extends AbstractVal implements NumericVal{
 
     /* Triggering */
     private ArrayList<TriggeredCmd> triggered;
-    enum TRIGGERTYPE {ALWAYS,CHANGED,STDEV,COMP};
 
     private RealVal(){}
 
@@ -103,7 +102,7 @@ public class RealVal extends AbstractVal implements NumericVal{
         /* Respond to triggered command based on value */
         if( dQueue!=null && triggered!=null ) {
             // Execute all the triggers, only if it's the first time
-            triggered.stream().forEach(tc -> tc.apply(val));
+            triggered.forEach(tc -> tc.apply(val));
         }
         if( digits != -1) {
             value = Tools.roundDouble(val, digits);
@@ -194,11 +193,10 @@ public class RealVal extends AbstractVal implements NumericVal{
         if( triggered==null)
             return;
         for( var tc : triggered ){
-            switch(tc.type ){
-                case ALWAYS:  fab.addChild("cmd",tc.cmd); break;
-                case CHANGED: fab.addChild("cmd",tc.cmd).attr("when","changed"); break;
-                case STDEV:
-                case COMP:    fab.addChild("cmd",tc.cmd).attr("when",tc.ori); break;
+            switch (tc.type) {
+                case ALWAYS -> fab.addChild("cmd", tc.cmd);
+                case CHANGED -> fab.addChild("cmd", tc.cmd).attr("when", "changed");
+                case STDEV, COMP -> fab.addChild("cmd", tc.cmd).attr("when", tc.ori);
             }
         }
     }
@@ -374,19 +372,19 @@ public class RealVal extends AbstractVal implements NumericVal{
             this.cmd=cmd;
             this.ori=trigger;
             type=TRIGGERTYPE.COMP;
-            switch( trigger ){
-                case "": case "always": type=TRIGGERTYPE.ALWAYS; break;
-                case "changed": type=TRIGGERTYPE.CHANGED; break;
-                default:
-                    if( trigger.contains("stdev")) {
+            switch (trigger) {
+                case "", "always" -> type = TRIGGERTYPE.ALWAYS;
+                case "changed" -> type = TRIGGERTYPE.CHANGED;
+                default -> {
+                    if (trigger.contains("stdev")) {
                         type = TRIGGERTYPE.STDEV;
-                        trigger=trigger.replace("stdev","");
+                        trigger = trigger.replace("stdev", "");
                     }
-                    comp=MathUtils.parseSingleCompareFunction(trigger);
-                    if( comp==null){
-                        this.cmd="";
+                    comp = MathUtils.parseSingleCompareFunction(trigger);
+                    if (comp == null) {
+                        this.cmd = "";
                     }
-                    break;
+                }
             }
         }
         public boolean isInvalid(){
@@ -398,26 +396,27 @@ public class RealVal extends AbstractVal implements NumericVal{
                 return;
             }
             boolean ok;
-            switch( type ){
-                case ALWAYS:
-                    dQueue.add(Datagram.system(cmd.replace("$",""+val)));
+            switch (type) {
+                case ALWAYS -> {
+                    dQueue.add(Datagram.system(cmd.replace("$", "" + val)));
                     return;
-                case CHANGED:
-                    if( val != value )
-                        dQueue.add(Datagram.system(cmd.replace("$",""+val)));
+                }
+                case CHANGED -> {
+                    if (val != value)
+                        dQueue.add(Datagram.system(cmd.replace("$", "" + val)));
                     return;
-                case COMP:
-                    ok = comp.apply(val);
-                    break;
-                case STDEV:
+                }
+                case COMP -> ok = comp.apply(val);
+                case STDEV -> {
                     double sd = getStdev();
-                    if( Double.isNaN(sd))
+                    if (Double.isNaN(sd))
                         return;
                     ok = comp.apply(getStdev()); // Compare with the Standard Deviation instead of value
-                    break;
-                default:
-                    Logger.error(id()+" (dv)-> Somehow an invalid trigger sneaked in... ");
+                }
+                default -> {
+                    Logger.error(id() + " (dv)-> Somehow an invalid trigger sneaked in... ");
                     return;
+                }
             }
             if( !triggered && ok ){
                 dQueue.add(Datagram.system(cmd.replace("$",""+val)));

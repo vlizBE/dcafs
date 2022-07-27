@@ -28,8 +28,9 @@ public abstract class AbstractVal {
     protected BlockingQueue<Datagram> dQueue;
 
     /* Requests */
-    ArrayList<Writable> targets;
+    protected ArrayList<Writable> targets;
 
+    enum TRIGGERTYPE {ALWAYS,CHANGED,STDEV,COMP}
     /* ************************************* Options ******************************************************** */
     public void reset(){
         keepTime=false;

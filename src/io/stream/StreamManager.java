@@ -18,7 +18,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.commons.lang3.StringUtils;
 import org.tinylog.Logger;
-import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import util.tools.TimeTools;
 import util.tools.Tools;
@@ -295,7 +294,7 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 					if( txt.indexOf("\\") < txt.length()-2 ){
 						txt = Tools.fromEscapedStringToBytes(txt);
 					}
-					boolean written = false;
+					boolean written;
 					if( txt.endsWith("\\0")){
 						written=((Writable)stream).writeString(StringUtils.removeEnd(txt,"\\0"));
 					}else{
@@ -387,7 +386,7 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 		}
 
 		if( !streams.isEmpty()){
-			streams.values().forEach( bs -> bs.disconnect());
+			streams.values().forEach(BaseStream::disconnect);
 		}
 		streams.clear(); // Clear out before the reread
 
@@ -573,8 +572,8 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 	public String replyToCommand(String[] request, Writable wr, boolean html) {
 		String find = request[0].toLowerCase().replaceAll("\\d+","_");
 		return switch( find ) {
-			case "ss", "streams" -> replyToStreamCommand(request[1], wr, html);
-			case "rios" -> replyToStreamCommand("rios", wr, html);
+			case "ss", "streams" -> replyToStreamCommand(request[1], html);
+			case "rios" -> replyToStreamCommand("rios", html);
 			case "raw","stream" -> "Request for "+request[0]+":"+request[1]+" "+( addForwarding(request[1],wr)?"ok":"failed");
 			case "s_","h_" -> doSorH( request);
 			case "","stop" -> removeWritable(wr)?"Ok.":"";
@@ -587,7 +586,7 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 	 * @param html Whether the answer should use html or regular line endings
 	 * @return The answer or Unknown Command if the question wasn't understood
 	 */
-	public String replyToStreamCommand(String request, Writable wrOri, boolean html ){
+	public String replyToStreamCommand(String request, boolean html ){
 
 		String nl = html?"<br>":"\r\n";
 
@@ -663,7 +662,7 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 			case "cleartargets":
 				if( cmds.length != 2 ) // Make sure we got the correct amount of arguments
 					return "Bad amount of arguments, need 2 ss:clearrequests,id";
-				return "Targets cleared:"+getStream(cmds[1]).map( b -> b.clearTargets()).orElse(0);
+				return "Targets cleared:"+getStream(cmds[1]).map(BaseStream::clearTargets).orElse(0);
 			case "recon":
 				if( cmds.length != 2 ) // Make sure we got the correct amount of arguments
 					return "Bad amount of arguments, need 2 (recon,id)";
@@ -735,32 +734,31 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 				if( fab.selectChildAsParent("stream","id",cmds[1]).isEmpty() )
 					return "No such stream '"+cmds[1]+"'";
 
-				Element f;
 				boolean reload=false;
-				switch( alter[0] ){
-					case "label":
+				switch (alter[0]) {
+					case "label" -> {
 						stream.setLabel(alter[1]);
-						fab.alterChild("label",alter[1]);
-						break; 
-					case "baudrate":
-						if( !(stream instanceof SerialStream) )
+						fab.alterChild("label", alter[1]);
+					}
+					case "baudrate" -> {
+						if (!(stream instanceof SerialStream))
 							return "Not a Serial port, no baudrate to change";
-						((SerialStream)stream).setBaudrate(Tools.parseInt(alter[1], -1));
-						fab.alterChild("serialsettings",((SerialStream)stream).getSerialSettings());
-					break;
-					case "ttl": 
-						if( !alter[1].equals("-1")){
-							stream.setReaderIdleTime( TimeTools.parsePeriodStringToSeconds(alter[1]));
-							fab.alterChild("ttl",alter[1]);
-						}else{
+						((SerialStream) stream).setBaudrate(Tools.parseInt(alter[1], -1));
+						fab.alterChild("serialsettings", ((SerialStream) stream).getSerialSettings());
+					}
+					case "ttl" -> {
+						if (!alter[1].equals("-1")) {
+							stream.setReaderIdleTime(TimeTools.parsePeriodStringToSeconds(alter[1]));
+							fab.alterChild("ttl", alter[1]);
+						} else {
 							fab.removeChild("ttl");
 						}
-						reload=true;
-					break;
-					default:
-						fab.alterChild(alter[0],alter[1]);
-						reload=true;
-					break;
+						reload = true;
+					}
+					default -> {
+						fab.alterChild(alter[0], alter[1]);
+						reload = true;
+					}
 				}
 				if( fab.build() ){
 					if( reload )
@@ -887,10 +885,9 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 				if( streams.get(cmds[1].toLowerCase()) != null )// Make sure we don't overwrite an existing connection
 					return "Connection exists with that id ("+cmds[1]+") not creating it";
 
-				if( cmds.length>=4)
-					cmds[3]=request.substring( request.indexOf(","+cmds[3])+1);
+				cmds[3]=request.substring( request.indexOf(","+cmds[3])+1);
 
-				UdpServer udpserver = new UdpServer(cmds[1],Integer.parseInt(cmds[2]),dQueue,cmds[3]);
+				new UdpServer(cmds[1],Integer.parseInt(cmds[2]),dQueue,cmds[3]);
 
 				break;
 			case "addserial":
@@ -925,9 +922,9 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 
 				return serial.connect()?"Connected to "+port:"Failed to connect to "+port;	
 			case "addlocal":
-				if( cmds.length != 3 ) // Make sure we got the correct amount of arguments
-					return "Bad amount of arguments, need 3 (addlocal,id,label,source)";
-				LocalStream local = new LocalStream( cmds[1],cmds[2],cmds.length==4?cmds[3]:"",dQueue);
+				if( cmds.length != 4 ) // Make sure we got the correct amount of arguments
+					return "Bad amount of arguments, ss:addlocal,id,label,source";
+				LocalStream local = new LocalStream( cmds[1],cmds[2],cmds[3],dQueue);
 				local.addListener(this);
 				streams.put( cmds[1].toLowerCase(), local);
 				addStreamToXML(cmds[1],true);
@@ -1078,18 +1075,14 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 	@Override
 	public void collectorFinished(String id, String message, Object result) {
 		String[] ids = id.split(":");
-		switch( ids[0] ){
-			case "confirm":
+		switch (ids[0]) {
+			case "confirm" -> {
 				confirmCollectors.remove(ids[1]);
 				if (confirmCollectors.isEmpty())
 					Logger.info("Confirm tasks are empty");
-				break;
-			case "math":
-				dQueue.add( Datagram.system( "store:"+message+","+result) );
-				break;
-			default:
-				Logger.error("Unknown Collector type: "+id);
-				break;
+			}
+			case "math" -> dQueue.add(Datagram.system("store:" + message + "," + result));
+			default -> Logger.error("Unknown Collector type: " + id);
 		}
 	}
 

@@ -17,8 +17,6 @@ import util.xml.XMLtools;
 import worker.Datagram;
 
 import java.nio.file.Path;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.*;
@@ -48,11 +46,10 @@ public class RealtimeValues implements DataProviding, Commandable {
 	private final Path settingsPath;
 
 	/* Patterns */
-	private final Pattern words = Pattern.compile("[a-zA-Z]+[_:0-9]*[a-zA-Z0-9]+\\d*"); // find references to *val
+	private final Pattern words = Pattern.compile("[a-zA-Z]+[_:\\d]*[a-zA-Z\\d]+\\d*"); // find references to *val
 
 	/* Other */
 	private final BlockingQueue<Datagram> dQueue; // Used to issue triggered cmd's
-	private final ArrayList<String> errorLog = new ArrayList<>();
 
 	boolean readingXML=false;
 
@@ -106,84 +103,77 @@ public class RealtimeValues implements DataProviding, Commandable {
 			name = rtval.getTextContent();
 		String id = group.isEmpty()?name:group+"_"+name;
 
-		switch( rtval.getTagName() ){
-			case "double": case "real":
-				if( !hasReal(id)) // If it doesn't exist yet
-					addRealVal( RealVal.newVal(group,name),false); // create it
-
-				var rv = getRealVal(id).get();
-
+		switch (rtval.getTagName()) {
+			case "double", "real" -> {
+				RealVal rv;
+				if (getRealVal(id).isEmpty()) // If it doesn't exist yet
+					addRealVal(RealVal.newVal(group, name), false); // create it
+				rv = getRealVal(id).get();
 				rv.reset(); // reset needed if this is called because of reload
-				rv.unit(XMLtools.getStringAttribute(rtval,"unit",""))
-				  .scale(XMLtools.getIntAttribute(rtval,"scale",-1))
-				  .defValue(XMLtools.getDoubleAttribute(rtval,"default",defReal));
-
-					String options = XMLtools.getStringAttribute(rtval,"options","");
-					for( var opt : options.split(",")){
-						var arg = opt.split(":");
-						switch( arg[0]){
-							case "minmax":  rv.keepMinMax(); break;
-							case "time":    rv.keepTime();   break;
-							case "scale":	rv.scale( NumberUtils.toInt(arg[1],-1)); break;
-							case "order":   rv.order( NumberUtils.toInt(arg[1],-1)); break;
-							case "history": rv.enableHistory( NumberUtils.toInt(arg[1],-1)); break;
-						}
-					}
-				if( !XMLtools.getChildElements(rtval,"cmd").isEmpty() )
-					rv.enableTriggeredCmds(dQueue);
-				for( Element trigCmd : XMLtools.getChildElements(rtval,"cmd")){
-					String trig = trigCmd.getAttribute("when");
-					String cmd = trigCmd.getTextContent();
-					rv.addTriggeredCmd(trig,cmd);
-				}
-				break;
-			case "integer": case "int":
-				if( !hasInteger(id)) // If it doesn't exist yet
-					addIntegerVal( IntegerVal.newVal(group,name),false); // create it
-
-				var iv = getIntegerVal(id).get();//
-
-				iv.reset(); // reset needed if this is called because of reload
-				iv.unit(XMLtools.getStringAttribute(rtval,"unit",""))
-				  .defValue(XMLtools.getIntAttribute(rtval,"default",defInteger));
-
-				String opts = XMLtools.getStringAttribute(rtval,"options","");
-				for( var opt : opts.split(",")){
+				rv.unit(XMLtools.getStringAttribute(rtval, "unit", ""))
+						.scale(XMLtools.getIntAttribute(rtval, "scale", -1))
+						.defValue(XMLtools.getDoubleAttribute(rtval, "default", defReal));
+				String options = XMLtools.getStringAttribute(rtval, "options", "");
+				for (var opt : options.split(",")) {
 					var arg = opt.split(":");
-					switch( arg[0]){
-						case "minmax":  iv.keepMinMax(); break;
-						case "time":    iv.keepTime();   break;
-						case "order":   iv.order( NumberUtils.toInt(arg[1],-1)); break;
-						case "history": iv.enableHistory( NumberUtils.toInt(arg[1],-1)); break;
+					switch (arg[0]) {
+						case "minmax" -> rv.keepMinMax();
+						case "time" -> rv.keepTime();
+						case "scale" -> rv.scale(NumberUtils.toInt(arg[1], -1));
+						case "order" -> rv.order(NumberUtils.toInt(arg[1], -1));
+						case "history" -> rv.enableHistory(NumberUtils.toInt(arg[1], -1));
 					}
 				}
-				if( !XMLtools.getChildElements(rtval,"cmd").isEmpty() )
-					iv.enableTriggeredCmds(dQueue);
-				for( Element trigCmd : XMLtools.getChildElements(rtval,"cmd")){
+				if (!XMLtools.getChildElements(rtval, "cmd").isEmpty())
+					rv.enableTriggeredCmds(dQueue);
+				for (Element trigCmd : XMLtools.getChildElements(rtval, "cmd")) {
 					String trig = trigCmd.getAttribute("when");
 					String cmd = trigCmd.getTextContent();
-					iv.addTriggeredCmd(trig,cmd);
+					rv.addTriggeredCmd(trig, cmd);
 				}
-				break;
-			case "text":
-				setText(id,XMLtools.getStringAttribute(rtval,"default",defText));
-				break;
-			case "flag":
+			}
+			case "integer", "int" -> {
+				if (!hasInteger(id)) // If it doesn't exist yet
+					addIntegerVal(IntegerVal.newVal(group, name), false); // create it
+				var iv = getIntegerVal(id).get();//
+				iv.reset(); // reset needed if this is called because of reload
+				iv.unit(XMLtools.getStringAttribute(rtval, "unit", ""))
+						.defValue(XMLtools.getIntAttribute(rtval, "default", defInteger));
+				String opts = XMLtools.getStringAttribute(rtval, "options", "");
+				for (var opt : opts.split(",")) {
+					var arg = opt.split(":");
+					switch (arg[0]) {
+						case "minmax" -> iv.keepMinMax();
+						case "time" -> iv.keepTime();
+						case "order" -> iv.order(NumberUtils.toInt(arg[1], -1));
+						case "history" -> iv.enableHistory(NumberUtils.toInt(arg[1], -1));
+					}
+				}
+				if (!XMLtools.getChildElements(rtval, "cmd").isEmpty())
+					iv.enableTriggeredCmds(dQueue);
+				for (Element trigCmd : XMLtools.getChildElements(rtval, "cmd")) {
+					String trig = trigCmd.getAttribute("when");
+					String cmd = trigCmd.getTextContent();
+					iv.addTriggeredCmd(trig, cmd);
+				}
+			}
+			case "text" -> setText(id, XMLtools.getStringAttribute(rtval, "default", defText));
+			case "flag" -> {
 				var fv = getOrAddFlagVal(id);
 				fv.reset(); // reset is needed if this is called because of reload
-				fv.name(XMLtools.getChildValueByTag(rtval,"name",fv.name()))
-						.group(XMLtools.getChildValueByTag(rtval,"group",fv.group()))
-						.defState(XMLtools.getBooleanAttribute(rtval,"default",defFlag));
-				if( XMLtools.getBooleanAttribute(rtval,"keeptime",false) )
+				fv.name(XMLtools.getChildValueByTag(rtval, "name", fv.name()))
+						.group(XMLtools.getChildValueByTag(rtval, "group", fv.group()))
+						.defState(XMLtools.getBooleanAttribute(rtval, "default", defFlag));
+				if (XMLtools.getBooleanAttribute(rtval, "keeptime", false))
 					fv.keepTime();
-				if( !XMLtools.getChildElements(rtval,"cmd").isEmpty() )
+				if (!XMLtools.getChildElements(rtval, "cmd").isEmpty())
 					fv.enableTriggeredCmds(dQueue);
-				for( Element trigCmd : XMLtools.getChildElements(rtval,"cmd")){
+				for (Element trigCmd : XMLtools.getChildElements(rtval, "cmd")) {
 					String trig = trigCmd.getAttribute("when");
 					String cmd = trigCmd.getTextContent();
-					fv.addTriggeredCmd(trig,cmd);
+					fv.addTriggeredCmd(trig, cmd);
 				}
-				break;
+			}
 		}
 	}
 	/* ************************************* P A R S I N G ********************************************************* */
@@ -196,7 +186,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 	 */
 	public String simpleParseRT( String line,String error ){
 
-		var found = words.matcher(line).results().map(MatchResult::group).collect(Collectors.toList());
+		var found = words.matcher(line).results().map(MatchResult::group).toList();
 
 		for( var word : found ){
 			if( word.contains(":")){ // Check if the word contains a : with means it's {d:id} etc
@@ -253,7 +243,6 @@ public class RealtimeValues implements DataProviding, Commandable {
 					if( hasInteger(word)){
 						line = line.replace(word, "" + getInteger(word,-999));
 					}else {
-						var t = getText(word, ""); // check if it's a text
 						if (hasText(word)) { //next, try text
 							line = line.replace(word, getText(word,""));
 						} else if (hasFlag(word)) { // if it isn't a text, check if it's a flag
@@ -288,30 +277,26 @@ public class RealtimeValues implements DataProviding, Commandable {
 		for( var p : pairs ){
 			if(p.length==2) {
 				switch (p[0]) {
-					case "d": case "r": case "double": case "real": {
+					case "d", "r", "double", "real" -> {
 						var d = getReal(p[1], Double.NaN);
 						if (!Double.isNaN(d) || !error.isEmpty())
 							line = line.replace("{" + p[0] + ":" + p[1] + "}", Double.isNaN(d) ? error : "" + d);
-						break;
 					}
-					case "i": case "int": case "integer": {
-						var i =getInteger(p[1], Integer.MAX_VALUE);
+					case "i", "int", "integer" -> {
+						var i = getInteger(p[1], Integer.MAX_VALUE);
 						if (i != Integer.MAX_VALUE)
-							line = line.replace("{" + p[0] + ":" + p[1] + "}",  "" + i);
-						break;
+							line = line.replace("{" + p[0] + ":" + p[1] + "}", "" + i);
 					}
-					case "t":
-					case "text":
+					case "t", "text" -> {
 						String t = getText(p[1], error);
 						if (!t.isEmpty())
 							line = line.replace("{" + p[0] + ":" + p[1] + "}", t);
-						break;
-					case "f":  case "b":case "flag": {
+					}
+					case "f", "b", "flag" -> {
 						var d = getFlagVal(p[1]);
 						var r = d.map(FlagVal::toString).orElse(error);
 						if (!r.isEmpty())
 							line = line.replace("{" + p[0] + ":" + p[1] + "}", r);
-						break;
 					}
 				}
 			}else{
@@ -362,83 +347,78 @@ public class RealtimeValues implements DataProviding, Commandable {
 				if( ok )
 					continue;
 				int index;
-				switch(p[0]){
-					case "d": case "double": case "r": case "real":
+				switch (p[0]) {
+					case "d", "double", "r", "real" -> {
 						var d = getRealVal(p[1]);
-						if( d.isPresent() ){
+						if (d.isPresent()) {
 							index = nums.indexOf(d.get());
-							if(index==-1){
-								nums.add( d.get() );
-								index = nums.size()-1;
+							if (index == -1) {
+								nums.add(d.get());
+								index = nums.size() - 1;
 							}
 							index += offset;
 							exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + index);
-						}else{
-							Logger.error("Couldn't find a real with id "+p[1]);
-							errorLog.add("Couldn't find a real with id "+p[1]);
+						} else {
+							Logger.error("Couldn't find a real with id " + p[1]);
 							return "";
 						}
-						break;
-					case "int": case "i":
+					}
+					case "int", "i" -> {
 						var ii = getIntegerVal(p[1]);
-						if( ii.isPresent() ){
+						if (ii.isPresent()) {
 							index = nums.indexOf(ii.get());
-							if(index==-1){
-								nums.add( ii.get() );
-								index = nums.size()-1;
+							if (index == -1) {
+								nums.add(ii.get());
+								index = nums.size() - 1;
 							}
 							index += offset;
 							exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + index);
-						}else{
-							Logger.error("Couldn't find a integer with id "+p[1]);
-							errorLog.add("Couldn't find a integer with id "+p[1]);
+						} else {
+							Logger.error("Couldn't find a integer with id " + p[1]);
 							return "";
 						}
-						break;
-					case "f": case "flag": case "b":
+					}
+					case "f", "flag", "b" -> {
 						var f = getFlagVal(p[1]);
-						if( f.isPresent() ){
+						if (f.isPresent()) {
 							index = nums.indexOf(f.get());
-							if(index==-1){
-								nums.add( f.get() );
-								index = nums.size()-1;
+							if (index == -1) {
+								nums.add(f.get());
+								index = nums.size() - 1;
 							}
 							index += offset;
 							exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + index);
-						}else{
-							Logger.error("Couldn't find a FlagVal with id "+p[1]);
-							errorLog.add("Couldn't find a FlagVal  with id "+p[1]);
+						} else {
+							Logger.error("Couldn't find a FlagVal with id " + p[1]);
 							return "";
 						}
-						break;
-					case "is": // issues
+					}
+					case "is" -> { // issues
 						var i = issuePool.getIssue(p[1]);
-						if( i.isPresent() ){
+						if (i.isPresent()) {
 							index = nums.indexOf(i.get());
-							if(index==-1){
-								nums.add( i.get() );
-								index = nums.size()-1;
+							if (index == -1) {
+								nums.add(i.get());
+								index = nums.size() - 1;
 							}
 							index += offset;
 							exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + index);
-						}else{
-							Logger.error("Couldn't find an Issue with id "+p[1]);
-							errorLog.add("Couldn't find a Issue with id "+p[1]);
+						} else {
+							Logger.error("Couldn't find an Issue with id " + p[1]);
 							return "";
 						}
-						break;
-					default:
-						Logger.error("Operation containing unknown pair: "+p[0]+":"+p[1]);
-						errorLog.add("Operation containing unknown pair: "+p[0]+":"+p[1]);
+					}
+					default -> {
+						Logger.error("Operation containing unknown pair: " + p[0] + ":" + p[1]);
 						return "";
+					}
 				}
 			}else{
 				Logger.error( "Pair containing odd amount of elements: "+String.join(":",p));
-				errorLog.add("Pair containing odd amount of elements: "+String.join(":",p));
 			}
 		}
 		// Figure out the rest?
-		var found = words.matcher(exp).results().map(MatchResult::group).collect(Collectors.toList());
+		var found = words.matcher(exp).results().map(MatchResult::group).toList();
 		for( String fl : found){
 			if( fl.matches("^i\\d+") )
 				continue;
@@ -455,7 +435,6 @@ public class RealtimeValues implements DataProviding, Commandable {
 					exp = exp.replace(fl, "i" + index);
 				}else{
 					Logger.error("Couldn't find a FlagVal with id "+fl);
-					errorLog.add("Couldn't find a FlagVal  with id "+fl);
 					return "";
 				}
 			}else{
@@ -480,7 +459,6 @@ public class RealtimeValues implements DataProviding, Commandable {
 						exp = exp.replace(fl, "i" + index);
 					}else{
 						Logger.error("Couldn't find a realval with id "+fl);
-						errorLog.add("Couldn't find a RealVal  with id "+fl);
 						return "";
 					}
 					return exp;
@@ -499,15 +477,12 @@ public class RealtimeValues implements DataProviding, Commandable {
 		if( id.startsWith("{")){ // First check if the id is contained inside a { }
 			id = id.substring(1,id.length()-2);
 			var pair = id.split(":");
-			switch(pair[0].toLowerCase()) {
-				case "i": case "int": case "integer":
-					return Optional.ofNullable(integerVals.get(id));
-				case "d":case "double": case "r": case "real":
-					return Optional.ofNullable(realVals.get(id));
-				case "f": case "flag": case "b":
-					return Optional.ofNullable(flagVals.get(id));
-			}
-			return Optional.empty();
+			return switch (pair[0].toLowerCase()) {
+				case "i", "int", "integer" -> Optional.ofNullable(integerVals.get(id));
+				case "d", "double", "r", "real" -> Optional.ofNullable(realVals.get(id));
+				case "f", "flag", "b" -> Optional.ofNullable(flagVals.get(id));
+				default -> Optional.empty();
+			};
 		} // If it isn't inside { } just check if a match is found in the realVals and then the FlagVals
 		return getRealVal(id).map(d -> Optional.of((NumericVal)d)).orElse(Optional.ofNullable((flagVals.get(id))));
 	}
@@ -875,15 +850,15 @@ public class RealtimeValues implements DataProviding, Commandable {
 		XMLfab fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
 		if( clearFirst ) // If it needs to cleared first, remove child nodes
 			fab.clearChildren();
-		var vals = realVals.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Entry::getValue).collect(Collectors.toList());
+		var vals = realVals.entrySet().stream().sorted(Entry.comparingByKey()).map(Entry::getValue).toList();
 		for( var rv : vals ){
 			rv.storeInXml(fab);
 		}
-		var keys = texts.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Entry::getKey).collect(Collectors.toList());
+		var keys = texts.entrySet().stream().sorted(Entry.comparingByKey()).map(Entry::getKey).toList();
 		for( var dt : keys ){
 			fab.selectOrAddChildAsParent("text","id",dt).up();
 		}
-		var flags = flagVals.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Entry::getValue).collect(Collectors.toList());
+		var flags = flagVals.entrySet().stream().sorted(Entry.comparingByKey()).map(Entry::getValue).toList();
 		for( var fv : flags ){
 			fv.storeInXml(fab);
 		}
@@ -895,34 +870,34 @@ public class RealtimeValues implements DataProviding, Commandable {
 	public int addRequest(Writable writable, String type, String req) {
 
 		switch (type) {
-			case "rtval": case "double": case "real":
+			case "rtval", "double", "real" -> {
 				var rv = realVals.get(req);
-				if( rv==null)
+				if (rv == null)
 					return 0;
 				rv.addTarget(writable);
 				return 1;
-			case "int": case "integer":
+			}
+			case "int", "integer" -> {
 				var iv = integerVals.get(req);
-				if( iv==null)
+				if (iv == null)
 					return 0;
 				iv.addTarget(writable);
 				return 1;
-			case "text":
+			}
+			case "text" -> {
 				var t = textRequest.get(req);
-				if( t == null) {
+				if (t == null) {
 					textRequest.put(req, new ArrayList<>());
 					Logger.info("Created new request for: " + req);
-				}else{
+				} else {
 					Logger.info("Appended existing request to: " + t + "," + req);
 				}
-				if( !textRequest.get(req).contains(writable)) {
+				if (!textRequest.get(req).contains(writable)) {
 					textRequest.get(req).add(writable);
 					return 1;
 				}
-				break;
-			default:
-				Logger.warn("Requested unknown type: "+type);
-				break;
+			}
+			default -> Logger.warn("Requested unknown type: " + type);
 		}
 		return 0;
 	}
@@ -946,7 +921,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 				int s = addRequest(wr,request[0],request[1]);
 				return s!=0?"Request added to "+s+" realvals":"Request failed";
 			case "rtvals": case "rvs":
-				return replyToRtvalsCmd(request,wr,html);
+				return replyToRtvalsCmd(request,html);
 			case "":
 				removeRequests(wr);
 				return "";
@@ -1022,7 +997,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 		var cmds = request[1].split(",");
 		var join = new StringJoiner(html?"<br>":"\r\n");
 		join.setEmptyValue("None yet");
-		var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
+
 		switch( cmds[0] ){
 			case "?":
 				join.add(ora+"Note: both fv and flags are valid starters"+reg)
@@ -1110,7 +1085,6 @@ public class RealtimeValues implements DataProviding, Commandable {
 				return join.toString();
 			case "list": return getRtvalsList(html,true,false,false, false);
 			case "new": case "create":
-				result=0;
 				if( cmds.length!=3 )
 					return "Not enough arguments given, "+request[0]+":new,id(,value)";
 
@@ -1125,9 +1099,10 @@ public class RealtimeValues implements DataProviding, Commandable {
 				var vals = cmds[2].split(":");
 				if( vals.length==1)
 					return "Incorrect param:value pair: "+cmds[2];
-				if( !hasReal(cmds[1]))
+				var rvOpt = getRealVal(cmds[1]);
+				if( rvOpt.isEmpty())
 					return "No such real yet.";
-				var realVal = getRealVal(cmds[1]).get();
+				var realVal = rvOpt.get();
 				var digger = XMLdigger.digRoot(settingsPath,"dcafs")
 						.goDown("settings","rtvals")
 						.goDown("group","name",realVal.group())
@@ -1211,7 +1186,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 		}
 		return result;
 	}
-	public String replyToRtvalsCmd( String[] request, Writable wr, boolean html ){
+	public String replyToRtvalsCmd( String[] request, boolean html ){
 
 		if( request[1].isEmpty())
 			return getRtvalsList(html,true,true,true, true);
@@ -1268,7 +1243,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 	public String getRTValsGroupList(String group, boolean showReals, boolean showFlags, boolean showTexts, boolean showInts, boolean html) {
 		String eol = html ? "<br>" : "\r\n";
 		String title = html ? "<b>Group: " + group + "</b>" : TelnetCodes.TEXT_CYAN + "Group: " + group + TelnetCodes.TEXT_YELLOW;
-		String space = html ? "  " : "  ";
+		String space = "  ";//html ? "  " : "  ";
 
 		StringJoiner join = new StringJoiner(eol, title + eol, "");
 		join.setEmptyValue("None yet");
@@ -1317,7 +1292,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 	public String getAllIDsList(String name, boolean html) {
 		String eol = html?"<br>":"\r\n";
 		String title = html?"<b>Name: "+name+"</b>":TelnetCodes.TEXT_CYAN+"Name: "+name+TelnetCodes.TEXT_YELLOW;
-		String space = html?"  ":"  ";
+		String space = "  ";//html?"  ":"  ";
 
 		StringJoiner join = new StringJoiner(eol,title+eol,"");
 		join.setEmptyValue("No matches found");
@@ -1346,7 +1321,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 	 */
 	public String getRtvalsList(boolean html, boolean showReals, boolean showFlags, boolean showTexts, boolean showInts){
 		String eol = html?"<br>":"\r\n";
-		String space = html?"  ":"  ";
+		String space = "  ";//html?"  ":"  ";
 		StringJoiner join = new StringJoiner(eol,"Status at "+ TimeTools.formatShortUTCNow()+eol+eol,"");
 		join.setEmptyValue("None yet");
 
@@ -1359,7 +1334,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 
 		// Add the not grouped ones
 		boolean ngReals = realVals.values().stream().anyMatch(rv -> rv.group().isEmpty())&&showReals;
-		boolean ngTexts = !texts.isEmpty() && !texts.keySet().stream().anyMatch(k -> k.contains("_")) && showTexts;
+		boolean ngTexts = !texts.isEmpty() && texts.keySet().stream().noneMatch(k -> k.contains("_")) && showTexts;
 		boolean ngFlags = flagVals.values().stream().anyMatch( fv -> fv.group().isEmpty())&&showFlags;
 		boolean ngIntegers = integerVals.values().stream().anyMatch( iv -> iv.group().isEmpty())&&showInts;
 

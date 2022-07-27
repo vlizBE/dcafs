@@ -46,7 +46,6 @@ public class TelnetServer implements Commandable {
     BlockingQueue<Datagram> dQueue;
     static final String XML_PARENT_TAG = "telnet";
     ArrayList<Writable> writables = new ArrayList<>();
-    private final SslContext sslCtx=null;
     private Path settingsPath;
 
     public TelnetServer( BlockingQueue<Datagram> dQueue, Path settingsPath, EventLoopGroup eventGroup ) {
