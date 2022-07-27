@@ -206,21 +206,22 @@ public class FilterForward extends AbstractForward {
         value = Tools.fromEscapedStringToBytes(value);
         Logger.info(id+" -> Adding rule "+type+" > "+value);
 
-        switch( StringUtils.removeEnd(type,"s") ){
-            case "start":     addStartsWith(value); break;
-            case "nostart":   addStartsNotWith(value); break;
-            case "end":       addEndsWith(value);   break;
-            case "contain":   addContains(value);   break;
-            case "c_start":   addCharAt(Tools.parseInt(values[0], -1)-1, value.charAt(value.indexOf(",")+1) );      break;
-            case "c_end":     addCharFromEnd(Tools.parseInt(values[0], -1)-1, value.charAt(value.indexOf(",")+1) ); break;
-            case "minlength": addMinimumLength(Tools.parseInt(value,-1)); break;
-            case "maxlength": addMaximumLength(Tools.parseInt(value,-1)); break;
-            case "nmea":      addNMEAcheck( Tools.parseBool(value,true));break;
-            case "regex":     addRegex( value ); break;
-            case "math":      addCheckBlock( delimiter, value); break;
-            default: 
-                Logger.error(id+" -> Unknown type chosen "+type);
+        switch (StringUtils.removeEnd(type, "s")) {
+            case "start" -> addStartsWith(value);
+            case "nostart" -> addStartsNotWith(value);
+            case "end" -> addEndsWith(value);
+            case "contain" -> addContains(value);
+            case "c_start" -> addCharAt(Tools.parseInt(values[0], -1) - 1, value.charAt(value.indexOf(",") + 1));
+            case "c_end" -> addCharFromEnd(Tools.parseInt(values[0], -1) - 1, value.charAt(value.indexOf(",") + 1));
+            case "minlength" -> addMinimumLength(Tools.parseInt(value, -1));
+            case "maxlength" -> addMaximumLength(Tools.parseInt(value, -1));
+            case "nmea" -> addNMEAcheck(Tools.parseBool(value, true));
+            case "regex" -> addRegex(value);
+            case "math" -> addCheckBlock(delimiter, value);
+            default -> {
+                Logger.error(id + " -> Unknown type chosen " + type);
                 return -1;
+            }
         }
         return 1;
     }
@@ -360,7 +361,7 @@ public class FilterForward extends AbstractForward {
 
         for( Predicate<String> check : rules ){
             boolean result = check.test(data);
-            if( !result || (result&&negate) ){
+            if( !result || negate ){
                 if( freePasses==0 ) {
                     if( debug )
                         Logger.info(id+" -> "+data + " -> Failed");

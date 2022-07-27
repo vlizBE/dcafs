@@ -10,7 +10,6 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
-import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
@@ -21,8 +20,6 @@ import java.util.concurrent.BlockingQueue;
 public class SerialStream extends BaseStream implements Writable {
 
     protected SerialPort serialPort;
-    private final byte[] buffer = new byte[1024];
-    ByteBuffer recBuffer= ByteBuffer.wrap(buffer);
     String port ="";
 
     public SerialStream(String port, BlockingQueue<Datagram> dQueue, String label, int priority) {
@@ -143,20 +140,18 @@ public class SerialStream extends BaseStream implements Writable {
 
         if( !targets.isEmpty() ){
             try {
-                targets.forEach(dt -> {
-                    eventLoopGroup.submit(()-> {
-                        try {
-                            if( dt.getID().contains("telnet")) {
-                                dt.writeString(Tools.fromBytesToHexString(data)+" ");
-                            }else{
-                                dt.writeBytes(data);
-                            }
-                        } catch (Exception e) {
-                            Logger.error(id + " -> Something bad while writeLine to " + dt.getID());
-                            Logger.error(e);
+                targets.forEach(dt -> eventLoopGroup.submit(()-> {
+                    try {
+                        if( dt.getID().contains("telnet")) {
+                            dt.writeString(Tools.fromBytesToHexString(data)+" ");
+                        }else{
+                            dt.writeBytes(data);
                         }
-                    });
-                });
+                    } catch (Exception e) {
+                        Logger.error(id + " -> Something bad while writeLine to " + dt.getID());
+                        Logger.error(e);
+                    }
+                }));
                 targets.removeIf(wr -> !wr.isConnectionValid()); // Clear inactive
             }catch(Exception e){
                 Logger.error(id+" -> Something bad in serialport");
@@ -189,16 +184,14 @@ public class SerialStream extends BaseStream implements Writable {
     protected void forwardData( String message){
         if( !targets.isEmpty() ){
             try {
-                targets.forEach(dt -> {
-                    eventLoopGroup.submit(()-> {
-                        try {
-                            dt.writeLine(message);
-                        } catch (Exception e) {
-                            Logger.error(id + " -> Something bad while writeLine to " + dt.getID());
-                            Logger.error(e);
-                        }
-                    });
-                });
+                targets.forEach(dt -> eventLoopGroup.submit(()-> {
+                    try {
+                        dt.writeLine(message);
+                    } catch (Exception e) {
+                        Logger.error(id + " -> Something bad while writeLine to " + dt.getID());
+                        Logger.error(e);
+                    }
+                }));
                 targets.removeIf(wr -> !wr.isConnectionValid()); // Clear inactive
             }catch(Exception e){
                 Logger.error(id+" -> Something bad in serialport");
@@ -218,49 +211,23 @@ public class SerialStream extends BaseStream implements Writable {
         if (split.length == 1)
             split = settings.split(";");
 
-        switch (split[2]) {           
-            case "1.5":
-                stopbits = SerialPort.ONE_POINT_FIVE_STOP_BITS;
-                break;
-            case "2":
-                stopbits = SerialPort.TWO_STOP_BITS;
-                break;
-            case "1":
-            default:
-                stopbits = SerialPort.ONE_STOP_BIT;
-                break;
-        }
+        stopbits = switch (split[2]) {
+            case "1.5" -> SerialPort.ONE_POINT_FIVE_STOP_BITS;
+            case "2" -> SerialPort.TWO_STOP_BITS;
+            default -> SerialPort.ONE_STOP_BIT;
+        };
         if (split.length > 3) {
-            switch (split[3]) {
-                
-                case "even":
-                    parity = SerialPort.EVEN_PARITY;
-                    break;
-                case "odd":
-                    parity = SerialPort.ODD_PARITY;
-                    break;
-                case "mark":
-                    parity = SerialPort.MARK_PARITY;
-                    break;
-                case "space":
-                    parity = SerialPort.SPACE_PARITY;
-                    break;
-                case "none":
-                default:
-                    parity = SerialPort.NO_PARITY;
-                    break;
-            }
+            parity = switch (split[3]) {
+                case "even" -> SerialPort.EVEN_PARITY;
+                case "odd" -> SerialPort.ODD_PARITY;
+                case "mark" -> SerialPort.MARK_PARITY;
+                case "space" -> SerialPort.SPACE_PARITY;
+                default -> SerialPort.NO_PARITY;
+            };
         }
 
         serialPort.setBaudRate(Tools.parseInt(split[0], 19200));
         serialPort.setNumDataBits(Tools.parseInt(split[1], 8));
-        serialPort.setNumStopBits(stopbits);
-        serialPort.setParity(parity);
-    }
-
-    public void alterSerialSettings(int baudrate, int databits, int stopbits, int parity) {
-        serialPort.setBaudRate(baudrate);
-        serialPort.setNumDataBits(databits);
         serialPort.setNumStopBits(stopbits);
         serialPort.setParity(parity);
     }
@@ -270,31 +237,21 @@ public class SerialStream extends BaseStream implements Writable {
     }
 
     private String getParity() {
-        switch (serialPort.getParity()) {
-            case SerialPort.EVEN_PARITY:
-                return "even";
-            case SerialPort.ODD_PARITY:
-                return "odd";
-            case SerialPort.MARK_PARITY:
-                return "mark";
-            case SerialPort.SPACE_PARITY:
-                return "space";
-            case SerialPort.NO_PARITY:
-            default:
-                return "none";
-        }
+        return switch (serialPort.getParity()) {
+            case SerialPort.EVEN_PARITY -> "even";
+            case SerialPort.ODD_PARITY -> "odd";
+            case SerialPort.MARK_PARITY -> "mark";
+            case SerialPort.SPACE_PARITY -> "space";
+            default -> "none";
+        };
     }
 
     private String getStopbits() {
-        switch (serialPort.getNumStopBits()) {
-            case SerialPort.ONE_POINT_FIVE_STOP_BITS:
-                return "1.5";
-            case SerialPort.TWO_STOP_BITS:
-                return "2";
-            case SerialPort.ONE_STOP_BIT:
-            default:
-                return "1";
-        }
+        return switch (serialPort.getNumStopBits()) {
+            case SerialPort.ONE_POINT_FIVE_STOP_BITS -> "1.5";
+            case SerialPort.TWO_STOP_BITS -> "2";
+            default -> "1";
+        };
     }
 
     public void setBaudrate(int baudrate) {

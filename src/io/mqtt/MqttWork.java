@@ -20,9 +20,6 @@ public class MqttWork {
 	long lastTimestamp=-1;
 	String lastKey="";
 
-	public MqttWork( String device ) {
-		this.device=device;
-	}
 	/**
 	 * Constructor that also adds a value 
 	 * @param device The device this data is comming from

@@ -184,9 +184,8 @@ public abstract class AbstractForward implements Writable {
     /**
      * Write the basics that are the same for each forward
      * @param fab An XMLfab with the forward as the current parent
-     * @return True no reason to fail for now
      */
-    protected boolean writeBasicsToXML( XMLfab fab){
+    protected void writeBasicsToXML( XMLfab fab){
         if( !label.isEmpty() )
             fab.attr("label",label);
 
@@ -199,7 +198,6 @@ public abstract class AbstractForward implements Writable {
             fab.comment("Sources go here");
             sources.forEach( src -> fab.addChild("src", src) );
         }
-        return true;
     }
     public void setInvalid(){valid=false;}
     /* *********************** Abstract Methods ***********************************/

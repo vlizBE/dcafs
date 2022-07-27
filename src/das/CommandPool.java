@@ -139,7 +139,7 @@ public class CommandPool {
 		if( wr!=null && (wr.getID().contains("matrix") || wr.getID().startsWith("file:"))){
 			html=true;
 		}
-		String result = UNKNOWN_CMD;
+		String result;
 		question=question.trim();
 
 		if (!html) // if html is false, verify that the command doesn't imply the opposite
@@ -219,7 +219,10 @@ public class CommandPool {
 				}
 			}
 		}
-
+		if( result == null || result.isEmpty()) {
+			Logger.error( "Result shouldn't be null!");
+			return "Result is null or empty...";
+		}
 		if( wr!=null ) {
 			if( d.getLabel().startsWith("matrix")) {
 				wr.writeLine(d.getOriginID()+"|"+result);
@@ -233,9 +236,6 @@ public class CommandPool {
 		}else{
 			Logger.debug("Hidden response to " + question + ": " + result);
 		}
-		if( result == null || result.isEmpty())
-			return "";
-
 		if( result.equalsIgnoreCase(UNKNOWN_CMD))
 			return result+" >>"+question+"|"+find+"|"+split[0]+"|"+split[1]+"<<";
 
@@ -506,8 +506,8 @@ public class CommandPool {
 				Path it = Path.of(workPath,"raw",TimeTools.formatUTCNow("yyyy-MM"));
 				if( sendEmail==null)
 					return "No email functionality active.";
-				try {
-					var last = Files.list(it).filter( f -> !Files.isDirectory(f)).max( Comparator.comparingLong( f -> f.toFile().lastModified()));
+				try (var list = Files.list(it) ){
+					var last = list.filter( f -> !Files.isDirectory(f)).max( Comparator.comparingLong( f -> f.toFile().lastModified()));
 					if( last.isPresent() ){
 						var path = last.get();
 						sendEmail.sendEmail(Email.toAdminAbout("Taskmanager.log").subject("File attached (probably)").attachment(path));
@@ -591,7 +591,7 @@ public class CommandPool {
 
 	/**
 	 * Request the content of the tasks.csv file that contains info on taskset execution
-	 * @param request
+	 * @param request Array containing reqtasks at 0 and either ? or an email address at 1
 	 * @return Result of the request
 	 */
 	public String doREQTASKS( String[] request ){

@@ -4,6 +4,7 @@ import das.Commandable;
 import io.Writable;
 import io.collector.BufferCollector;
 import io.collector.CollectorFuture;
+import io.telnet.TelnetCodes;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.tools.FileTools;
@@ -415,20 +416,6 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 		}
 	}
 	/**
-	 * Checks the emailbook to see to which reference the emailadres is linked
-	 * 
-	 * @param email The email address to look for
-	 * @return Semi-colon (;) separated string with the found refs
-	 */
-	public String getEmailRefs( String email ){
-		StringJoiner b = new StringJoiner( ";");
-
-		emailBook.entrySet().stream().filter(set -> set.getValue().contains(email)) // only retain the refs that have the email
-							  .forEach( set -> b.add(set.getKey()));
-		
-		return b.toString();
-	}
-	/**
 	 * Checks if a certain email address is part of the list associated with a certain ref
 	 * @param ref The reference to check
 	 * @param address The emailaddress to look for
@@ -461,18 +448,20 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 
 		String[] cmds = request[1].split(",");
 
+		String green=html?"":TelnetCodes.TEXT_GREEN;
+		String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
+
 		switch(cmds[0]){
 			case "?":
 				StringJoiner b = new StringJoiner(html?"<br>":"\r\n");
-				b.add("email:reload -> Reload the settings found in te XML.");
-				b.add("email:refs -> Get a list of refs and emailadresses.");
-				b.add("email:send,to,subject,content -> Send an email using to with subject and content");
-				b.add("email:setup -> Get a listing of all the settings.");
-				b.add("email:checknow -> Checks the inbox for new emails");
-				b.add("email:addallow,from,cmd(,isRegex) -> Adds permit allow node, default no regex");
-				b.add("email:adddeny,from,cmd(,isRegex) -> Adds permit deny node, default no regex");
-				b.add("email:interval,x -> Change the inbox check interval to x");
-				return b.toString();
+				return b.add(green+"email:reload "+reg+"-> Reload the settings found in te XML.")
+						.add(green+"email:refs "+reg+"-> Get a list of refs and emailadresses.")
+						.add(green+"email:send,to,subject,content "+reg+"-> Send an email using to with subject and content")
+						.add(green+"email:setup "+reg+"-> Get a listing of all the settings.")
+						.add(green+"email:checknow "+reg+"-> Checks the inbox for new emails")
+						.add(green+"email:addallow,from,cmd(,isRegex) "+reg+"-> Adds permit allow node, default no regex")
+						.add(green+"email:adddeny,from,cmd(,isRegex) "+reg+"-> Adds permit deny node, default no regex")
+						.add(green+"email:interval,x "+reg+"-> Change the inbox check interval to x").toString();
 			case "reload":
 				if( xml == null )
 					return "No xml defined yet...";
@@ -670,7 +659,7 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 	 * @throws MessagingException Something went wrong altering the message
 	 */
 	private boolean addAttachment( Email email, Message message ) throws MessagingException {
-		String attach="";
+		String attach;
 
 		int a = email.attachment.indexOf("[");
 		// If a [ ... ] is present this means that a datetime format is enclosed and then [...] will be replaced
@@ -967,7 +956,7 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 	 * @param message The message to get content from
 	 * @return The text content if any, delimited with \r\n
 	 * @throws MessagingException Something went wrong handling the message
-	 * @throws IOException
+	 * @throws IOException Something went wrong while checking the message
 	 */
 	private static String getTextFromMessage(Message message) throws MessagingException, IOException {
 		String result = "";
@@ -985,7 +974,6 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 	 * @param mimeMultipart The part to get the text from
 	 * @return The text found
 	 * @throws MessagingException Something went wrong handling the message
-	 * @throws IOException
 	 */
 	private static String getTextFromMimeMultipart(
 			MimeMultipart mimeMultipart)  throws MessagingException, IOException{
@@ -1050,7 +1038,6 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 		boolean hasSSL = false; // Whether the outbox uses ssl
 		String user = ""; // User for the outbox
 		String pass = ""; // Password for the outbox user
-		boolean auth = false; // Whether to authenticate
 		String from = "dcafs"; // The email address to use as from address
 
 		public void setServer(String server, int port){

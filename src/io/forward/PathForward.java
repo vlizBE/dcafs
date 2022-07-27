@@ -267,7 +267,7 @@ public class PathForward {
         }else if(type.equalsIgnoreCase("rtvals")){
             type="plain";
         }
-        customs.add( new CustomSrc(data,type,TimeTools.parsePeriodStringToMillis(interval),"") );
+        customs.add( new CustomSrc(data,type,TimeTools.parsePeriodStringToMillis(interval),label) );
     }
 
     public String toString(){
@@ -336,10 +336,9 @@ public class PathForward {
         ArrayList<String> buffer;
         ArrayList<Path> files;
         int lineCount=1;
-        long totalLines=0;
         long sendLines=0;
         int multiLine=1;
-        String label="";
+        String label;
         boolean readOnce=false;
 
         public CustomSrc( String data, String type, long intervalMillis, String label){

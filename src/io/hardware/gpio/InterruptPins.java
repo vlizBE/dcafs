@@ -14,11 +14,11 @@ import java.util.concurrent.BlockingQueue;
 
 public class InterruptPins implements DeviceEventConsumer<DigitalInputEvent> {
 
-    private ArrayList<InterruptCmd> pinCmds = new ArrayList<>();
+    private final ArrayList<InterruptCmd> pinCmds = new ArrayList<>();
 
     public static final int INTERRUPT_GPIO_NOT_SET = -1;
-    private BlockingQueue<Datagram> dQueue;
-    private Path settings;
+    private final BlockingQueue<Datagram> dQueue;
+    private final Path settings;
 
     public InterruptPins(BlockingQueue<Datagram> dQueue, Path settings){
         this.dQueue=dQueue;
@@ -31,13 +31,12 @@ public class InterruptPins implements DeviceEventConsumer<DigitalInputEvent> {
         {
             String edge = XMLtools.getStringAttribute(isr,"edge","falling");
             int pin = XMLtools.getIntAttribute(isr,"pin",-1);
-            Optional<InterruptCmd> ic;
-            switch( edge ){
-                case "falling": ic=addFalling(pin);break;
-                case "rising": ic=addRising(pin);break;
-                case "both": ic=addBoth(pin);break;
-                default: ic =Optional.empty();
-            }
+            Optional<InterruptCmd> ic = switch (edge) {
+                case "falling" -> addFalling(pin);
+                case "rising" -> addRising(pin);
+                case "both" -> addBoth(pin);
+                default -> Optional.empty();
+            };
             ic.ifPresent(interruptCmd -> XMLtools.getChildElements(isr, "cmd").forEach(
                     cmd -> interruptCmd.addCmd(cmd.getTextContent())
             ));
@@ -58,7 +57,7 @@ public class InterruptPins implements DeviceEventConsumer<DigitalInputEvent> {
             try {
                 var device = new DigitalInputDevice(pinNr, GpioPullUpDown.NONE, event);
                 device.addListener(this);
-                Logger.info("Setting interruptGpio ({}) consumer", Integer.valueOf(device.getGpio()));
+                Logger.info("Setting interruptGpio ({}) consumer", device.getGpio());
                 var isr = new InterruptCmd(device);
                 pinCmds.add(isr);
                 return Optional.of(isr);
@@ -74,19 +73,10 @@ public class InterruptPins implements DeviceEventConsumer<DigitalInputEvent> {
         Logger.info("accept({})", event);
         Logger.info( "Interrupt on pin:" +event.getGpio());
 
-        // Check the event is for one of the interrupt gpios
+        // Check the event is for one of the interrupt gpio's
         pinCmds.stream().filter(x -> x.device.getGpio()==event.getGpio()).map(x->x.cmds).forEach(
                 cmd -> cmd.forEach( x->dQueue.add(Datagram.system(x)))
         );
-
-        synchronized (this) {
-            try {
-
-            } catch (Throwable t) {
-                // Log and ignore
-                Logger.error(t, "IO error handling interrupts: {}", t);
-            }
-        }
     }
     private static class InterruptCmd {
         DigitalInputDevice device;

@@ -10,7 +10,6 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.StringJoiner;
@@ -452,7 +451,7 @@ public class EditorForward extends AbstractForward{
     }
     public void addTrim( ){
         rulesString.add( new String[]{"","Trim","Trim spaces "} );
-        edits.add( input -> input.trim() );
+        edits.add(String::trim);
     }
     public void addRexRemove( String find ){
         rulesString.add( new String[]{"","regexremove","Remove "+find} );
@@ -480,9 +479,9 @@ public class EditorForward extends AbstractForward{
         } );
     }
     /**
-     *
-     * @param input
-     * @return
+     * Test the workings of the editor by giving a string to process
+     * @param input The string to process
+     * @return The resulting string
      */
     public String test( String input ){
         Logger.info(id+" -> From: "+input);

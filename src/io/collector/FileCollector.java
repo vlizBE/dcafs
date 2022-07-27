@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
 import java.util.concurrent.*;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class FileCollector extends AbstractCollector{
@@ -81,7 +80,7 @@ public class FileCollector extends AbstractCollector{
     @Override
     public String getID(){ return "fc:"+id;}
     public String toString(){
-        String size = "";
+        String size;
         if( byteCount < 10000){
             size=byteCount+"B";
         }else if( byteCount < 1000000){
@@ -107,7 +106,7 @@ public class FileCollector extends AbstractCollector{
             Logger.error("Need a valid scheduler to use FileCollectors");
             return fcs;
         }
-        for( Element fcEle : fcEles.collect(Collectors.toList()) ) {
+        for( Element fcEle : fcEles.toList()) {
             String id = XMLtools.getStringAttribute(fcEle, "id", "");
             if( id.isEmpty() )
                 continue;
@@ -263,7 +262,6 @@ public class FileCollector extends AbstractCollector{
      * Add a triggered command to the collector
      * @param trigger The trigger, using the enum
      * @param cmd The command to execute if triggered
-     * @return True if added successfully
      */
     public void addTriggerCommand( TRIGGERS trigger, String cmd ){
         trigCmds.add(new TriggeredCommand(trigger, cmd));
@@ -440,7 +438,7 @@ public class FileCollector extends AbstractCollector{
             if( join.toString().isBlank() )// Don't write empty lines
                 return;
 
-            Files.write(dest, join.toString().getBytes(charSet), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            Files.writeString(dest, join.toString(), charSet, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
             Logger.debug("Written " + join.toString().length() + " bytes to " + dest.getFileName().toString());
 
             if( maxBytes!=-1 ){
