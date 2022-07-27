@@ -25,7 +25,7 @@ public class XMLdigger {
         var digger = new XMLdigger(xml);
         if( !digger.valid)
             return digger;
-        digger.root = XMLtools.getFirstElementByTag(digger.xmlDoc, rootNode );
+        digger.root = XMLtools.getFirstElementByTag(digger.xmlDoc, rootNode ).get();
         return digger;
     }
     public XMLdigger goDown( String... tags ){

@@ -49,18 +49,18 @@ public class ForwardPool implements Commandable {
     public void readSettingsFromXML() {
 
         var xml = XMLtools.readXML(settingsPath);
+
         Logger.info("Loading filters...");
-        Element filtersEle = XMLtools.getFirstElementByTag(xml, "filters");
-        if (filtersEle != null)
-            readFiltersFromXML(XMLtools.getChildElements(filtersEle, "filter"));
+        XMLtools.getFirstElementByTag(xml, "filters")
+                .ifPresent( ele -> readFiltersFromXML(XMLtools.getChildElements(ele, "filter")));
+
         Logger.info("Loading maths...");
-        Element mathsEle = XMLtools.getFirstElementByTag(xml, "maths");
-        if (mathsEle != null)
-            readMathsFromXML(XMLtools.getChildElements(mathsEle, "math"));
+        XMLtools.getFirstElementByTag(xml, "maths")
+                .ifPresent( ele -> readMathsFromXML(XMLtools.getChildElements(ele, "math")));
+
         Logger.info("Loading editors...");
-        Element editorsEle = XMLtools.getFirstElementByTag(xml, "editors");
-        if (editorsEle != null)
-            readEditorsFromXML(XMLtools.getChildElements(editorsEle, "editor"));
+        XMLtools.getFirstElementByTag(xml, "editors")
+                .ifPresent( ele -> readEditorsFromXML(XMLtools.getChildElements(ele, "editor")));
 
         /* Figure out the paths? */
         Logger.info("Loading paths...");

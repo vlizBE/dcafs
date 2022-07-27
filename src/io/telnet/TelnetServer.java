@@ -58,25 +58,19 @@ public class TelnetServer implements Commandable {
     public String getTitle(){
         return this.title;
     }
-    public static boolean inXML(Document xml) {
-		return XMLtools.getFirstElementByTag(xml, XML_PARENT_TAG) != null;
-	}
+
     public boolean readSettingsFromXML( ) {
         if( dQueue != null ) {
-            var xml = XMLtools.readXML(settingsPath);
-            Element settings = XMLtools.getFirstElementByTag(xml, XML_PARENT_TAG);
-            if (settings != null) {
-                port = XMLtools.getIntAttribute(settings, "port", 23);
-                title = XMLtools.getStringAttribute(settings, "title", "DCAFS");
-                ignore = XMLtools.getChildValueByTag(settings, "ignore", "");
-                return true;
-            }
-            addBlankTelnetToXML(xml);
+            XMLtools.getFirstElementByTag(settingsPath, XML_PARENT_TAG).ifPresentOrElse( ele -> {
+                port = XMLtools.getIntAttribute(ele, "port", 23);
+                title = XMLtools.getStringAttribute(ele, "title", "DCAFS");
+                ignore = XMLtools.getChildValueByTag(ele, "ignore", "");
+            },()->addBlankTelnetToXML(settingsPath));
         }
         return false;
     }
-    public static boolean addBlankTelnetToXML( Document xmlDoc ){
-        return XMLfab.withRoot(xmlDoc, "settings")                
+    public static boolean addBlankTelnetToXML( Path xmlPath ){
+        return XMLfab.withRoot(xmlPath, "settings")
                         .addParentToRoot(XML_PARENT_TAG,"Settings related to the telnet server").attr("title","DCAFS").attr("port",23)
                             .build();
     }

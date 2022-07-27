@@ -1151,12 +1151,12 @@ public class TaskManager implements CollectorFuture {
 
 			dp.readFromXML(XMLfab.withRoot(path,"tasklist","rtvals"));
 
-			Element ss = XMLtools.getFirstElementByTag( doc, "tasklist" );
-			if( ss==null) {
+			var ssOpt = XMLtools.getFirstElementByTag( doc, "tasklist" );
+			if(ssOpt.isEmpty()) {
 				Logger.error("No valid taskmanager script, need the node tasklist");
 				return false;
 			}
-			for( Element el : XMLtools.getChildElements( XMLtools.getFirstChildByTag( ss,"tasksets" ), "taskset" )){
+			for( Element el : XMLtools.getChildElements( XMLtools.getFirstChildByTag( ssOpt.get(),"tasksets" ), "taskset" )){
 				var description = XMLtools.getStringAttribute(el,"name","");
 				if( description.isEmpty() )
 					description = XMLtools.getStringAttribute(el,"info","");
@@ -1213,7 +1213,7 @@ public class TaskManager implements CollectorFuture {
 				}
 			 }
 			
-			 for( Element tasksEntry : XMLtools.getChildElements( ss, "tasks" )){ //Can be multiple collections of tasks.
+			 for( Element tasksEntry : XMLtools.getChildElements( ssOpt.get(), "tasks" )){ //Can be multiple collections of tasks.
 				for( Element ll : XMLtools.getChildElements( tasksEntry, "task" )){
 					addTask(ll);
 				 	ts++;

@@ -26,6 +26,7 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
+import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -348,27 +349,25 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 	public String reloadStream( String id ) {
 
 		Logger.info("Reloading "+id+ " from "+ settingsPath.toAbsolutePath());
-		Document xmlDoc = XMLtools.readXML(settingsPath);
-		if( xmlDoc != null ){
-			Element streamElement = XMLtools.getFirstElementByTag(xmlDoc, XML_PARENT_TAG);
-			var child = XMLfab.withRoot(settingsPath,"dcafs","streams").getChild("stream","id",id);
-			var base = getStream(id);
-			if( child.isEmpty() )
-				return "No stream named "+id+" found.";
-
-			if( base.isPresent() ){ // meaning reloading an existing one
-				var str = base.get();
-				str.disconnect();
-				str.readFromXML(child.get());
-				str.reconnectFuture = scheduler.schedule( new DoConnection( str ), 0, TimeUnit.SECONDS );
-				return "Reloaded and trying to reconnect";
-			}else{
-				addStreamFromXML(child.get());
-				return "Loading new stream.";
-			}
-		}else{
+		if(Files.notExists(settingsPath)){
 			Logger.error("Failed to read xml file at "+ settingsPath.toAbsolutePath());
 			return "Failed to read xml";
+		}
+
+		var childOpt = XMLfab.withRoot(settingsPath,"dcafs","streams").getChild("stream","id",id);
+		var baseOpt = getStream(id);
+		if( childOpt.isEmpty() )
+			return "No stream named "+id+" found.";
+
+		if( baseOpt.isPresent() ){ // meaning reloading an existing one
+			var str = baseOpt.get();
+			str.disconnect();
+			str.readFromXML(childOpt.get());
+			str.reconnectFuture = scheduler.schedule( new DoConnection( str ), 0, TimeUnit.SECONDS );
+			return "Reloaded and trying to reconnect";
+		}else{
+			addStreamFromXML(childOpt.get());
+			return "Loading new stream.";
 		}
 	}
 	/* ***************************** A D D I N G C H A N N E L S ******************************************/
@@ -387,22 +386,22 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 			Logger.error(e);
 		}
 
-		Element streamsElement = XMLtools.getFirstElementByTag( xml, "streams");
-		if( streamsElement!=null) {
-			retryDelayIncrement = XMLtools.getChildIntValueByTag(streamsElement, "retrydelayincrement", 5);
-			retryDelayMax = XMLtools.getChildIntValueByTag(streamsElement, "retrydelaymax", 60);
-		}
 		if( !streams.isEmpty()){
 			streams.values().forEach( bs -> bs.disconnect());
 		}
 		streams.clear(); // Clear out before the reread
 
-		for( Element el : XMLtools.getChildElements( streamsElement, XML_CHILD_TAG)){
-			BaseStream bs = addStreamFromXML(el);
-			if( bs != null ){
-				streams.put( bs.getID().toLowerCase(),bs);
+		XMLtools.getFirstElementByTag( xml, "streams").ifPresent( ele -> {
+			retryDelayIncrement = XMLtools.getChildIntValueByTag(ele, "retrydelayincrement", 5);
+			retryDelayMax = XMLtools.getChildIntValueByTag(ele, "retrydelaymax", 60);
+
+			for( Element el : XMLtools.getChildElements( ele, XML_CHILD_TAG)){
+				BaseStream bs = addStreamFromXML(el);
+				if( bs != null ){
+					streams.put( bs.getID().toLowerCase(),bs);
+				}
 			}
-		}	
+		});
 	}
 	/**
 	 * Add a single channel from an XML element

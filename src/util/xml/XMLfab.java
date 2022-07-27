@@ -89,8 +89,8 @@ public class XMLfab {
     }
 
     private void getRoot(String parentTag){
-        this.root = XMLtools.getFirstElementByTag(xmlDoc, parentTag );
-        if( root == null ){
+        var rootOpt= XMLtools.getFirstElementByTag(xmlDoc, parentTag );
+        if( rootOpt.isEmpty() ){
             Logger.warn("No such root "+parentTag+ " in "+xmlPath.getFileName()+", so creating it.");
             root = xmlDoc.createElement(parentTag);
             try {
@@ -98,6 +98,8 @@ public class XMLfab {
             }catch( DOMException e ){
                 Logger.error( "Issue while trying to add "+parentTag+" to "+xmlDoc.toString()+":"+e.getMessage());
             }
+        }else{
+            root = rootOpt.get();
         }
         this.last=root;
     }
@@ -172,19 +174,7 @@ public class XMLfab {
             Logger.error("No such xml file: "+xmlPath+", looking for "+String.join("->",roots));
             return new ArrayList<Element>().stream();
         }
-
-        XMLfab fab = new XMLfab(xmlPath);
-        fab.root = XMLtools.getFirstElementByTag(fab.xmlDoc, roots[0]);
-
-        if( fab.hasRoots(roots) ){
-            if( fab.root.getParentNode()!=null && fab.root.getParentNode() instanceof Element) {
-                fab.last = (Element) fab.root.getParentNode();
-            }else{
-                fab.last=fab.root;
-            }
-            return fab.getChildren(roots[roots.length-1]).stream();
-        }        
-        return new ArrayList<Element>().stream();
+        return getRootChildren( XMLtools.readXML(xmlPath),roots);
     }
 
     /**
@@ -197,12 +187,19 @@ public class XMLfab {
      */
     public static Stream<Element> getRootChildren( Document xml, String... roots){
         XMLfab fab = new XMLfab(xml,false);
-        fab.root = XMLtools.getFirstElementByTag(fab.xmlDoc, roots[0]);
 
-        if( fab.hasRoots(roots) ){
-            fab.last=(Element)fab.root.getParentNode();            
-            return fab.getChildren(roots[roots.length-1]).stream();
-        }        
+        var rootOpt= XMLtools.getFirstElementByTag(fab.xmlDoc, roots[0]);
+        if( rootOpt.isPresent()) {
+            fab.root = rootOpt.get();
+            if (fab.hasRoots(roots)) {
+                if (fab.root.getParentNode() != null && fab.root.getParentNode() instanceof Element) {
+                    fab.last = (Element) fab.root.getParentNode();
+                } else {
+                    fab.last = fab.root;
+                }
+                return fab.getChildren(roots[roots.length - 1]).stream();
+            }
+        }
         return new ArrayList<Element>().stream();
     }
 
@@ -212,10 +209,13 @@ public class XMLfab {
      * @return True if found
      */
     private boolean hasRoots( String... roots ){
-        root = XMLtools.getFirstElementByTag(xmlDoc, roots[0]);
+        var rootOpt = XMLtools.getFirstElementByTag(xmlDoc, roots[0]);
+        if(rootOpt.isEmpty())
+            return false;
+
+        var root=rootOpt.get();
         for( int a=1; a<roots.length;a++){
             Element ele = XMLtools.getFirstChildByTag(root, roots[a]);
-
             if( ele == null ){
                 return false;
             }else{               

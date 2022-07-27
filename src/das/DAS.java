@@ -128,20 +128,19 @@ public class DAS implements Commandable{
             Logger.error("Issue in current settings.xml, aborting: " + settingsPath.toString());
             addTelnetServer();
         } else {
-            Element settings = XMLtools.getFirstElementByTag(settingsDoc, "settings");
+            XMLtools.getFirstElementByTag(settingsDoc, "settings").ifPresent( ele ->
+                    {
+                        debug = XMLtools.getChildValueByTag(ele, "mode", "normal").equals("debug");
+                        log = XMLtools.getChildValueByTag(ele, "mode", "normal").equals("log");
+                        System.setProperty("tinylog.directory", XMLtools.getChildValueByTag(ele,"tinylog",workPath) );
+            });
 
-            if (settings != null) {
-                debug = XMLtools.getChildValueByTag(settings, "mode", "normal").equals("debug");
-                log = XMLtools.getChildValueByTag(settings, "mode", "normal").equals("log");
-
-                System.setProperty("tinylog.directory", XMLtools.getChildValueByTag(settings,"tinylog",workPath) );
-
-                if (debug) {
-                    Logger.info("Program booting in DEBUG mode");
-                } else {
-                    Logger.info("Program booting in NORMAL mode");
-                }
+            if (debug) {
+                Logger.info("Program booting in DEBUG mode");
+            } else {
+                Logger.info("Program booting in NORMAL mode");
             }
+
             /* RealtimeValues */
             rtvals = new RealtimeValues( settingsPath, dQueue );
 

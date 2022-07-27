@@ -84,18 +84,15 @@ public class TcpServer implements StreamListener, Commandable {
 	}
 
 	/**
-	 * Checks whether or not StreamManager info can be found in the settings file.
-	 * 
-	 * @param xml The settings file
-	 * @return True if settings were found
+	 * Read the settings related to the transserver from the settings.xml
+	 * @param xml The document to read from
+	 * @param run Whether to run the transserver once settings are read
+	 * @return True if no hiccups
 	 */
-	public static boolean inXML(Document xml) {
-		return XMLtools.getFirstElementByTag(xml, XML_PARENT_TAG) != null;
-	}
-
 	public boolean readSettingsFromXML(Document xml, boolean run) {
-		Element tran = XMLtools.getFirstElementByTag(xml, XML_PARENT_TAG);
-		if (tran != null) {
+		var tranOpt = XMLtools.getFirstElementByTag(xml, XML_PARENT_TAG);
+		if (tranOpt.isPresent()) {
+			var tran = tranOpt.get();
 			Logger.info("Settings for the TransServer found.");
 			serverPort = XMLtools.getIntAttribute(tran, "port", -1);
 			if (serverPort == -1)

@@ -89,10 +89,12 @@ public class Waypoints implements Commandable {
             wps.clear();
         }
 
-        Element wpts = XMLtools.getFirstElementByTag( XMLtools.readXML(settingsPath), XML_TAG);
+        var wptsOpt = XMLtools.getFirstElementByTag( XMLtools.readXML(settingsPath), XML_TAG);
 
-        if( wpts == null )
+        if( wptsOpt.isEmpty() )
             return false;
+
+        var wpts = wptsOpt.get();
 
         if( rtvals!=null) {
             Logger.info("Looking for lat, lon, sog");

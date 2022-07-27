@@ -187,29 +187,37 @@ public class XMLtools {
 	 * 
 	 * @param xml The Document to check the node for
 	 * @param tag The name of the element
-	 * @return The element if found, null if not
+	 * @return An optional containing the element if found, empty if not
 	 */
-	public static Element getFirstElementByTag(Document xml, String tag) {
+	public static Optional<Element> getFirstElementByTag(Document xml, String tag) {
 
 		if (xml == null) {
 			Logger.error("No valid XML provided");
-			return null;
+			return Optional.empty();
 		}
 		NodeList list = xml.getElementsByTagName(tag);
 
 		if (list == null)
-			return null;
+			return Optional.empty();
 
 		if (list.getLength() > 0) {
 			Node nNode = xml.getElementsByTagName(tag).item(0);
 			if (nNode == null)
-				return null;
+				return Optional.empty();
 			if (nNode.getNodeType() == Node.ELEMENT_NODE) {
-				return (Element) nNode;
+				return Optional.ofNullable((Element) nNode);
 			}
 		}
 		Logger.debug("No such tag? " + tag);
-		return null;
+		return Optional.empty();
+	}
+	public static Optional<Element> getFirstElementByTag(Path xmlPath, String tag) {
+		var doc = XMLtools.readXML(xmlPath);
+		if( doc == null) {
+			Logger.error("No such xml file: "+xmlPath);
+			return Optional.empty();
+		}
+		return getFirstElementByTag(doc,tag);
 	}
 	/**
 	 * Check the given document if it contains a node with the given tag
@@ -218,7 +226,7 @@ public class XMLtools {
 	 * @return True if found
 	 */
 	public static boolean hasElementByTag(Document xml, String tag) {
-		return getFirstElementByTag(xml,tag) != null;
+		return getFirstElementByTag(xml,tag).isPresent();
 	}
 	public static boolean hasChildByTag(Element parent, String tag) {
 		return getFirstChildByTag(parent, tag)!=null;

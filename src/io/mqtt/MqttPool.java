@@ -130,21 +130,22 @@ public class MqttPool implements Commandable, MqttWriting {
      * Reload the settings for a certain MQTTWorker from the settings.xml
      *
      * @param id The worker for which the settings need to be reloaded
-     * @return True if this was succesful
+     * @return True if this was successful
      */
     public boolean reloadMQTTsettings(String id) {
         MqttWorker worker = mqttWorkers.get(id);
         if (worker == null)
             return false;
 
-        Element mqtt;
-        var settingsDoc = XMLtools.readXML(settingsFile);
-        if ((mqtt = XMLtools.getFirstElementByTag(settingsDoc, "mqtt")) != null) {
-            for (Element broker : XMLtools.getChildElements(mqtt, "broker")) {
-                if (XMLtools.getStringAttribute(broker, "id", "general").equals(id)) {
-                    worker.readSettings(broker);
-                    return true;
-                }
+        var mqttOpt = XMLtools.getFirstElementByTag( settingsFile, "mqtt");
+
+        if( mqttOpt.isEmpty())
+            return false;
+
+        for (Element broker : XMLtools.getChildElements(mqttOpt.get(), "broker")) {
+            if (XMLtools.getStringAttribute(broker, "id", "general").equals(id)) {
+                worker.readSettings(broker);
+                return true;
             }
         }
         return false;
@@ -156,17 +157,17 @@ public class MqttPool implements Commandable, MqttWriting {
      */
     public boolean readXMLsettings() {
 
-        var settingsDoc = XMLtools.readXML(settingsFile);
-        var mqtt = XMLtools.getFirstElementByTag(settingsDoc, "mqtt");
-        if (mqtt != null) {
-            for (Element broker : XMLtools.getChildElements(mqtt, "broker")) {
-                String id = XMLtools.getStringAttribute(broker, "id", "general");
-                Logger.info("Adding MQTT broker called " + id);
-                mqttWorkers.put(id, new MqttWorker(broker, dQueue));
-            }
-            return true;
+        var mqttOpt = XMLtools.getFirstElementByTag(settingsFile, "mqtt");
+
+        if( mqttOpt.isEmpty())
+            return false;
+
+        for (Element broker : XMLtools.getChildElements(mqttOpt.get(), "broker")) {
+            String id = XMLtools.getStringAttribute(broker, "id", "general");
+            Logger.info("Adding MQTT broker called " + id);
+            mqttWorkers.put(id, new MqttWorker(broker, dQueue));
         }
-        return false;
+        return true;
     }
 
 

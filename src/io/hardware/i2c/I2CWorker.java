@@ -164,13 +164,12 @@ public class I2CWorker implements Commandable {
      */
     private void readFromXML() {
 
-        Element i2c = XMLtools.getFirstElementByTag( XMLtools.readXML(settingsPath), "i2c");
-
-        if (i2c != null) {                       
+        var i2cOpt = XMLtools.getFirstElementByTag( settingsPath, "i2c");
+        if( !i2cOpt.isEmpty()){
             Logger.info("Found settings for a I2C bus");
             devices.values().forEach(I2CDevice::close);
             devices.clear();
-            for( Element i2c_bus : XMLtools.getChildElements( i2c, "bus") ){
+            for( Element i2c_bus : XMLtools.getChildElements( i2cOpt.get(), "bus") ){
                 int bus = XMLtools.getIntAttribute(i2c_bus, "controller", -1);
                 Logger.info("Reading devices on the I2C bus of controller "+bus);
                 if( bus ==-1 ){
