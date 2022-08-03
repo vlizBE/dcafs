@@ -77,7 +77,7 @@ public class ModbusTCP extends TcpHandler{
         index=0;
         // Log anything and everything (except empty strings)
         if( log )		// If the message isn't an empty string and logging is enabled, store the data with logback
-            Logger.tag("RAW").warn( priority + "\t" + label + "\t[hex] " + Tools.fromBytesToHexString(rec,0,index) );
+            Logger.tag("RAW").warn( priority + "\t" + label+"|"+id + "\t[hex] " + Tools.fromBytesToHexString(data,0,data.length) );
 
         int reg = data[8];
 

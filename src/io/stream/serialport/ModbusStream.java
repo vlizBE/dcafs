@@ -73,7 +73,7 @@ public class ModbusStream extends SerialStream{
 
             // Log anything and everything (except empty strings)
             if( log )		// If the message isn't an empty string and logging is enabled, store the data with logback
-                Logger.tag("RAW").warn( priority + "\t" + label + "\t[hex] " + Tools.fromBytesToHexString(rec) );
+                Logger.tag("RAW").warn( priority + "\t" + label+"|"+id + "\t[hex] " + Tools.fromBytesToHexString(rec,0,index) );
 
             if( verifyCRC( rec, index ) ){
 
