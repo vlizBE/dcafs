@@ -151,13 +151,17 @@ public class CollectorPool implements Commandable, CollectorFuture {
                         .add("   fc:list -> Get a list of all active File Collectors")
                         .add("   fc:? -> Show this message");
                 return join.toString();
-            case "addnew":
+            case "addnew": case "add":
                 if( cmds.length<4)
                     return "Not enough arguments given: fc:addnew,id,src,path";
                 FileCollector.addBlankToXML(XMLfab.withRoot(workPath.resolve("settings.xml"),"dcafs"),cmds[1],cmds[2],cmds[3]);
                 var fc = createFileCollector(cmds[1]);
                 fc.addSource(cmds[2]);
-                fc.setPath( Path.of(cmds[3]), settingsPath.toString() );
+                if( Path.of(cmds[3]).isAbsolute()){
+                    fc.setPath( Path.of(cmds[3]));
+                }else{
+                    fc.setPath( Path.of(settingsPath.getParent().toString()).resolve(cmds[3])  );
+                }
                 return "FileCollector "+cmds[1]+" created and added to xml.";
             case "list":
                 return getFileCollectorsList(html?"<br":"\r\n");
