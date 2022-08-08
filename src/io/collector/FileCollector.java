@@ -88,7 +88,7 @@ public class FileCollector extends AbstractCollector{
         }else{
             size = Tools.roundDouble(byteCount/(1024.0*1024.0),1)+"MB";
         }
-        return "Writing to "+getPath()+" buffer containing "+dataBuffer.size()+"/max"+" items for a total of "+size;
+        return "Writing to "+getPath()+" buffer containing "+dataBuffer.size()+"/"+batchSize+" items for a total of "+size;
     }
     public void setScheduler( ScheduledExecutorService scheduler ){
         this.scheduler=scheduler;
@@ -208,7 +208,7 @@ public class FileCollector extends AbstractCollector{
                 .addChild("file").attr("id",id).attr("src",source)
                     .down()
                     .addChild("path",path)
-                    .addChild("flush").attr("batchsize","-1").attr("age","1m")
+                    .addChild("flush").attr("batchsize","30").attr("age","1m")
                 .build();
     }
 
@@ -305,7 +305,7 @@ public class FileCollector extends AbstractCollector{
      * @param batch The amount
      */
     public void setBatchsize( int batch ){
-        this.batchSize=batch;
+        batchSize=batch;
     }
 
     /**
