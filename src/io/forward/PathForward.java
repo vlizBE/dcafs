@@ -6,6 +6,7 @@ import io.Writable;
 import io.netty.channel.EventLoopGroup;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.database.SQLiteDB;
 import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.xml.XMLfab;
@@ -35,7 +36,7 @@ public class PathForward {
 
     String id;
     ArrayList<AbstractForward> stepsForward;
-    enum SRCTYPE {REG,PLAIN,RTVALS,CMD,FILE,INVALID}
+    enum SRCTYPE {REG,PLAIN,RTVALS,CMD,FILE,SQLITE,INVALID}
     Path workPath;
     static int READ_BUFFER_SIZE=2500;
     static long SKIPLINES = 0;
@@ -330,15 +331,20 @@ public class PathForward {
 
     private class CustomSrc{
         String pathOrData;
+        String path;
         SRCTYPE srcType;
         long intervalMillis;
+
         ScheduledFuture<?> future;
         ArrayList<String> buffer;
         ArrayList<Path> files;
+
         int lineCount=1;
         long sendLines=0;
         int multiLine=1;
+
         String label;
+
         boolean readOnce=false;
 
         public CustomSrc( String data, String type, long intervalMillis, String label){
@@ -351,6 +357,7 @@ public class PathForward {
                 case "cmd" -> SRCTYPE.CMD;
                 case "plain" -> SRCTYPE.PLAIN;
                 case "file" ->  SRCTYPE.FILE;
+                case "sqlite" -> SRCTYPE.SQLITE;
                 default -> SRCTYPE.INVALID;
             };
             if( srcType==SRCTYPE.FILE){
@@ -369,14 +376,15 @@ public class PathForward {
                     }
                 } else {
                     files.add(p);
-                   // totalLines=FileTools.getLineCount(p);
-                   // Logger.info("Line count: "+ totalLines);
                 }
                 buffer = new ArrayList<>();
                 if (spl.length == 2)
                     multiLine = NumberUtils.toInt(spl[1]);
             }else if( srcType == SRCTYPE.INVALID ){
                 Logger.error(id + "(pf) -> no valid srctype '" + type + "'");
+            }else if( srcType==SRCTYPE.SQLITE){
+                path = spl[1];
+                buffer = new ArrayList<>();
             }
         }
         public void start(){
@@ -401,6 +409,23 @@ public class PathForward {
                     break;
                 default:
                 case PLAIN: targets.forEach( x -> x.writeLine(pathOrData)); break;
+                case SQLITE:
+                    if( buffer.isEmpty() ) {
+                        var lite = SQLiteDB.createDB("custom", Path.of(path));
+                        var dataOpt = lite.doSelect(pathOrData);
+                        if (dataOpt.isPresent()) {
+                            var data = dataOpt.get();
+                            for( var d : data ){
+                                StringJoiner join = new StringJoiner(";");
+                                d.stream().map(Object::toString).forEach(join::add);
+                                buffer.add(join.toString());
+                            }
+                        }
+                    }else{
+                        String line = buffer.remove(0);
+                        targets.forEach( wr-> wr.writeLine(line));
+                    }
+                    break;
                 case FILE:
                     try {
                         for( int a=0;a<multiLine;a++){
