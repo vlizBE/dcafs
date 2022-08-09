@@ -1263,7 +1263,11 @@ public class RealtimeValues implements DataProviding, Commandable {
 							return nv1.name().compareTo(nv2.name());
 						}
 					})
-					.map(nv -> space + nv.name() + " : "+ nv.intValue() ) // change it to strings
+					.map(nv -> {
+						if( nv instanceof RealVal)
+							return space + nv.name() + " : "+ nv.value();
+						return space + nv.name() + " : "+ nv.intValue();
+					} ) // change it to strings
 					.forEach(join::add);
 		}
 		if( showTexts ) {
