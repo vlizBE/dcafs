@@ -5,6 +5,7 @@ import io.stream.StreamManager;
 import io.Writable;
 import das.CommandPool;
 import das.Commandable;
+import io.telnet.TelnetCodes;
 import util.data.DataProviding;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
@@ -102,20 +103,31 @@ public class TaskManagerPool implements Commandable {
         StringJoiner response = new StringJoiner(nl);
         String[] cmd = request[1].split(",");
 
-        if( tasklists.isEmpty() && !cmd[0].equalsIgnoreCase("addblank") && !cmd[0].equalsIgnoreCase("load"))
+        if( tasklists.isEmpty() && !cmd[0].equalsIgnoreCase("addblank") && !cmd[0].equalsIgnoreCase("add") && !cmd[0].equalsIgnoreCase("load"))
             return "No TaskManagers active, only tm:addblank available.";
 
         TaskManager tl;
+        String cyan = html?"":TelnetCodes.TEXT_CYAN;
+        String green=html?"":TelnetCodes.TEXT_GREEN;
+        String ora = html?"":TelnetCodes.TEXT_ORANGE;
+        String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
 
         switch( cmd[0] ){
             case "?":
-                response.add( "tm:reloadall -> Reload all the taskmanagers")
-                        .add( "tm:stopall -> Stop all the taskmanagers")
-                        .add( "tm:managers -> Get a list of currently active TaskManagers")
-                        .add( "tm:remove,x -> Remove the manager with id x")
-                        .add( "tm:run,id:task(set) -> Run the given task(set) from taskmanager id, taskset has priority if both exist")
-                        .add( "tm:addblank,id -> Add a new taskmanager, creates a file etc")
-                        .add( "tm:x,y -> Send command y to manager x");
+                response.add( cyan+"Addition"+reg)
+                        .add( green+"tm:addblank,id "+reg+"-> Add a new taskmanager, creates a file etc")
+                        .add( green+"tm:addtaskset,id,tasksetid "+reg+"-> Adds an empty taskset to the given taskmanager")
+                        .add( green+"tm:load,id "+reg+"-> Load an existing taskmanager from the default folder")
+                        .add( cyan+"Interact"+reg)
+                        .add( green+"tm:reloadall "+reg+"-> Reload all the taskmanagers")
+                        .add( green+"tm:reload,id "+reg+"-> Reload the specific taskmanager")
+                        .add( green+"tm:stopall "+reg+"-> Stop all the taskmanagers")
+                        .add( green+"tm:remove,x "+reg+"-> Remove the manager with id x")
+                        .add( green+"tm:run,id:task(set) "+reg+"-> Run the given task(set) from taskmanager id, taskset has priority if both exist")
+                        .add( green+"tm:x,y "+reg+"-> Send command y to manager x")
+                        .add( green+"Other")
+                        .add( green+"tm:list "+reg+"-> Get a list of currently active TaskManagers")
+                        .add( green+"tm:getpath,id"+reg+" -> Get the path to the given taskmanager");
                 return response.toString();
             case "addtaskset":
                 if( cmd.length != 3)
@@ -128,7 +140,7 @@ public class TaskManagerPool implements Commandable {
                     return "Failed to add taskset";
                 }
                 return "No such TaskManager "+cmd[1];
-            case "addblank":
+            case "addblank": case "add":
                 if( cmd.length != 2)
                     return "Not enough parameters, need tm:addblank,id";
 
@@ -178,7 +190,7 @@ public class TaskManagerPool implements Commandable {
                 return "Tasklist added, use tm:reload,"+cmd[1]+" to run it.";
             case "load":
                 if( cmd.length != 2)
-                    return "Not enough parameters, missing id";
+                    return "Not enough parameters, tm:load,id";
                 if( tasklists.get(cmd[1])!=null)
                     return "Already a taskmanager with that id";
                 if( Files.notExists( Path.of(workPath,"tmscripts",cmd[1]+".xml") ))
@@ -196,7 +208,7 @@ public class TaskManagerPool implements Commandable {
                 if( tl == null)
                     return "No such TaskManager: "+cmd[1];
                 if( tl.reloadTasks() )
-                    return "Tasks reloaded";
+                    return "\r\nTasks reloaded";
                 return "Tasks failed to reload";
             case "reloadall":
                 for(TaskManager tam : tasklists.values() )
@@ -251,12 +263,12 @@ public class TaskManagerPool implements Commandable {
                 return "Tried starting the keyword stuff";
             case "getpath":
                 if( cmd.length != 2)
-                    return "";
+                    return "Not enough arguments, tm:getpath,id";
                 tl = tasklists.get(cmd[1]);
                 if( tl != null){
                     return tl.getXMLPath().toString();
                 }else{
-                    return "";
+                    return "No such taskmanager";
                 }
             default:
                 if( cmd.length==1)
