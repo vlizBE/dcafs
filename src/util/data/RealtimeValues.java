@@ -1247,28 +1247,23 @@ public class RealtimeValues implements DataProviding, Commandable {
 
 		StringJoiner join = new StringJoiner(eol, title + eol, "");
 		join.setEmptyValue("None yet");
+		ArrayList<NumericVal> nums = new ArrayList<>();
 		if (showReals){
-			realVals.values().stream().filter(rv -> rv.group().equalsIgnoreCase(group))
-					.sorted((rv1, rv2) -> {
-						if (rv1.order() != rv2.order()) {
-							return Integer.compare(rv1.order(), rv2.order());
-						} else {
-							return rv1.name().compareTo(rv2.name());
-						}
-					})
-					.map(rv -> space + rv.name() + " : " + rv) //Change it to strings
-					.forEach(join::add); // Then add the sorted strings
+			nums.addAll(realVals.values().stream().filter(rv -> rv.group().equalsIgnoreCase(group)).toList());
 		}
 		if( showInts ){
-			integerVals.values().stream().filter(iv -> iv.group().equalsIgnoreCase(group))
-					.sorted((iv1, iv2) -> {
-						if (iv1.order() != iv2.order()) {
-							return Integer.compare(iv1.order(), iv2.order());
+			nums.addAll(integerVals.values().stream().filter(rv -> rv.group().equalsIgnoreCase(group)).toList());
+		}
+		if( !nums.isEmpty()){
+			nums.stream()
+					.sorted((nv1, nv2) -> {
+						if (nv1.order() != nv2.order()) {
+							return Integer.compare(nv1.order(), nv2.order());
 						} else {
-							return iv1.name().compareTo(iv2.name());
+							return nv1.name().compareTo(nv2.name());
 						}
 					})
-					.map(iv -> space + iv.name() + " : "+ iv.intValue() ) // change it to strings
+					.map(nv -> space + nv.name() + " : "+ nv.intValue() ) // change it to strings
 					.forEach(join::add);
 		}
 		if( showTexts ) {
