@@ -104,7 +104,7 @@ public class TaskManagerPool implements Commandable {
         String[] cmd = request[1].split(",");
 
         if( tasklists.isEmpty() && !cmd[0].equalsIgnoreCase("addblank") && !cmd[0].equalsIgnoreCase("add") && !cmd[0].equalsIgnoreCase("load"))
-            return "No TaskManagers active, only tm:addblank available.";
+            return "No TaskManagers active, only tm:addblank,id/tm:add,id and tm:load,id available.";
 
         TaskManager tl;
         String cyan = html?"":TelnetCodes.TEXT_CYAN;
