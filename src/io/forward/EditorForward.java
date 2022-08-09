@@ -10,6 +10,9 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
+import java.time.DateTimeException;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.StringJoiner;
@@ -82,7 +85,9 @@ public class EditorForward extends AbstractForward{
                 .add("rexremove -> Remove all matches of the value as a regex ")
                 .add("    fe. <edit type='rexremove' >\\d*</edit>  --> ::")
                 .add("rexkeep -> Only retain the result of the regex given as value")
-                .add("    fe. <edit type='rexkeep' >\\d*</edit>  --> 162512");
+                .add("    fe. <edit type='rexkeep' >\\d*</edit>  --> 162512")
+                .add("millisdate -> Convert epoch millis to a timestamp with given format")
+                .add("    fe. todo ");
 
         return join.toString();
     }
@@ -244,6 +249,11 @@ public class EditorForward extends AbstractForward{
             case "toascii":
                 converToAscii(deli);
                 Logger.info(id + " -> Added conversion to char");
+                break;
+            case "millisdate":
+                addMillisToDate(content,index,deli);
+                Logger.info( getID() +" -> Added millis conversion to "+content);
+                break;
             default:
                 Logger.error(id+" -> Unknown type used : '"+edit.getAttribute("type")+"'");
                 return false;
@@ -287,6 +297,35 @@ public class EditorForward extends AbstractForward{
         };
         edits.add(edit);
     }
+    public void addMillisToDate( String to, int index, String delimiter ){
+        rulesString.add( new String[]{"","millisdate","millis -> "+to} );
+        Function<String,String> edit = input ->
+        {
+            String[] split = input.split(delimiter);
+            if( split.length > index){
+                long millis = NumberUtils.toLong(split[index],-1L);
+                if( millis == -1L ){
+                    Logger.error( getID() + " -> Couldn't convert "+split[index]+" to millis");
+                    return input;
+                }
+                var ins = Instant.ofEpochMilli(millis);
+                try {
+                    split[index] = DateTimeFormatter.ofPattern(to).format(ins);
+                    if (split[index].isEmpty()) {
+                        Logger.error(getID() + " -> Failed to convert datetime " + split[index]);
+                        return input;
+                    }
+                    return String.join(delimiter, split);
+                }catch(IllegalArgumentException | DateTimeException e){
+                    Logger.error( getID() + " -> Invalid format in millis to date");
+                    return input;
+                }
+            }
+            Logger.error(id+" -> To few elements after split for redate");
+            return input;
+        };
+        edits.add(edit);
+    }
     /**
      * Alter the formatting of a date field
      * @param from The original format
@@ -295,7 +334,7 @@ public class EditorForward extends AbstractForward{
      * @param delimiter The delimiter to split the data
      */
     public void addRedate( String from, String to, int index, String delimiter ){
-        rulesString.add( new String[]{"","redata",from+" -> "+to} );
+        rulesString.add( new String[]{"","redate",from+" -> "+to} );
         String deli;
         if( delimiter.equalsIgnoreCase("*")){
             deli="\\*";
