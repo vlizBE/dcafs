@@ -32,6 +32,7 @@ From 0.5.0 onwards, this should be better documented...
 - Moved methods in CommandPool that can be static to Tools package
 - Removed cyclic redundancy between CommandPool and Das
 - Alias in database table is replaced with rtval, but alias will still be read (backwards compatible)
+- Added edit to convert epoch millis to a formatted datetime
 
 ### Rtvals
 - The response now starts with the current datetime
@@ -42,6 +43,7 @@ the rtvals commands
 - fixed: Empty ungrouped texts no longer show in list
 - fixed: int/real mix in group no longer cause duplicate entries
 - fixed: rtvals:name now works again with *
+- fixed: reals were always followed by int's independent of the order
 
 ### Generics
 - Can't add a generic with duplicate id through telnet

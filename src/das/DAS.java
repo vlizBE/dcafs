@@ -44,7 +44,7 @@ import java.util.concurrent.*;
 
 public class DAS implements Commandable{
 
-    private static final String version = "1.0.0d";
+    private static final String version = "1.0.0e";
 
     private Path settingsPath = Path.of("settings.xml");
     private String workPath=Path.of("").toString();
