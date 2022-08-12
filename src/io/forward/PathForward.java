@@ -411,10 +411,16 @@ public class PathForward {
                 case PLAIN: targets.forEach( x -> x.writeLine(pathOrData)); break;
                 case SQLITE:
                     if( buffer.isEmpty() ) {
+                        if( readOnce ) {
+                            stop();
+                            return;
+                        }
                         var lite = SQLiteDB.createDB("custom", Path.of(path));
                         var dataOpt = lite.doSelect(pathOrData);
+                        lite.disconnect(); //disconnect the database after retrieving the data
                         if (dataOpt.isPresent()) {
                             var data = dataOpt.get();
+                            readOnce=true;
                             for( var d : data ){
                                 StringJoiner join = new StringJoiner(";");
                                 d.stream().map(Object::toString).forEach(join::add);
