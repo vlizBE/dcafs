@@ -12,6 +12,7 @@ import worker.Datagram;
 
 import java.time.DateTimeException;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -310,14 +311,18 @@ public class EditorForward extends AbstractForward{
                 }
                 var ins = Instant.ofEpochMilli(millis);
                 try {
-                    split[index] = DateTimeFormatter.ofPattern(to).format(ins);
+                    if( to.equalsIgnoreCase("sql")){
+                        split[index] = ins.toString();
+                    }else{
+                        split[index] = DateTimeFormatter.ofPattern(to).withZone(ZoneId.of("UTC")).format(ins);
+                    }
                     if (split[index].isEmpty()) {
                         Logger.error(getID() + " -> Failed to convert datetime " + split[index]);
                         return input;
                     }
                     return String.join(delimiter, split);
                 }catch(IllegalArgumentException | DateTimeException e){
-                    Logger.error( getID() + " -> Invalid format in millis to date");
+                    Logger.error( getID() + " -> Invalid format in millis to date: "+to+" -> "+e.getMessage());
                     return input;
                 }
             }
