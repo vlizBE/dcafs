@@ -405,6 +405,10 @@ public class IssuePool implements Commandable{
         public String name() {
             return name;
         }
+        @Override
+        public String unit() {
+            return "";
+        }
 
         @Override
         public String group() {

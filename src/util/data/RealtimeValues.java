@@ -1265,8 +1265,8 @@ public class RealtimeValues implements DataProviding, Commandable {
 					})
 					.map(nv -> {
 						if( nv instanceof RealVal)
-							return space + nv.name() + " : "+ nv.value();
-						return space + nv.name() + " : "+ nv.intValue();
+							return space + nv.name() + " : "+ nv.value()+ nv.unit();
+						return space + nv.name() + " : "+ nv.intValue() + nv.unit();
 					} ) // change it to strings
 					.forEach(join::add);
 		}
