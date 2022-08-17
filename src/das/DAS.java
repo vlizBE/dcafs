@@ -22,7 +22,6 @@ import org.apache.commons.lang3.SystemUtils;
 import org.tinylog.Logger;
 import org.tinylog.provider.ProviderRegistry;
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import util.data.RealtimeValues;
 import util.database.*;
 import util.task.TaskManagerPool;
@@ -44,7 +43,7 @@ import java.util.concurrent.*;
 
 public class DAS implements Commandable{
 
-    private static final String version = "1.0.0e";
+    private static final String version = "1.0.0";
 
     private Path settingsPath = Path.of("settings.xml");
     private String workPath=Path.of("").toString();
