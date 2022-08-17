@@ -14,13 +14,16 @@ From 0.5.0 onwards, this should be better documented...
 
 ## Work in progress
 * Rework the TaskManager ( > 1.0.0 )
-* Zigbee support ( > 1.0.0 )
 
 ### To do/fix
 - cmd !idle not used properly when disconnected/reconnected
 - integerval telnet interface?
 
-## 1.0.0
+## 1.0.1 (work in progress)
+### Planned
+- Resolve #34
+
+## 1.0.0 (released 17/08/2022)
 - Updated dependencies
 - Now using java 17 (new lts)
 - DoubleVal is now RealVal, so real is used throughout instead of mix of double/real
