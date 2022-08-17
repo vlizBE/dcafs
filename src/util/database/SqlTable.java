@@ -10,6 +10,7 @@ import util.xml.XMLtools;
 
 import java.sql.PreparedStatement;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -17,7 +18,7 @@ import java.util.*;
 
 public class SqlTable {
 
-    String name = "";
+    String name;
 
     enum COLUMN_TYPE {
         INTEGER, REAL, TEXT, TIMESTAMP, EPOCH, OBJECT, LOCALDTNOW, UTCDTNOW, DATETIME
@@ -27,10 +28,6 @@ public class SqlTable {
     boolean ifnotexists = false;
     boolean server = false;
 
-    ArrayList<Object[]> data = new ArrayList<>(); // The data for the default insert statement
-    String prepStatement = "";  // The default insert statement
-
-    PrepStatement defaultPrep;
     HashMap<String,PrepStatement> preps = new HashMap<>();
     String lastError="";
 
@@ -80,35 +77,36 @@ public class SqlTable {
                     ok = false;
                     break;
                 }
-                String alias = XMLtools.getStringAttribute(node,"alias","");
+                String rtval = XMLtools.getStringAttribute(node,"rtval","");
+                rtval = XMLtools.getStringAttribute(node,"alias",rtval); // Retain backwards compatibility
 
                 switch (node.getNodeName()) {
                     case "real":
-                        table.addReal(val, alias);
+                        table.addReal(val, rtval);
                         break;
                     case "integer":case "int":
-                        table.addInteger(val, alias);
+                        table.addInteger(val, rtval);
                         break;
                     case "timestamp":
-                        if (alias.isEmpty()) {
+                        if (rtval.isEmpty()) {
                             table.addTimestamp(val);
                         } else {
-                            table.addText(val, alias);
+                            table.addText(val, rtval);
                         }
                         break;
                     case "millis":
-                        if (alias.isEmpty()) {
+                        if (rtval.isEmpty()) {
                             table.addEpochMillis(val);
                         } else {
-                            table.addInteger(val, alias);
+                            table.addInteger(val, rtval);
                         }
                         break;
                     case "text":
-                        table.addText(val, alias);
+                        table.addText(val, rtval);
                         break;
-                    case "localdtnow": table.addLocalDateTime(val, alias,true); break;
-                    case "utcdtnow": case "utcnow": table.addUTCDateTime(val, alias,true); break;
-                    case "datetime": table.addLocalDateTime(val, alias,false); break;
+                    case "localdtnow": table.addLocalDateTime(val, rtval,true); break;
+                    case "utcdtnow": case "utcnow": table.addUTCDateTime(val, rtval,true); break;
+                    case "datetime": table.addLocalDateTime(val, rtval,false); break;
                     default:
                         Logger.error("Unknown column specified "+node.getNodeName()+" for "+table.getName());
                         return Optional.empty();
@@ -124,7 +122,7 @@ public class SqlTable {
             }
         }
         if (ok)
-            return Optional.ofNullable(table);
+            return Optional.of(table);
         return Optional.empty();
     }
 
@@ -138,11 +136,12 @@ public class SqlTable {
         fab.addChild("table").attr("name",name).down();
         for( var col : columns ){
             fab.addChild(col.type.toString().toLowerCase(),col.title);
-            if( !col.alias.isEmpty() && !col.alias.equalsIgnoreCase(name+"_"+col.title)) {
-                fab.attr("alias", col.alias);
+            if( !col.rtval.isEmpty() && !col.rtval.equalsIgnoreCase(name+"_"+col.title)) {
+                fab.attr("rtval", col.rtval);
             }else{
-                fab.removeAttr("alias");
+                fab.removeAttr("rtval");
             }
+            fab.removeAttr("alias");
             if( !col.defString.isEmpty())
                 fab.attr("def",col.defString);
             String setup = (col.primary?"primary ":"")+(col.notnull?"notnull ":"")+(col.unique?"unique ":"");
@@ -224,15 +223,15 @@ public class SqlTable {
     }
 
     /**
-     * Add a column that contains integer data, using the given alias to link to
+     * Add a column that contains integer data, using the given rtval to link to
      * rtvals
      *
-     * @param title The title of the oolumn
-     * @param alias The alias to use to find the data
+     * @param title The title of the column
+     * @param rtval The rtval to use to find the data
      * @return This object
      */
-    public SqlTable addInteger(String title, String alias) {
-        addColumn(new Column(title, alias, COLUMN_TYPE.INTEGER));
+    public SqlTable addInteger(String title, String rtval) {
+        addColumn(new Column(title, rtval, COLUMN_TYPE.INTEGER));
         return this;
     }
 
@@ -248,21 +247,21 @@ public class SqlTable {
     }
 
     /**
-     * Add a column that contains real data, using the given alias to link to rtvals
+     * Add a column that contains real data, using the given rtval to link to rtvals
      * 
-     * @param title The title of the oolumn
-     * @param alias The alias to use to find the data
+     * @param title The title of the column
+     * @param rtval The rtval to use to find the data
      * @return This object
      */
-    public SqlTable addReal(String title, String alias) {
-        addColumn(new Column(title, alias, COLUMN_TYPE.REAL));
+    public SqlTable addReal(String title, String rtval) {
+        addColumn(new Column(title, rtval, COLUMN_TYPE.REAL));
         return this;
     }
 
     /**
      * Add a column that contains text data
      * 
-     * @param title The title of the oolumn
+     * @param title The title of the column
      * @return This object
      */
     public SqlTable addText(String title) {
@@ -271,14 +270,14 @@ public class SqlTable {
     }
 
     /**
-     * Add a column that contains text data, using the given alias to link to rtvals
+     * Add a column that contains text data, using the given rtval to link to rtvals
      * 
-     * @param title The title of the oolumn
-     * @param alias The alias to use to find the data
+     * @param title The title of the column
+     * @param rtval The rtval to use to find the data
      * @return This object
      */
-    public SqlTable addText(String title, String alias) {
-        addColumn(new Column(title, alias, COLUMN_TYPE.TEXT));
+    public SqlTable addText(String title, String rtval) {
+        addColumn(new Column(title, rtval, COLUMN_TYPE.TEXT));
         return this;
     }
 
@@ -286,7 +285,7 @@ public class SqlTable {
     /**
      * Add a column that contains timestamp data (in text format)
      * 
-     * @param title The title of the oolumn
+     * @param title The title of the column
      * @return This object
      */
     public SqlTable addTimestamp(String title) {
@@ -294,24 +293,12 @@ public class SqlTable {
         return this;
     }
 
-    /**
-     * Add a column that contains timestamp data in text format, using the given
-     * alias to link to rtvals
-     * 
-     * @param title The title of the oolumn
-     * @param alias The alias to use to find the data
-     * @return This object
-     */
-    public SqlTable addTimestamp(String title, String alias) {
-        addColumn(new Column(title, alias, COLUMN_TYPE.TIMESTAMP));
+    public SqlTable addLocalDateTime(String title, String rtval,boolean now) {
+        addColumn(new Column(title, rtval, now?COLUMN_TYPE.LOCALDTNOW:COLUMN_TYPE.DATETIME));
         return this;
     }
-    public SqlTable addLocalDateTime(String title, String alias,boolean now) {
-        addColumn(new Column(title, alias, now?COLUMN_TYPE.LOCALDTNOW:COLUMN_TYPE.DATETIME));
-        return this;
-    }
-    public SqlTable addUTCDateTime(String title, String alias,boolean now) {
-        addColumn(new Column(title, alias, now?COLUMN_TYPE.UTCDTNOW:COLUMN_TYPE.DATETIME));
+    public SqlTable addUTCDateTime(String title, String rtval,boolean now) {
+        addColumn(new Column(title, rtval, now?COLUMN_TYPE.UTCDTNOW:COLUMN_TYPE.DATETIME));
         return this;
     }
 
@@ -326,22 +313,6 @@ public class SqlTable {
         return this;
     }
 
-    /**
-     * Add a column that contains timestamp data in integer format, using the given
-     * alias to link to rtvals
-     * 
-     * @param title The title of the column
-     * @param alias The alias to use to find the data
-     * @return This object
-     */
-    public SqlTable addEpochMillis(String title, String alias) {
-        addColumn(new Column(title, alias, COLUMN_TYPE.EPOCH));
-        return this;
-    }
-    public SqlTable addObject(String title, String alias) {
-        addColumn(new Column(title, alias, COLUMN_TYPE.INTEGER));
-        return this;
-    }
     public SqlTable withDefault(String def) {
         int index = columns.size() - 1;
         columns.get(index).setDefault(def);
@@ -367,7 +338,7 @@ public class SqlTable {
         return this;
     }
     /**
-     * Define whether or not the last created column is not allowed to be null
+     * Define whether the last created column is not allowed to be null
      * 
      * @param nn True if not allowed to be null, false if so
      * @return This object
@@ -387,28 +358,6 @@ public class SqlTable {
         columns.get(columns.size() - 1).unique = unique;
         return this;
     }
-
-    /**
-     * Remove a single column from the table format
-     * 
-     * @param title The
-     * @return
-     */
-    public int removeColumn(String title) {
-        int a = columns.size();
-        columns.removeIf(x -> x.title.equalsIgnoreCase(title));
-        return a - columns.size();
-    }
-
-    /**
-     * Get the amount of columns in this table
-     * 
-     * @return The column count
-     */
-    public int getColumnCount() {
-        return columns.size();
-    }
-
     /**
      * Check if this table has columns
      * 
@@ -436,7 +385,7 @@ public class SqlTable {
         StringJoiner join = new StringJoiner("\r\n", "Table '" + name + "'\r\n", "");
         for (Column column : columns) {
             join.add("> " + column.toString()
-                    + (column.alias.equals(column.title) ? "" : " (alias=" + column.alias + ")"));
+                    + (column.rtval.equals(column.title) ? "" : " (rtval=" + column.rtval + ")"));
         }
         return join + "\r\n";
     }
@@ -456,19 +405,6 @@ public class SqlTable {
         return join.toString();
     }
 
-    /**
-     * Get a stringjoiner that has been set up to create the INSERT statement but
-     * needs the values added
-     * 
-     * @return The stringjoiner to create the INSERT statement
-     */
-    public StringJoiner getInsertJoiner() {
-        StringJoiner cols = new StringJoiner(",");
-        for (Column col : columns) {
-            cols.add(col.title);
-        }
-        return new StringJoiner(",", "INSERT INTO " + name + " (" + cols + ") VALUES (", ");");
-    }
     public int getRecordCount() {        
         return preps.values().stream().mapToInt( p -> p.getData().size()).sum();        
     }
@@ -516,11 +452,10 @@ public class SqlTable {
             int index = 0;
             try {
                 for ( int colIndex : prep.getIndexes() ) {
-                    if(  d[index] == null){
-                       // return -3;
-                    }
                     Column c = columns.get(colIndex);
-                    try{     
+                    try{
+                        if( d[index] instanceof OffsetDateTime )
+                            d[index]=asTimestamp((OffsetDateTime) d[index]);
                         ps.setObject( index+1,d[index] );
                         index++;
                     }catch( java.lang.ClassCastException | NullPointerException e){
@@ -538,8 +473,12 @@ public class SqlTable {
         }
         return count;
     }
-    public int fillStatement( PreparedStatement ps ) {
-        return fillStatement( "",ps);
+    public static Timestamp asTimestamp(OffsetDateTime offsetDateTime) {
+        if (offsetDateTime != null) {
+            return Timestamp.valueOf(offsetDateTime.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime());
+        }
+        else
+            return null;
     }
     public int clearRecords( String id, long[] updateCounts ){
         PrepStatement prep = preps.get(id);
@@ -583,20 +522,17 @@ public class SqlTable {
         return getPrep("").map( p -> p.addData(values)?1:0).orElse(-1);
     }
     /**
-     * Use the given rtvals to fill in the create statement, alias/title must match elements
+     * Use the given rtvals to fill in the create statement, rtval/title must match elements
      * @param dp The DataProviding object containing the values
      * @return The INSERT statement or an empty string if a value wasn't found
      */
-    public boolean buildInsert(DataProviding dp ){
-        return buildInsert("",dp,"");
-    }
     public boolean buildInsert( DataProviding dp ,String macro ){
         return buildInsert("",dp,macro);
     }
     /**
      * Use the given rtvals object and macro to fill in the INSERT statement (@macro defined in xml)
      * @param dp The DataProviding object containing the values
-     * @param macro The string to replace the @macro in the alias with
+     * @param macro The string to replace the @macro in the rtval with
      * @return The INSERT statement or an empty string if a value wasn't found
      */
     public boolean buildInsert( String id, DataProviding dp, String macro ){
@@ -616,7 +552,7 @@ public class SqlTable {
             if( def.equalsIgnoreCase("@macro"))
                 def=macro;
             
-            String ref = col.alias.replace("@macro", macro);
+            String ref = col.rtval.replace("@macro", macro);
             Object val = null;
             try{
                 if( col.type==COLUMN_TYPE.TIMESTAMP ){
@@ -632,21 +568,26 @@ public class SqlTable {
                     if( ivOpt.isPresent()) {
                         val = ivOpt.get().value();
                     }else{
-                        val = null;
                         if( col.hasDefault )
                             val = NumberUtils.toInt(def);
                     }
                 }else if( col.type == COLUMN_TYPE.REAL){
-                    var dvOpt = dp.getDoubleVal(ref);
+                    var dvOpt = dp.getRealVal(ref);
                     val = dvOpt.isPresent()?dvOpt.get().value():null;
                     if( val==null && col.hasDefault )
                         val = NumberUtils.createDouble(def);
                 }else if( col.type == COLUMN_TYPE.LOCALDTNOW){
                     val = OffsetDateTime.now();
+                    if( !server )
+                        val = val.toString();
                 }else if( col.type == COLUMN_TYPE.UTCDTNOW){
                     val = OffsetDateTime.now(ZoneOffset.UTC);
+                    if( !server )
+                        val = val.toString();
                 }else if( col.type == COLUMN_TYPE.DATETIME){
                     val = TimeTools.parseDateTime(dp.getText(ref,""),"yyyy-MM-dd HH:mm:ss.SSS");
+                    if( !server )
+                        val = val.toString();
                 }
             }catch( NullPointerException e ){
                 Logger.error("Null pointer when looking for "+ref + " type:"+col.type);
@@ -670,7 +611,7 @@ public class SqlTable {
     private class Column{
         COLUMN_TYPE type;
         String title="";
-        String alias="";
+        String rtval ="";
         boolean unique=false;
         boolean notnull=false;
         boolean primary=false;
@@ -678,17 +619,17 @@ public class SqlTable {
         boolean hasDefault=false;
         String defString="";
 
-        public Column( String title, String alias, COLUMN_TYPE type){
+        public Column( String title, String rtval, COLUMN_TYPE type){
             this.title=title;
-            if( alias.equals("")) // if no alias is given, we assume it's the same as the title
-                alias=name+"_"+title;
-            this.alias=alias;
+            if( rtval.equals("")) // if no rtval is given, we assume it's the same as the title
+                rtval=name+"_"+title;
+            this.rtval =rtval;
             this.type=type;
             switch( type ){
                 case TIMESTAMP: case EPOCH: notnull=true; break; // these aren't allowed to be null by default
-                case INTEGER: 
-                case REAL: 
-                case TEXT: 
+                case INTEGER:
+                case REAL:
+                case TEXT:
                 default:
                     break;
             }
@@ -709,7 +650,7 @@ public class SqlTable {
          */
         public String toString(){ 
             
-            if( type == COLUMN_TYPE.TIMESTAMP && !server ) // Timestamp should be timestamp on a server
+            if( (type == COLUMN_TYPE.TIMESTAMP||type == COLUMN_TYPE.LOCALDTNOW || type== COLUMN_TYPE.UTCDTNOW) && !server ) // Timestamp should be timestamp on a server
                 return title+" TEXT" + (unique?" UNIQUE":"") + (notnull?" NOT NULL":"")+(primary?" PRIMARY KEY":"");
             if( type == COLUMN_TYPE.EPOCH )
                 return title+" REAL" + (unique?" UNIQUE":"") + (notnull?" NOT NULL":"")+(primary?" PRIMARY KEY":"");
@@ -731,12 +672,13 @@ public class SqlTable {
         fab.addChild("table").attr("name",tableName).down();
 
         for( char c : format.toCharArray() ){
-            switch(c){
-                case 't': fab.addChild( "timestamp","columnname"); break;
-                case 'r': fab.addChild( "real","columnname"); break;
-                case 'i': fab.addChild( "integer","columnname"); break;
-                case 'c': fab.addChild( "text","columnname"); break;
-                case 'm': fab.addChild( "epochmillis","columnname"); break;
+            switch (c) {
+                case 't' -> fab.addChild("timestamp", "columnname");
+                case 'u' -> fab.addChild("utcnow", "columnname");
+                case 'r' -> fab.addChild("real", "columnname");
+                case 'i' -> fab.addChild("integer", "columnname");
+                case 'c' -> fab.addChild("text", "columnname");
+                case 'm' -> fab.addChild("epochmillis", "columnname");
             }
         }
         return fab.build();
@@ -758,21 +700,21 @@ public class SqlTable {
         int index=0;
         boolean macro=false;
         for( Column col : columns ){ //check for macro
-            if( col.alias.contains("@macro")){
+            if( col.rtval.contains("@macro")){
                 fab.addChild("macro").attr("index",0);
                 index++;
                 macro=true;
                 break;
             }
         }
-        boolean groupAllowed = columns.stream().allMatch( col -> col.alias.equalsIgnoreCase(name+"_"+col.title));
+        boolean groupAllowed = columns.stream().allMatch( col -> col.rtval.equalsIgnoreCase(name+"_"+col.title));
         if( groupAllowed ) // All the colums refer to the same group
             fab.attr("group",this.name);
 
         for( Column col : columns ){
             String value = col.title;
             if( !groupAllowed || macro )
-                value = col.alias;
+                value = col.rtval;
 
             if( col.defString.contains("@macro"))
                 continue;
@@ -785,7 +727,7 @@ public class SqlTable {
                 case DATETIME: fab.addChild("utcdt",value).attr("index",index++);break;
                 case TIMESTAMP:
                     if( index !=0)
-                        fab.addChild("timestamp",macro||!col.alias.isEmpty()?col.alias:col.title).attr("index",index++);
+                        fab.addChild("timestamp",macro||!col.rtval.isEmpty()?col.rtval :col.title).attr("index",index++);
                     break;
                 default:
                     break;
@@ -793,33 +735,7 @@ public class SqlTable {
         }
         return fab.build();
     }
-    /**
-     * Creates a template for a prepared statement of an INSERT query
-     * @param id The id of this preparedstatement with which it can be referenced
-     * @param params The columns that this statement will provide data to
-     * @return True if all columns were found
-     */
-    public boolean buildInsertStatement( String id, String... params){
 
-        PrepStatement stat = buildPrep(params);
-        
-        if( stat.getIndexes().size()!=params.length ){
-            Logger.error("Couldn't find all parameters");
-            return false;
-        }
-        
-        preps.put(id, stat);
-
-        StringJoiner qMarks = new StringJoiner(",", "", ");");
-        StringJoiner cols = new StringJoiner(",", "INSERT INTO " + name + " (", ") VALUES (");
-        stat.getIndexes().forEach(c -> {
-            qMarks.add("?");
-            cols.add( columns.get(c).title );
-        });
-        stat.setStatement( cols + qMarks.toString() );
-
-        return true;
-    }
     private void buildDefStatement(){
         PrepStatement stat = preps.get("");
 
@@ -830,19 +746,6 @@ public class SqlTable {
             cols.add( columns.get(c).title );
         });
         stat.setStatement( cols + qMarks.toString() );
-    }
-    private PrepStatement buildPrep( String... params ){
-        PrepStatement stat = new PrepStatement();
-        for( String col : params ){
-            for( int a=0;a<columns.size();a++){
-                if( columns.get(a).title.equalsIgnoreCase(col) ){
-                    stat.addColumn(a);
-                    Logger.info("Found column "+col+" at index "+a);
-                    break;
-                }
-            }
-        }
-        return stat;
     }
     private static class PrepStatement{
         ArrayList<Object[]> data = new ArrayList<>();

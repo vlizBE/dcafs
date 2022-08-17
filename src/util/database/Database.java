@@ -32,7 +32,6 @@ public abstract class Database{
     }
 
     protected boolean tablesRetrieved = false;
-    protected boolean connecting = false;
     protected String lastError="";
 
     /* ************************************************************************************************* */
@@ -128,7 +127,7 @@ public abstract class Database{
     /**
      * Create the local tables and views in the database
      * @param keepConnection True if the established connection should be kept
-     * @return
+     * @return The created content
      */
     public abstract String createContent(boolean keepConnection);
 

@@ -1,5 +1,7 @@
 package das;
 
+import io.Writable;
+import io.collector.CollectorPool;
 import io.email.Email;
 import io.email.EmailSending;
 import io.email.EmailWorker;
@@ -7,11 +9,9 @@ import io.hardware.gpio.InterruptPins;
 import io.hardware.i2c.I2CWorker;
 import io.matrix.MatrixClient;
 import io.mqtt.MqttPool;
-import io.sms.DigiWorker;
 import io.stream.StreamManager;
-import io.collector.FileCollector;
-import io.collector.MathCollector;
 import io.forward.ForwardPool;
+import util.data.DataProviding;
 import util.tools.FileMonitor;
 import io.stream.tcp.TcpServer;
 import io.telnet.TelnetCodes;
@@ -22,12 +22,8 @@ import org.apache.commons.lang3.SystemUtils;
 import org.tinylog.Logger;
 import org.tinylog.provider.ProviderRegistry;
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import util.DeadThreadListener;
-import util.data.DataProviding;
 import util.data.RealtimeValues;
 import util.database.*;
-import util.task.TaskManager;
 import util.task.TaskManagerPool;
 import util.tools.TinyWrapErr;
 import util.tools.TimeTools;
@@ -44,11 +40,10 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.stream.Collectors;
 
-public class DAS implements DeadThreadListener {
+public class DAS implements Commandable{
 
-    private static final String version = "0.11.10";
+    private static final String version = "1.0.0";
 
     private Path settingsPath = Path.of("settings.xml");
     private String workPath=Path.of("").toString();
@@ -60,7 +55,6 @@ public class DAS implements DeadThreadListener {
     /* Workers */
     private EmailWorker emailWorker;
     private LabelWorker labelWorker;
-    private DigiWorker digiWorker;
     private DebugWorker debugWorker;
     private I2CWorker i2cWorker;
 
@@ -76,15 +70,14 @@ public class DAS implements DeadThreadListener {
     private DatabaseManager dbManager;
     private MqttPool mqttPool;
     private TaskManagerPool taskManagerPool;
-
-    private final Map<String, FileCollector> fileCollectors = new HashMap<>();
+    private CollectorPool collectorPool;
 
     private boolean debug = false;
     private boolean log = false;
     private boolean bootOK = false; // Flag to show if booting went ok
     String sdReason = "Unwanted shutdown."; // Reason for shutdown of das, default is unwanted
 
-    BlockingQueue<Datagram> dQueue = new LinkedBlockingQueue<>();
+    private BlockingQueue<Datagram> dQueue = new LinkedBlockingQueue<>();
     boolean rebootOnShutDown = false;
     private InterruptPins isrs;
 
@@ -92,7 +85,7 @@ public class DAS implements DeadThreadListener {
     private FileMonitor fileMonitor;
 
     /* Threading */
-    EventLoopGroup nettyGroup = new NioEventLoopGroup(); // Single group so telnet,trans and streampool can share it
+    private EventLoopGroup nettyGroup = new NioEventLoopGroup(); // Single group so telnet,trans and streampool can share it
 
     public DAS() {
 
@@ -134,22 +127,19 @@ public class DAS implements DeadThreadListener {
             Logger.error("Issue in current settings.xml, aborting: " + settingsPath.toString());
             addTelnetServer();
         } else {
-            bootOK = true;
+            XMLtools.getFirstElementByTag(settingsDoc, "settings").ifPresent( ele ->
+                    {
+                        debug = XMLtools.getChildValueByTag(ele, "mode", "normal").equals("debug");
+                        log = XMLtools.getChildValueByTag(ele, "mode", "normal").equals("log");
+                        System.setProperty("tinylog.directory", XMLtools.getChildValueByTag(ele,"tinylog",workPath) );
+            });
 
-            Element settings = XMLtools.getFirstElementByTag(settingsDoc, "settings");
-
-            if (settings != null) {
-                debug = XMLtools.getChildValueByTag(settings, "mode", "normal").equals("debug");
-                log = XMLtools.getChildValueByTag(settings, "mode", "normal").equals("log");
-
-                System.setProperty("tinylog.directory", XMLtools.getChildValueByTag(settings,"tinylog",workPath) );
-
-                if (debug) {
-                    Logger.info("Program booting in DEBUG mode");
-                } else {
-                    Logger.info("Program booting in NORMAL mode");
-                }
+            if (debug) {
+                Logger.info("Program booting in DEBUG mode");
+            } else {
+                Logger.info("Program booting in NORMAL mode");
             }
+
             /* RealtimeValues */
             rtvals = new RealtimeValues( settingsPath, dQueue );
 
@@ -157,12 +147,14 @@ public class DAS implements DeadThreadListener {
             dbManager = new DatabaseManager(workPath,rtvals);
 
             /* CommandPool */
-            commandPool = new CommandPool( workPath);
+            commandPool = new CommandPool( workPath, dQueue );
             addCommandable(rtvals.getIssuePool(),"issue","issues");
-            addCommandable("flags;fv;doubles;double;dv;texts;tv",rtvals);
+            addCommandable("flags;fv;reals;real;rv;texts;tv;int;integer",rtvals);
             addCommandable(rtvals,"rtval","rtvals");
+            addCommandable("stop",rtvals);
             addCommandable( "wpts",rtvals.enableWaypoints(nettyGroup) );
             addCommandable(dbManager,"dbm","myd");
+            addCommandable(this,"st");
 
             /* TransServer */
             addTransServer(-1);
@@ -170,11 +162,8 @@ public class DAS implements DeadThreadListener {
             /* MQTT worker */
             addMqttPool();
 
-            /* Base Worker */
+            /* Label Worker */
             addLabelWorker();
-
-            /* ValMaps */
-            loadValMaps(true);
 
             /* StreamManager */
             addStreamPool();
@@ -183,10 +172,6 @@ public class DAS implements DeadThreadListener {
             if (XMLtools.hasElementByTag(settingsDoc, "email") ) {
                 addEmailWorker();
             }
-            /* DigiWorker */
-            if (XMLtools.hasElementByTag(settingsDoc, "digi") ) {
-                addDigiWorker();
-            }
             /* DebugWorker */
             if (DebugWorker.inXML(settingsDoc)) {
                 addDebugWorker();
@@ -194,9 +179,6 @@ public class DAS implements DeadThreadListener {
 
             /* I2C */
             addI2CWorker();
-
-            /* Telnet */
-            addTelnetServer();
 
             /* TaskManagerPool */
             addTaskManager();
@@ -207,20 +189,15 @@ public class DAS implements DeadThreadListener {
             addCommandable(forwardPool,"math","mf","maths");
             addCommandable(forwardPool,"editor","ef","editors");
             addCommandable(forwardPool,"paths","path","pf","paths");
+            addCommandable(forwardPool, "");
 
-            /* Math Collectors */
-            MathCollector.createFromXml( XMLfab.getRootChildren(settingsDoc,"dcafs","maths","*") ).forEach(
-                mc ->
-                {
-                    rtvals.addMathCollector(mc);
-                    dQueue.add( Datagram.system(mc.getSource()).writable(mc) ); // request the data
-                }
-            );
+            /* Collectors */
+            collectorPool = new CollectorPool(settingsPath.getParent(),dQueue,nettyGroup,rtvals);
+            addCommandable(collectorPool,"fc");
+            addCommandable(collectorPool,"mc");
 
-            /* File Collectors */
-            loadFileCollectors();
             /* File monitor */
-            if( FileMonitor.inXML(settingsPath))
+            if( XMLfab.hasRoot(settingsPath,"dcafs","monitor") )
                 fileMonitor = new FileMonitor(settingsPath.getParent(),dQueue);
 
             /* GPIO's */
@@ -228,7 +205,7 @@ public class DAS implements DeadThreadListener {
                 Logger.info("Reading interrupt gpio's from settings.xml");
                 isrs = new InterruptPins(dQueue,settingsPath);
             }else{
-                Logger.info("No gpios defined in settings.xml");
+                Logger.info("No gpio's defined in settings.xml");
             }
 
             /* Matrix */
@@ -239,7 +216,11 @@ public class DAS implements DeadThreadListener {
             }else{
                 Logger.info("No matrix settings");
             }
-            commandPool.setDAS(this);
+
+            bootOK = true;
+
+            /* Telnet */
+            addTelnetServer();
         }
         this.attachShutDownHook();
     }
@@ -248,22 +229,19 @@ public class DAS implements DeadThreadListener {
         if( start )
             startAll();
     }
-    public String getWorkPath(){
-        return workPath;
+    public String getVersion(){return version;}
+    public Path getWorkPath(){
+        return Path.of(workPath);
     }
     public Path getSettingsPath(){
         return settingsPath;
     }
-    public DatabaseManager getDatabaseManager(){return dbManager;}
-
     /**
      * Check if the boot up was successful
-     * 
+     *
      * @return True if boot went fine
      */
-    public boolean isOk() {
-        return bootOK;
-    }
+    public boolean hasBootedOk() { return bootOK; }
 
     /**
      * Check if running in debug mode
@@ -274,18 +252,13 @@ public class DAS implements DeadThreadListener {
         return debug;
     }
 
-    public String getDASVersion() {
-        return version;
-    }
-
     public String getUptime() {
         return TimeTools.convertPeriodtoString(Duration.between(bootupTimestamp, LocalDateTime.now()).getSeconds(),
                 TimeUnit.SECONDS);
     }
 
     /* ************************************  X M L *****************************************************/
-    public void createXML() {
-       
+    private void createXML() {
        XMLfab.withRoot(settingsPath, "dcafs")
                 .addParentToRoot("settings")
                     .addChild("mode","normal")
@@ -293,8 +266,7 @@ public class DAS implements DeadThreadListener {
                     .comment("Defining the various streams that need to be read")
                 .build();
     }
-
-    /* **************************************  C O M M A N D R E Q  ********************************************/
+    /* **************************************  C O M M A N D P O O L ********************************************/
     /**
      * Add a commandable to the CommandPool, this is the same as adding commands to dcafs
      * @param id The unique start command (so whatever is in front of the : )
@@ -306,35 +278,11 @@ public class DAS implements DeadThreadListener {
     public void addCommandable( Commandable cmd, String... id  ){
         commandPool.addCommandable(String.join(";",id),cmd);
     }
-    public CommandPool getCommandPool(){
-        return commandPool;
-    }
-    /**
-     * Add a commandable to the CommandPool, this is the same as adding commands to dcafs,
-     * bulk means that this can contain multiple 'major' commands but no specific command will trigger it
-     * @param cmd The commandable to add
-     */
-    public void addBulkCommandable( Commandable cmd ){
-        commandPool.addBulkCommandable(cmd);
-    }
-
-    /**
-     * Adds a check to do to see if it's allowed to shut down now
-     * @param sdp
-     */
-    public void addShutdownPreventing( ShutdownPreventing sdp){
-        commandPool.addShutdownPreventing(sdp);
-    }
-    /* **************************************  R E A L T I M E V A L U E S ********************************************/
-    public DataProviding getDataProvider() {
-        return rtvals;
-    }
-
     /* ***************************************  T A S K M A N A G E R ********************************************/
     /**
      * Create a Taskmanager to handle tasklist scripts
      */
-    public void addTaskManager() {
+    private void addTaskManager() {
 
         taskManagerPool = new TaskManagerPool(workPath, rtvals, commandPool);
 
@@ -342,24 +290,20 @@ public class DAS implements DeadThreadListener {
             taskManagerPool.setStreamPool(streampool);
         if (emailWorker != null)
             taskManagerPool.setEmailSending(emailWorker.getSender());
-        if (digiWorker != null) {
-            taskManagerPool.setSMSSending(digiWorker);
-        }
         taskManagerPool.readFromXML();
         addCommandable("tm", taskManagerPool);
     }
-    public Optional<TaskManager> getTaskManager( String id){
-        return taskManagerPool.getTaskList(id);
-    }
-
     /* ******************************************  S T R E A M P O O L ***********************************************/
     /**
      * Adds the streampool
      */
-    public void addStreamPool() {
+    private void addStreamPool() {
 
         streampool = new StreamManager(dQueue, rtvals.getIssuePool(), nettyGroup);
-        commandPool.setStreamPool(streampool);
+        addCommandable(streampool,"ss","streams","");
+        addCommandable(streampool,"s_","h_");
+        addCommandable(streampool,"rios","raw","stream");
+        addCommandable(streampool,"");
 
         if (debug) {
             streampool.enableDebug();
@@ -367,81 +311,34 @@ public class DAS implements DeadThreadListener {
             streampool.readSettingsFromXML(settingsPath);
         }
     }
-
-    public StreamManager getStreamPool() {
-        if (streampool == null) {
-            Logger.warn("No Streampool defined");
-            return null;
-        }
+    public StreamManager getStreampool(){
         return streampool;
+    }
+    /* ***************************************** D B M  ******************************************************** */
+    public DatabaseManager getDatabaseManager(){
+        return dbManager;
     }
 
     /* *************************************  L A B E L W O R K E R **********************************************/
     /**
      * Adds the BaseWorker
      */
-    public void addLabelWorker() {
+    private void addLabelWorker() {
         if (this.labelWorker == null)
             labelWorker = new LabelWorker(settingsPath,dQueue,rtvals,dbManager);
         labelWorker.setCommandReq(commandPool);
         labelWorker.setDebugging(debug);
         labelWorker.setMqttWriter(mqttPool);
-        labelWorker.setEventListener(this);
 
         addCommandable(labelWorker,"gens");
-    }
-    public LabelWorker getLabelWorker() {
-        return labelWorker;
     }
 
     public BlockingQueue<Datagram> getDataQueue() {
         addLabelWorker();
         return dQueue;
     }
-
-    public void loadValMaps(boolean clear){
-        if( clear ){
-            settingsDoc = XMLtools.readXML(settingsPath);
-            labelWorker.clearValMaps();
-        }
-        XMLfab.getRootChildren(settingsDoc, "dcafs","valmaps","valmap")
-                .forEach( ele ->  labelWorker.addValMap( ValMap.readFromXML(ele) ) );
-
-        // Find the path ones?
-        XMLfab.getRootChildren(settingsPath, "dcafs","paths","path")
-                .forEach( ele -> {
-                        String imp = ele.getAttribute("import");
-
-                        int a=1;
-                        if( !imp.isEmpty() ){ //meaning imported
-                            String file = Path.of(imp).getFileName().toString();
-                            file = file.substring(0,file.length()-4);//remove the .xml
-
-                            for( Element vm : XMLfab.getRootChildren(Path.of(imp), "dcafs","paths","path","valmap").collect(Collectors.toList())){
-                                if( !vm.hasAttribute("id")){ //if it hasn't got an id, give it one
-                                    vm.setAttribute("id",file+"_vm"+a);
-                                    a++;
-                                }
-                                if( !vm.hasAttribute("delimiter") ) //if it hasn't got an id, give it one
-                                    vm.setAttribute("delimiter",vm.getAttribute("delimiter"));
-                                labelWorker.addValMap( ValMap.readFromXML(vm) );
-                            }
-                        }
-                        String delimiter = XMLtools.getStringAttribute(ele,"delimiter","");
-                        for( Element vm : XMLtools.getChildElements(ele,"valmap")){
-                            if( !vm.hasAttribute("id")){ //if it hasn't got an id, give it one
-                                vm.setAttribute("id",ele.getAttribute("id")+"_vm"+a);
-                                a++;
-                            }
-                            if( !vm.hasAttribute("delimiter") && !delimiter.isEmpty()) //if it hasn't got an id, give it one
-                                vm.setAttribute("delimiter",delimiter);
-                            labelWorker.addValMap( ValMap.readFromXML(vm) );
-                        }
-                    }
-            );
-    }
     /* ***************************************** M Q T T ******************************************************** */
-    public void addMqttPool(){
+    private void addMqttPool(){
         mqttPool = new MqttPool(settingsPath,rtvals,dQueue);
         addCommandable("mqtt", mqttPool);
     }
@@ -451,7 +348,7 @@ public class DAS implements DeadThreadListener {
      * 
      * @param port The port the server will be listening on
      */
-    public void addTransServer(int port) {
+    private void addTransServer(int port) {
 
         Logger.info("Adding TransServer");
         trans = new TcpServer(settingsPath, nettyGroup);
@@ -459,41 +356,28 @@ public class DAS implements DeadThreadListener {
         trans.setDataQueue(dQueue);
 
         addCommandable("ts",trans);
+        addCommandable("trans",trans);
     }
 
     /* **********************************  E M A I L W O R K E R *********************************************/
     /**
      * Adds an EmailWorker
      */
-    public void addEmailWorker() {
+    private void addEmailWorker() {
         Logger.info("Adding EmailWorker");
         addLabelWorker();
-        emailWorker = new EmailWorker(settingsDoc, dQueue);
-        emailWorker.setEventListener(this);
-        commandPool.setEmailWorker(emailWorker);
+        emailWorker = new EmailWorker(settingsPath, dQueue);
+        addCommandable("email",emailWorker);
+        commandPool.setEmailSender(emailWorker);
     }
-    public Optional<EmailSending> getEmailSender(){
-        if(emailWorker!=null)
-            return Optional.ofNullable(emailWorker.getSender());
-        return Optional.empty();
-    }
-
-    /* *****************************************  D I G I W O R K E R **************************************************/
-    /**
-     * Adds a digiworker, this is a worker talking to a Digi 4g modem via telnet
-     */
-    public void addDigiWorker() {
-        Logger.info("Adding DigiWorker");
-        digiWorker = new DigiWorker(settingsDoc);
-        digiWorker.setEventListener(this);
-        addCommandable("sms",digiWorker);
-        commandPool.setSMSSending(digiWorker);
+    public EmailSending getEmailSender(){
+        return emailWorker;
     }
     /* *************************************  D E B U G W O R K E R ***********************************************/
     /**
      * Creates the DebugWorker
      */
-    public void addDebugWorker() {
+    private void addDebugWorker() {
         Logger.info("Adding DebugWorker");
         addLabelWorker();
 
@@ -507,7 +391,7 @@ public class DAS implements DeadThreadListener {
     /**
      * Create the telnet server
      */
-    public void addTelnetServer() {
+    private void addTelnetServer() {
 
         if( bootOK) {
             telnet = new TelnetServer(this.getDataQueue(), settingsPath, nettyGroup);
@@ -521,7 +405,7 @@ public class DAS implements DeadThreadListener {
     /**
      * Create the I2CWorker
      */
-    public void addI2CWorker() {
+    private void addI2CWorker() {
         if( i2cWorker!=null)
             return;
 
@@ -534,49 +418,11 @@ public class DAS implements DeadThreadListener {
         i2cWorker = new I2CWorker(settingsPath, dQueue);
         addCommandable("i2c",i2cWorker);
     }
-    /* *************************************** F I L E C O L L E C T O R ************************************ */
-
-    /**
-     * Load all file collectors from the settings.xml
-     */
-    public void loadFileCollectors(){
-        fileCollectors.clear();
-        FileCollector.createFromXml( XMLfab.getRootChildren(settingsDoc,"dcafs","collectors","file"), nettyGroup,dQueue, workPath ).forEach(
-                fc ->
-                {
-                    Logger.info("Created "+fc.getID());
-                    fileCollectors.put(fc.getID(),fc);
-                    dQueue.add( Datagram.system(fc.getSource()).writable(fc) ); // request the data
-                }
-        );
-    }
-    public Optional<FileCollector> getFileCollector(String id){
-        return Optional.ofNullable(fileCollectors.get(id));
-    }
-    public String getFileCollectorsList( String eol ){
-        StringJoiner join = new StringJoiner(eol);
-        join.setEmptyValue("None yet");
-        fileCollectors.forEach((key, value) -> join.add(key + " -> " + value.toString()));
-        return join.toString();
-    }
-    public FileCollector addFileCollector( String id ){
-        var fc=new FileCollector(id,"1m",nettyGroup,dQueue);
-        fileCollectors.put(id, fc);
-        return fc;
+    /* ******************************** R E A L T I M E  D A T A  ******************************************* */
+    public DataProviding getDataProvider(){
+        return rtvals;
     }
     /* ******************************** * S H U T D O W N S T U F F ***************************************** */
-    /**
-     * Set the reason for shutting down
-     * 
-     * @param reason The reason DAS is shutting down
-     */
-    public void setShutdownReason(String reason) {
-        this.sdReason = reason;
-        if (reason.startsWith("upgrade")) {
-            this.rebootOnShutDown = true;
-        }
-    }
-
     /**
      * Attach a hook to the shutdown process, so we're sure that all queue's etc. get
      * processed first
@@ -598,12 +444,14 @@ public class DAS implements DeadThreadListener {
                 Logger.info("Flushing database buffers");
                 dbManager.flushAll();
 
-                // File collectors
-                fileCollectors.values().forEach(FileCollector::flushNow);
+                // Collectors
+                collectorPool.flushAll();
 
                 // Try to send email...
                 if (emailWorker != null) {
                     Logger.info("Informing admin");
+                    String r = commandPool.getShutdownReason();
+                    sdReason = r.isEmpty()?sdReason:r;
                     emailWorker.sendEmail( Email.toAdminAbout(telnet.getTitle() + " shutting down.").content("Reason: " + sdReason) );
                 }
                 try {
@@ -643,28 +491,24 @@ public class DAS implements DeadThreadListener {
         Logger.info("Shut Down Hook Attached.");
     }
 
-    /* ******************************  * T H R E A D I N G *****************************************/
+    /* ******************************* T H R E A D I N G *****************************************/
     /**
      * Start all the threads
      */
     public void startAll() {
 
         if (labelWorker != null) {
-            Logger.info("Starting BaseWorker...");
-            new Thread(labelWorker, "BaseWorker").start();// Start the thread
-        }
-        if (digiWorker != null) {
-            Logger.info("Starting DigiWorker...");
-            new Thread(digiWorker, "DigiWorker").start();// Start the thread
+            Logger.info("Starting LabelWorker...");
+            new Thread(labelWorker, "LabelWorker").start();// Start the thread
         }
         if (debug && debugWorker == null) {
-            Logger.info("Debug mode but no debugworker created...");
+            Logger.info("Debug mode but no debug worker created...");
         } else if (debugWorker != null) {
             if (debug || log) {
                 Logger.info("Starting DebugWorker...");
                 debugWorker.start();// Start the thread
             } else {
-                Logger.info("Not in debug mode, not starting debugworker...");
+                Logger.info("Not in debug mode, not starting debug worker...");
             }
         }
         if (trans != null && trans.isActive()) {
@@ -686,12 +530,6 @@ public class DAS implements DeadThreadListener {
 
         Logger.debug("Finished");
     }
-
-    public void haltWorkers() {
-        if (labelWorker != null)
-            labelWorker.stopWorker();
-    }
-
     /* **************************** * S T A T U S S T U F F *********************************************************/
     /**
      * Request a status message regarding the streams, databases, buffers etc
@@ -814,74 +652,26 @@ public class DAS implements DeadThreadListener {
      */
     public String getQueueSizes() {
         StringJoiner join = new StringJoiner("\r\n", "", "\r\n");
-        join.add("Data buffer: " + this.dQueue.size() + " in receive buffer and "+ labelWorker.getWaitingQueueSize()+" waiting...");
+        join.add("Data buffer: " + dQueue.size() + " in receive buffer and "+ labelWorker.getWaitingQueueSize()+" waiting...");
 
         if (emailWorker != null)
             join.add("Email backlog: " + emailWorker.getRetryQueueSize() );
         return join.toString();
     }
 
-    /**
-     * Get the settings in string format
-     * 
-     * @return The settings in string format
-     */
-    public String getSettings() {
-
-        StringJoiner join = new StringJoiner("\r\n", "\r\n", "\r\n");
-
-        if (streampool != null) {
-            join.add("----Serial & TCP & UDP PORTS----");
-            join.add(streampool.getSettings());
-        }
-        if (emailWorker != null) {
-            join.add("\r\n----Email----");
-            join.add(emailWorker.getSettings());
-            join.add(emailWorker.getEmailBook());
-        }
-        if (digiWorker != null) {
-            join.add("\r\n----SMS----");
-            join.add(digiWorker.getServerInfo());
-            join.add(digiWorker.getSMSBook());
-        }
-        if (mqttPool !=null) {
-            join.add("\r\n----MQTT----");
-            join.add(mqttPool.getMqttBrokersInfo());
-        }
-        return join.toString();
+    @Override
+    public String replyToCommand(String[] request, Writable wr, boolean html) {
+        return switch( request[0]){
+            case "st" -> getStatus(html);
+            default -> "Unknown command";
+        };
     }
 
     @Override
-    public void notifyCancelled(String thread) {
-
-        Logger.error("Thread: " + thread + " stopped for some reason.");
-        rtvals.getIssuePool().addIfNewAndIncrement("threaddied:" + thread, thread + " died and got restarted");
-
-        switch (thread) {
-            case "BaseWorker": // done
-                int retries = rtvals.getIssuePool().getIssueTriggerCount("thread died:" + thread);
-                if (labelWorker != null && retries < 50) {
-                    Logger.error("BaseWorker not alive, trying to restart...");
-                    new Thread(labelWorker, "BaseWorker").start();// Start the thread
-                } else {
-                    Logger.error("BaseWorker died 50 times, giving up reviving.");
-                    rtvals.getIssuePool().addIfNewAndIncrement("fatal:" + thread, thread + " permanently dead.");
-                }
-                break;
-            case "DigiWorker": // done
-                if (digiWorker != null) {
-                    Logger.error("DigiWorker not alive, trying to restart...");
-                    new Thread(digiWorker, "DigiWorker").start();// Start the thread
-                }
-                break;
-            default:
-                Logger.error("Unknown thread");
-                break;
-        }
+    public boolean removeWritable(Writable wr) {
+        return false;
     }
-    public void test(){
 
-    }
     public static void main(String[] args) {
 
         DAS das = new DAS();
@@ -892,6 +682,5 @@ public class DAS implements DeadThreadListener {
         das.startAll();
 
         Logger.info("Dcafs "+version+" boot finished!");
-
     }
 }

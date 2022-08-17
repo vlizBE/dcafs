@@ -101,7 +101,7 @@ public abstract class AbstractForward implements Writable {
         return targets.remove(target);
     }
     public boolean noTargets(){
-        return targets.isEmpty() && label.isEmpty() ;
+        return targets.isEmpty() && label.isEmpty() && !log;
     }
     public ArrayList<Writable> getTargets(){
         return targets;
@@ -149,7 +149,10 @@ public abstract class AbstractForward implements Writable {
      */
     public void setLabel(String label){
         this.label=label;
-        valid = !label.isEmpty(); // A label counts as a valid target
+        if( !valid && !label.isEmpty()) {
+            sources.forEach(source -> dQueue.add(Datagram.build(source).label("system").writable(this)));
+            valid=true;
+        }
     }
     protected boolean readBasicsFromXml( Element fw ){
 
@@ -181,9 +184,8 @@ public abstract class AbstractForward implements Writable {
     /**
      * Write the basics that are the same for each forward
      * @param fab An XMLfab with the forward as the current parent
-     * @return True no reason to fail for now
      */
-    protected boolean writeBasicsToXML( XMLfab fab){
+    protected void writeBasicsToXML( XMLfab fab){
         if( !label.isEmpty() )
             fab.attr("label",label);
 
@@ -196,7 +198,6 @@ public abstract class AbstractForward implements Writable {
             fab.comment("Sources go here");
             sources.forEach( src -> fab.addChild("src", src) );
         }
-        return true;
     }
     public void setInvalid(){valid=false;}
     /* *********************** Abstract Methods ***********************************/

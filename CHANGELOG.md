@@ -16,12 +16,65 @@ From 0.5.0 onwards, this should be better documented...
 * Rework the TaskManager ( > 1.0.0 )
 * Zigbee support ( > 1.0.0 )
 
+### To do/fix
+- cmd !idle not used properly when disconnected/reconnected
+- integerval telnet interface?
+
+## 1.0.0
+- Updated dependencies
+- Now using java 17 (new lts)
+- DoubleVal is now RealVal, so real is used throughout instead of mix of double/real
+
+### General
+- Clean up, remove unused stuff etc
+- Rewrote emailworker a bit
+- Removed DigiWorker and other things related to sms
+- Moved methods in CommandPool that can be static to Tools package
+- Removed cyclic redundancy between CommandPool and Das
+- Alias in database table is replaced with rtval, but alias will still be read (backwards compatible)
+- Added edit to convert epoch millis to a formatted datetime
+
+### Rtvals
+- The response now starts with the current datetime
+- IntegerVals now show up in the rtvals listing and are available for
+the rtvals commands
+- Group is now mandatory (empty group also exists)
+- Removed the option to use {D:...} etc, rtvals need be be defined instead
+- fixed: Empty ungrouped texts no longer show in list
+- fixed: int/real mix in group no longer cause duplicate entries
+- fixed: rtvals:name now works again with *
+- fixed: reals were always followed by int's independent of the order
+
+### Generics
+- Can't add a generic with duplicate id through telnet
+- When two generics are in xml with same id, only first is used.
+  This is mentioned in the errorlog
+- gens:addgen now actually uses the given group
+- Generics inside a path now get the id from the path id instead of the file
+- If a value wasn't found, the rtvals are updated with NaN if double/real or Max_integer for integer 
+
+### Other fixes
+- Here and there the relative paths weren't converted to correct absolute ones
+- ModbusTCP didn't use the inherited timestamp field
+- raw: stops again when issue'ing empty cmd
+- Interval task with delay more than 48 hours now works properly  
+- Forwards, now giving a label with xf:alter does request src
+
 ## 0.11.x
 - Goals for this version series (removed when they are done)
   * Code cleanup
     * Bring javadoc up to date
 
-## 0.11.10 (work in progress)
+## 0.11.10 (04/05/2022)
+
+### File monitor 
+- Simple class that watches files for modification and executes a cmd on event
+- Purely xml for now, now telnet interface
+
+### Fixes
+- EmailWorker check thread got called multiple times if it failed, this amount kept increasing
+- The command to send a string to a stream didn't allow a single ?, now info on the cmd is with ??
+- Various small fixes in the tools package
 
 ## 0.11.9 (28/03/22)
 

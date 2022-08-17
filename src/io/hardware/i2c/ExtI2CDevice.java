@@ -41,11 +41,10 @@ public class ExtI2CDevice extends I2CDevice {
 	public String getID(){
 		return id;
 	}
-	public boolean probeIt() throws RuntimeIOException{
+	public void probeIt() throws RuntimeIOException{
 		failedProbe = !this.probe();
 		if( failedProbe )
 			throw new RuntimeIOException( "Probe failed for "+getAddr() );
-		return true;
 	}
 	public String toString(){
 		return "@"+getController()+":0x"+String.format("%02x ", getAddress())
@@ -98,8 +97,8 @@ public class ExtI2CDevice extends I2CDevice {
 			return -1;
 		return Duration.between(timestamp,Instant.now()).getSeconds();
 	}
-	public boolean storeInXml(XMLfab fab){
-		return fab.selectOrAddChildAsParent("bus","controller",getController())
+	public void storeInXml(XMLfab fab){
+		fab.selectOrAddChildAsParent("bus","controller",getController())
 				.selectOrAddChildAsParent("device","id",id)
 				.attr("address","0x"+String.format("%02x", getAddress()))
 				.attr("script",script).build();

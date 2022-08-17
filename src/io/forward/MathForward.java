@@ -1,7 +1,7 @@
 package io.forward;
 
 import util.data.DataProviding;
-import util.data.DoubleVal;
+import util.data.RealVal;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
@@ -46,7 +46,7 @@ public class MathForward extends AbstractForward {
         readOk = readFromXML(ele);
     }
     public MathForward(BlockingQueue<Datagram> dQueue, DataProviding dp){
-        super(null,dp);
+        super(dQueue,dp);
     }
     /**
      * Read a mathForward from an element in the xml
@@ -139,25 +139,19 @@ public class MathForward extends AbstractForward {
                 .forEach( ops -> {
                     try {
                         var type= fromStringToOPTYPE(XMLtools.getStringAttribute(ops, "type", "complex"));
-                        switch(Objects.requireNonNull(type)){
-                            case COMPLEX:
-                                addStdOperation(
-                                        ops.getTextContent(),
-                                        XMLtools.getIntAttribute(ops,"scale",-1),
-                                        XMLtools.getStringAttribute(ops, "cmd", "")
-                                    );
-                                break;
-                            case LN: case SALINITY:case SVC:case TRUEWINDSPEED:case TRUEWINDDIR: case UTM: case GDC:
-                                addOperation(
-                                        XMLtools.getStringAttribute(ops,"index","-1"),
-                                        XMLtools.getIntAttribute(ops,"scale",-1),
-                                        type,
-                                        XMLtools.getStringAttribute(ops, "cmd", ""),
-                                        ops.getTextContent());
-                                break;
-                            default:
-                                Logger.error("Bad type "+type);
-                                break;
+                        switch (Objects.requireNonNull(type)) {
+                            case COMPLEX -> addStdOperation(
+                                    ops.getTextContent(),
+                                    XMLtools.getIntAttribute(ops, "scale", -1),
+                                    XMLtools.getStringAttribute(ops, "cmd", "")
+                            );
+                            case LN, SALINITY, SVC, TRUEWINDSPEED, TRUEWINDDIR, UTM, GDC -> addOperation(
+                                    XMLtools.getStringAttribute(ops, "index", "-1"),
+                                    XMLtools.getIntAttribute(ops, "scale", -1),
+                                    type,
+                                    XMLtools.getStringAttribute(ops, "cmd", ""),
+                                    ops.getTextContent());
+                            default -> Logger.error("Bad type " + type);
                         }
 
                     }catch( NumberFormatException e){
@@ -271,7 +265,7 @@ public class MathForward extends AbstractForward {
             valid=false;
             return false;
         }
-        if( badDataCount > 0 || bds == null)
+        if(badDataCount > 0)
             return true;
 
         StringJoiner join = new StringJoiner(delimiter); // prepare a joiner to rejoin the data
@@ -420,7 +414,7 @@ public class MathForward extends AbstractForward {
         String exp = expression;
 
         if( index.equalsIgnoreCase("-1") ){
-            Logger.warn(id + " -> Bad/No index given in "+cmd+"|"+expression);
+            Logger.warn(id + " -> Bad/No index given in '"+cmd+"'|"+expression+" for "+type);
         }
 
         exp=replaceReferences(exp);
@@ -463,13 +457,12 @@ public class MathForward extends AbstractForward {
                 op = new Operation(expression, Calculations.procTrueWindDirection(indexes[0],indexes[1],indexes[2],indexes[3],indexes[4]), NumberUtils.toInt(index));
                 break;
             case UTM:
-                var res =
                 op = new Operation(expression, GisTools.procToUTM(indexes[0],indexes[1],
-                        Arrays.stream(index.split(",")).map(i -> NumberUtils.toInt(i)).toArray( Integer[]::new)),-1);
+                        Arrays.stream(index.split(",")).map(NumberUtils::toInt).toArray( Integer[]::new)),-1);
                 break;
             case GDC:
                 op = new Operation(expression, GisTools.procToGDC(indexes[0],indexes[1],
-                        Arrays.stream(index.split(",")).map(i -> NumberUtils.toInt(i)).toArray( Integer[]::new)),-1);
+                        Arrays.stream(index.split(",")).map(NumberUtils::toInt).toArray( Integer[]::new)),-1);
                 break;
             default:
                 return Optional.empty();
@@ -535,8 +528,8 @@ public class MathForward extends AbstractForward {
 
     /**
      * Method to use all the functionality but without persistence
-     * @param op The formula to compute fe. 15+58+454/3 or a+52 if a was defined
-     * @return
+     * @param op The formula to compute fe. 15+58+454/3 or a+52 if 'a' was defined
+     * @return The result
      */
     public double solveOp( String op ){
         ops.clear();rulesString.clear();
@@ -550,8 +543,8 @@ public class MathForward extends AbstractForward {
 
     /**
      * Create a static numericalval
-     * @param key
-     * @param val
+     * @param key The id  to use
+     * @param val The value
      */
     public void addNumericalRef( String key, double val){
         if( referencedNums==null)
@@ -562,7 +555,7 @@ public class MathForward extends AbstractForward {
                 return;
             }
         }
-        referencedNums.add( DoubleVal.newVal("matrix",key).value(val) );
+        referencedNums.add( RealVal.newVal("matrix",key).value(val) );
     }
     /**
      * Build the BigDecimal array base on received data and the local references.
@@ -585,7 +578,7 @@ public class MathForward extends AbstractForward {
     }
     /**
      * Check the expression for references to:
-     * - doubles -> {d:id} or {double:id}
+     * - reals -> {r:id} or {real:id}
      * - flags -> {f:id} or {flag:id}
      * If found, check if those exist and if so, add them to the corresponding list
      *
@@ -600,22 +593,14 @@ public class MathForward extends AbstractForward {
             referencedNums = new ArrayList<>();
         for( var p : pairs ) {
             if (p.length == 2) {
-                switch(p[0]){
-                    case "d": case "double": case "r":
-                        dataProviding.getDoubleVal(p[1]).ifPresent( referencedNums::add );
-                        break;
-                    case "D":
-                        referencedNums.add( dataProviding.getOrAddDoubleVal(p[1]) );
-                        break;
-                    case "f": case "flag":
-                        dataProviding.getFlagVal(p[1]).ifPresent( referencedNums::add );
-                        break;
-                    case "F":
-                        referencedNums.add( dataProviding.getOrAddFlagVal(p[1]));
-                        break;
-                    default:
-                        Logger.error(id+" (mf)-> Operation containing unknown pair: "+p[0]+":"+p[1]);
+                switch (p[0]) {
+                    case "d", "double", "r", "real" -> dataProviding.getRealVal(p[1]).ifPresent(referencedNums::add);
+                    case "i", "int" -> dataProviding.getIntegerVal(p[1]).ifPresent(referencedNums::add);
+                    case "f", "flag" -> dataProviding.getFlagVal(p[1]).ifPresent(referencedNums::add);
+                    default -> {
+                        Logger.error(id + " (mf)-> Operation containing unknown pair: " + p[0] + ":" + p[1]);
                         return false;
+                    }
                 }
             }else{
                 Logger.error(id+" (mf)-> Pair containing odd amount of elements: "+String.join(":",p));
@@ -656,7 +641,7 @@ public class MathForward extends AbstractForward {
         for( var p : Tools.parseKeyValue(exp,true) ) {
             if (p.length == 2) { // The pair should be an actual pair
                 boolean ok=false; // will be used at the end to check if ok
-                if ( p[0].toLowerCase().equals("d")||p[0].equals("double")||p[0].toLowerCase().equals("f")||p[0].equals("flag") ) { // if the left of the pair is a double
+                if ( p[0].equalsIgnoreCase("d")||p[0].equals("double")|| p[0].equalsIgnoreCase("f")||p[0].equals("flag") ) { // if the left of the pair is a double
                     for( int pos=0;pos<referencedNums.size();pos++ ){ // go through the known doubleVals
                         var d = referencedNums.get(pos);
                         if( d.id().equalsIgnoreCase(p[1])) { // If a match is found
@@ -692,7 +677,7 @@ public class MathForward extends AbstractForward {
         int scale=-1;
         String ori;          // The expression before it was decoded mainly for listing purposes
         String cmd ="";      // Command in which to replace the $ with the result
-        DoubleVal update;
+        NumericVal update;
         BigDecimal directSet;
 
         public Operation(String ori,int index){
@@ -702,17 +687,25 @@ public class MathForward extends AbstractForward {
             if( ori.contains(":") && ori.indexOf(":")<ori.indexOf("=") ) { // If this contains : it means it has a reference
                 try {
                     String sub = ori.substring(ori.indexOf(":") + 1, ori.indexOf("}"));
-                    if (ori.startsWith("{d")) {
-                        dataProviding.getDoubleVal(sub)
+
+                    if (ori.startsWith("{r")) {
+                        dataProviding.getRealVal(sub)
                                 .ifPresent(dv -> {
                                     update = dv;
                                     doUpdate = true;
                                 });
                         if (!doUpdate)
-                            Logger.warn("Asking to update {d:" + ori.substring(ori.indexOf(":") + 1, ori.indexOf("}") + 1) + " but doesn't exist");
-                    } else if (ori.startsWith("{D:")) {
-                        update = dataProviding.getOrAddDoubleVal(sub);
-                        doUpdate = true;
+                            Logger.error("Asking to update {r:" + ori.substring(ori.indexOf(":") + 1, ori.indexOf("}") + 1) + " but doesn't exist");
+                    } else if (ori.startsWith("{i")) {
+                        dataProviding.getIntegerVal(sub)
+                                .ifPresent(iv -> {
+                                    update = iv;
+                                    doUpdate = true;
+                                });
+                        if (!doUpdate)
+                            Logger.error("Asking to update {i:" + ori.substring(ori.indexOf(":") + 1, ori.indexOf("}") + 1) + " but doesn't exist");
+                    }else{
+                        Logger.error( "No idea what to do with "+ori);
                     }
                 }catch(IndexOutOfBoundsException e ){
                     Logger.error( id+" (mf) -> Index out of bounds: "+e.getMessage());
@@ -744,7 +737,7 @@ public class MathForward extends AbstractForward {
 
             if( ((cmd.startsWith("doubles:update")||cmd.startsWith("dv")) && cmd.endsWith(",$"))  ){
                 String val = cmd.substring(8).split(",")[1];
-                this.cmd = dataProviding.getDoubleVal(val).map( dv-> {
+                this.cmd = dataProviding.getRealVal(val).map(dv-> {
                     update=dv;
                     doUpdate=true;
                     return "";

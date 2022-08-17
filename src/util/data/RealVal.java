@@ -2,7 +2,6 @@ package util.data;
 
 import org.tinylog.Logger;
 import util.math.MathUtils;
-import util.task.Task;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
@@ -15,7 +14,7 @@ import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-public class DoubleVal extends AbstractVal implements NumericVal{
+public class RealVal extends AbstractVal implements NumericVal{
 
     private double value;
 
@@ -25,7 +24,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
 
     /* Min max*/
     private double min=Double.MAX_VALUE;
-    private double max=Double.MIN_VALUE;
+    private double max=-1*Double.MAX_VALUE;
     private boolean keepMinMax=false;
 
     /* History */
@@ -33,35 +32,20 @@ public class DoubleVal extends AbstractVal implements NumericVal{
 
     /* Triggering */
     private ArrayList<TriggeredCmd> triggered;
-    enum TRIGGERTYPE {ALWAYS,CHANGED,STDEV,COMP};
 
-    private DoubleVal(){}
+    private RealVal(){}
 
     /**
-     * Constructs a new DoubleVal with the given group and name
+     * Constructs a new RealVal with the given group and name
      *
-     * @param group The group this DoubleVal belongs to
-     * @param name The name for the DoubleVal
-     * @return The constructed DoubleVal
+     * @param group The group this RealVal belongs to
+     * @param name The name for the RealVal
+     * @return The constructed RealVal
      */
-    public static DoubleVal newVal(String group, String name){
-        return new DoubleVal().group(group).name(name);
+    public static RealVal newVal(String group, String name){
+        return new RealVal().group(group).name(name);
     }
 
-    /**
-     * Construct a new DoubleVal with the given id which is the combination of the group and name separated with an
-     * underscore
-     * @param combined group + underscore + name = id
-     * @return the constructed DoubleVal
-     */
-    public static DoubleVal newVal(String combined){
-        int us = combined.indexOf("_");
-
-        if( us != -1) { // If this contains an underscore, split it
-            return new DoubleVal().group(combined.substring(0,us)).name(combined.substring(us+1));
-        }
-        return new DoubleVal().name(combined);// If no underscore, this means no group id given
-    }
     /* ********************************* Constructing ************************************************************ */
 
     /**
@@ -69,7 +53,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * @param name The new name
      * @return This object with altered name
      */
-    public DoubleVal name(String name){
+    public RealVal name(String name){
         this.name=name;
         return this;
     }
@@ -78,7 +62,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * @param group The new group
      * @return This object with altered group
      */
-    public DoubleVal group(String group){
+    public RealVal group(String group){
         this.group=group;
         return this;
     }
@@ -88,7 +72,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * @param unit The unit for the value
      * @return This object with updated unit
      */
-    public DoubleVal unit(String unit){
+    public RealVal unit(String unit){
         this.unit=unit;
         return this;
     }
@@ -98,7 +82,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * @param val The new value
      * @return This object after updating the value etc
      */
-    public DoubleVal value( double val ){
+    public RealVal value(double val ){
 
         /* Keep history of passed values */
         if( keepHistory!=0 ) {
@@ -118,7 +102,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
         /* Respond to triggered command based on value */
         if( dQueue!=null && triggered!=null ) {
             // Execute all the triggers, only if it's the first time
-            triggered.stream().forEach(tc -> tc.apply(val));
+            triggered.forEach(tc -> tc.apply(val));
         }
         if( digits != -1) {
             value = Tools.roundDouble(val, digits);
@@ -136,7 +120,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * @param defVal The default value
      * @return This object after altering the defValue if not NaN
      */
-    public DoubleVal defValue( double defVal){
+    public RealVal defValue(double defVal){
         if( !Double.isNaN(defVal) ) { // If the given value isn't NaN
             this.defVal = defVal;
             if( Double.isNaN(value))
@@ -146,7 +130,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
     }
 
     /**
-     * Reset this DoubleVal to its default value
+     * Reset this RealVal to its default value
      */
     @Override
     public void reset(){
@@ -161,7 +145,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * @param fd The amount of digits
      * @return This object after setting the digits
      */
-    public DoubleVal fractionDigits(int fd){
+    public RealVal scale(int fd){
         this.digits=fd;
         return this;
     }
@@ -170,7 +154,7 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * Enable keeping track of the max and min values received since last reset
      * @return This object but with min max enabled
      */
-    public DoubleVal keepMinMax(){
+    public RealVal keepMinMax(){
         keepMinMax=true;
         return this;
     }
@@ -209,13 +193,15 @@ public class DoubleVal extends AbstractVal implements NumericVal{
         if( triggered==null)
             return;
         for( var tc : triggered ){
-            switch(tc.type ){
-                case ALWAYS:  fab.addChild("cmd",tc.cmd); break;
-                case CHANGED: fab.addChild("cmd",tc.cmd).attr("when","changed"); break;
-                case STDEV:
-                case COMP:    fab.addChild("cmd",tc.cmd).attr("when",tc.ori); break;
+            switch (tc.type) {
+                case ALWAYS -> fab.addChild("cmd", tc.cmd);
+                case CHANGED -> fab.addChild("cmd", tc.cmd).attr("when", "changed");
+                case STDEV, COMP -> fab.addChild("cmd", tc.cmd).attr("when", tc.ori);
             }
         }
+    }
+    public String getID(){
+        return group+"_"+name;
     }
     /* ***************************************** U S I N G ********************************************************** */
 
@@ -225,13 +211,11 @@ public class DoubleVal extends AbstractVal implements NumericVal{
      * @return True when
      */
     public boolean storeInXml( XMLfab fab ){
-        if( !group.isEmpty()) {
-            fab.alterChild("group","id",group)
-                    .down(); // Go down in the group
-            fab.alterChild("real").attr("name",name);
-        }else{
-            fab.alterChild("real").attr("id",id());
-        }
+
+        fab.alterChild("group","id",group)
+                .down(); // Go down in the group
+        fab.alterChild("real").attr("name",name);
+
         fab.attr("unit",unit);
         if( digits !=-1)
             fab.attr("scale",digits);
@@ -242,11 +226,12 @@ public class DoubleVal extends AbstractVal implements NumericVal{
         fab.up();
         if( !group.isEmpty())
             fab.up(); // Go back up to rtvals
+        fab.build();
         return true;
     }
 
     /**
-     * Get a , delimited string with all the used options
+     * Get a delimited string with all the used options
      * @return The options in a listing or empty if none are used
      */
     private String getOptions(){
@@ -326,11 +311,11 @@ public class DoubleVal extends AbstractVal implements NumericVal{
         return MathUtils.calcStandardDeviation(history,digits==-1?5:digits+2);
     }
     /**
-     * Compare two DoubleVal's based on their values
-     * @param dv The DoubleVal to compare to
+     * Compare two RealVal's based on their values
+     * @param dv The RealVal to compare to
      * @return True if they have the same value
      */
-    public boolean equals( DoubleVal dv){
+    public boolean equals( RealVal dv){
         return Double.compare(value,dv.value())==0;
     }
 
@@ -387,19 +372,19 @@ public class DoubleVal extends AbstractVal implements NumericVal{
             this.cmd=cmd;
             this.ori=trigger;
             type=TRIGGERTYPE.COMP;
-            switch( trigger ){
-                case "": case "always": type=TRIGGERTYPE.ALWAYS; break;
-                case "changed": type=TRIGGERTYPE.CHANGED; break;
-                default:
-                    if( trigger.contains("stdev")) {
+            switch (trigger) {
+                case "", "always" -> type = TRIGGERTYPE.ALWAYS;
+                case "changed" -> type = TRIGGERTYPE.CHANGED;
+                default -> {
+                    if (trigger.contains("stdev")) {
                         type = TRIGGERTYPE.STDEV;
-                        trigger=trigger.replace("stdev","");
+                        trigger = trigger.replace("stdev", "");
                     }
-                    comp=MathUtils.parseSingleCompareFunction(trigger);
-                    if( comp==null){
-                        this.cmd="";
+                    comp = MathUtils.parseSingleCompareFunction(trigger);
+                    if (comp == null) {
+                        this.cmd = "";
                     }
-                    break;
+                }
             }
         }
         public boolean isInvalid(){
@@ -411,26 +396,27 @@ public class DoubleVal extends AbstractVal implements NumericVal{
                 return;
             }
             boolean ok;
-            switch( type ){
-                case ALWAYS:
-                    dQueue.add(Datagram.system(cmd.replace("$",""+val)));
+            switch (type) {
+                case ALWAYS -> {
+                    dQueue.add(Datagram.system(cmd.replace("$", "" + val)));
                     return;
-                case CHANGED:
-                    if( val != value )
-                        dQueue.add(Datagram.system(cmd.replace("$",""+val)));
+                }
+                case CHANGED -> {
+                    if (val != value)
+                        dQueue.add(Datagram.system(cmd.replace("$", "" + val)));
                     return;
-                case COMP:
-                    ok = comp.apply(val);
-                    break;
-                case STDEV:
+                }
+                case COMP -> ok = comp.apply(val);
+                case STDEV -> {
                     double sd = getStdev();
-                    if( Double.isNaN(sd))
+                    if (Double.isNaN(sd))
                         return;
                     ok = comp.apply(getStdev()); // Compare with the Standard Deviation instead of value
-                    break;
-                default:
-                    Logger.error(id()+" (dv)-> Somehow an invalid trigger sneaked in... ");
+                }
+                default -> {
+                    Logger.error(id() + " (dv)-> Somehow an invalid trigger sneaked in... ");
                     return;
+                }
             }
             if( !triggered && ok ){
                 dQueue.add(Datagram.system(cmd.replace("$",""+val)));

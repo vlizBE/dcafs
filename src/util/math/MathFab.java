@@ -31,7 +31,7 @@ public class MathFab {
 
     /**
      * Enable or disable extra debug information
-     * @param debug
+     * @param debug New value for debug
      */
     public void setDebug( boolean debug ){
         this.debug=debug;
@@ -171,16 +171,6 @@ public class MathFab {
     }
 
     /**
-     * Solve the build equation based on the given data
-     * @param data The data to use
-     * @param delimiter The delimiter to split the data
-     * @return The result
-     */
-    public BigDecimal solve( String data, String delimiter ){
-        return solve( MathUtils.toBigDecimals(data,delimiter,-1) );
-    }
-
-    /**
      * Solve the build equation using the given values
      * @param val The values to use
      * @return The result
@@ -193,10 +183,6 @@ public class MathFab {
 
         return bd.doubleValue();
     }
-    public BigDecimal solve(  ) throws ArrayIndexOutOfBoundsException{
-        return solve(new BigDecimal[0]);
-    }
-
     /**
      * Solve the build equation using the given bigdecimals
      * @param data The bigDecimals used in the operation
@@ -208,7 +194,7 @@ public class MathFab {
             Logger.error("No valid formula present");
             return null;
         }
-        if( data == null && requiredInputs!=0 ){
+        if( data == null ){
             Logger.error("Source data is null");
             return null;
         }

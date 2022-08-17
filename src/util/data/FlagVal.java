@@ -15,8 +15,8 @@ public class FlagVal extends AbstractVal implements NumericVal{
     boolean defState=false;
 
     /* Triggering */
-    private enum TRIGGERTYPE {RAISED,LOWERED};
-    ArrayList<String>[] cmdLists = new ArrayList[TRIGGERTYPE.values().length];
+    ArrayList<String> raisedList = new ArrayList<>();
+    ArrayList<String> loweredList = new ArrayList<>();
 
     /* Options */
     ArrayList<Boolean> history;
@@ -34,9 +34,8 @@ public class FlagVal extends AbstractVal implements NumericVal{
         if( spl.length==2) {
             return new FlagVal().group(spl[0]).name(spl[1]);
         }else if( spl.length>2){
-            String name = spl[1]+"_"+spl[2];
-            for( int a=3;a<spl.length;a++)
-                name+="_"+spl[a];
+            String name = String.join("_",spl);
+            name = name.substring(name.indexOf("_")+1); // Remove spl[0]
             return new FlagVal().group(spl[0]).name(name);
         }
         return new FlagVal().name(spl[0]);
@@ -73,15 +72,12 @@ public class FlagVal extends AbstractVal implements NumericVal{
         if( keepTime )
             timestamp= Instant.now();
         /* Check if valid and issue commands if trigger is met */
-        if( cmdLists != null && val!=state){ // If there are cmds stored and the value has changed
-            ArrayList<String> list=null;
+        if( val!=state){ // If there are cmds stored and the value has changed
             if( val ){ // If the flag goes from FALSE to TRUE => raised
-                list = cmdLists[TRIGGERTYPE.RAISED.ordinal()];
+                raisedList.forEach( c -> dQueue.add(Datagram.system(c.replace("$","true"))));
             }else{ // If the flag goes from TRUE to FALSE => lowered
-                list = cmdLists[TRIGGERTYPE.LOWERED.ordinal()];
+                loweredList.forEach( c -> dQueue.add(Datagram.system(c.replace("$","false"))));
             }
-            if( list != null) // If cmd's were found, issue them
-                list.stream().forEach( c -> dQueue.add(Datagram.system(c.replace("$",""+val))));
         }
         state=val;// update the state
         return this;
@@ -90,11 +86,9 @@ public class FlagVal extends AbstractVal implements NumericVal{
     /**
      * Alter the default state (default is false)
      * @param defState The new default state
-     * @return This object with altered default state
      */
-    public FlagVal defState( boolean defState){
+    public void defState( boolean defState){
         this.defState = defState;
-        return this;
     }
 
     /**
@@ -120,7 +114,7 @@ public class FlagVal extends AbstractVal implements NumericVal{
     }
 
     /**
-     * Convert the flag state to a bigdecimal value
+     * Convert the flag state to a big decimal value
      * @return BigDecimal.ONE if the state is true or ZERO if not
      */
     public BigDecimal toBigDecimal(){
@@ -169,15 +163,14 @@ public class FlagVal extends AbstractVal implements NumericVal{
     }
 
     /**
-     * Reset this flagval to default state, disables options and clears cmd's
+     * Reset this flagVal to default state, disables options and clears cmd's
      */
     @Override
     public void reset(){
         state = defState;
-        for( int a=0;a<cmdLists.length;a++){
-            cmdLists[a]=null;
-        }
-        super.reset(); // This resets common options like keeptime
+        raisedList.clear();
+        loweredList.clear();
+        super.reset(); // This resets common options like keep time
     }
     /* ******************************** T R I G G E R E D ********************************************************** */
     /**
@@ -190,25 +183,20 @@ public class FlagVal extends AbstractVal implements NumericVal{
     public boolean addTriggeredCmd(String trigger, String cmd){
         if( dQueue==null)
             Logger.error("Tried to add cmd "+cmd+" but dQueue still null");
-        int index=-1;
         switch( trigger ){
             case "raised": case "up": case "set": // State goes from false to true
-                index = TRIGGERTYPE.RAISED.ordinal(); break;
+                raisedList.add(cmd);
+                break;
             case "lowered": case "down": case "clear": // state goes from true to false
-                index = TRIGGERTYPE.LOWERED.ordinal(); break;
+                loweredList.add(cmd);
+                break;
             default: // No other triggers for now or typo's
                 return false;
         }
-        if( cmdLists[index]==null) // If the target position is null
-            cmdLists[index] = new ArrayList<>(); // Create a new arraylist
-        cmdLists[index].add(cmd);// add the cmd to the list on the position determined by the trigger type
         return true;
     }
     public boolean hasTriggeredCmds(){
-        for( var ar : cmdLists)
-            if( ar!=null)
-                return true;
-        return false;
+        return !loweredList.isEmpty()||!raisedList.isEmpty();
     }
 
     @Override
@@ -229,18 +217,10 @@ public class FlagVal extends AbstractVal implements NumericVal{
         return true;
     }
     private void storeTriggeredCmds(XMLfab fab){
-        if( !hasTriggeredCmds())
-            return;
-        var c = cmdLists[TRIGGERTYPE.RAISED.ordinal()];
-        if( c!= null ){
-            for( var cmd : c )
-                fab.addChild("cmd",cmd).attr("when","up");
-        }
-        c = cmdLists[TRIGGERTYPE.LOWERED.ordinal()];
-        if( c!= null ){
-            for( var cmd : c )
+        for( var cmd : raisedList )
+            fab.addChild("cmd",cmd).attr("when","up");
+        for( var cmd : loweredList )
                 fab.addChild("cmd",cmd).attr("when","down");
-        }
     }
     private String getOptions(){
         var join = new StringJoiner(",");

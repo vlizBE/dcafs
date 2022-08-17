@@ -31,32 +31,21 @@ public class IntegerVal extends AbstractVal implements NumericVal{
     /* Triggering */
     private ArrayList<TriggeredCmd> triggered;
 
-    enum TRIGGERTYPE {ALWAYS,CHANGED,STDEV,COMP};
-
     /**
-     * Constructs a new DoubleVal with the given group and name
+     * Constructs a new RealVal with the given group and name
      *
-     * @param group The group this DoubleVal belongs to
-     * @param name The name for the DoubleVal
-     * @return The constructed DoubleVal
+     * @param group The group this RealVal belongs to
+     * @param name The name for the RealVal
+     * @return The constructed RealVal
      */
     public static IntegerVal newVal(String group, String name){
         return new IntegerVal().group(group).name(name);
     }
 
-    /**
-     * Construct a new DoubleVal with the given id which is the combination of the group and name separated with an
-     * underscore
-     * @param combined group + underscore + name = id
-     * @return the constructed DoubleVal
-     */
-    public static IntegerVal newVal(String combined){
-        int us = combined.indexOf("_");
-
-        if( us != -1) { // If this contains an underscore, split it
-            return new IntegerVal().group(combined.substring(0,us)).name(combined.substring(us+1));
-        }
-        return new IntegerVal().name(combined);// If no underscore, this means no group id given
+    public String getID(){
+        if( group.isEmpty())
+            return name;
+        return group+"_"+name;
     }
     /* ********************************* Constructing ************************************************************ */
 
@@ -125,14 +114,13 @@ public class IntegerVal extends AbstractVal implements NumericVal{
 
     /**
      * Set the default value, this will be used as initial value and after a reset
+     *
      * @param defVal The default value
-     * @return This object after altering the defValue if not NaN
      */
-    public IntegerVal defValue( int defVal){
+    public void defValue(int defVal){
         if( !Double.isNaN(defVal) ) { // If the given value isn't NaN
             this.defVal = defVal;
         }
-        return this;
     }
     /**
      * Enable keeping track of the max and min values received since last reset
@@ -150,7 +138,7 @@ public class IntegerVal extends AbstractVal implements NumericVal{
         return super.enableHistory(count);
     }
     /**
-     * Reset this DoubleVal to its default value
+     * Reset this RealVal to its default value
      */
     @Override
     public void reset(){
@@ -186,11 +174,10 @@ public class IntegerVal extends AbstractVal implements NumericVal{
         if( triggered==null)
             return;
         for( var tc : triggered ){
-            switch(tc.type ){
-                case ALWAYS:  fab.addChild("cmd",tc.cmd); break;
-                case CHANGED: fab.addChild("cmd",tc.cmd).attr("when","changed"); break;
-                case STDEV:
-                case COMP:    fab.addChild("cmd",tc.cmd).attr("when",tc.ori); break;
+            switch (tc.type) {
+                case ALWAYS -> fab.addChild("cmd", tc.cmd);
+                case CHANGED -> fab.addChild("cmd", tc.cmd).attr("when", "changed");
+                case STDEV, COMP -> fab.addChild("cmd", tc.cmd).attr("when", tc.ori);
             }
         }
     }
@@ -202,22 +189,18 @@ public class IntegerVal extends AbstractVal implements NumericVal{
      * @return True when
      */
     public boolean storeInXml( XMLfab fab ){
-        if( !group.isEmpty()) {
-            fab.alterChild("group","id",group)
+
+        fab.alterChild("group","id",group)
                     .down(); // Go down in the group
-            fab.alterChild("integer").attr("name",name);
-        }else{
-            fab.alterChild("integer").attr("id",id());
-        }
+        fab.alterChild("integer").attr("name",name);
+
         fab.attr("unit",unit);
 
         var opts = getOptions();
         if( !opts.isEmpty())
             fab.attr("options",opts);
         storeTriggeredCmds(fab.down());
-        fab.up();
-        if( !group.isEmpty())
-            fab.up(); // Go back up to rtvals
+        fab.build();
         return true;
     }
     /**
@@ -289,7 +272,7 @@ public class IntegerVal extends AbstractVal implements NumericVal{
         }else if( history.size() != keepHistory){
             return Double.NaN;
         }
-        ArrayList<Double> decs = new ArrayList<Double>();
+        ArrayList<Double> decs = new ArrayList<>();
         history.forEach( x -> decs.add((double)x));
         return MathUtils.calcStandardDeviation( decs,3);
     }
@@ -323,7 +306,7 @@ public class IntegerVal extends AbstractVal implements NumericVal{
     private class TriggeredCmd{
         String cmd; // The cmd to issue
         String ori; // The compare before it was converted to a function (for toString purposes)
-        DoubleVal.TRIGGERTYPE type;
+        RealVal.TRIGGERTYPE type;
         Function<Double,Boolean> comp; // The compare after it was converted to a function
         boolean triggered=false; // The last result of the comparison
 
@@ -336,20 +319,20 @@ public class IntegerVal extends AbstractVal implements NumericVal{
         public TriggeredCmd( String cmd, String trigger){
             this.cmd=cmd;
             this.ori=trigger;
-            type= DoubleVal.TRIGGERTYPE.COMP;
-            switch( trigger ){
-                case "": case "always": type= DoubleVal.TRIGGERTYPE.ALWAYS; break;
-                case "changed": type= DoubleVal.TRIGGERTYPE.CHANGED; break;
-                default:
-                    if( trigger.contains("stdev")) {
-                        type = DoubleVal.TRIGGERTYPE.STDEV;
-                        trigger=trigger.replace("stdev","");
+            type= RealVal.TRIGGERTYPE.COMP;
+            switch (trigger) {
+                case "", "always" -> type = RealVal.TRIGGERTYPE.ALWAYS;
+                case "changed" -> type = RealVal.TRIGGERTYPE.CHANGED;
+                default -> {
+                    if (trigger.contains("stdev")) {
+                        type = RealVal.TRIGGERTYPE.STDEV;
+                        trigger = trigger.replace("stdev", "");
                     }
-                    comp= MathUtils.parseSingleCompareFunction(trigger);
-                    if( comp==null){
-                        this.cmd="";
+                    comp = MathUtils.parseSingleCompareFunction(trigger);
+                    if (comp == null) {
+                        this.cmd = "";
                     }
-                    break;
+                }
             }
         }
         public boolean isInvalid(){
@@ -357,30 +340,31 @@ public class IntegerVal extends AbstractVal implements NumericVal{
         }
         public void apply( double val ){
             if( dQueue==null) {
-                Logger.error(id()+" (dv)-> Tried to check for a trigger without a dQueue");
+                Logger.error(id()+" (iv)-> Tried to check for a trigger without a dQueue");
                 return;
             }
             boolean ok;
-            switch( type ){
-                case ALWAYS:
-                    dQueue.add(Datagram.system(cmd.replace("$",""+val)));
+            switch (type) {
+                case ALWAYS -> {
+                    dQueue.add(Datagram.system(cmd.replace("$", "" + val)));
                     return;
-                case CHANGED:
-                    if( val != value )
-                        dQueue.add(Datagram.system(cmd.replace("$",""+val)));
+                }
+                case CHANGED -> {
+                    if (val != value)
+                        dQueue.add(Datagram.system(cmd.replace("$", "" + val)));
                     return;
-                case COMP:
-                    ok = comp.apply(val);
-                    break;
-                case STDEV:
+                }
+                case COMP -> ok = comp.apply(val);
+                case STDEV -> {
                     double sd = getStdev();
-                    if( Double.isNaN(sd))
+                    if (Double.isNaN(sd))
                         return;
                     ok = comp.apply(getStdev()); // Compare with the Standard Deviation instead of value
-                    break;
-                default:
-                    Logger.error(id()+" (dv)-> Somehow an invalid trigger sneaked in... ");
+                }
+                default -> {
+                    Logger.error(id() + " (iv)-> Somehow an invalid trigger sneaked in... ");
                     return;
+                }
             }
             if( !triggered && ok ){
                 dQueue.add(Datagram.system(cmd.replace("$",""+val)));

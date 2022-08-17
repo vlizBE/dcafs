@@ -152,7 +152,7 @@ public class TransHandler extends SimpleChannelInboundHandler<byte[]> implements
 				return;
 			}else {
 				switch (msg) {
-					case "?":
+					case "?" -> {
 						StringJoiner join = new StringJoiner("\r\n");
 						join.add(">>>? -> Returns this message");
 						join.add(">>>label:newlabel  -> Change the label to the new label");
@@ -162,19 +162,22 @@ public class TransHandler extends SimpleChannelInboundHandler<byte[]> implements
 						join.add(">>>forget -> Clears the current history");
 						join.add(">>>id? -> returns the current id");
 						join.add(">>>label? -> returns the current label");
-
 						writeLine(join.toString());
 						return;
-					case "id?":
+					}
+					case "id?" -> {
 						writeLine("id is " + id);
 						return;
-					case "label?":
+					}
+					case "label?" -> {
 						writeLine("label is " + label);
 						return;
-					default:
+					}
+					default -> {
 						Logger.warn("Unknown message " + msg + " from " + id);
 						writeLine("Unknown command, try >>>? for a list");
 						return;
+					}
 				}
 			}
 		}else if(keepHistory){

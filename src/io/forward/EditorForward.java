@@ -10,6 +10,10 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
+import java.time.DateTimeException;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.StringJoiner;
@@ -53,6 +57,7 @@ public class EditorForward extends AbstractForward{
                 .add("charsplit -> Splits the given data on the char positions and combines with first used delimiter")
                 .add("    fe. <edit type='charsplit'>1,4,7 </edit>  --> 1,6:2,5:1,2")
                 .add("redate -> Get the value at index according to delimiter, then go 'from' one date(time) format to the format in the value given")
+                .add("    fe. <edit type='redate' from='yy:dd:MM' >dd_MMMM_yy</edit>  --> 25_december_16")
                 .add("retime -> Same as redate but for only time")
                 .add("    fe. <edit type='retime' from='HH:mm:ss' >HH-mm</edit>  --> 16-25")
                 .add("replace -> Replace 'find' with the value given (NOTE: 'Value given' can't be a whitespace character)")
@@ -81,7 +86,9 @@ public class EditorForward extends AbstractForward{
                 .add("rexremove -> Remove all matches of the value as a regex ")
                 .add("    fe. <edit type='rexremove' >\\d*</edit>  --> ::")
                 .add("rexkeep -> Only retain the result of the regex given as value")
-                .add("    fe. <edit type='rexkeep' >\\d*</edit>  --> 162512");
+                .add("    fe. <edit type='rexkeep' >\\d*</edit>  --> 162512")
+                .add("millisdate -> Convert epoch millis to a timestamp with given format")
+                .add("    fe. todo ");
 
         return join.toString();
     }
@@ -243,6 +250,11 @@ public class EditorForward extends AbstractForward{
             case "toascii":
                 converToAscii(deli);
                 Logger.info(id + " -> Added conversion to char");
+                break;
+            case "millisdate":
+                addMillisToDate(content,index,deli);
+                Logger.info( getID() +" -> Added millis conversion to "+content);
+                break;
             default:
                 Logger.error(id+" -> Unknown type used : '"+edit.getAttribute("type")+"'");
                 return false;
@@ -286,6 +298,39 @@ public class EditorForward extends AbstractForward{
         };
         edits.add(edit);
     }
+    public void addMillisToDate( String to, int index, String delimiter ){
+        rulesString.add( new String[]{"","millisdate","millis -> "+to} );
+        Function<String,String> edit = input ->
+        {
+            String[] split = input.split(delimiter);
+            if( split.length > index){
+                long millis = NumberUtils.toLong(split[index],-1L);
+                if( millis == -1L ){
+                    Logger.error( getID() + " -> Couldn't convert "+split[index]+" to millis");
+                    return input;
+                }
+                var ins = Instant.ofEpochMilli(millis);
+                try {
+                    if( to.equalsIgnoreCase("sql")){
+                        split[index] = ins.toString();
+                    }else{
+                        split[index] = DateTimeFormatter.ofPattern(to).withZone(ZoneId.of("UTC")).format(ins);
+                    }
+                    if (split[index].isEmpty()) {
+                        Logger.error(getID() + " -> Failed to convert datetime " + split[index]);
+                        return input;
+                    }
+                    return String.join(delimiter, split);
+                }catch(IllegalArgumentException | DateTimeException e){
+                    Logger.error( getID() + " -> Invalid format in millis to date: "+to+" -> "+e.getMessage());
+                    return input;
+                }
+            }
+            Logger.error(id+" -> To few elements after split for redate");
+            return input;
+        };
+        edits.add(edit);
+    }
     /**
      * Alter the formatting of a date field
      * @param from The original format
@@ -294,7 +339,7 @@ public class EditorForward extends AbstractForward{
      * @param delimiter The delimiter to split the data
      */
     public void addRedate( String from, String to, int index, String delimiter ){
-        rulesString.add( new String[]{"","redata",from+" -> "+to} );
+        rulesString.add( new String[]{"","redate",from+" -> "+to} );
         String deli;
         if( delimiter.equalsIgnoreCase("*")){
             deli="\\*";
@@ -305,9 +350,11 @@ public class EditorForward extends AbstractForward{
         {
             String[] split = input.split(deli);
             if( split.length > index){
-                split[index] = TimeTools.reformatDate(split[index],from,to);
-                if( split[index].isEmpty())
+                split[index] = TimeTools.reformatDate(split[index], from, to);
+                if( split[index].isEmpty()) {
+                    Logger.error( getID() + " -> Failed to convert datetime "+split[index]);
                     return input;
+                }
                 return String.join(delimiter,split);
             }
             Logger.error(id+" -> To few elements after split for redate");
@@ -448,7 +495,7 @@ public class EditorForward extends AbstractForward{
     }
     public void addTrim( ){
         rulesString.add( new String[]{"","Trim","Trim spaces "} );
-        edits.add( input -> input.trim() );
+        edits.add(String::trim);
     }
     public void addRexRemove( String find ){
         rulesString.add( new String[]{"","regexremove","Remove "+find} );
@@ -471,16 +518,14 @@ public class EditorForward extends AbstractForward{
         rulesString.add( new String[]{"","tochar","convert delimited data to char's"} );
         edits.add( input -> {
             var join = new StringJoiner("");
-            Arrays.stream(input.split(delimiter)).forEach( x -> {
-                join.add( ""+(char)NumberUtils.createInteger(x).intValue());
-            });
+            Arrays.stream(input.split(delimiter)).forEach( x -> join.add( ""+(char)NumberUtils.createInteger(x).intValue()));
             return join.toString();
         } );
     }
     /**
-     *
-     * @param input
-     * @return
+     * Test the workings of the editor by giving a string to process
+     * @param input The string to process
+     * @return The resulting string
      */
     public String test( String input ){
         Logger.info(id+" -> From: "+input);

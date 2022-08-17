@@ -1,12 +1,12 @@
 package io.email;
 
+import das.Commandable;
 import io.Writable;
 import io.collector.BufferCollector;
 import io.collector.CollectorFuture;
+import io.telnet.TelnetCodes;
 import org.tinylog.Logger;
-import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import util.DeadThreadListener;
 import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.tools.Tools;
@@ -26,7 +26,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
-public class EmailWorker implements CollectorFuture, EmailSending {
+public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 
 	static double megaByte = 1024.0 * 1024.0;
 
@@ -43,10 +43,10 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 	private final Map<String, String> emailBook = new HashMap<>(); // Hashmap containing the reference to email address
 																	// 'translation'
 	private final ArrayList<Permit> permits = new ArrayList<>();
-	/* Outbox */
-	MailBox outbox = new MailBox();
 
-	boolean outboxAuth = false; // Whether or not to authenticate
+    /* Outbox */
+	MailBox outbox = new MailBox();
+	boolean outboxAuth = false; // Whether to authenticate
 
 	/* Inbox */
 	MailBox inbox = new MailBox();
@@ -85,8 +85,6 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 
 	long lastInboxConnect = -1; // Keep track of the last timestamp that a inbox connection was made
 
-	protected DeadThreadListener listener;	// a way to notify anything that the thread died somehow
-
 	HashMap<String, DataRequest> buffered = new HashMap<>();	// Store the requests made for data via email
 
 
@@ -95,27 +93,20 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 
 	private ScheduledFuture<?> slowCheck = null;
 	private ScheduledFuture<?> fastCheck = null;
+	final Path settingsPath;
+	private boolean ready=false;
 	/**
 	 * Constructor for this class
 	 * 
-	 * @param xml       the xml document containing the settings
+	 * @param settingsPath the path to the xml with the settings
 	 * @param dQueue the queue processed by a @see BaseWorker
 	 */
-	public EmailWorker(Document xml, BlockingQueue<Datagram> dQueue) {
+	public EmailWorker(Path settingsPath, BlockingQueue<Datagram> dQueue) {
 		this.dQueue = dQueue;
-		this.readFromXML(xml);
-		init();
+		this.settingsPath=settingsPath;
+		if( readFromXML() )
+			init();
 	}
-
-	/**
-	 * Add a listener to be notified of the event the thread fails.
-	 * 
-	 * @param listener the listener
-	 */
-	public void setEventListener(DeadThreadListener listener) {
-		this.listener = listener;
-	}
-
 	/**
 	 * Initialises the worker by enabling the retry task and setting the defaults
 	 * settings, if reading emails is enabled this starts the thread for this.
@@ -138,7 +129,8 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 		mc.addMailcap("text/plain;; x-java-content-handler=com.sun.mail.handlers.text_plain");
 		mc.addMailcap("multipart/*;; x-java-content-handler=com.sun.mail.handlers.multipart_mixed");
 		mc.addMailcap("message/rfc822;; x-java-content-handler=com.sun.mail.handlers.message_rfc822");
-		CommandMap.setDefaultCommandMap(mc);	
+		CommandMap.setDefaultCommandMap(mc);
+		ready=true;
 	}
 
 	/**
@@ -157,25 +149,18 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 		return retryQueue.size();
 	}
 	/**
-	 * Checks whether or not EmailWorker info can be found in the settings file.
-	 * 
-	 * @param xml The XML document maybe containing the settings
-	 * @return True if settings are present
-	 */
-	public static boolean inXML( Document xml){
-		return XMLtools.hasElementByTag( xml, XML_PARENT_TAG);	
-	}
-	/**
 	 * Read the settings from the XML file and apply them
-	 * 
-	 * @param xmlDoc The XML document containing the settings
 	 */
-	public void readFromXML(Document xmlDoc ){
+	public boolean readFromXML(){
 
-		xml = XMLtools.getDocPath(xmlDoc);
 		mailSession = null;
+		var emailOpt = XMLtools.getFirstElementByTag( XMLtools.readXML(settingsPath), XML_PARENT_TAG);	// Get the element containing the settings and references
 
-		Element email = XMLtools.getFirstElementByTag( xmlDoc, XML_PARENT_TAG);	// Get the element containing the settings and references
+
+		if( emailOpt.isEmpty())
+			return false;
+
+		var email = emailOpt.get();
 
 		// Sending
 		Element outboxElement = XMLtools.getFirstChildByTag(email, "outbox");
@@ -216,6 +201,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 		**/
 		readEmailBook(email);
 		readPermits(email);
+		return true;
 	}
 
 	/**
@@ -430,20 +416,6 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 		}
 	}
 	/**
-	 * Checks the emailbook to see to which reference the emailadres is linked
-	 * 
-	 * @param email The email address to look for
-	 * @return Semi-colon (;) separated string with the found refs
-	 */
-	public String getEmailRefs( String email ){
-		StringJoiner b = new StringJoiner( ";");
-
-		emailBook.entrySet().stream().filter(set -> set.getValue().contains(email)) // only retain the refs that have the email
-							  .forEach( set -> b.add(set.getKey()));
-		
-		return b.toString();
-	}
-	/**
 	 * Checks if a certain email address is part of the list associated with a certain ref
 	 * @param ref The reference to check
 	 * @param address The emailaddress to look for
@@ -453,68 +425,83 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 		String list = emailBook.get(ref);
 		return list.contains(address);
 	}
-	/**
-	 * Method to have the worker act on commands/requests
-	 * 
-	 * @param req The command/request to execute
-	 * @param html Whether or not the response should be html formatted
-	 * @return The response to the command/request
-	 */
-	public String replyToSingleRequest( String req, boolean html ){
+	@Override
+	public String replyToCommand(String[] request, Writable wr, boolean html) {
 
-        String[] parts = req.split(",");
-        
-        switch(parts[0]){
+		if( request[1].equalsIgnoreCase("addblank") ){
+			if( EmailWorker.addBlankEmailToXML(  XMLfab.withRoot(settingsPath, "settings"), true,true) )
+				return "Adding default email settings";
+			return "Failed to add default email settings";
+		}
+
+		if( !ready ){
+			if(request[1].equals("reload")
+					&& XMLfab.withRoot(settingsPath, "settings").getChild("email").isPresent() ){
+				if( !readFromXML() )
+					return "No proper email node yet";
+			}else{
+				return "No EmailWorker initialized (yet), use email:addblank to add blank to xml.";
+			}
+		}
+		// Allow a shorter version to email to admin, replace it to match the standard command
+		request[1] = request[1].replace("toadmin,","send,admin,");
+
+		String[] cmds = request[1].split(",");
+
+		String green=html?"":TelnetCodes.TEXT_GREEN;
+		String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
+
+		switch(cmds[0]){
 			case "?":
 				StringJoiner b = new StringJoiner(html?"<br>":"\r\n");
-				b.add("email:reload -> Reload the settings found in te XML.");
-				b.add("email:refs -> Get a list of refs and emailadresses.");
-				b.add("email:send,to,subject,content -> Send an email using to with subject and content");
-				b.add("email:setup -> Get a listing of all the settings.");
-				b.add("email:checknow -> Checks the inbox for new emails");
-				b.add("email:addallow,from,cmd(,isRegex) -> Adds permit allow node, default no regex");
-				b.add("email:adddeny,from,cmd(,isRegex) -> Adds permit deny node, default no regex");
-				b.add("email:interval,x -> Change the inbox check interval to x");
-				return b.toString();
-			case "reload": 
+				return b.add(green+"email:reload "+reg+"-> Reload the settings found in te XML.")
+						.add(green+"email:refs "+reg+"-> Get a list of refs and emailadresses.")
+						.add(green+"email:send,to,subject,content "+reg+"-> Send an email using to with subject and content")
+						.add(green+"email:setup "+reg+"-> Get a listing of all the settings.")
+						.add(green+"email:checknow "+reg+"-> Checks the inbox for new emails")
+						.add(green+"email:addallow,from,cmd(,isRegex) "+reg+"-> Adds permit allow node, default no regex")
+						.add(green+"email:adddeny,from,cmd(,isRegex) "+reg+"-> Adds permit deny node, default no regex")
+						.add(green+"email:interval,x "+reg+"-> Change the inbox check interval to x").toString();
+			case "reload":
 				if( xml == null )
 					return "No xml defined yet...";
-				readFromXML(XMLtools.readXML(xml));
+				readFromXML();
 				return "Settings reloaded";
 			case "refs": return getEmailBook();
 			case "setup":case "status": return getSettings();
 			case "send":
-				if( parts.length !=4 )
+				if( cmds.length !=4 )
 					return "Not enough arguments send,ref/email,subject,content";
 
 				// Check if the subject contains time request
-				parts[2]=parts[2].replace("{localtime}", TimeTools.formatNow("HH:mm"));
-				parts[2]=parts[2].replace("{utctime}", TimeTools.formatUTCNow("HH:mm"));
+				cmds[2]=cmds[2].replace("{localtime}", TimeTools.formatNow("HH:mm"));
+				cmds[2]=cmds[2].replace("{utctime}", TimeTools.formatUTCNow("HH:mm"));
 
-				sendEmail( Email.to(parts[1]).subject(parts[2]).content(parts[3]) );
+				sendEmail( Email.to(cmds[1]).subject(cmds[2]).content(cmds[3]) );
 				return "Tried to send email";
 			case "checknow":
 				checker.cancel(false);
 				checker = scheduler.schedule( new Check(), 1, TimeUnit.SECONDS);
 				return "Will check emails asap.";
 			case "interval":
-				if( parts.length==2){
-					this.checkIntervalSeconds = (int)TimeTools.parsePeriodStringToSeconds(parts[1]);
+				if( cmds.length==2){
+					this.checkIntervalSeconds = (int)TimeTools.parsePeriodStringToSeconds(cmds[1]);
 					return "Interval changed to "+this.checkIntervalSeconds+" seconds (todo:save to settings.xml)";
 				}else{
 					return "Invalid number of parameters";
 				}
 			case "addallow":case "adddeny":
-				if( parts.length <3 ){
-					return "Not enough arguments email:"+parts[0]+",from,cmd(,isRegex)";
+				if( cmds.length <3 ){
+					return "Not enough arguments email:"+cmds[0]+",from,cmd(,isRegex)";
 				}
-				boolean regex = parts.length == 4 && Tools.parseBool(parts[3], false);
-				permits.add(new Permit(parts[0].equals("adddeny"), parts[1], parts[2], regex));
+				boolean regex = cmds.length == 4 && Tools.parseBool(cmds[3], false);
+				permits.add(new Permit(cmds[0].equals("adddeny"), cmds[1], cmds[2], regex));
 				return writePermits()?"Permit added":"Failed to write to xml";
 			default	:
 				return "unknown command";
 		}
 	}
+
 	/**
 	 * Send an email
 	 * @param email The email to send
@@ -526,12 +513,17 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 		}
 		if( email.isValid()) {
 			applyBook(email);
-			scheduler.execute(new Sender(email, false));
+			scheduler.execute( ()-> sendEmail(email, false));
 		}else{
 			Logger.error("Tried to send an invalid email");
 		}
 	}
-	public void applyBook( Email email ){
+
+	/**
+	 * Alter the 'to' field in the email from a possible reference to an actual emailaddress
+	 * @param email The email to check and maybe alter
+	 */
+	private void applyBook( Email email ){
 		StringJoiner join = new StringJoiner(",");
 		for( String part : email.toRaw.split(",")){
 			if( part.contains("@")) {
@@ -548,185 +540,194 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 		email.toRaw=join.toString();
 	}
 
+	/**
+	 * Enable or disable sending of emails
+	 * @param send True for sending, false if not
+	 */
 	public void setSending( boolean send ){
 		sendEmails=send;
 	}
+
+
+	@Override
+	public boolean removeWritable(Writable wr) {
+		return false;
+	}
 	/* *********************************  W O R K E R S ******************************************************* */
 	/**
-	 * Main worker thread that sends emails
+	 * Method to send an email
 	 */
-	private class Sender implements Runnable {
-		Email email;
-		boolean retry;
+	private void sendEmail(Email email, boolean retry) {
 
-		public Sender(Email email, boolean retry) {
-			this.email = email;
-			this.retry = retry;
-		}
-		@Override
-		public void run() {
-
-			try {
-				String attach = "";
-
-				if (mailSession == null) {
-					if (outboxAuth) {
-						mailSession = Session.getInstance(props, new javax.mail.Authenticator() {
-							@Override
-							protected PasswordAuthentication getPasswordAuthentication() {
-								return new PasswordAuthentication(outbox.user, outbox.pass);
-							}
-						});
-					} else {
-						mailSession = javax.mail.Session.getInstance(props, null);
-					}
-					//mailSession.setDebug(true); 	// No need for extra feedback
-				}
-
-				Message message = new MimeMessage(mailSession);
-
-				String subject = email.subject;
-				if (email.subject.endsWith(" at.")) { //macro to get the local time added
-					subject = email.subject.replace(" at.", " at " + TimeTools.formatNow("HH:mm") + ".");
-				}
-				message.setSubject(subject);
-				if (!email.hasAttachment()) { // If there's no attachment, this changes the content type
-					message.setContent(email.content, "text/html");
+		try {
+			if (mailSession == null) {
+				if (outboxAuth) {
+					mailSession = Session.getInstance(props, new javax.mail.Authenticator() {
+						@Override
+						protected PasswordAuthentication getPasswordAuthentication() {
+							return new PasswordAuthentication(outbox.user, outbox.pass);
+						}
+					});
 				} else {
-					int a = email.attachment.indexOf("[");
-					// If a [ ... ] is present this means that a datetime format is enclosed and then [...] will be replaced
-					// with format replaced with actual current datetime
-					// eg [HH:mm] -> 16:00
-					if (a != -1) {
-						int b = email.attachment.indexOf("]");
-						String dt = email.attachment.substring(a + 1, b);
-						dt = TimeTools.formatUTCNow(dt); //replace the format with datetime
-						attach = email.attachment.substring(0, a) + dt + email.attachment.substring(b + 1); // replace it in the attachment
-						Logger.info("Changed " + email.attachment + " to " + attach);
-					} else { // Nothing special happens
-						attach = email.attachment;
-					}
-
-					try {
-						Path path = Path.of(attach);
-						if (Files.notExists(path)) { // If the attachment doesn't exist
-							email.attachment = "";
-							message.setContent(email.content, "text/html");
-							message.setSubject(subject + " [attachment not found!]"); // Notify the receiver that is should have had an attachment
-						} else if (Files.size(path) > doZipFromSizeMB * megaByte) { // If the attachment is larger than the zip limit
-							FileTools.zipFile(path); // zip it
-							attach += ".zip"; // rename attachment
-							Logger.info("File zipped because of size larger than " + doZipFromSizeMB + "MB. Zipped size:" + Files.size(path) / megaByte + "MB");
-							path = Path.of(attach);// Changed the file to archive, zo replace file
-							if (Files.size(path) > maxSizeMB * megaByte) { // If the zip file it to large to send, maybe figure out way to split?
-								email.attachment = "";
-								message.setContent(email.content, "text/html");
-								message.setSubject(subject + " [ATTACHMENT REMOVED because size constraint!]");
-								Logger.info("Removed attachment because to big (>" + maxSizeMB + "MB)");
-							}
-						}
-					} catch (IOException e) {
-						Logger.error(e);
-					}
+					mailSession = javax.mail.Session.getInstance(props, null);
 				}
-				String from = email.from.isEmpty()?(outbox.getFromStart()+"<" + outbox.from + ">"):email.from;
-				message.setFrom(new InternetAddress( from ));
-				for (String single : email.toRaw.split(",")) {
-					try {
-						message.addRecipient(Message.RecipientType.TO, new InternetAddress(single.split("\\|")[0]));
-					} catch (AddressException e) {
-						Logger.warn("Issue trying to convert: " + single.split("\\|")[0] + "\t" + e.getMessage());
-						Logger.error(e.getMessage());
-					}
-				}
-				//Add attachment
-				if (email.hasAttachment()) {
-					// Create the message part
-					BodyPart messageBodyPart = new MimeBodyPart();
-
-					// Fill the message
-					messageBodyPart.setContent(email.content, "text/html");
-
-					// Create a multipar message
-					Multipart multipart = new MimeMultipart();
-
-					// Set text message part
-					multipart.addBodyPart(messageBodyPart);
-
-					// Part two is attachment
-					messageBodyPart = new MimeBodyPart();
-					DataSource source = new FileDataSource(attach);
-					messageBodyPart.setDataHandler(new DataHandler(source));
-					messageBodyPart.setFileName(Path.of(attach).getFileName().toString());
-					multipart.addBodyPart(messageBodyPart);
-
-					message.setContent(multipart);
-				}
-				// Send the complete message parts
-				Logger.debug("Trying to send email to " + email.toRaw + " through " + outbox.server + "!");
-				busy = true;
-				Transport.send(message);
-				busy = false;
-
-				if (attach.endsWith(".zip")) { // If a zip was made, remove it afterwards
-					try {
-						Files.deleteIfExists(Path.of(attach));
-					} catch (IOException e) {
-						Logger.error(e);
-					}
-				}
-
-				if (email.deleteOnSend()) {
-					try {
-						Files.deleteIfExists(Path.of(email.attachment));
-					} catch (IOException e) {
-						Logger.error(e);
-					}
-				}
-
-				errorCount = 0;
-				if( !retryQueue.isEmpty() ){
-					retryFuture.cancel(true); // stop the retry attempt
-					//Only got one thread so we can submit before clearing without worrying about concurrency
-
-					retryQueue.forEach( email -> {
-						Logger.info("Retrying email to "+email.toRaw);
-						scheduler.execute( new Sender(email,false));
-					} );
-					retryQueue.clear();
-				}
-			} catch (MessagingException ex) {
-				Logger.error("Failed to send email: " + ex);
-				email.addAttempt();
-				if( !retry ){
-					if( retryQueue.isEmpty() || retryFuture == null || retryFuture.isDone() ) {
-						Logger.info("Scheduling a retry after 10 seconds");
-						retryFuture = scheduler.schedule( new Sender(email,true), 10, TimeUnit.SECONDS);
-					}
-					Logger.info("Adding email to " + email.toRaw + " about " + email.subject + " to resend queue. Error count: " + errorCount);
-					retryQueue.add(email);
-				}else{
-					if( email.isFresh(maxEmailAgeInHours) ) { // If the email is younger than the preset age
-						Logger.info("Scheduling a successive retry after " + TimeTools.convertPeriodtoString(Math.min(30 * email.getAttempts(), 300), TimeUnit.SECONDS) + " with "
-								+ retryQueue.size() + " emails in retry queue");
-
-						retryFuture = scheduler.schedule(new Sender(email, true), Math.min(30 * email.getAttempts(), 300), TimeUnit.SECONDS);
-					}else{// If the email is older than the preset age
-						retryQueue.removeIf(email -> !email.isFresh(maxEmailAgeInHours)); // Remove all old emails
-						if( !retryQueue.isEmpty()){ // Check if any emails are left, and if so send the first one
-							retryFuture = scheduler.schedule(new Sender(retryQueue.get(0), true), 300, TimeUnit.SECONDS);
-						}
-					}
-				}
-				errorCount++;
+				//mailSession.setDebug(true); 	// No need for extra feedback
 			}
 
+			Message message = new MimeMessage(mailSession);
+
+			String subject = email.subject;
+			if (email.subject.endsWith(" at.")) { //macro to get the local time added
+				subject = email.subject.replace(" at.", " at " + TimeTools.formatNow("HH:mm") + ".");
+			}
+			message.setSubject(subject);
+			boolean hasAttachment = false;
+			if (!email.hasAttachment()) { // If there's no attachment, this changes the content type
+				message.setContent(email.content, "text/html");
+			} else {
+				hasAttachment=addAttachment(email,message);
+			}
+			String from = email.from.isEmpty()?(outbox.getFromStart()+"<" + outbox.from + ">"):email.from;
+			message.setFrom(new InternetAddress( from ));
+			for (String single : email.toRaw.split(",")) {
+				try {
+					message.addRecipient(Message.RecipientType.TO, new InternetAddress(single.split("\\|")[0]));
+				} catch (AddressException e) {
+					Logger.warn("Issue trying to convert: " + single.split("\\|")[0] + "\t" + e.getMessage());
+					Logger.error(e.getMessage());
+				}
+			}
+
+			// Send the complete message parts
+			Logger.debug("Trying to send email to " + email.toRaw + " through " + outbox.server + "!");
+			busy = true;
+			Transport.send(message);
+			busy = false;
+
+			if( hasAttachment ){
+				try {
+					Files.deleteIfExists(Path.of(email.attachment+".zip"));
+					if (email.deleteOnSend())
+						Files.deleteIfExists(Path.of(email.attachment));
+				} catch (IOException e) {
+					Logger.error(e);
+				}
+			}
+
+			errorCount = 0;
+			if( !retryQueue.isEmpty() ){
+				retryFuture.cancel(true); // stop the retry attempt
+				//Only got one thread so we can submit before clearing without worrying about concurrency
+
+				retryQueue.forEach( em -> {
+					Logger.info("Retrying email to "+em.toRaw);
+					scheduler.execute( ()-> sendEmail(em,false));
+				} );
+				retryQueue.clear();
+			}
+		} catch (MessagingException ex) {
+			Logger.error("Failed to send email: " + ex);
+			email.addAttempt();
+			if( !retry ){
+				if( retryQueue.isEmpty() || retryFuture == null || retryFuture.isDone() ) {
+					Logger.info("Scheduling a retry after 10 seconds");
+					retryFuture = scheduler.schedule( ()-> sendEmail(email,true), 10, TimeUnit.SECONDS);
+				}
+				Logger.info("Adding email to " + email.toRaw + " about " + email.subject + " to resend queue. Error count: " + errorCount);
+				retryQueue.add(email);
+			}else{
+				if( email.isFresh(maxEmailAgeInHours) ) { // If the email is younger than the preset age
+					Logger.info("Scheduling a successive retry after " + TimeTools.convertPeriodtoString(Math.min(30 * email.getAttempts(), 300), TimeUnit.SECONDS) + " with "
+							+ retryQueue.size() + " emails in retry queue");
+
+					retryFuture = scheduler.schedule(()-> sendEmail(email, true), Math.min(30 * email.getAttempts(), 300), TimeUnit.SECONDS);
+				}else{// If the email is older than the preset age
+					retryQueue.removeIf(em -> !em.isFresh(maxEmailAgeInHours)); // Remove all old emails
+					if( !retryQueue.isEmpty()){ // Check if any emails are left, and if so send the first one
+						retryFuture = scheduler.schedule(()-> sendEmail(retryQueue.get(0), true), 300, TimeUnit.SECONDS);
+					}
+				}
+			}
+			errorCount++;
 		}
+	}
+
+	/**
+	 * Add the attachment information from the email to the message
+	 * @param email The email to handle the attachment from
+	 * @param message The message being build
+	 * @throws MessagingException Something went wrong altering the message
+	 */
+	private boolean addAttachment( Email email, Message message ) throws MessagingException {
+		String attach;
+
+		int a = email.attachment.indexOf("[");
+		// If a [ ... ] is present this means that a datetime format is enclosed and then [...] will be replaced
+		// with format replaced with actual current datetime
+		// eg [HH:mm] -> 16:00
+		if (a != -1) {
+			int b = email.attachment.indexOf("]");
+			String dt = email.attachment.substring(a + 1, b);
+			dt = TimeTools.formatUTCNow(dt); //replace the format with datetime
+			attach = email.attachment.substring(0, a) + dt + email.attachment.substring(b + 1); // replace it in the attachment
+			Logger.info("Changed " + email.attachment + " to " + attach);
+		} else { // Nothing special happens
+			attach = email.attachment;
+		}
+
+		try {
+			Path path = Path.of(attach);
+			if (Files.notExists(path)) { // If the attachment doesn't exist
+				email.attachment = "";
+				message.setContent(email.content, "text/html");
+				message.setSubject( message.getSubject() + " [attachment not found!]"); // Notify the receiver that is should have had an attachment
+				return false;
+			} else if (Files.size(path) > doZipFromSizeMB * megaByte) { // If the attachment is larger than the zip limit
+				FileTools.zipFile(path); // zip it
+				attach += ".zip"; // rename attachment
+				Logger.info("File zipped because of size larger than " + doZipFromSizeMB + "MB. Zipped size:" + Files.size(path) / megaByte + "MB");
+				path = Path.of(attach);// Changed the file to archive, zo replace file
+				if (Files.size(path) > maxSizeMB * megaByte) { // If the zip file it to large to send, maybe figure out way to split?
+					email.attachment = "";
+					message.setContent(email.content, "text/html");
+					message.setSubject(message.getSubject() + " [ATTACHMENT REMOVED because size constraint!]");
+					Logger.info("Removed attachment because to big (>" + maxSizeMB + "MB)");
+					return false;
+				}
+			}
+		} catch (IOException e) {
+			Logger.error(e);
+			return false;
+		}
+
+		// Create the message part
+		BodyPart messageBodyPart = new MimeBodyPart();
+
+		// Fill the message
+		messageBodyPart.setContent(email.content, "text/html");
+
+		// Create a multipart message
+		Multipart multipart = new MimeMultipart();
+
+		// Set text message part
+		multipart.addBodyPart(messageBodyPart);
+
+		// Part two is attachment
+		messageBodyPart = new MimeBodyPart();
+		DataSource source = new FileDataSource(attach);
+		messageBodyPart.setDataHandler(new DataHandler(source));
+		messageBodyPart.setFileName(Path.of(attach).getFileName().toString());
+		multipart.addBodyPart(messageBodyPart);
+
+		// Add the attachment info to the message
+		message.setContent(multipart);
+
+		return true;
 	}
 	/**
 	 * Set the properties for sending emails
 	 */
-	private void alterInboxProps( Properties props ){
+	private static void alterInboxProps( Properties props ){
 		// Set a fixed timeout of 10s for all operations the default timeout is "infinite"		
 		props.put( "mail.imap.connectiontimeout", TIMEOUT_MILLIS); //10s timeout on connection
 		props.put( "mail.imap.timeout", TIMEOUT_MILLIS);
@@ -734,7 +735,7 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 		props.put( MAIL_SMTP_TIMEOUT, TIMEOUT_MILLIS);    
 		props.put( MAIL_SMTP_CONNECTIONTIMEOUT, TIMEOUT_MILLIS);
 	}
-	public List<String> findTo( String from ){
+	private List<String> findTo( String from ){
 		if( from.startsWith(inbox.user)){
 			var ar = new ArrayList<String>();
 			ar.add("echo");
@@ -954,10 +955,10 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 	 * Retrieve the text content of an email message
 	 * @param message The message to get content from
 	 * @return The text content if any, delimited with \r\n
-	 * @throws MessagingException
-	 * @throws IOException
+	 * @throws MessagingException Something went wrong handling the message
+	 * @throws IOException Something went wrong while checking the message
 	 */
-	private String getTextFromMessage(Message message) throws MessagingException, IOException {
+	private static String getTextFromMessage(Message message) throws MessagingException, IOException {
 		String result = "";
 		if (message.isMimeType("text/plain")) {
 			result = message.getContent().toString();
@@ -972,10 +973,9 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 	 * Retrieve the text from a mimemultipart
 	 * @param mimeMultipart The part to get the text from
 	 * @return The text found
-	 * @throws MessagingException
-	 * @throws IOException
+	 * @throws MessagingException Something went wrong handling the message
 	 */
-	private String getTextFromMimeMultipart(
+	private static String getTextFromMimeMultipart(
 			MimeMultipart mimeMultipart)  throws MessagingException, IOException{
 
 		StringJoiner result = new StringJoiner("\r\n");
@@ -1011,16 +1011,6 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 		}
 	}
 
-	/**
-	 * Test if the BufferCollector construction works
-	 */
-	public void testCollector(){
-
-		DataRequest req = new DataRequest("admin","calc:clock");
-
-		buffered.put(req.getID(), req);
-		dQueue.add( Datagram.build("calc:clock").label("email").writable(req.getWritable()).origin("admin") );
-	}
 	public class DataRequest{
 		BufferCollector bwr;
 		String to;
@@ -1045,10 +1035,9 @@ public class EmailWorker implements CollectorFuture, EmailSending {
 	private static class MailBox{
 		String server = ""; // Server to send emails with
 		int port = -1; // Port to contact the server on
-		boolean hasSSL = false; // Whether or not the outbox uses ssl
+		boolean hasSSL = false; // Whether the outbox uses ssl
 		String user = ""; // User for the outbox
 		String pass = ""; // Password for the outbox user
-		boolean auth = false; // Whether or not to authenticate
 		String from = "dcafs"; // The email address to use as from address
 
 		public void setServer(String server, int port){

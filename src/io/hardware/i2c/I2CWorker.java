@@ -7,14 +7,11 @@ import com.diozero.api.RuntimeIOException;
 import io.Writable;
 import io.telnet.TelnetCodes;
 import das.Commandable;
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import util.math.MathUtils;
-import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
@@ -40,8 +37,8 @@ public class I2CWorker implements Commandable {
 
     private boolean debug = false;
 
-    private Path scriptsPath; // Path to the scripts
-    private Path settingsPath; // Path to the settingsfile
+    private final Path scriptsPath; // Path to the scripts
+    private final Path settingsPath; // Path to the settingsfile
     private ExecutorService executor; // Executor to run the commands
 
     public I2CWorker(Path settings, BlockingQueue<Datagram> dQueue) {
@@ -164,13 +161,12 @@ public class I2CWorker implements Commandable {
      */
     private void readFromXML() {
 
-        Element i2c = XMLtools.getFirstElementByTag( XMLtools.readXML(settingsPath), "i2c");
-
-        if (i2c != null) {                       
+        var i2cOpt = XMLtools.getFirstElementByTag( settingsPath, "i2c");
+        if( i2cOpt.isPresent() ){
             Logger.info("Found settings for a I2C bus");
             devices.values().forEach(I2CDevice::close);
             devices.clear();
-            for( Element i2c_bus : XMLtools.getChildElements( i2c, "bus") ){
+            for( Element i2c_bus : XMLtools.getChildElements( i2cOpt.get(), "bus") ){
                 int bus = XMLtools.getIntAttribute(i2c_bus, "controller", -1);
                 Logger.info("Reading devices on the I2C bus of controller "+bus);
                 if( bus ==-1 ){
@@ -250,9 +246,6 @@ public class I2CWorker implements Commandable {
     }
     /* ***************************************************************************************************** */
     /* ***************************************************************************************************** */
-
-
-
     /**
      * Converts an array of bytes to a list of ints according to the bits. Note that bytes aren't split in their nibbles
      *   fe. 10bits means take the first two bytes and shift right, then take the next two
@@ -364,12 +357,12 @@ public class I2CWorker implements Commandable {
                                 while( rd > 0 ) {
                                     if (toWrite.length == 1) {
                                         // after writing the first byte, read readCount bytes and put in readBuffer
-                                        b = new byte[rd>32?32:rd];
+                                        b = new byte[Math.min(rd, 32)];
                                         device.readI2CBlockData(toWrite[0], b);
                                     } else {
                                         if (toWrite.length != 0)
                                             device.writeBytes(toWrite); // write all the bytes in the array
-                                        b = device.readBytes(rd>32?32:rd);
+                                        b = device.readBytes(Math.min(rd, 32));
                                     }
                                     if( debug ){
                                         Logger.info( "Read: "+Tools.fromBytesToHexString(b));
@@ -473,9 +466,7 @@ public class I2CWorker implements Commandable {
         var or = TelnetCodes.TEXT_ORANGE;
         var red = TelnetCodes.TEXT_RED;
 		for (int device_address = 0; device_address < 128; device_address++) {
-			if (device_address < 0x03 || device_address > 0x77) {
-				// Out of bounds
-			} else {
+			if (device_address >= 0x03 && device_address <= 0x77) {
 				try (I2CDevice device = new I2CDevice(controller, device_address)) {
 					if (device.probe( I2CDevice.ProbeMode.AUTO )) {
 						b.add( gr+"Free"+ye+" - 0x"+String.format("%02x ", device_address) );
@@ -645,26 +636,24 @@ public class I2CWorker implements Commandable {
         }
         // Do something with the result...
         StringJoiner output = new StringJoiner(";",device.getID()+";"+cmdID+";","");
-        switch( com.getOutType() ){
-            case DEC:
-                altRes.forEach( x -> {
-                    if( x.toString().endsWith(".0")) {
-                        output.add(Integer.toString(x.intValue()));
-                    }else{
-                        output.add(x.toString());
-                    }
-                } );
-                break;
-            case HEX: altRes.forEach( x -> {
+        switch (com.getOutType()) {
+            case DEC -> altRes.forEach(x -> {
+                if (x.toString().endsWith(".0")) {
+                    output.add(Integer.toString(x.intValue()));
+                } else {
+                    output.add(x.toString());
+                }
+            });
+            case HEX -> altRes.forEach(x -> {
                 String val = Integer.toHexString(x.intValue()).toUpperCase();
-                output.add( "0x"+(val.length()==1?"0":"")+val);
-            } ); break;
-            case BIN: altRes.forEach( x -> output.add("0b"+Integer.toBinaryString(x.intValue()))); break;
-            case CHAR:
+                output.add("0x" + (val.length() == 1 ? "0" : "") + val);
+            });
+            case BIN -> altRes.forEach(x -> output.add("0b" + Integer.toBinaryString(x.intValue())));
+            case CHAR -> {
                 var line = new StringJoiner("");
-                altRes.forEach( x -> line.add( ""+(char)x.intValue()) );
+                altRes.forEach(x -> line.add("" + (char) x.intValue()));
                 output.add(line.toString());
-                break;
+            }
         }
         if( !device.getLabel().equalsIgnoreCase("void") ){
             dQueue.add( Datagram.build(output.toString()).label(device.getLabel()+":"+cmdID).origin(device.getID()).payload(altRes) );

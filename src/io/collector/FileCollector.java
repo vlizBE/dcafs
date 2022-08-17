@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
 import java.util.concurrent.*;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class FileCollector extends AbstractCollector{
@@ -33,18 +32,17 @@ public class FileCollector extends AbstractCollector{
     ScheduledExecutorService scheduler;
 
     BlockingQueue<String> dataBuffer = new LinkedBlockingQueue<>();
-    private BlockingQueue<Datagram> dQueue;                        // Queue to send commands
+    private final BlockingQueue<Datagram> dQueue;                        // Queue to send commands
 
     private int byteCount=0;
     private Path destPath;
     private String lineSeparator = System.lineSeparator();
-    private ArrayList<String> headers= new ArrayList<>();
-    private Charset charSet = StandardCharsets.UTF_8;
+    private final ArrayList<String> headers= new ArrayList<>();
+    private final Charset charSet = StandardCharsets.UTF_8;
     private int batchSize = 10;
 
     /* Variables related to the rollover */
     private DateTimeFormatter format = null;
-    private String oriFormat="";
     private ScheduledFuture<?> rollOverFuture;
     private TimeTools.RolloverUnit rollUnit = TimeTools.RolloverUnit.NONE;
     private int rollCount = 0;
@@ -58,7 +56,8 @@ public class FileCollector extends AbstractCollector{
     long firstData=-1;
 
     /* Triggers */
-    enum TRIGGERS {IDLE, ROLLOVER, MAXSIZE };
+    enum TRIGGERS {IDLE, ROLLOVER, MAXSIZE }
+
     ArrayList<TriggeredCommand> trigCmds = new ArrayList<>();
 
     /* Size limit */
@@ -81,15 +80,15 @@ public class FileCollector extends AbstractCollector{
     @Override
     public String getID(){ return "fc:"+id;}
     public String toString(){
-        String size = "";
+        String size;
         if( byteCount < 10000){
             size=byteCount+"B";
         }else if( byteCount < 1000000){
-            size = Tools.roundDouble(byteCount/1024,1)+"KB";
+            size = Tools.roundDouble(byteCount/1024.0,1)+"KB";
         }else{
-            size = Tools.roundDouble(byteCount/(1024*1024),1)+"MB";
+            size = Tools.roundDouble(byteCount/(1024.0*1024.0),1)+"MB";
         }
-        return "Writing to "+getPath()+" buffer containing "+dataBuffer.size()+"/max"+" items for a total of "+size;
+        return "Writing to "+getPath()+" buffer containing "+dataBuffer.size()+"/"+batchSize+" items for a total of "+size;
     }
     public void setScheduler( ScheduledExecutorService scheduler ){
         this.scheduler=scheduler;
@@ -107,7 +106,7 @@ public class FileCollector extends AbstractCollector{
             Logger.error("Need a valid scheduler to use FileCollectors");
             return fcs;
         }
-        for( Element fcEle : fcEles.collect(Collectors.toList()) ) {
+        for( Element fcEle : fcEles.toList()) {
             String id = XMLtools.getStringAttribute(fcEle, "id", "");
             if( id.isEmpty() )
                 continue;
@@ -209,7 +208,7 @@ public class FileCollector extends AbstractCollector{
                 .addChild("file").attr("id",id).attr("src",source)
                     .down()
                     .addChild("path",path)
-                    .addChild("flush").attr("batchsize","-1").attr("age","1m")
+                    .addChild("flush").attr("batchsize","30").attr("age","1m")
                 .build();
     }
 
@@ -263,10 +262,9 @@ public class FileCollector extends AbstractCollector{
      * Add a triggered command to the collector
      * @param trigger The trigger, using the enum
      * @param cmd The command to execute if triggered
-     * @return True if added successfully
      */
     public void addTriggerCommand( TRIGGERS trigger, String cmd ){
-        trigCmds.add( new TriggeredCommand(trigger,cmd) );
+        trigCmds.add(new TriggeredCommand(trigger, cmd));
     }
     /**
      * Set the full path (relative of absolute) to the file
@@ -307,7 +305,7 @@ public class FileCollector extends AbstractCollector{
      * @param batch The amount
      */
     public void setBatchsize( int batch ){
-        this.batchSize=batch;
+        batchSize=batch;
     }
 
     /**
@@ -359,8 +357,7 @@ public class FileCollector extends AbstractCollector{
     }
 
     /**
-     * Force the collector to flush the data, used in case of urgent flushing
-     * @return
+     * Force the collector to flush the data, used in case of urgent flushing (fe. before shutdown)
      */
     public void flushNow(){
         if( flushFuture==null||flushFuture.isCancelled() || flushFuture.isDone()) {
@@ -438,11 +435,13 @@ public class FileCollector extends AbstractCollector{
             }
             headerChanged = false;
 
-            Files.write(dest, join.toString().getBytes(charSet), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            if( join.toString().isBlank() )// Don't write empty lines
+                return;
+
+            Files.writeString(dest, join.toString(), charSet, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
             Logger.debug("Written " + join.toString().length() + " bytes to " + dest.getFileName().toString());
 
             if( maxBytes!=-1 ){
-
                 if( Files.size(dest) >= maxBytes  ){
                     Path renamed=null;
                     for( int a=1;a<1000;a++){
@@ -451,24 +450,20 @@ public class FileCollector extends AbstractCollector{
                         if( Files.notExists(renamed) && Files.notExists(Path.of(renamed+".zip")) )
                             break;
                     }
-                    if( renamed !=null) {
-                        Logger.debug("Renamed to "+renamed.toString());
-                        Files.move(dest, dest.resolveSibling(renamed)); // rename the file
-                        String path ;
-                        if (zipMaxBytes) { // if wanted, zip it
-                            FileTools.zipFile(renamed);
-                            Files.deleteIfExists(renamed);
-                            path = renamed+".zip";
-                        }else{
-                            path = renamed.toString();
-                        }
-
-                        // run the triggered commands
-                        trigCmds.stream().filter( tc -> tc.trigger==TRIGGERS.MAXSIZE)
-                                .forEach(tc->dQueue.add(Datagram.system(tc.cmd.replace("{path}",path)).writable(this)));
+                    Logger.debug("Renamed to "+ renamed);
+                    Files.move(dest, dest.resolveSibling(renamed)); // rename the file
+                    String path ;
+                    if (zipMaxBytes) { // if wanted, zip it
+                        FileTools.zipFile(renamed);
+                        Files.deleteIfExists(renamed);
+                        path = renamed+".zip";
                     }else{
-                        Logger.error("Couldn't create another file "+dest.toString());
+                        path = renamed.toString();
                     }
+
+                    // run the triggered commands
+                    trigCmds.stream().filter( tc -> tc.trigger==TRIGGERS.MAXSIZE)
+                            .forEach(tc->dQueue.add(Datagram.system(tc.cmd.replace("{path}",path)).writable(this)));
                 }
             }
 
@@ -494,7 +489,6 @@ public class FileCollector extends AbstractCollector{
         }
         this.rollCount=rollCount;
         rollUnit=unit;
-        oriFormat=dateFormat;
         zippedRoll=zip;
 
         format = DateTimeFormatter.ofPattern(dateFormat);
@@ -587,7 +581,7 @@ public class FileCollector extends AbstractCollector{
             }
         }
     }
-    private class TriggeredCommand {
+    private static class TriggeredCommand {
         TRIGGERS trigger;
         String cmd;
 

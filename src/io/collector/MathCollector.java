@@ -72,7 +72,7 @@ public class MathCollector extends AbstractCollector{
     public static List<MathCollector> createFromXml( Stream<Element> maths ){
         var mcs = new ArrayList<MathCollector>();
 
-        for( Element mc : maths.collect(Collectors.toList()) ){
+        for( Element mc : maths.toList()){
             String id = XMLtools.getStringAttribute(mc,"id","");
             int count = XMLtools.getIntAttribute(mc,"count",-1);
             int index = XMLtools.getIntAttribute(mc,"index",0);
@@ -82,12 +82,15 @@ public class MathCollector extends AbstractCollector{
 
             String target = mc.getTextContent();
             MathCollector collector=null;
-            switch( mc.getTagName() ){
-                case "stdev": collector=MathCollector.createStDev(id,target,delimiter,index,count,decimals); break;
-                case "movingstdev": collector=MathCollector.createMovingStDev(id,target,delimiter,index,count,decimals); break;
-                case "avg": collector=MathCollector.createAvg(id,target,delimiter,index,count,decimals); break;
-                case "movingavg": collector=MathCollector.createMovingAvg(id,target,delimiter,index,count,decimals); break;
-                default: break;
+            switch (mc.getTagName()) {
+                case "stdev" -> collector = MathCollector.createStDev(id, target, delimiter, index, count, decimals);
+                case "movingstdev" ->
+                        collector = MathCollector.createMovingStDev(id, target, delimiter, index, count, decimals);
+                case "avg" -> collector = MathCollector.createAvg(id, target, delimiter, index, count, decimals);
+                case "movingavg" ->
+                        collector = MathCollector.createMovingAvg(id, target, delimiter, index, count, decimals);
+                default -> {
+                }
             }
             if( collector != null ){
                 collector.addSource(src);

@@ -12,6 +12,7 @@ import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.bytes.ByteArrayDecoder;
 import io.netty.handler.codec.bytes.ByteArrayEncoder;
+import io.telnet.TelnetCodes;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
@@ -84,18 +85,15 @@ public class TcpServer implements StreamListener, Commandable {
 	}
 
 	/**
-	 * Checks whether or not StreamManager info can be found in the settings file.
-	 * 
-	 * @param xml The settings file
-	 * @return True if settings were found
+	 * Read the settings related to the transserver from the settings.xml
+	 * @param xml The document to read from
+	 * @param run Whether to run the transserver once settings are read
+	 * @return True if no hiccups
 	 */
-	public static boolean inXML(Document xml) {
-		return XMLtools.getFirstElementByTag(xml, XML_PARENT_TAG) != null;
-	}
-
 	public boolean readSettingsFromXML(Document xml, boolean run) {
-		Element tran = XMLtools.getFirstElementByTag(xml, XML_PARENT_TAG);
-		if (tran != null) {
+		var tranOpt = XMLtools.getFirstElementByTag(xml, XML_PARENT_TAG);
+		if (tranOpt.isPresent()) {
+			var tran = tranOpt.get();
 			Logger.info("Settings for the TransServer found.");
 			serverPort = XMLtools.getIntAttribute(tran, "port", -1);
 			if (serverPort == -1)
@@ -151,6 +149,7 @@ public class TcpServer implements StreamListener, Commandable {
 
 							TransHandler handler = new TransHandler("system", dQueue);
 							handler.setListener(TcpServer.this);
+							handler.setEventLoopGroup(workerGroup);
 							clients.add(handler);
 
 							ch.pipeline().addLast(handler);
@@ -330,16 +329,22 @@ public class TcpServer implements StreamListener, Commandable {
 
 		Optional<TransHandler> hOpt = cmds.length>1?getHandler(cmds[1]):Optional.empty();
 
+		String cyan = html?"": TelnetCodes.TEXT_CYAN;
+		String green=html?"":TelnetCodes.TEXT_GREEN;
+		String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
+
 		switch( cmds[0] ){
 			case "?":
-				return "ts:store,id/index(,newid) -> Store the session in the xml\r\n"+
-						"ts:add,id/index,cmd -> Add the cmd to the id/index\r\n"+
-						"ts:clear,id/index -> Clear all cmds from the client id/index\r\n"+
-						"ts:list -> List of all the connected clients\r\n"+
-						"ts:defaults -> List of all the defaults\r\n"+
-						"ts:alter,id,ref:value -> Alter some settings\r\n"+
-						"ts:forward,id -> Forward data received on the trans to the issuer of the command\r\n"+
-						"ts:reload -> Reload the xml settings.\r\n";
+				StringJoiner j = new StringJoiner("\r\n");
+				return j.add(cyan+"General"+reg)
+						.add( green + "ts:store,id/index<,newid> "+reg+"-> Store the session in the xml, optional id")
+						.add( green +"ts:add,id/index,cmd "+reg+"-> Add the cmd to the id/index")
+						.add( green +"ts:clear,id/index "+reg+"-> Clear all cmds from the client id/index")
+						.add( green +"ts:list "+reg+"-> List of all the connected clients")
+						.add( green +"ts:defaults "+reg+"-> List of all the defaults")
+						.add( green +"ts:alter,id,ref:value "+reg+"-> Alter some settings")
+						.add( green +"ts:forward,id "+reg+"-> Forward data received on the trans to the issuer of the command")
+						.add( green +"ts:reload "+reg+"-> Reload the xml settings.").toString();
 			case "store":
 				if( hOpt.isEmpty() )
 					return "Invalid id";
@@ -383,10 +388,13 @@ public class TcpServer implements StreamListener, Commandable {
 						return "Altered id to "+value;
 					default: return "Nothing called "+ref;
 				}
-
+			case "trans" :
+				if( cmds.length!=2)
+					return "Not enough arguments, need trans:id";
+				cmds[1]="forward"+cmds[1];
 			case "forward":
 				if( cmds.length==1)
-					return "No enough parameters given for forwarding...";
+					return "No enough parameters given, needs ts:forward,id";
 
 				if( defaults.containsKey(cmds[1]) || hOpt.isPresent() ) {
 					if (!targets.containsKey(cmds[1])) {
@@ -438,10 +446,9 @@ public class TcpServer implements StreamListener, Commandable {
 		public void setLabel(String label){
 			this.label=label;
 		}
-		public boolean addCommand( String cmd ){
-			if( commands.contains(cmd))
-				return false;
-			return commands.add(cmd);
+		public void addCommand( String cmd ){
+			if( !commands.contains(cmd))
+				commands.add(cmd);
 		}
 		public List<String> getCommands(){return commands;}
 	}

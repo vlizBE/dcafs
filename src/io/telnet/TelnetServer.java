@@ -10,15 +10,10 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.DelimiterBasedFrameDecoder;
-import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.bytes.ByteArrayDecoder;
 import io.netty.handler.codec.bytes.ByteArrayEncoder;
-import io.netty.handler.ssl.SslContext;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import org.tinylog.Logger;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
@@ -46,8 +41,7 @@ public class TelnetServer implements Commandable {
     BlockingQueue<Datagram> dQueue;
     static final String XML_PARENT_TAG = "telnet";
     ArrayList<Writable> writables = new ArrayList<>();
-    private final SslContext sslCtx=null;
-    private Path settingsPath;
+    private final Path settingsPath;
 
     public TelnetServer( BlockingQueue<Datagram> dQueue, Path settingsPath, EventLoopGroup eventGroup ) {
         this.dQueue=dQueue;
@@ -58,27 +52,21 @@ public class TelnetServer implements Commandable {
     public String getTitle(){
         return this.title;
     }
-    public static boolean inXML(Document xml) {
-		return XMLtools.getFirstElementByTag(xml, XML_PARENT_TAG) != null;
-	}
+
     public boolean readSettingsFromXML( ) {
         if( dQueue != null ) {
-            var xml = XMLtools.readXML(settingsPath);
-            Element settings = XMLtools.getFirstElementByTag(xml, XML_PARENT_TAG);
-            if (settings != null) {
-                port = XMLtools.getIntAttribute(settings, "port", 23);
-                title = XMLtools.getStringAttribute(settings, "title", "DCAFS");
-                ignore = XMLtools.getChildValueByTag(settings, "ignore", "");
-                return true;
-            }
-            addBlankTelnetToXML(xml);
+            XMLtools.getFirstElementByTag(settingsPath, XML_PARENT_TAG).ifPresentOrElse( ele -> {
+                port = XMLtools.getIntAttribute(ele, "port", 23);
+                title = XMLtools.getStringAttribute(ele, "title", "DCAFS");
+                ignore = XMLtools.getChildValueByTag(ele, "ignore", "");
+            },()->addBlankTelnetToXML(settingsPath));
         }
         return false;
     }
-    public static boolean addBlankTelnetToXML( Document xmlDoc ){
-        return XMLfab.withRoot(xmlDoc, "settings")                
-                        .addParentToRoot(XML_PARENT_TAG,"Settings related to the telnet server").attr("title","DCAFS").attr("port",23)
-                            .build();
+    public static void addBlankTelnetToXML(Path xmlPath ){
+        XMLfab.withRoot(xmlPath, "settings")
+                .addParentToRoot(XML_PARENT_TAG, "Settings related to the telnet server").attr("title", "DCAFS").attr("port", 23)
+                .build();
     }
     public void run(){
             
@@ -139,31 +127,32 @@ public class TelnetServer implements Commandable {
             writables.remove(wr);
             return (s==writables.size())?"Failed to remove":"Removed from targets";
         }else {
+            String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
             switch (cmds[0]) {
                 case "?":
                     var join = new StringJoiner("\r\n");
-                    join.add( "telnet:broadcast,message -> Broadcast the message to all active telnet sessions at info level.")
-                        .add( "telnet:broadcast,!message -> Broadcast the message to all active telnet sessions at error level.")
-                        .add( "telnet:broadcast,level,message -> Broadcast the message to all active telnet sessions at the given level. (info,warn,error)")
-                        .add( "telnet:bt -> Get the broadcast target count")
-                        .add(" telnet:nb or nb -> Disable showing broadcasts" );
+                    join.add( TelnetCodes.TEXT_GREEN+"telnet:broadcast,message "+reg+"-> Broadcast the message to all active telnet sessions at info level.")
+                        .add( TelnetCodes.TEXT_GREEN+"telnet:broadcast,!message "+reg+"-> Broadcast the message to all active telnet sessions at error level.")
+                        .add( TelnetCodes.TEXT_GREEN+"telnet:broadcast,level,message "+reg+"-> Broadcast the message to all active telnet sessions at the given level. (info,warn,error)")
+                        .add( TelnetCodes.TEXT_GREEN+"telnet:bt "+reg+"-> Get the broadcast target count")
+                        .add(TelnetCodes.TEXT_GREEN+"telnet:nb or nb "+reg+"-> Disable showing broadcasts" );
                     return join.toString();
                 case "broadcast":
                     String send;
                     if( cmds.length < 2)
                         return "Not enough arguments, telnet:broadcast,level,message or telnet:broadcast,message for info level";
-                    switch(cmds[1]){
-                        case "warn":  send = TelnetCodes.TEXT_ORANGE+request[1].substring(15); break;
-                        case "error": send = TelnetCodes.TEXT_RED+request[1].substring(16);    break;
-                        case "info":  send = TelnetCodes.TEXT_GREEN+request[1].substring(15);  break;
-                        default:
+                    switch (cmds[1]) {
+                        case "warn" -> send = TelnetCodes.TEXT_ORANGE + request[1].substring(15);
+                        case "error" -> send = TelnetCodes.TEXT_RED + request[1].substring(16);
+                        case "info" -> send = TelnetCodes.TEXT_GREEN + request[1].substring(15);
+                        default -> {
                             var d = request[1].substring(10);
-                            if( d.startsWith("!")){
-                                send =  TelnetCodes.TEXT_RED + d.substring(1);
-                            }else {
+                            if (d.startsWith("!")) {
+                                send = TelnetCodes.TEXT_RED + d.substring(1);
+                            } else {
                                 send = TelnetCodes.TEXT_GREEN + d;
                             }
-                            break;
+                        }
                     }
 
                     writables.removeIf(w -> !w.writeLine(send+TelnetCodes.TEXT_YELLOW));
@@ -177,7 +166,6 @@ public class TelnetServer implements Commandable {
                     return mes.replace(TelnetCodes.TEXT_MAGENTA,TelnetCodes.TEXT_ORANGE);
                 case "bt":
                     return "Currently has " + writables.size() + " broadcast targets.";
-
             }
         }
         return "unknown command "+ String.join(":",request);

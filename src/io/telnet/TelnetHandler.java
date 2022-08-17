@@ -2,12 +2,10 @@ package io.telnet;
 
 import das.Configurator;
 import io.Writable;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.codec.TooLongFrameException;
-import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
+import org.w3c.dom.Node;
 import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.tools.Tools;
@@ -17,7 +15,6 @@ import worker.Datagram;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
@@ -40,8 +37,8 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 	protected boolean clean=true;	// Flag that determines if null characters etc need to be cleaned from a received message
 	protected boolean log=true;	// Flag that determines if raw data needs to be logged
 
-	private Path settingsPath;
-	private HashMap<String,String> macros = new HashMap<>();
+	private final Path settingsPath;
+	private final HashMap<String,String> macros = new HashMap<>();
 
  	String repeat = "";
 	String title = "dcafs";
@@ -82,7 +79,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 			remote = (InetSocketAddress)ctx.channel().remoteAddress();;	// Store this as remote address
 			remoteIP = remote.getAddress().getHostAddress();
 			if( remote.getAddress() instanceof Inet4Address){
-				Logger.info("IPv4: "+((Inet4Address)remote.getAddress()));
+				Logger.info("IPv4: "+ remote.getAddress());
 			}else{
 				Logger.info("IPv6: "+((Inet6Address)remote.getAddress()));
 			}
@@ -91,7 +88,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 						.selectChildAsParent("client", "host", remote.getHostName())
 						.ifPresent(f -> {
 							id = f.getCurrentElement().getAttribute("id");
-							start = f.getChild("start").map(c -> c.getTextContent()).orElse("");
+							start = f.getChild("start").map(Node::getTextContent).orElse("");
 							for (var c : f.getChildren("macro")) {
 								macros.put(c.getAttribute("ref"), c.getTextContent());
 							}
@@ -147,7 +144,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 		dQueue.add( Datagram.system("nb").writable(this)); // Remove this from the writables when closed
     }
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, byte[] data) throws Exception {
+    public void channelRead0(ChannelHandlerContext ctx, byte[] data) {
 
 		var recOpt= cli.receiveData(data);
 
@@ -209,52 +206,56 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 			split[0] = cmd.substring( 0,cmd.indexOf(":"));
 			split[1] = cmd.substring(split[0].length()+1);
 
-			switch( split[0] ){
-				case "id":
-					id=split[1];
+			switch (split[0]) {
+				case "id" -> {
+					id = split[1];
 					writeString(
-						XMLfab.withRoot(settingsPath,"dcafs","settings","telnet").noChild("client","id",id)
-							.map( f -> {
-										f.alterChild("client","host",remote.getHostName())
-										.attr("id",id).build();
-										return "ID changed to "+id+"\r\n>";
+							XMLfab.withRoot(settingsPath, "dcafs", "settings", "telnet").noChild("client", "id", id)
+									.map(f -> {
+										f.alterChild("client", "host", remote.getHostName())
+												.attr("id", id).build();
+										return "ID changed to " + id + "\r\n>";
 									}).orElse("ID already in use")
-						);
+					);
 					return;
-				case "talkto":
-					writeString("Talking to "+split[1]+", send !! to stop\r\n>");
-					repeat = "telnet:write,"+split[1]+",";
+				}
+				case "talkto" -> {
+					writeString("Talking to " + split[1] + ", send !! to stop\r\n>");
+					repeat = "telnet:write," + split[1] + ",";
 					return;
-				case "start":
-					if( id.isEmpty() ){
+				}
+				case "start" -> {
+					if (id.isEmpty()) {
 						writeLine("Please set an id first with >>id:newid");
 						return;
 					}
 					start = split[1];
-					writeString("Startup command has been set to '"+start+"'");
-
-					writeLine( XMLfab.withRoot(settingsPath,"dcafs","settings","telnet").selectChildAsParent("client","id",id)
-							.map( f -> {
-								f.addChild("start",split[1]);
-								return "Start set to "+id+"\r\n>";
+					writeString("Startup command has been set to '" + start + "'");
+					writeLine(XMLfab.withRoot(settingsPath, "dcafs", "settings", "telnet").selectChildAsParent("client", "id", id)
+							.map(f -> {
+								f.addChild("start", split[1]);
+								return "Start set to " + id + "\r\n>";
 							}).orElse("Couldn't find the node"));
 					return;
-				case "macro":
-					if( !split[1].contains("->")) {
+				}
+				case "macro" -> {
+					if (!split[1].contains("->")) {
 						writeLine("Missing ->");
 						return;
 					}
 					var ma = split[1].split("->");
-					writeString( XMLfab.withRoot(settingsPath,"dcafs","settings","telnet").selectChildAsParent("client","id",id)
-							.map( f -> {
-								f.addChild("macro",ma[1]).attr("ref",ma[0]).build();
-								macros.put(ma[0],ma[1]);
-								return "Macro "+ma[0]+" replaced with "+ma[1]+"\r\n>";
+					writeString(XMLfab.withRoot(settingsPath, "dcafs", "settings", "telnet").selectChildAsParent("client", "id", id)
+							.map(f -> {
+								f.addChild("macro", ma[1]).attr("ref", ma[0]).build();
+								macros.put(ma[0], ma[1]);
+								return "Macro " + ma[0] + " replaced with " + ma[1] + "\r\n>";
 							}).orElse("Couldn't find the node\r\n>"));
 					return;
-				default:
-					writeLine( "Unknown telnet command: "+d.getData());
+				}
+				default -> {
+					writeLine("Unknown telnet command: " + d.getData());
 					return;
+				}
 			}
 		}else{
 			d.setData(repeat+d.getData());
@@ -271,7 +272,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
         }
 	}
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
        ctx.flush();
     }
 
@@ -285,10 +286,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 			ctx.flush();
 		}
 	}
-	
-	/* ***************************************************************************************************************/
 	/* *************************************** W R I T A B L E  ******************************************************/
-	/* ***************************************************************************************************************/
 	/**
 	 * Sending data that will be appended by the default newline string.
 	 * @param message The data to send.
@@ -331,28 +329,6 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 		return this;
 	}
 	/* ***********************************************************************************************************/
-	/* ****************************************** I N H E R I T A N C E ******************************************/
-	/* ***********************************************************************************************************/
-	/**
-	 * Add an ip to the ignore list, mostly used to prevent checkers to flood the logs with status messages 
-	 * @param ip The IP to ignore
-	 */
-	public void addIgnoreIP( String ip ){
-		ignoreIP.add(ip);
-	}
-	/**
-	 * Check to see if an ip is part of the ignore list
-	 * @param ip The IP to check
-	 * @return True if it is, false if not
-	 */
-	protected boolean notIgnoredIP( String ip ){
-		ip=ip.substring(1);
-		for( String ignore : ignoreIP ){
-			if( ip.startsWith(ignore) && !ignore.isBlank() )
-				return false;
-		}
-		return true;
-	}
 	/**
 	 * Change the title of the handler, title is used for telnet client etc representation
 	 * @param title The new title
@@ -368,9 +344,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 		return title;
 	}
 
-	/* ***********************************************************************************************************/
 	/* ************************************* S T A T U S *********************************************************/
-	/* ***********************************************************************************************************/
 	/**
 	 * Get the channel object
 	 * @return The channel

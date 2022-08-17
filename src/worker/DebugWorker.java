@@ -110,7 +110,7 @@ public class DebugWorker implements Readable {
 		}
 	}
 	public static boolean inXML(Document xml) {
-		return XMLtools.getFirstElementByTag(xml, "debug") != null;
+		return XMLtools.getFirstElementByTag(xml, "debug").isPresent();
 	}
 
 	public static void addBlank( XMLfab fab){
@@ -127,8 +127,12 @@ public class DebugWorker implements Readable {
 	}
 	public void readSettingsFromXML(Document xml) {
 
-		Element dbg = XMLtools.getFirstElementByTag(xml, "debug");
+		var dbgOpt = XMLtools.getFirstElementByTag(xml, "debug");
 
+		if(dbgOpt.isEmpty())
+			return;
+
+		var dbg=dbgOpt.get();
 		this.filesPath = XMLtools.getXMLparent(xml).resolve(XMLtools.getChildValueByTag(dbg, "inputfile", "")); // Raw files folder
 		this.logRaw = XMLtools.getChildValueByTag(dbg, "rawlog", "no").equals("yes"); // Send WS messages or not
 		Logger.info("Path to search:" + filesPath.toString());

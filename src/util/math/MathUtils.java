@@ -16,6 +16,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
@@ -50,7 +51,7 @@ public class MathUtils {
                     var bd1 = NumberUtils.createBigDecimal(parts.get(0));
                     var bd2 = NumberUtils.createBigDecimal(parts.get(2));
                     var bd3 = calcBigDecimalsOp(bd1,bd2,parts.get(1));
-                    result.add(new String[]{bd3.toPlainString(),"0","+"});
+                    result.add(new String[]{bd3==null?"":bd3.toPlainString(),"0","+"});
                 }else {
                     if (debug) {
                         Logger.info("  Sub: " + "o" + indexOffset + "=" + expression);
@@ -76,7 +77,7 @@ public class MathUtils {
 
                             parts.remove(opIndex);  // remove the operand
                             parts.remove(opIndex);  // remove the top part
-                            parts.set(opIndex - 1, bd3.toPlainString()); // replace the bottom one
+                            parts.set(opIndex - 1, bd3==null?"":bd3.toPlainString()); // replace the bottom one
                             opIndex = getIndexOfOperand(parts, ORDERED_OPS[a], ORDERED_OPS[a + 1]);
                             continue;
                         }
@@ -135,8 +136,7 @@ public class MathUtils {
         var ee = es.matcher(formula) // find the numbers with scientific notation
                 .results()
                 .map(MatchResult::group)
-                .distinct()
-                .collect(Collectors.toList());
+                .distinct().toList();
 
         for( String el : ee ){ // Replace those with uppercase so they all use the same format
             formula = formula.replace(el,el.toUpperCase());
@@ -211,15 +211,14 @@ public class MathUtils {
      */
     public static Function<Double[],Boolean> getCompareFunction( String comp, Function<Double[],Double> f1, Function<Double[],Double> f2 ){
         Function<Double[],Boolean> proc=null;
-        switch( comp ){
-            case "<":  proc = x -> Double.compare(f1.apply(x),f2.apply(x))<0;  break;
-            case "<=": proc = x -> Double.compare(f1.apply(x),f2.apply(x))<=0; break;
-            case ">":  proc = x -> Double.compare(f1.apply(x),f2.apply(x))>0;  break;
-            case ">=": proc = x -> Double.compare(f1.apply(x),f2.apply(x))>=0; break;
-            case "==": proc = x -> Double.compare(f1.apply(x),f2.apply(x))==0; break;
-            case "!=": proc = x -> Double.compare(f1.apply(x),f2.apply(x))!=0; break;
-            default:
-                Logger.error( "Tried to convert an unknown compare to a function: "+comp);
+        switch (comp) {
+            case "<" -> proc = x -> Double.compare(f1.apply(x), f2.apply(x)) < 0;
+            case "<=" -> proc = x -> Double.compare(f1.apply(x), f2.apply(x)) <= 0;
+            case ">" -> proc = x -> Double.compare(f1.apply(x), f2.apply(x)) > 0;
+            case ">=" -> proc = x -> Double.compare(f1.apply(x), f2.apply(x)) >= 0;
+            case "==" -> proc = x -> Double.compare(f1.apply(x), f2.apply(x)) == 0;
+            case "!=" -> proc = x -> Double.compare(f1.apply(x), f2.apply(x)) != 0;
+            default -> Logger.error("Tried to convert an unknown compare to a function: " + comp);
         }
         return proc;
     }
@@ -298,8 +297,7 @@ public class MathUtils {
         }
         var cc = comparePattern.matcher(op)
                 .results()
-                .map(MatchResult::group)
-                .collect(Collectors.toList());
+                .map(MatchResult::group).toList();
         if( cc.isEmpty() ){ // fe. 1-10
             op=op.replace("--","<=$<=-");// -5 - -10 => -5<=$<=-10
             if(!op.contains("$"))// Don't replace if the previous step already did
@@ -336,15 +334,15 @@ public class MathUtils {
      * @return The generated function
      */
     public static Function<Double,Boolean> getSingleCompareFunction( double fixed,String comp ){
-        Function<Double,Boolean> proc=null;
-        switch( comp ){
-            case "<": proc = x -> x<fixed; break;
-            case "<=": proc = x -> x<=fixed; break;
-            case ">": proc = x -> x>fixed; break;
-            case ">=": proc = x -> x>=fixed; break;
-            case "==": proc = x -> x==fixed; break;
-            case "!=": proc = x -> x!=fixed; break;
-        }
+        Function<Double,Boolean> proc = switch (comp) {
+            case "<" -> x -> x < fixed;
+            case "<=" -> x -> x <= fixed;
+            case ">" -> x -> x > fixed;
+            case ">=" -> x -> x >= fixed;
+            case "==" -> x -> x == fixed;
+            case "!=" -> x -> x != fixed;
+            default -> null;
+        };
         return proc;
     }
 
@@ -354,13 +352,13 @@ public class MathUtils {
      * @return The inverted version
      */
     private static String invertCompare(String comp){
-        switch( comp ){
-            case "<": return ">";
-            case "<=": return ">=";
-            case ">": return "<";
-            case ">=": return "<=";
-            default: return comp;
-        }
+        return switch (comp) {
+            case "<" -> ">";
+            case "<=" -> ">=";
+            case ">" -> "<";
+            case ">=" -> "<=";
+            default -> comp;
+        };
     }
     /**
      * Converts a simple operation (only two operands) on elements in an array to a function
@@ -376,7 +374,6 @@ public class MathUtils {
         final int i1;
         final BigDecimal bd2 ;
         final int i2;
-        boolean i1Neg=false;
 
         try{
             if(NumberUtils.isCreatable(first) ) {
@@ -556,7 +553,7 @@ public class MathUtils {
                 }
                 break;
             case "°":
-                switch( bd1.intValue() ){
+                switch( Objects.requireNonNull(bd1).intValue() ){
                     case 1: //cosd,sin
                         if( bd2==null) {
                             proc = x -> BigDecimal.valueOf(Math.cos(Math.toRadians(x[i2].doubleValue())));
@@ -604,7 +601,6 @@ public class MathUtils {
     }
     public static BigDecimal calcBigDecimalsOp(BigDecimal bd1, BigDecimal bd2, String op ){
 
-        Function<BigDecimal[],BigDecimal> proc=null;
         switch( op ){
             case "+":
                 return bd1.add(bd2);

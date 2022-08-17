@@ -28,8 +28,9 @@ public abstract class AbstractVal {
     protected BlockingQueue<Datagram> dQueue;
 
     /* Requests */
-    ArrayList<Writable> targets;
+    protected ArrayList<Writable> targets;
 
+    enum TRIGGERTYPE {ALWAYS,CHANGED,STDEV,COMP}
     /* ************************************* Options ******************************************************** */
     public void reset(){
         keepTime=false;
@@ -38,7 +39,6 @@ public abstract class AbstractVal {
     }
     /**
      * Enable keeping time of the last value update
-     * @return This object but with time keeping enabled
      */
     public void keepTime(){
         keepTime=true;

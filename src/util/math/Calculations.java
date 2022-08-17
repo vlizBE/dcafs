@@ -17,23 +17,6 @@ public class Calculations {
     static final double A1 = 2.070e-5, A2 = -6.370e-10, A3 = 3.989e-15, B1 = 3.426e-2, B2 = 4.464e-4, B3 = 4.215e-1,
             B4 = -3.107e-3, C0 = 6.766097e-1, C1 = 2.00564e-2, C2 = 1.104259e-4, C3 = -6.9698e-7, C4 = 1.0031e-9;
 
-    // static BigDecimal aa = new BigDecimal("6378137.0")
-    static final double aa = 6378137.0;
-    // static BigDecimal ff = new BigDecimal("298.257223563")
-    static final double ff = 1.0 / 298.257223563;
-    static final double bb = aa * (1.0 - ff);
-    static final double cc = aa / (1.0 - ff);
-    static final double ea_2 = (aa * aa - bb * bb) / (bb * bb);
-    static final double k_0 = 0.9996;
-    static final double m0 = 0.9996;
-
-    static final long full = Long.decode("0xFFFFFF");
-    static final long mid = Long.decode("0x800000");
-    static final BigDecimal fullB = BigDecimal.valueOf(full);
-
-    static final TimeZone UTC = TimeZone.getTimeZone("UTC");
-
-
     public static Function<BigDecimal[],BigDecimal> procSalinity( String temp, String cond, String pressure){
         int tempIndex,condIndex,pressIndex;
         double tempVal,condVal,pressVal;
@@ -203,8 +186,8 @@ public class Calculations {
     }
     /**
      * Method that calculates the true windvelocity based on apparent wind and ships
-     * navigation Source: http://coaps.fsu.edu/woce/truewind/paper/
-     * 
+     * navigation Source: <a href="http://coaps.fsu.edu/woce/truewind/paper/">...</a>
+     *
      * @param windvel The apparent windvelocity in m/s
      * @param winddir The apparent wind direction in degrees [°]
      * @param sogKnots The Speed Over Ground in Knots
@@ -294,8 +277,8 @@ public class Calculations {
     }
     /**
      * Method that calculates the True wind direction based on apparent wind and
-     * ships navigation Source: http://coaps.fsu.edu/woce/truewind/paper/
-     * 
+     * ships navigation Source: <a href="http://coaps.fsu.edu/woce/truewind/paper/">...</a>
+     *
      * @param windvel The apparent windvelocity in m/s
      * @param winddir The apparent wind direction in degrees [°]
      * @param sogKnots The Speed Over Ground in Knots

@@ -27,7 +27,8 @@ public class MqttPool implements Commandable, MqttWriting {
         this.rtvals=rtvals;
         this.dQueue=dQueue;
 
-        readXMLsettings();
+        if( !readXMLsettings() )
+            Logger.error("Failed to read xml settings for MQTTPool");
     }
     public boolean sendToBroker( String id, String device, String param, double value) {
         MqttWorker worker = mqttWorkers.get(id);
@@ -130,21 +131,22 @@ public class MqttPool implements Commandable, MqttWriting {
      * Reload the settings for a certain MQTTWorker from the settings.xml
      *
      * @param id The worker for which the settings need to be reloaded
-     * @return True if this was succesful
+     * @return True if this was successful
      */
     public boolean reloadMQTTsettings(String id) {
         MqttWorker worker = mqttWorkers.get(id);
         if (worker == null)
             return false;
 
-        Element mqtt;
-        var settingsDoc = XMLtools.readXML(settingsFile);
-        if ((mqtt = XMLtools.getFirstElementByTag(settingsDoc, "mqtt")) != null) {
-            for (Element broker : XMLtools.getChildElements(mqtt, "broker")) {
-                if (XMLtools.getStringAttribute(broker, "id", "general").equals(id)) {
-                    worker.readSettings(broker);
-                    return true;
-                }
+        var mqttOpt = XMLtools.getFirstElementByTag( settingsFile, "mqtt");
+
+        if( mqttOpt.isEmpty())
+            return false;
+
+        for (Element broker : XMLtools.getChildElements(mqttOpt.get(), "broker")) {
+            if (XMLtools.getStringAttribute(broker, "id", "general").equals(id)) {
+                worker.readSettings(broker);
+                return true;
             }
         }
         return false;
@@ -156,17 +158,17 @@ public class MqttPool implements Commandable, MqttWriting {
      */
     public boolean readXMLsettings() {
 
-        var settingsDoc = XMLtools.readXML(settingsFile);
-        var mqtt = XMLtools.getFirstElementByTag(settingsDoc, "mqtt");
-        if (mqtt != null) {
-            for (Element broker : XMLtools.getChildElements(mqtt, "broker")) {
-                String id = XMLtools.getStringAttribute(broker, "id", "general");
-                Logger.info("Adding MQTT broker called " + id);
-                mqttWorkers.put(id, new MqttWorker(broker, dQueue));
-            }
-            return true;
+        var mqttOpt = XMLtools.getFirstElementByTag(settingsFile, "mqtt");
+
+        if( mqttOpt.isEmpty())
+            return false;
+
+        for (Element broker : XMLtools.getChildElements(mqttOpt.get(), "broker")) {
+            String id = XMLtools.getStringAttribute(broker, "id", "general");
+            Logger.info("Adding MQTT broker called " + id);
+            mqttWorkers.put(id, new MqttWorker(broker, dQueue));
         }
-        return false;
+        return true;
     }
 
 
@@ -187,8 +189,9 @@ public class MqttPool implements Commandable, MqttWriting {
                 return "Failed to add broker";
             case "subscribe":
                 if( cmd.length == 4){
-                    addMQTTSubscription(cmd[1], cmd[2], cmd[3]);
-                    return nl+"Subscription added, send 'mqtt:store,"+cmd[1]+"' to save settings to xml";
+                    if( addMQTTSubscription(cmd[1], cmd[2], cmd[3]) )
+                        return nl+"Subscription added, send 'mqtt:store,"+cmd[1]+"' to save settings to xml";
+                    return "Failed to add subscription";
                 }else{
                     return nl+"Incorrect amount of cmd: mqtt:subscribe,brokerid,label,topic";
                 }
@@ -204,8 +207,9 @@ public class MqttPool implements Commandable, MqttWriting {
                 }
             case "reload":
                 if( cmd.length == 2){
-                    reloadMQTTsettings(cmd[1]);
-                    return nl+"Settings for "+cmd[1]+" reloaded.";
+                    if( reloadMQTTsettings(cmd[1]))
+                        return nl+"Settings for "+cmd[1]+" reloaded.";
+                    return nl+"Failed to reload settings.";
                 }else{
                     return "Incorrect amount of cmd: mqtt:reload,brokerid";
                 }
@@ -235,7 +239,7 @@ public class MqttPool implements Commandable, MqttWriting {
                     return "No such MQTTWorker: "+cmd[1];
                 }
                 String[] topVal = cmd[2].split(":");
-                double val = rtvals.getDouble(topVal[1], -999);
+                double val = rtvals.getReal(topVal[1], -999);
                 getMqttWorker(cmd[1]).ifPresent( w -> w.addWork(topVal[0],""+val));
                 return "Data send to "+cmd[1];
             case "?":

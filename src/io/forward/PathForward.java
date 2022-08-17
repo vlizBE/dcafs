@@ -6,13 +6,13 @@ import io.Writable;
 import io.netty.channel.EventLoopGroup;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.database.SQLiteDB;
 import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,7 +28,7 @@ public class PathForward {
     private String src = "";
 
     private final ArrayList<Writable> targets = new ArrayList<>();
-    private ArrayList<CustomSrc> customs=new ArrayList<>();
+    private final ArrayList<CustomSrc> customs=new ArrayList<>();
 
     DataProviding dataProviding;
     BlockingQueue<Datagram> dQueue;
@@ -36,9 +36,10 @@ public class PathForward {
 
     String id;
     ArrayList<AbstractForward> stepsForward;
-    enum SRCTYPE {REG,PLAIN,RTVALS,CMD,FILE}
+    enum SRCTYPE {REG,PLAIN,RTVALS,CMD,FILE,SQLITE,INVALID}
     Path workPath;
-    static int READ_BUFFER_SIZE=500;
+    static int READ_BUFFER_SIZE=2500;
+    static long SKIPLINES = 0;
 
     public PathForward(DataProviding dataProviding, BlockingQueue<Datagram> dQueue, EventLoopGroup nettyGroup ){
         this.dataProviding = dataProviding;
@@ -60,14 +61,11 @@ public class PathForward {
     }
     public boolean readFromXML( Element pathEle, String workpath ){
 
-        var oldTargets = new ArrayList<Writable>();
-
-        oldTargets.addAll(targets);
+        var oldTargets = new ArrayList<>(targets);
         targets.clear();
 
-        if( customs!=null) { // if any future is active, stop it
-            customs.forEach(CustomSrc::stop);
-        }
+        // if any future is active, stop it
+        customs.forEach(CustomSrc::stop);
 
         if( stepsForward!=null) {// If this is a reload, reset the steps
             dQueue.add(Datagram.system("nothing").writable(stepsForward.get(0))); // stop asking for data
@@ -76,18 +74,21 @@ public class PathForward {
         }
 
         id = XMLtools.getStringAttribute(pathEle,"id","");
-        String delimiter = XMLtools.getStringAttribute(pathEle,"delimiter","");;
+        String delimiter = XMLtools.getStringAttribute(pathEle,"delimiter","");
         this.src = XMLtools.getStringAttribute(pathEle,"src","");
 
-        var importPath = XMLtools.getPathAttribute(pathEle,"import",Path.of(workpath));
-        if( importPath.isPresent() ) {
-            var p = XMLfab.getRootChildren(importPath.get(),"dcafs","path").findFirst();
+        var importPathOpt = XMLtools.getPathAttribute(pathEle,"import",Path.of(workpath));
+        if( importPathOpt.isPresent() ) {
+            var importPath = importPathOpt.get();
+            if( !importPath.isAbsolute()) // If the path isn't absolute
+                importPath = workPath.resolve(importPath); // Make it so
+            var p = XMLfab.getRootChildren(importPath,"dcafs","path").findFirst();
             if(p.isPresent()) {
                 pathEle = p.get();
                 delimiter = XMLtools.getStringAttribute(pathEle,"delimiter","");
-                Logger.info("Valid path script found at "+importPath.get());
+                Logger.info("Valid path script found at "+importPath);
             }else{
-                Logger.error("No valid path script found: "+importPath.get());
+                Logger.error("No valid path script found: "+importPath);
                 return false;
             }
         }
@@ -110,19 +111,20 @@ public class PathForward {
             if(step.getTagName().equalsIgnoreCase("customsrc")){
                 addCustomSrc( step.getTextContent(),
                               XMLtools.getStringAttribute(step,"interval","1s"),
-                              XMLtools.getStringAttribute(step,"type","plain"));
+                              XMLtools.getStringAttribute(step,"type","plain"),
+                              XMLtools.getStringAttribute(step,"label",""));
                 continue;
             }
 
             // Check if the next step is a generic, if so change the label attribute of the current step
             if( a<steps.size()-1 ){
                 var next = steps.get(a+1);
-                if(next.getTagName().equalsIgnoreCase("generic")){
-                    if( !step.hasAttribute("label")) {
-                        var genid = next.getAttribute("id");
-                        genid = genid.isEmpty()?id+"_gen"+gens:genid;
-                        gens++;
-                        step.setAttribute("label", "generic:" + genid);
+                if(next.getTagName().equalsIgnoreCase("generic")){// Next element is a generic
+                    if( !step.hasAttribute("label")) { // If this step doesn't have a label
+                        var genid = next.getAttribute("id"); // get the id of the generic
+                        genid = genid.isEmpty()?id+"_gen"+gens:genid; // If no id is given, take the path id and append gen
+                        gens++; // increase the total gen count
+                        step.setAttribute("label", "generic:" + genid); //alter this step label to the gen
                     }
                 }
                 if(next.getTagName().equalsIgnoreCase("valmap")){
@@ -155,41 +157,41 @@ public class PathForward {
             if( stepsForward.isEmpty() && !src.isEmpty())
                 step.setAttribute("src","");
 
-            switch( step.getTagName() ){
-                case "filter":
-                    FilterForward ff = new FilterForward( step, dQueue );
-                    if( !src.isEmpty()){
-                        addAsTarget(ff,src);
-                    }else if( lastff != null && (!(lastStep().get() instanceof FilterForward) || lastGenMap)) {
+            switch (step.getTagName()) {
+                case "filter" -> {
+                    FilterForward ff = new FilterForward(step, dQueue);
+                    if (!src.isEmpty()) {
+                        addAsTarget(ff, src);
+                    } else if (lastff != null && (!(lastStep().isPresent()&&lastStep().get() instanceof FilterForward) || lastGenMap)) {
                         lastff.addReverseTarget(ff);
-                    }else{
-                        addAsTarget(ff,src);
+                    } else {
+                        addAsTarget(ff, src);
                     }
-                    lastff=ff;
+                    lastff = ff;
                     stepsForward.add(ff);
-                    break;
-                case "math":
-                    MathForward mf = new MathForward( step,dQueue,dataProviding );
+                }
+                case "math" -> {
+                    MathForward mf = new MathForward(step, dQueue, dataProviding);
                     mf.removeSources();
-                    addAsTarget(mf,src);
+                    addAsTarget(mf, src);
                     stepsForward.add(mf);
-                    break;
-                case "editor":
-                    var ef = new EditorForward( step,dQueue,dataProviding );
+                }
+                case "editor" -> {
+                    var ef = new EditorForward(step, dQueue, dataProviding);
                     if( !ef.readOk)
                         return false;
                     ef.removeSources();
-                    addAsTarget(ef,src);
+                    addAsTarget(ef, src);
                     stepsForward.add(ef);
-                    break;
+                }
             }
 
         }
         if( !oldTargets.isEmpty()&&!stepsForward.isEmpty()){ // Restore old requests
-            oldTargets.forEach( wr->addTarget(wr) );
+            oldTargets.forEach(this::addTarget);
         }
         if( !lastStep().map(AbstractForward::noTargets).orElse(false) || hasLabel) {
-            if (customs == null || customs.isEmpty()) { // If no custom sources
+            if (customs.isEmpty() ) { // If no custom sources
                 dQueue.add(Datagram.system(this.src).writable(stepsForward.get(0)));
             } else {// If custom sources
                 if( !stepsForward.isEmpty()) // and there are steps
@@ -211,7 +213,7 @@ public class PathForward {
                 }
             }
         }else if( !stepsForward.isEmpty() ) {
-            lastStep().get().addTarget(f);
+            lastStep().ifPresent( ls -> ls.addTarget(f));
         }
     }
     public String debugStep( String step, Writable wr ){
@@ -260,13 +262,13 @@ public class PathForward {
         }
         return null;
     }
-    public void addCustomSrc( String data, String interval, String type){
+    public void addCustomSrc( String data, String interval, String type, String label){
         if( data.contains("{") && data.contains("}")) {
             type ="rtvals";
         }else if(type.equalsIgnoreCase("rtvals")){
             type="plain";
         }
-        customs.add( new CustomSrc(data,type,TimeTools.parsePeriodStringToMillis(interval)) );
+        customs.add( new CustomSrc(data,type,TimeTools.parsePeriodStringToMillis(interval),label) );
     }
 
     public String toString(){
@@ -278,12 +280,12 @@ public class PathForward {
 
         customs.forEach(c->join.add(c.toString()));
         if(stepsForward!=null) {
-            for (int a = 0; a < stepsForward.size(); a++) {
-                join.add("   -> " + stepsForward.get(a).toString());
+            for (AbstractForward abstractForward : stepsForward) {
+                join.add("   -> " + abstractForward.toString());
             }
+            if( !stepsForward.isEmpty() )
+                join.add( " gives the data from "+stepsForward.get(stepsForward.size()-1).getID() );
         }
-        if( !stepsForward.isEmpty() )
-            join.add( " gives the data from "+stepsForward.get(stepsForward.size()-1).getID() );
         return join.toString();
     }
     public ArrayList<Writable> getTargets(){
@@ -319,65 +321,75 @@ public class PathForward {
             for( var step : stepsForward )
                 step.removeTarget(wr);
 
-            if( lastStep().map(ls->ls.noTargets()).orElse(true) ){ // if the final step has no more targets, stop the first step
+            if( lastStep().isEmpty() )
+                return;
+            if( lastStep().map(AbstractForward::noTargets).orElse(true) ){ // if the final step has no more targets, stop the first step
                 customs.forEach(CustomSrc::stop);
             }
         }
     }
 
-    public void writeData(){
-
-        targets.removeIf( x -> !x.isConnectionValid());
-        customs.forEach( CustomSrc::write );
-
-        if( targets.isEmpty() ){
-            customs.forEach(CustomSrc::stop);
-        }
-    }
     private class CustomSrc{
-        String data;
+        String pathOrData;
+        String path;
         SRCTYPE srcType;
         long intervalMillis;
-        ScheduledFuture future;
+
+        ScheduledFuture<?> future;
         ArrayList<String> buffer;
         ArrayList<Path> files;
+
         int lineCount=1;
+        long sendLines=0;
         int multiLine=1;
 
-        public CustomSrc( String data, String type, long intervalMillis){
-            this.data =data;
+        String label;
+
+        boolean readOnce=false;
+
+        public CustomSrc( String data, String type, long intervalMillis, String label){
+            pathOrData = data;
+            this.label=label;
             this.intervalMillis=intervalMillis;
             var spl = type.split(":");
-            switch(spl[0]){
-                case "rtvals": srcType=SRCTYPE.RTVALS; break;
-                case "cmd": srcType=SRCTYPE.CMD; break;
-                case "plain": srcType=SRCTYPE.PLAIN; break;
-                case "file":
-                    srcType=SRCTYPE.FILE;
-                    files=new ArrayList<>();
-                    if( !Path.of(data).isAbsolute()) {
-                        this.data = workPath.resolve(data).toString();
-                    }
-                    if( Files.isDirectory( Path.of(this.data))){
-                        try{
-                            Files.list(Path.of(this.data)).forEach(files::add);
-                        } catch (IOException e) {
-                            Logger.error(e);
+            srcType = switch (spl[0]) {
+                case "rtvals" -> SRCTYPE.RTVALS;
+                case "cmd" -> SRCTYPE.CMD;
+                case "plain" -> SRCTYPE.PLAIN;
+                case "file" ->  SRCTYPE.FILE;
+                case "sqlite" -> SRCTYPE.SQLITE;
+                default -> SRCTYPE.INVALID;
+            };
+            if( srcType==SRCTYPE.FILE){
+                files = new ArrayList<>();
+                var p = Path.of(pathOrData);
+                if (!p.isAbsolute()) {
+                    p = workPath.resolve(data);
+                }
+                if (Files.isDirectory(p)) {
+                    try {
+                        try( var str = Files.list(p) ){
+                            str.forEach(files::add);
                         }
-                    }else{
-                        files.add(Path.of(this.data));
+                    } catch (IOException e) {
+                        Logger.error(e);
                     }
-                    buffer=new ArrayList<>();
-                    if(spl.length==2)
-                        multiLine = NumberUtils.toInt(spl[1]);
-                    break;
-                default:
-                    Logger.error(id+ "(pf) -> no valid srctype '"+type+"'");
+                } else {
+                    files.add(p);
+                }
+                buffer = new ArrayList<>();
+                if (spl.length == 2)
+                    multiLine = NumberUtils.toInt(spl[1]);
+            }else if( srcType == SRCTYPE.INVALID ){
+                Logger.error(id + "(pf) -> no valid srctype '" + type + "'");
+            }else if( srcType==SRCTYPE.SQLITE){
+                path = spl[1];
+                buffer = new ArrayList<>();
             }
         }
         public void start(){
             if( future==null || future.isDone())
-                future = nettyGroup.scheduleAtFixedRate(()-> write(),intervalMillis,intervalMillis, TimeUnit.MILLISECONDS);
+                future = nettyGroup.scheduleAtFixedRate(this::write,intervalMillis,intervalMillis, TimeUnit.MILLISECONDS);
         }
         public void stop(){
             if( future!=null && !future.isCancelled())
@@ -389,13 +401,37 @@ public class PathForward {
                 stop();
 
             switch( srcType){
-                case CMD:; targets.forEach( t->dQueue.add( Datagram.build(data).label("telnet").writable(t))); break;
+                case CMD:
+                    targets.forEach(t->dQueue.add( Datagram.build(pathOrData).label("telnet").writable(t))); break;
                 case RTVALS:
-                    var write = dataProviding.parseRTline(data,"-999");
+                    var write = dataProviding.parseRTline(pathOrData,"-999");
                     targets.forEach( x -> x.writeLine(write));
                     break;
                 default:
-                case PLAIN: targets.forEach( x -> x.writeLine(data)); break;
+                case PLAIN: targets.forEach( x -> x.writeLine(pathOrData)); break;
+                case SQLITE:
+                    if( buffer.isEmpty() ) {
+                        if( readOnce ) {
+                            stop();
+                            return;
+                        }
+                        var lite = SQLiteDB.createDB("custom", Path.of(path));
+                        var dataOpt = lite.doSelect(pathOrData);
+                        lite.disconnect(); //disconnect the database after retrieving the data
+                        if (dataOpt.isPresent()) {
+                            var data = dataOpt.get();
+                            readOnce=true;
+                            for( var d : data ){
+                                StringJoiner join = new StringJoiner(";");
+                                d.stream().map(Object::toString).forEach(join::add);
+                                buffer.add(join.toString());
+                            }
+                        }
+                    }else{
+                        String line = buffer.remove(0);
+                        targets.forEach( wr-> wr.writeLine(line));
+                    }
+                    break;
                 case FILE:
                     try {
                         for( int a=0;a<multiLine;a++){
@@ -405,14 +441,22 @@ public class PathForward {
                                     dQueue.add( Datagram.system("telnet:broadcast,info,"+id+" finished."));
                                     return;
                                 }
-                                buffer.addAll(FileTools.readLines(files.get(0), lineCount, READ_BUFFER_SIZE));
+                                if( SKIPLINES==0 ) {
+                                    buffer.addAll( FileTools.readLines(files.get(0), lineCount, READ_BUFFER_SIZE));
+                                }else{
+                                    if( !readOnce )
+                                        buffer.addAll( FileTools.readSubsetLines( files.get(0),10,SKIPLINES));
+                                    readOnce=true;
+                                }
                                 lineCount += buffer.size();
                                 if( buffer.size() < READ_BUFFER_SIZE ){
                                     dQueue.add( Datagram.system("telnet:broadcast,info,"+id+" processed "+files.get(0)));
+                                    Logger.info("Finished processing "+files.get(0));
                                     files.remove(0);
                                     lineCount = 1;
                                     if( buffer.isEmpty()) {
                                         if (!files.isEmpty()) {
+                                            Logger.info("Started processing "+files.get(0));
                                             buffer.addAll(FileTools.readLines(files.get(0), lineCount, READ_BUFFER_SIZE));
                                             lineCount += buffer.size();
                                         }else{
@@ -425,6 +469,10 @@ public class PathForward {
                             }
                             String line = buffer.remove(0);
                             targets.forEach( wr-> wr.writeLine(line));
+                            if( !label.isEmpty()){
+                                dQueue.add( Datagram.build(line).label(label));
+                            }
+                            sendLines++;
                         }
                     }catch(Exception e){
                         Logger.error(e);
@@ -433,7 +481,7 @@ public class PathForward {
             }
         }
         public String toString(){
-            return "Reads '"+data+"' every "+TimeTools.convertPeriodtoString(intervalMillis,TimeUnit.MILLISECONDS);
+            return "Reads '"+ pathOrData +"' every "+TimeTools.convertPeriodtoString(intervalMillis,TimeUnit.MILLISECONDS);
         }
     }
 }
