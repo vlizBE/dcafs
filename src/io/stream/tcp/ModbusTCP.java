@@ -14,7 +14,6 @@ import java.util.concurrent.BlockingQueue;
 
 public class ModbusTCP extends TcpHandler{
     int index=0;
-    long timestamp;
     byte[] rec = new byte[512];
     byte[] header=new byte[]{0,1,0,0,0,0,0};
     String[] origin = new String[]{"","","","reg","AI",""};
@@ -34,7 +33,7 @@ public class ModbusTCP extends TcpHandler{
             listeners.forEach( l-> l.notifyActive(id));
         }
 
-        long p = Instant.now().toEpochMilli() - timestamp;	// Calculate the time between 'now' and when the previous message was received
+        long p = Instant.now().toEpochMilli() - timeStamp;	// Calculate the time between 'now' and when the previous message was received
         if( p >= 0 ){	// If this time is valid
             passed = p; // Store it
         }
@@ -43,7 +42,7 @@ public class ModbusTCP extends TcpHandler{
                 Logger.info("delay passed: "+passed+" rec:"+data.length);
             index=0;
         }
-        timestamp = Instant.now().toEpochMilli();    		    // Store the timestamp of the received message
+        timeStamp = Instant.now().toEpochMilli();    		    // Store the timestamp of the received message
 
         for( byte b : data ){
 
@@ -78,7 +77,7 @@ public class ModbusTCP extends TcpHandler{
         index=0;
         // Log anything and everything (except empty strings)
         if( log )		// If the message isn't an empty string and logging is enabled, store the data with logback
-            Logger.tag("RAW").warn( priority + "\t" + label + "\t[hex] " + Tools.fromBytesToHexString(rec,0,index) );
+            Logger.tag("RAW").warn( priority + "\t" + label+"|"+id + "\t[hex] " + Tools.fromBytesToHexString(data,0,data.length) );
 
         int reg = data[8];
 
@@ -90,7 +89,7 @@ public class ModbusTCP extends TcpHandler{
             join.add(origin[data[7]]+reg+":"+(i0*256+i1));
             reg++;
         }
-        Logger.debug("Received "+join.toString());
+        Logger.debug("Received "+join);
         if( !label.equalsIgnoreCase("void")) {
             var dg = Datagram.build(join.toString())
                     .label(label)

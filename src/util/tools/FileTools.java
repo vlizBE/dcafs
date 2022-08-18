@@ -7,6 +7,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.*;
@@ -17,9 +18,7 @@ import java.util.zip.ZipOutputStream;
 
 public class FileTools {
 
-    /************************************************************************************************************/
-    /******************************** R E A D / W R I T E *******************************************************/
-    /************************************************************************************************************/
+    /* ******************************* R E A D / W R I T E ****************************************************** */
     /**
      * Method that opens a file (or creates it and needed directories) and appends the data to it
      * 
@@ -88,7 +87,21 @@ public class FileTools {
             Logger.error(ex);
             return false;
         }
-    } 
+    }
+
+    /**
+     * Check how many lines the given file contains
+     * @param file The path to the file
+     * @return The amount of lines or -1 if failed
+     */
+    public static long getLineCount( Path file ){
+        try{
+            return Files.lines(file).parallel().count();
+        } catch (IOException ex) {
+            Logger.error(ex);
+            return -1;
+        }
+    }
     /**
      * Read amount of lines from a file starting at start
      * 
@@ -101,7 +114,7 @@ public class FileTools {
 
         var read = new ArrayList<String>();
         if( start==0) {
-            Logger.error( "Readlines should start at 1, not 0");
+            Logger.error( "Readlines should start at 1, not 0 for "+path);
             return read;
         }
         if( Files.notExists(path)){
@@ -111,21 +124,52 @@ public class FileTools {
 
         if( start<0 || amount<0 )
             return read;
-             
-        try( var lines = Files.lines(path, StandardCharsets.UTF_8) ) {
-                var d = lines.skip(start - 1)
-                        .limit(amount);
-                        try{
-                            d.forEach( x-> read.add(x));
-                        }catch(UncheckedIOException e){
-                            Logger.error("Issue reading from "+start);
-                        }
-            return read;
+
+        if( !readLimitedLines(path,start, StandardCharsets.UTF_8,read) ){
+            Logger.info("Retrying with ISO_8859_1");
+            readLimitedLines(path,start, StandardCharsets.ISO_8859_1,read );
+        }
+        return read;
+    }
+    private static boolean readLimitedLines( Path path, int start, Charset cs, ArrayList<String> read){
+        try( var lines = Files.lines(path, cs) ) {
+            try{
+                var l = lines.skip(start - 1);
+                read.addAll(l.toList());
+                return true;
+            }catch ( UncheckedIOException d ) {
+                Logger.error("Malformed Failed reading with (charset) " + cs + " while reading " + path);
+            }
         } catch (IOException ex) {
             Logger.error(ex);
+        }
+        return false;
+    }
+    public static ArrayList<String> readSubsetLines( Path path, int amount, long skip) throws UncheckedIOException, IOException {
+        var read = new ArrayList<String>();
+        long count=0;
+        if( Files.notExists(path)){
+            Logger.error("Tried to read lines from "+path+" but no such file");
             return read;
         }
-    }  
+        var f = Files.newBufferedReader(path);
+        while(true) {
+            Logger.info("Next "+amount+" at "+count+", total: "+read.size());
+            for (int a = 0; a < amount; a++) {
+                String line = f.readLine();
+                if (line == null)
+                    return read;
+                read.add(f.readLine());
+                count++;
+            }
+            for (int b = 0; b < skip; b++) {
+                String line = f.readLine();
+                if (line == null)
+                    return read;
+                count++;
+            }
+        }
+    }
     /**
      * Read the file 'in' and only keep the lines containing 'cont' then write those to 'out' with the system dependent newline
      * @param in The path to read

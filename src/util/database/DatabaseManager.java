@@ -391,15 +391,14 @@ public class DatabaseManager implements QueryWriting, Commandable {
                 return false;
             fab.selectChildAsParent("sqlite","id",id);
         }
-        SqlTable.addBlankToXML( fab,table,format );
-        return true;
+        return SqlTable.addBlankToXML( fab,table,format );
     }
     /* ********************************** C O M M A N D A B L E *********************************************** */
 
     /**
-     * Not used
-     * @param wr
-     * @return
+     * Not used, but needs to be implemented
+     * @param wr The writable to remove
+     * @return True if it was removed
      */
     @Override
     public boolean removeWritable(Writable wr) {
@@ -417,12 +416,11 @@ public class DatabaseManager implements QueryWriting, Commandable {
     public String replyToCommand(String[] request, Writable wr, boolean html) {
 
         if( request[0].equalsIgnoreCase("myd"))
-            return doMYsqlDump(request,wr,html);
+            return doMYsqlDump(request);
 
         String[] cmds = request[1].split(",");
 
         StringJoiner join = new StringJoiner(html?"<br":"\r\n");
-        Database db=null;
 
         String id = cmds.length>=2?cmds[1]:"";
         String dbName = cmds.length>=3?cmds[2]:"";
@@ -435,32 +433,37 @@ public class DatabaseManager implements QueryWriting, Commandable {
             user = user.substring(0,user.indexOf(":"));
         }
 
+        String cyan = html?"":TelnetCodes.TEXT_CYAN;
+        String green=html?"":TelnetCodes.TEXT_GREEN;
+        String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
+
         switch( cmds[0] ){
             case "?":
-                join.add(TelnetCodes.TEXT_MAGENTA+"The databasemanager connects to databases, handles queries and fetches table information");
-                join.add(TelnetCodes.TEXT_GREEN+"Glossary"+TelnetCodes.TEXT_YELLOW)
-                        .add("  alias -> the alias of a column is the reference to use instead of the column name to find the rtval, empty is not used")
+                join.add(TelnetCodes.TEXT_MAGENTA+"The databasemanager connects to databases, handles queries and fetches table information.\r\n");
+                join.add(TelnetCodes.TEXT_ORANGE+"Notes"+reg)
+                        .add("  rtval -> the rtval of a column is the id to look for in the rtvals instead of the default tablename_column")
                         .add("  macro -> an at runtime determined value that can be used to define the rtval reference").add("");
-                join.add(TelnetCodes.TEXT_GREEN+"Connect to a database"+TelnetCodes.TEXT_YELLOW)
-                        .add("  dbm:addmssql,id,db name,ip:port,user:pass -> Adds a MSSQL server on given ip:port with user:pass")
-                        .add("  dbm:addmysql,id,db name,ip:port,user:pass -> Adds a MSSQL server on given ip:port with user:pass")
-                        .add("  dbm:addmariadb,id,db name,ip:port,user:pass -> Adds a MariaDB server on given ip:port with user:pass")
-                        .add("  dbm:addsqlite,id(,filename) -> Creates an empty sqlite database, filename and extension optional default db/id.sqlite")
-                        .add("  dbm:addinfluxdb,id,db name,ip:port,user:pass -> Adds a Influxdb server on given ip:port with user:pass")
-                        .add("").add(TelnetCodes.TEXT_GREEN+"Working with tables"+TelnetCodes.TEXT_YELLOW)
-                        .add("  dbm:addtable,id,tablename,format (format eg. tirc timestamp(auto filled system time),int,real,char/text)")
-                        .add("  dbm:addcol,<dbid:>tablename,columntype:columnname<:alias>,... (columntypes r(eal),t(ime)s(tamp),i(nteger),t(ext)")
-                        .add("  dbm:tablexml,id,tablename -> Write the table in memory to the xml file, use * as tablename for all")
-                        .add("  dbm:tables,id -> Get info about the given id (tables etc)")
-                        .add("  dbm:fetch,id -> Read the tables from the database directly, not overwriting stored ones.")
-                        .add("  dbm:store,dbId,tableid -> Trigger a insert for the database and table given")
-                        .add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW)
-                        .add("  dbm:addserver,id -> Adds a blank database server node to xml")
-                        .add("  dbm:addrollover,id,count,unit,pattern -> Add rollover to a SQLite database")
-                        .add("  dbm:alter,id,param:value -> Alter things like idle, flush and batch (still todo)")
-                        .add("  dbm:reload,id -> (Re)loads the database with the given id fe. after changing the xml")
-                        .add("  dbm:status -> Show the status of all managed database connections")
-                        .add("  st -> Show the current status of the databases (among other things)");
+                join.add(cyan+"Connect to a database"+reg)
+                        .add(green+"  dbm:addmssql,id,db name,ip:port,user:pass "+reg+"-> Adds a MSSQL server on given ip:port with user:pass")
+                        .add(green+"  dbm:addmysql,id,db name,ip:port,user:pass "+reg+"-> Adds a MySQL server on given ip:port with user:pass")
+                        .add(green+"  dbm:addmariadb,id,db name,ip:port,user:pass "+reg+"-> Adds a MariaDB server on given ip:port with user:pass")
+                        .add(green+"  dbm:addsqlite,id(,filename) "+reg+"-> Creates an empty sqlite database, filename and extension optional default db/id.sqlite")
+                        .add(green+"  dbm:addinfluxdb,id,db name,ip:port,user:pass "+reg+"-> Adds a Influxdb server on given ip:port with user:pass")
+                        .add("").add(cyan+"Working with tables"+reg)
+                        .add(green+"  dbm:addtable,id,tablename "+reg+"-> Adds a table to the given database id")
+                        .add(green+"  dbm:addcol,<dbid:>tablename,columntype:columnname<:rtval> "+reg+"-> Add a column to the given table")
+                        .add(      "        - columntypes: r(eal),t(ime)s(tamp),i(nteger),t(ext), utc(now)")
+                        .add(green+"  dbm:tablexml,id,tablename "+reg+"-> Write the table in memory to the xml file, use * as tablename for all")
+                        .add(green+"  dbm:tables,id "+reg+"-> Get info about the given id (tables etc)")
+                        .add(green+"  dbm:fetch,id "+reg+"-> Read the tables from the database directly, not overwriting stored ones.")
+                        .add(green+"  dbm:store,dbId,tableid "+reg+"-> Trigger a insert for the database and table given")
+                        .add("").add(cyan+"Other"+reg)
+                        .add(green+"  dbm:addserver,id "+reg+"-> Adds a blank database server node to xml")
+                        .add(green+"  dbm:addrollover,id,count,unit,pattern "+reg+"-> Add rollover to a SQLite database")
+                        .add(green+"  dbm:alter,id,param:value "+reg+"-> Alter things like idle, flush and batch (still todo)")
+                        .add(green+"  dbm:reload,id "+reg+"-> (Re)loads the database with the given id fe. after changing the xml")
+                        .add(green+"  dbm:status "+reg+"-> Show the status of all managed database connections")
+                        .add(green+"  st "+reg+"-> Show the current status of the databases (among other things)");
                 return join.toString();
             case "reload":
                 if( cmds.length<2)
@@ -593,8 +596,6 @@ public class DatabaseManager implements QueryWriting, Commandable {
                     return "Needs to be columtype:columnname";
                 String dbid =  cmds[1].contains(":")?cmds[1].split(":")[0]:"";
                 String table = cmds[1].contains(":")?cmds[1].split(":")[1]:cmds[1];
-                String[] col = cmds[2].split(":");
-                String alias = cmds.length==4?cmds[3]:"";
 
                 fab = XMLfab.withRoot(settingsPath,"databases");
 
@@ -609,13 +610,15 @@ public class DatabaseManager implements QueryWriting, Commandable {
                                 for( int a=2;a<cmds.length;a++){
                                     var spl = cmds[a].split(":");
                                     switch(spl[0]){
-                                        case "ts":spl[0]="timestamp";break;
-                                        case "i":spl[0]="integer";break;
-                                        case "r": case "d":spl[0]="real";break;
-                                        case "t":spl[0]="text";break;
-                                        case "udt":spl[0]="utcdatetime";break;
-                                        case "ldt":spl[0]="localdatetime";break;
+                                        case "timestamp":case "ts":spl[0]="timestamp";break;
+                                        case "integer": case "int": case "i":spl[0]="integer";break;
+                                        case "real": case "r": case "d":spl[0]="real";break;
+                                        case "text": case "t":spl[0]="text";break;
+                                        case "utc":spl[0]="utcnow";break;
+                                        case "ltc":spl[0]="localdtnow";break;
                                         case "dt":spl[0]="datetime";break;
+                                        default:
+                                            return "Invalid column type: "+spl[0];
                                     }
                                     fab.addChild(spl[0], spl[1]);
                                     if( spl.length==3)
@@ -660,11 +663,9 @@ public class DatabaseManager implements QueryWriting, Commandable {
     /**
      * Respons to MySQLdump related commands
      * @param request The command
-     * @param wr The writable that gave the command
-     * @param html Respons in html or not
      * @return The response
      */
-    public String doMYsqlDump(String[] request, Writable wr, boolean html ){
+    public String doMYsqlDump(String[] request ){
         String[] cmds = request[1].split(",");
         switch( cmds[0] ){
             case "?": 	return " myd:run,dbid,path -> Run the mysqldump process for the given database";
@@ -676,8 +677,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
                     return "No such database "+cmds[1];
                 if( dbOpt.get() instanceof SQLiteDB )
                     return "Database is an sqlite, not mysql/mariadb";
-                if( dbOpt.get() instanceof SQLDB ){
-                    SQLDB sql =(SQLDB)dbOpt.get();
+                if(dbOpt.get() instanceof SQLDB sql){
                     if( sql.isMySQL() ){
                         // do the dump
                         String os = System.getProperty("os.name").toLowerCase();

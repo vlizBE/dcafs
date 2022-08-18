@@ -15,17 +15,10 @@ public class MultiStream extends SerialStream{
     private final byte[] rec = new byte[512];
     private final byte[] header = new byte[]{'_','(','*','*',')','_'};
     private final ByteBuffer recBuffer;
-    private final int index = 0;
-    private final boolean readyForWorker=false;
     private final int payloadPosition=3;
     private final int idPosition=2;
     private static final byte deviceId='1';
 
-	public MultiStream(String port, BlockingQueue<Datagram> dQueue, String label, int priority) {
-		super(port,dQueue, label, priority);
-		recBuffer = ByteBuffer.wrap(rec);
-		eol = "";
-    }
     public MultiStream(BlockingQueue<Datagram> dQueue, Element stream) {
 	    super(dQueue,stream);
         recBuffer = ByteBuffer.wrap(rec);
@@ -64,7 +57,7 @@ public class MultiStream extends SerialStream{
 
                     if( !targets.isEmpty() ){ // If there are targets
                         try {
-                            targets.stream().forEach(dt -> dt.writeLine(d.getData())); // send the payload
+                            targets.forEach(dt -> dt.writeLine(d.getData())); // send the payload
                             targets.removeIf(wr -> !wr.isConnectionValid()); // Clear inactive
                         }catch(Exception e){
                             Logger.error(id+" -> Something bad in multiplexer");

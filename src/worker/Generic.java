@@ -6,6 +6,8 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.influxdb.dto.Point;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.data.IntegerVal;
+import util.data.RealVal;
 import util.database.QueryWriting;
 import util.tools.TimeTools;
 import util.tools.Tools;
@@ -17,6 +19,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Optional;
 import java.util.StringJoiner;
 
 public class Generic {
@@ -41,12 +44,12 @@ public class Generic {
     int maxIndex=-1;
     boolean tableMatch=false;
 
-    String group="";
-
     /* Macro */
     String macro="";
     String macroRef="";
     int macroIndex=-1;
+
+    private long uses=0;
 
     static final String INDEX_STRING = "index";
 
@@ -81,8 +84,10 @@ public class Generic {
         macroRef=value;
         return this;
     }
-    public void setDefaultGroup( String group ){
-        this.group=group;
+    public Optional<Entry> getLastEntry(){
+        if( entries.isEmpty())
+            return Optional.empty();
+        return Optional.ofNullable(entries.get(entries.size()-1));
     }
     /**
      * Add looking for a real/double on the given index
@@ -90,9 +95,6 @@ public class Generic {
      * @param title The name under which to store this ( or table_title if table is defined)
      * @return this object
      */
-    public Generic addReal( int index, String title){       
-        return addReal( index, title, "");
-    }
     public Generic addReal( int index, String title, String mqttDevice){
         maxIndex = Math.max(maxIndex, index);
         Entry ent = new Entry(index, title, DATATYPE.REAL);
@@ -107,9 +109,6 @@ public class Generic {
      * @param title The name under which to store this ( or table_title if table is defined)
      * @return this object
      */
-    public Entry addInteger( int index, String title){
-        return addInteger(index,title,"");
-    }
     public Entry addInteger( int index, String title,String mqttDevice){
         maxIndex = Math.max(maxIndex, index);
         Entry ent = new Entry(index, title, DATATYPE.INTEGER);
@@ -206,7 +205,7 @@ public class Generic {
      * @return an array with the data
      */
     public Object[] apply(String line, Double[] doubles, DataProviding dp, QueryWriting queryWriting, MqttWriting mqtt){
-         
+        uses++;
         for( Filter filter : filters ){
             line = filter.apply(line);
         }
@@ -236,7 +235,7 @@ public class Generic {
         for( int a=0;a<entries.size();a++ ){
             Entry entry = entries.get(a);
 
-            String ref = group.isEmpty()?entry.title:(group+"_"+entry.title);
+            String ref = entry.getID();
             
             if( ref.contains("@macro") ) // If the ref contains @macro, replace it with the macro
                 ref = ref.replace("@macro", macro);
@@ -246,37 +245,43 @@ public class Generic {
                 switch( entry.type ){
                     case INTEGER:
                             if( doubles!=null && doubles.length>entry.index && doubles[entry.index]!=null){
-                                data[a] = doubles[entry.index].intValue();
-                                dp.setInteger( ref, (int)data[a] );
+                                val = doubles[entry.index].intValue();
+                            }else if( NumberUtils.isCreatable(split[entry.index])) {
+                                val=NumberUtils.toInt(split[entry.index],Integer.MAX_VALUE);
                             }else{
-                                data[a]=NumberUtils.toInt(split[entry.index],Integer.MAX_VALUE);
-                                if( (int)data[a]!=Integer.MAX_VALUE){
-                                    dp.setInteger( ref, (int)data[a] );
+                                val = Double.NaN;
+                                if( split[entry.index].isEmpty()){
+                                    Logger.error(id +" -> Got an empty value at "+ entry.index+" instead of integer for "+ ref);
                                 }else{
-                                    data[a]=null;
-                                    if( split[entry.index].isEmpty()){
-                                        Logger.error(id +" -> Got an empty value at "+ entry.index+" instead of int for "+ ref);
-                                    }else{
-                                        Logger.error(id +" -> Failed to convert "+split[entry.index]+" to int for "+ ref);
-                                    }
+                                    Logger.error(id +" -> Failed to convert "+split[entry.index]+" to integer for "+ ref);
                                 }
+                            }
+                            data[a] = val;
+                            if( dp.hasInteger(ref) ){
+                                dp.updateInteger(ref,(int)val);
+                            }else{
+                                var iv = IntegerVal.newVal(entry.group, entry.name).value((int)val);
+                                dp.addIntegerVal( iv, true );
                             }
                             break;
                     case REAL:
                             if( doubles!=null && doubles.length>entry.index && doubles[entry.index]!=null){
-                                data[a]=doubles[entry.index];
-                                dp.getOrAddDoubleVal( ref ).updateValue( doubles[entry.index] );
+                                val=doubles[entry.index];
                             }else if( NumberUtils.isCreatable(split[entry.index])) {
                                 val = NumberUtils.toDouble(split[entry.index], val);
-                                data[a] = val;
-                                dp.getOrAddDoubleVal( ref ).updateValue( val );
                             }else{
-                                data[a]=null;
+                                val = Double.NaN;
                                 if( split[entry.index].isEmpty()){
                                     Logger.error(id +" -> Got an empty value at "+ entry.index+" instead of real for "+ ref);
                                 }else{
                                     Logger.error(id +" -> Failed to convert "+split[entry.index]+" to real for "+ ref);
                                 }
+                            }
+                            data[a] = val;
+                            if( dp.hasReal(ref) ){
+                                dp.updateReal(ref,val);
+                            }else{
+                                dp.addRealVal(RealVal.newVal(entry.group, entry.name).value(val),true);
                             }
                             break;                
                     case TEXT: case TAG:
@@ -308,10 +313,10 @@ public class Generic {
                 }
                 if( !influxID.isEmpty() && pb!=null ){
                    switch (entry.type ){
-                       case INTEGER:  pb.addField(entry.title,(int)data[a]); break;
-                       case REAL: pb.addField(entry.title,(double)data[a]); break;
-                       case TEXT: pb.addField(entry.title, data[a].toString()); break;
-                       case TAG: pb.tag(entry.title, data[a].toString()); break;
+                       case INTEGER:  pb.addField(entry.name,(int)data[a]); break;
+                       case REAL: pb.addField(entry.name,(double)data[a]); break;
+                       case TEXT: pb.addField(entry.name, data[a].toString()); break;
+                       case TAG: pb.tag(entry.name, data[a].toString()); break;
                    }
                 }
                 if( mqtt!=null && !mqttID.isEmpty() && !entry.mqttDevice.isEmpty() )
@@ -326,6 +331,11 @@ public class Generic {
         }
         return data;
     }
+    public String getCommonGroups(){
+        StringJoiner join = new StringJoiner(",");
+        entries.stream().map( e -> e.group).distinct().forEach( join::add);
+        return join.toString();
+    }
     /**
      * Returns the info about this generic
      */
@@ -334,14 +344,18 @@ public class Generic {
         if( dbid!=null ){
             join.add("Store in "+String.join(",",dbid)+":"+table+" " );
         }
-        if( !group.isEmpty())
-            join.add(" for group "+group+" ");
+        if( !getCommonGroups().isEmpty())
+            join.add(" for group(s) '"+getCommonGroups()+"' ");
 
         if (!influxID.isEmpty() ){
             join.add(" Store in InfluxDB "+influxID+":"+table+" ");
         }
         join.add("has delimiter '"+delimiter+"'"+(startsWith.isBlank()?"":"and starts with '"+startsWith+"'") );
-
+        if( uses == 0 ){
+            join.add(", not used yet.");
+        }else{
+            join.add(", used "+uses+" times.");
+        }
         join.add("\r\n");
 
         if( !filters.isEmpty() ){
@@ -363,7 +377,7 @@ public class Generic {
     public static Generic readFromXML( Element gen ){
 
         Generic generic = Generic.create(gen.getAttribute("id"));
-        generic.setDefaultGroup(gen.getAttribute("group"));
+        String group = gen.getAttribute("group");
         generic.setDelimiter(XMLtools.getStringAttribute(gen,"delimiter",","));
         generic.setStartsWith(gen.getAttribute("startswith"));
         generic.setMQTTID(gen.getAttribute("mqtt"));
@@ -378,6 +392,7 @@ public class Generic {
                 Logger.error( generic.getID()+" -> Failed to read db tag, must contain dbids:table, multiple dbids separated with ','");
             }
         }
+
         for (Element ent : XMLtools.getChildElements(gen)) {
             String title = ent.getTextContent();
 
@@ -392,15 +407,30 @@ public class Generic {
                     }
                     break;
                 case "real":case "double":
-                    generic.addReal(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title,
+                   generic.addReal(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title,
                             XMLtools.getStringAttribute(ent, "mqtt", ""));
+                    if( ent.hasAttribute("group") ){
+                        generic.getLastEntry().get().setGroup(ent.getAttribute("group"));
+                    }else{
+                        generic.getLastEntry().get().setGroup(group);
+                    }
                     break;
                 case "integer":case "int":
                     generic.addInteger(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title,
                             XMLtools.getStringAttribute(ent, "mqtt", ""));
+                    if( ent.hasAttribute("group") ){
+                        generic.getLastEntry().get().setGroup(ent.getAttribute("group"));
+                    }else{
+                        generic.getLastEntry().get().setGroup(group);
+                    }
                     break;
                 case "text": case "timestamp":
                     generic.addText(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title );
+                    if( ent.hasAttribute("group") ){
+                        generic.getLastEntry().get().setGroup(ent.getAttribute("group"));
+                    }else{
+                        generic.getLastEntry().get().setGroup(group);
+                    }
                     break;
                 case "filler":
                     generic.addFiller(-1, ent.getTextContent());
@@ -507,19 +537,27 @@ public class Generic {
     public static class Entry{
         DATATYPE type;
         int index;
-        String title;
+        String name;
         String mqttDevice="";
+        String group="";
 
-        public Entry(int index, String title, DATATYPE type){
+        public Entry(int index, String name, DATATYPE type){
             this.index=index;
-            this.title=title;
+            this.name =name;
             this.type=type;
+        }
+        public void setGroup( String group ){
+            this.group=group;
         }
         public void enableMQTT( String mqttDevice){
             this.mqttDevice=mqttDevice;
         }
+
         public String toString(){
-            return "At ["+index+"] get a "+type+" called "+title;
+            return "At ["+index+"] get a "+type+" called "+ name + (group.isEmpty()?" in default group":" in group '"+group+"'");
+        }
+        public String getID(){
+            return group.isEmpty()? name:group+"_"+name;
         }
     }
 }

@@ -10,9 +10,9 @@ import java.util.Optional;
 import java.util.StringJoiner;
 
 public class CommandLineInterface {
-    private static int BUFFER_SIZE = 128;
+    private static final int BUFFER_SIZE = 128;
     ByteBuf buffer = Unpooled.buffer(BUFFER_SIZE);       // Buffer that holds the received data
-    private ArrayList<String> cmdHistory = new ArrayList<>(); // Buffer that holds the processed commands
+    private final ArrayList<String> cmdHistory = new ArrayList<>(); // Buffer that holds the processed commands
     private int cmdHistoryIndex =-1; // Pointer to the last send historical cmd
 
     Channel channel;

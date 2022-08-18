@@ -49,7 +49,7 @@ public class TimeTools {
      * @param outputFormat The desired format for the timestamp
      * @return The input timestamp with the desired output format
      */
-    public static String reformatDate(String date, String inputFormat, String outputFormat) {
+    public static String reformatDate(String date, String inputFormat, String outputFormat){
         try{
             LocalDateTime dt = LocalDateTime.parse(date, DateTimeFormatter.ofPattern(inputFormat).withLocale(Locale.ENGLISH));
             if (dt != null) {
@@ -62,7 +62,7 @@ public class TimeTools {
                     if (dt != null)
                         return dt.format( DateTimeFormatter.ofPattern(outputFormat) );
                 }catch(DateTimeParseException f) {
-                    Logger.error(f);
+                    Logger.error(f.getMessage());
                 }
             }else{
                 Logger.error(e);
@@ -161,8 +161,8 @@ public class TimeTools {
     /**
      * Calculate the delay till the next occurrence of a 'clean' interval start
      * fe. 60000 = 10min => if now 13:42, next at 13:50 or 8min so 8*60*1000
-     * @param interval_millis
-     * @return Amount of millis calculated
+     * @param interval_millis The interval in milliseconds
+     * @return Amount of millis calculated till next
      */
     public static long millisDelayToCleanTime( long interval_millis ){
         LocalDateTime now = LocalDateTime.now();
@@ -208,7 +208,7 @@ public class TimeTools {
                     hs = res/60;
                 }
                 if( hs>23 ){
-                    first = first.plusDays(1).withHour( hs-24 );
+                    first = first.plusDays(hs/24).withHour( hs%24 );
                 }else{
                     first = first.withHour( hs );
                 }
@@ -241,7 +241,7 @@ public class TimeTools {
     	return LocalDateTime.now(ZoneOffset.UTC).getDayOfWeek();    
     }
     /**
-     * Convert the string repr of a time unit to the time unit object
+     * Convert the string representation of a time unit to the time unit object
      * @param unit The string to convert
      * @param def The time unit to return in case of failure
      * @return The resulting time unit
@@ -344,7 +344,7 @@ public class TimeTools {
         long total=0;
         
     	try {
-            if( d != -1 ){ // If H is present in the string
+            if( d != -1 ){ // If D is present in the string
                 total += Tools.parseInt( period.substring(0, d), 0 ); // get the number in front and multiply for h->s
                 d+=1;// increment the index to skip te letter
             }else{
@@ -546,7 +546,7 @@ public class TimeTools {
 		}
 		return amount+"h";
     }
-    /*********************** C A L C U L A T I O N S *******************************************/
+    /* ********************** C A L C U L A T I O N S ****************************************** */
     /**
      * Calculates the seconds till a certain time in UTC
      * @param time The time in standard format

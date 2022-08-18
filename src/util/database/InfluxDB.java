@@ -63,7 +63,8 @@ public class InfluxDB extends Database{
         }
         var db = new InfluxDB(irl,dbname,user,pass);
 
-        db.readFlushSetup( XMLtools.getFirstChildByTag(dbe, "setup") );
+        if( !db.readFlushSetup(XMLtools.getFirstChildByTag(dbe, "flush")))
+            Logger.info("No flush setup read");
         db.connect(false);
         return db;
     }
@@ -305,10 +306,10 @@ public class InfluxDB extends Database{
             var field = influxDB.query(new Query("SHOW FIELD KEYS FROM "+mes.name,dbname)).getResults().get(0);
             var cols = field.getSeries().get(0).getValues();
             for( var col : cols){
-                switch( col.get(1).toString() ){
-                    case "integer": mes.addField(col.get(0).toString(), FIELD_TYPE.INTEGER); break;
-                    case "string": mes.addField(col.get(0).toString(), FIELD_TYPE.STRING); break;
-                    case "float": mes.addField(col.get(0).toString(), FIELD_TYPE.FLOAT); break;
+                switch (col.get(1).toString()) {
+                    case "integer" -> mes.addField(col.get(0).toString(), FIELD_TYPE.INTEGER);
+                    case "string" -> mes.addField(col.get(0).toString(), FIELD_TYPE.STRING);
+                    case "float" -> mes.addField(col.get(0).toString(), FIELD_TYPE.FLOAT);
                 }
             }
         }

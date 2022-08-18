@@ -8,7 +8,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
@@ -33,13 +32,9 @@ public class TcpStream extends BaseStream implements Writable {
 
     TcpHandler handler;
     InetSocketAddress ipsock;
-
     ByteBuf[] deli;
     Bootstrap bootstrap;		// Bootstrap for TCP connections
-
-
     static int bufferSize = 2048; 	// How many bytes are stored before a dump
-    private boolean writableValid = true;
 
     public TcpStream( String id, String ipport, BlockingQueue<Datagram> dQueue, String label, int priority ){
         super(id,label,dQueue);
@@ -104,7 +99,7 @@ public class TcpStream extends BaseStream implements Writable {
 
 		bootstrap.handler(new ChannelInitializer<SocketChannel>() {
 	        @Override
-	        public void initChannel(SocketChannel ch) throws Exception {
+	        public void initChannel(SocketChannel ch) {
 				try{
 					if( deli != null ){
 						ch.pipeline().addLast("framer",  new DelimiterBasedFrameDecoder(bufferSize,deli) );

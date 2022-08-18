@@ -24,16 +24,16 @@ import java.util.concurrent.BlockingQueue;
 
 public class ForwardPool implements Commandable {
     
-    HashMap<String, FilterForward> filters = new HashMap<>();
-    HashMap<String, EditorForward> editors = new HashMap<>();
-    HashMap<String, MathForward> maths = new HashMap<>();
+    private final HashMap<String, FilterForward> filters = new HashMap<>();
+    private final HashMap<String, EditorForward> editors = new HashMap<>();
+    private final HashMap<String, MathForward> maths = new HashMap<>();
 
-    HashMap<String, PathForward> paths = new HashMap<>();
+    private final HashMap<String, PathForward> paths = new HashMap<>();
 
-    BlockingQueue<Datagram> dQueue;
-    Path settingsPath;
-    DataProviding dataProviding;
-    EventLoopGroup nettyGroup;
+    private final BlockingQueue<Datagram> dQueue;
+    private final Path settingsPath;
+    private final DataProviding dataProviding;
+    private final EventLoopGroup nettyGroup;
 
     public ForwardPool(BlockingQueue<Datagram> dQueue, Path settingsPath, DataProviding dataProviding,EventLoopGroup group){
         this.dQueue=dQueue;
@@ -49,20 +49,23 @@ public class ForwardPool implements Commandable {
     public void readSettingsFromXML() {
 
         var xml = XMLtools.readXML(settingsPath);
-        Element filtersEle = XMLtools.getFirstElementByTag(xml, "filters");
-        if (filtersEle != null)
-            readFiltersFromXML(XMLtools.getChildElements(filtersEle, "filter"));
 
-        Element mathsEle = XMLtools.getFirstElementByTag(xml, "maths");
-        if (mathsEle != null)
-            readMathsFromXML(XMLtools.getChildElements(mathsEle, "math"));
+        Logger.info("Loading filters...");
+        XMLtools.getFirstElementByTag(xml, "filters")
+                .ifPresent( ele -> readFiltersFromXML(XMLtools.getChildElements(ele, "filter")));
 
-        Element editorsEle = XMLtools.getFirstElementByTag(xml, "editors");
-        if (editorsEle != null)
-            readEditorsFromXML(XMLtools.getChildElements(editorsEle, "editor"));
+        Logger.info("Loading maths...");
+        XMLtools.getFirstElementByTag(xml, "maths")
+                .ifPresent( ele -> readMathsFromXML(XMLtools.getChildElements(ele, "math")));
+
+        Logger.info("Loading editors...");
+        XMLtools.getFirstElementByTag(xml, "editors")
+                .ifPresent( ele -> readEditorsFromXML(XMLtools.getChildElements(ele, "editor")));
 
         /* Figure out the paths? */
+        Logger.info("Loading paths...");
         readPathsFromXML();
+        Logger.info("Finished loading Forwardpool");
     }
 
     @Override
@@ -96,8 +99,15 @@ public class ForwardPool implements Commandable {
             // Math
             case "mf": case "maths": return replyToMathCmd(request[1],html);
             case "math": ok = getMathForward(request[1]).map(mf -> { mf.addTarget(wr); return true;} ).orElse(false); break;
+            case "":
+                maths.forEach( (k,m) -> m.removeTarget(wr));
+                editors.forEach( (k,e) -> e.removeTarget(wr));
+                filters.forEach( (k,m) -> m.removeTarget(wr));
+                paths.forEach( (k,m) -> m.removeTarget(wr));
+                return "Cleared requests";
             default:
                 return "unknown command: "+request[0]+":"+request[1];
+
         }
         if( ok )
             return "Request for "+request[0]+":"+request[1]+" ok.";
@@ -135,34 +145,37 @@ public class ForwardPool implements Commandable {
 
         String[] cmds = cmd.split(",");
 
+        String cyan = html?"":TelnetCodes.TEXT_CYAN;
+        String green=html?"":TelnetCodes.TEXT_GREEN;
+        String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
+
         StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
-        boolean complex=false;
         switch( cmds[0] ) {
             case "?":
-                join.add(TelnetCodes.TEXT_RED+"Purpose"+TelnetCodes.TEXT_YELLOW)
-                        .add("  Maths can be used to alter data received from any source using mathematics.")
-                        .add("  eg. receive the raw data from a sensor and convert it to engineering values")
+                join.add(TelnetCodes.TEXT_RED+"Purpose"+reg)
+                        .add("  Math forwards can be used to alter data received from any source using mathematics.")
+                        .add("  So fe, receive the raw data from a sensor and convert it to engineering values")
                         .add("  Furthermore, the altered data is considered a source and can thus be used in further steps.")
                         .add("  fe. pass it to a generic that stores it in a database")
                         .add("");
-                join.add(TelnetCodes.TEXT_BLUE+"Notes"+TelnetCodes.TEXT_YELLOW)
+                join.add(TelnetCodes.TEXT_ORANGE+"Notes"+reg)
                         .add("  - Maths don't do anything if it doesn't have a target (label counts as target)")
-                        .add("  - Commands can start with mf: instead of maths:")
+                        .add("  - Commands can start with mf: or maths:")
                         .add("  - ...");
-                join.add(TelnetCodes.TEXT_GREEN+"Create a MathForward"+TelnetCodes.TEXT_YELLOW)
-                        .add("  maths:addmath/add,id,source<,op> -> Add a blank math to the xml with the given id, source and optional op")
-                        .add("  maths:addsource,id,source -> Add the source to the given math")
-                        .add("  maths:addop,id,op -> Add the operation fe. i1=i2+50 to the math with the id")
-                        .add("  maths:alter,id,param:value -> Change a setting, currently delim(eter),label");
-                join.add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW)
-                        .add("  maths:debug,on/off -> Turn debug on/off")
-                        .add("  maths:list -> Get a listing of all the present maths")
-                        .add("  maths:scratchpad,id,value -> Add the given value to the scratchpad of mathf id (or * for all)")
-                        .add("  maths:reload,id -> reloads the given id")
-                        .add("  maths:remove,id -> remove the given id")
-                        .add("  maths:clear -> remove all maths")
-                        .add("  maths:test,id,variables -> Test the given id with the variables (with the correct delimiter)")
-                        .add("  math:id -> Receive the data in the telnet window, also the source reference");
+                join.add(cyan+"Creation"+reg)
+                        .add(green+"  mf:addmath/add,id,source<,op> "+reg+"-> Add a blank math to the xml with the given id, source and optional op")
+                        .add(green+"  mf:addsource,id,source "+reg+"-> Add the source to the given math")
+                        .add(green+"  mf:addop,id,op "+reg+"-> Add the operation fe. i1=i2+50 to the math with the id")
+                        .add(green+"  mf:alter,id,param:value "+reg+"-> Change a setting, currently delim(eter),label");
+                join.add("").add(cyan+"Other"+reg)
+                        .add(green+"  mf:debug,on/off "+reg+"-> Turn debug on/off")
+                        .add(green+"  mf:list "+reg+"-> Get a listing of all the present maths")
+                        .add(green+"  mf:scratchpad,id,value "+reg+"-> Add the given value to the scratchpad of mathf id (or * for all)")
+                        .add(green+"  mf:reload,id "+reg+"-> reloads the given id")
+                        .add(green+"  mf:remove,id "+reg+"-> remove the given id")
+                        .add(green+"  mf:clear "+reg+"-> remove all maths")
+                        .add(green+"  mf:test,id,variables "+reg+"-> Test the given id with the variables (with the correct delimiter)")
+                        .add(green+"  math:id "+reg+"-> Receive the data in the telnet window, also the source reference");
                 return join.toString();
             case "debug":
                 if (cmds[1].equalsIgnoreCase("on")) {
@@ -179,7 +192,7 @@ public class ForwardPool implements Commandable {
                     return "Already math with that id";
                 cmds[1]=cmds[1].toLowerCase();
                 StringJoiner src = new StringJoiner(",");
-                int limit = cmds.length-(complex?1:0);
+                int limit = cmds.length;
                 for( int a=2;a<limit;a++){
                     if( !cmds[a].contains("="))
                         src.add(cmds[a]);
@@ -266,7 +279,7 @@ public class ForwardPool implements Commandable {
                     if( mEle.size() != maths.size() ){ // Meaning filters has more
                         // First mark them as invalid, so references also get deleted
                         maths.entrySet().stream().filter(e -> !altered.contains(e.getKey()) ).forEach( e->e.getValue().setInvalid());
-                        //then remove then safely
+                        //then remove them safely
                         maths.entrySet().removeIf( ee -> !ee.getValue().isConnectionValid());
                     }
                 }
@@ -337,30 +350,34 @@ public class ForwardPool implements Commandable {
 
         String[] cmds = cmd.split(",");
 
+        String cyan = html?"":TelnetCodes.TEXT_CYAN;
+        String green=html?"":TelnetCodes.TEXT_GREEN;
+        String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
+
         StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
         EditorForward ef;
         XMLfab fab;
 
         switch( cmds[0] ) {
             case "?":
-                join.add(TelnetCodes.TEXT_RED+"Purpose"+TelnetCodes.TEXT_YELLOW)
+                join.add(TelnetCodes.TEXT_RED+"Purpose"+reg)
                         .add("  If a next step in the processing needs something altered to the format or layout of the data")
                         .add("  an editor can do this.");
-                join.add(TelnetCodes.TEXT_BLUE+"Notes"+TelnetCodes.TEXT_YELLOW)
+                join.add(TelnetCodes.TEXT_ORANGE+"Notes"+reg)
                         .add("  - Editors don't do anything if it doesn't have a target (label counts as target)")
-                        .add("  - Commands can start with ef:, instead of filters:")
+                        .add("  - Commands can start with ef: or editors:")
                         .add("  - ...");
-                join.add("").add(TelnetCodes.TEXT_GREEN+"Create a EditorForward"+TelnetCodes.TEXT_YELLOW);
-                join.add( "  ef/editors:addeditor/add,id<,source> -> Add a blank filter with an optional source.")
-                    .add( "  ef:reload<,id> -> Reload the editor with the given id or all if no id was given.");
-                join.add("").add(TelnetCodes.TEXT_GREEN+"Other commands"+TelnetCodes.TEXT_YELLOW)
-                        .add("  ef:list -> Get a list of all editors")
-                        .add("  ef:remove,id -> Remove the given editor")
-                        .add("  ef:clear -> Remove all editors")
-                        .add("  ef:edits -> Get a list of all possible edit operations")
-                        .add("  ef:addedit,id,type:value -> Add an edit of the given value, use type:? for format");
+                join.add("").add(cyan+"Creation"+reg);
+                join.add( green+"  ef:add,id<,source> "+reg+"-> Add a blank editor with an optional source.")
+                    .add( green+"  ef:reload<,id> "+reg+"-> Reload the editor with the given id or all if no id was given.");
+                join.add("").add(cyan+"Other commands"+reg)
+                        .add(green+"  ef:list "+reg+"-> Get a list of all editors")
+                        .add(green+"  ef:remove,id "+reg+"-> Remove the given editor")
+                        .add(green+"  ef:clear "+reg+"-> Remove all editors")
+                        .add(green+"  ef:edits "+reg+"-> Get a list of all possible edit operations")
+                        .add(green+"  ef:addedit,id,type:value "+reg+"-> Add an edit of the given value, use type:? for format");
                 return join.toString();
-            case "addblank": case "addeditor": case "add":
+            case "addblank": case "addeditor": case "add": case "new":
                 if( cmds.length<2)
                     return "Not enough arguments, needs to be ef:addeditor,id<,src,>";
                 if( getEditorForward(cmds[1]).isPresent() )
@@ -471,125 +488,140 @@ public class ForwardPool implements Commandable {
                 fab = XMLfab.withRoot(settingsPath,"dcafs","editors");
                 fab.selectOrAddChildAsParent("editor","id",cmds[1]);
 
-                switch(type){
+                switch (type) {
                     /* Splitting */
-                    case "rexsplit":
-                        if( value.equals("?"))
-                            return "ef:addedit,"+cmds[1]+",rexsplit:delimiter,regextomatch";
-                        if( value.startsWith(",")){
-                            deli=",";
-                            value=value.substring(2);
-                        }else{
+                    case "rexsplit" -> {
+                        if (value.equals("?"))
+                            return "ef:addedit," + cmds[1] + ",rexsplit:delimiter,regextomatch";
+                        if (value.startsWith(",")) {
+                            deli = ",";
+                            value = value.substring(2);
+                        } else {
                             int in = value.indexOf(",");
-                            deli = value.substring(0,in);
-                            value=value.substring(in+1);
+                            deli = value.substring(0, in);
+                            value = value.substring(in + 1);
                         }
-                        e.addRexsplit(deli,value);
-                        fab.comment("Find matches on "+value+" then concatenate with "+deli);
-                        addEditNode(fab,type,value,false)
-                                .attr( "delimiter",deli)
-                                .attr("leftover","append").build();
-                        return "Find matches on "+value+" then concatenate with "+deli;
-                    case "resplit":
-                        if( value.equals("?"))
-                            return "ef:addedit,"+cmds[1]+",resplit:delimiter,format";
-                        if( value.startsWith(",")){
-                            deli=",";
-                            value=value.substring(2);
-                        }else{
+                        e.addRexsplit(deli, value);
+                        fab.comment("Find matches on " + value + " then concatenate with " + deli);
+                        addEditNode(fab, type, value, false)
+                                .attr("delimiter", deli)
+                                .attr("leftover", "append").build();
+                        return "Find matches on " + value + " then concatenate with " + deli;
+                    }
+                    case "resplit" -> {
+                        if (value.equals("?"))
+                            return "ef:addedit," + cmds[1] + ",resplit:delimiter,format";
+                        if (value.startsWith(",")) {
+                            deli = ",";
+                            value = value.substring(2);
+                        } else {
                             int in = value.indexOf(",");
-                            deli = value.substring(0,in);
-                            value=value.substring(in+1);
+                            deli = value.substring(0, in);
+                            value = value.substring(in + 1);
                         }
-                        e.addResplit(deli,value,"",true);
-                        fab.comment("Split on "+deli+" then combine according to "+value);
-                        addEditNode(fab,type,value,false)
-                                .attr( "delimiter",deli)
-                                .attr("leftover","append").build();
-                        return "Split on '"+deli+ "', then combine according to "+value+" and append leftover data";
-                    case "charsplit":
-                        if( value.equals("?"))
-                            return "ef:addedit,"+cmds[1]+",rexplit:regextosplitwith";
-                        e.addCharSplit( ",",value );
-                        addEditNode(fab,type,value,true);
+                        e.addResplit(deli, value, "", true);
+                        fab.comment("Split on " + deli + " then combine according to " + value);
+                        addEditNode(fab, type, value, false)
+                                .attr("delimiter", deli)
+                                .attr("leftover", "append").build();
+                        return "Split on '" + deli + "', then combine according to " + value + " and append leftover data";
+                    }
+                    case "charsplit" -> {
+                        if (value.equals("?"))
+                            return "ef:addedit," + cmds[1] + ",rexplit:regextosplitwith";
+                        e.addCharSplit(",", value);
+                        addEditNode(fab, type, value, true);
                         return "Charsplit added with default delimiter";
+                    }
                     /* Timestamp stuff */
-                    case "redate":
-                        if( value.equals("?"))
-                            return "ef:addedit,"+cmds[1]+",redate:index,from,to";
-                        e.addRedate(p[1],p[2],NumberUtils.toInt(p[0]),deli);
-                        addEditNode(fab,"redate",p[2],false);
-                        fab.attr("index",p[0]).build();
-                        return "After splitting on "+deli+" the date on index "+p[0]+" is reformatted from "+p[1]+" to "+p[2];
-                    case "retime":
-                        if( value.equals("?"))
-                            return "ef:addedit,"+cmds[1]+",retime:index,from,to";
-                        e.addRetime(p[0],p[2],NumberUtils.toInt(p[1]),",");
-                        addEditNode(fab,"retime",p[2],false);
-                        fab.attr("index",p[1]).build();
-                        return "After splitting on , the time on index "+p[1]+" is reformatted from "+p[0]+" to "+p[2];
+                    case "redate" -> {
+                        if (value.equals("?"))
+                            return "ef:addedit," + cmds[1] + ",redate:index,from,to";
+                        e.addRedate(p[1], p[2], NumberUtils.toInt(p[0]), deli);
+                        addEditNode(fab, "redate", p[2], false);
+                        fab.attr("index", p[0]).build();
+                        return "After splitting on " + deli + " the date on index " + p[0] + " is reformatted from " + p[1] + " to " + p[2];
+                    }
+                    case "retime" -> {
+                        if (value.equals("?"))
+                            return "ef:addedit," + cmds[1] + ",retime:index,from,to";
+                        e.addRetime(p[0], p[2], NumberUtils.toInt(p[1]), ",");
+                        addEditNode(fab, "retime", p[2], false);
+                        fab.attr("index", p[1]).build();
+                        return "After splitting on , the time on index " + p[1] + " is reformatted from " + p[0] + " to " + p[2];
+                    }
                     /* Replacing */
-                    case "replace":
-                        if( value.equals("?"))
-                            return "ef:addedit,"+cmds[1]+",replace:what,with";
-                        e.addReplacement(p[0],p[1]);
-                        fab.comment("Replace "+p[0]+" with "+p[1]);
-                        fab.addChild("edit",p[1]).attr( "type",type).attr("find",p[0]).build();
-                        return "Replacing "+p[0]+" with "+p[1];
-                    case "rexreplace":
-                        if( value.equals("?"))
-                            return "ef:addedit,"+cmds[1]+",rexreplace:regexwhat,with";
-                        e.addRegexReplacement(p[0],p[1]);
-                        fab.addChild("edit",p[1]).attr( "type",type).attr("find",p[0]).build();
-                        return "Replacing "+p[0]+" with "+p[1];
+                    case "replace" -> {
+                        if (value.equals("?"))
+                            return "ef:addedit," + cmds[1] + ",replace:what,with";
+                        e.addReplacement(p[0], p[1]);
+                        fab.comment("Replace " + p[0] + " with " + p[1]);
+                        fab.addChild("edit", p[1]).attr("type", type).attr("find", p[0]).build();
+                        return "Replacing " + p[0] + " with " + p[1];
+                    }
+                    case "rexreplace" -> {
+                        if (value.equals("?"))
+                            return "ef:addedit," + cmds[1] + ",rexreplace:regexwhat,with";
+                        e.addRegexReplacement(p[0], p[1]);
+                        fab.addChild("edit", p[1]).attr("type", type).attr("find", p[0]).build();
+                        return "Replacing " + p[0] + " with " + p[1];
+                    }
                     /* Remove stuff */
-                    case "remove":
-                        if( value.equals("?"))
-                            return "ef:addedit,"+cmds[1]+",remove:find";
-                        e.addReplacement(value,"");
-                        fab.addChild("edit",value).attr( "type",type).build();
-                        return "Removing "+value+" from the data";
-                    case "rexremove":
-                        if( value.equals("?"))
-                            return "ef:addedit,"+cmds[1]+",rexremove:regexfind";
-                        e.addRegexReplacement(value,"");
-                        fab.addChild("edit",value).attr( "type",type).build();
-                        return "Removing matches of "+value+" from the data";
-                    case "trim":
-                        if( value.equals("?"))
-                            return "ef:addedit,"+cmds[1]+",trim";
+                    case "remove" -> {
+                        if (value.equals("?"))
+                            return "ef:addedit," + cmds[1] + ",remove:find";
+                        e.addReplacement(value, "");
+                        fab.addChild("edit", value).attr("type", type).build();
+                        return "Removing " + value + " from the data";
+                    }
+                    case "rexremove" -> {
+                        if (value.equals("?"))
+                            return "ef:addedit," + cmds[1] + ",rexremove:regexfind";
+                        e.addRegexReplacement(value, "");
+                        fab.addChild("edit", value).attr("type", type).build();
+                        return "Removing matches of " + value + " from the data";
+                    }
+                    case "trim" -> {
+                        if (value.equals("?"))
+                            return "ef:addedit," + cmds[1] + ",trim";
                         e.addTrim();
-                        fab.addChild("edit").attr( "type",type).build();
+                        fab.addChild("edit").attr("type", type).build();
                         return "Trimming spaces from data";
-                    case "cutstart":
-                        if( value.equals("?"))
-                            return "ef:addedit,"+cmds[1]+",cutstart:charcount";
+                    }
+                    case "cutstart" -> {
+                        if (value.equals("?"))
+                            return "ef:addedit," + cmds[1] + ",cutstart:charcount";
                         e.addCutStart(NumberUtils.toInt(value));
-                        fab.addChild("edit",value).attr( "type",type).build();
-                        return "Cutting "+value+" char(s) from the start";
-                    case "cutend":
-                        if( value.equals("?"))
-                            return "ef:addedit,"+cmds[1]+",cutend:charcount";
+                        fab.addChild("edit", value).attr("type", type).build();
+                        return "Cutting " + value + " char(s) from the start";
+                    }
+                    case "cutend" -> {
+                        if (value.equals("?"))
+                            return "ef:addedit," + cmds[1] + ",cutend:charcount";
                         e.addCutEnd(NumberUtils.toInt(value));
-                        return "Cutting "+value+" char(s) from the end";
+                        return "Cutting " + value + " char(s) from the end";
+                    }
                     /* Adding stuff */
-                    case "prepend": case "prefix":
-                        if( value.equals("?"))
-                            return "ef:addedit,"+cmds[1]+",prepend:toprepend or ef:addedit,prefix:toprepend";
+                    case "prepend", "prefix" -> {
+                        if (value.equals("?"))
+                            return "ef:addedit," + cmds[1] + ",prepend:toprepend or ef:addedit,prefix:toprepend";
                         e.addPrepend(value);
-                        fab.addChild("edit",value).attr( "type",type).build();
-                        return "Prepending "+value+" to the data";
-                    case "insert":
-                        if( value.equals("?"))
-                            return "ef:addedit,"+cmds[1]+",insert:position,toinsert";
-                        e.addInsert(NumberUtils.toInt(p[0]),p[1]);
-                        fab.addChild("edit",p[1]).attr("position",p[0]).attr( "type",type).build();
-                        return "Inserting "+value+" at char "+p[0]+" in the data";
-                    case "append": case "suffix":
-                        if( value.equals("?"))
-                            return "ef:addedit,"+cmds[1]+",append:toappend or ef:addedit,"+cmds[1]+",suffix:toappend";
+                        fab.addChild("edit", value).attr("type", type).build();
+                        return "Prepending " + value + " to the data";
+                    }
+                    case "insert" -> {
+                        if (value.equals("?"))
+                            return "ef:addedit," + cmds[1] + ",insert:position,toinsert";
+                        e.addInsert(NumberUtils.toInt(p[0]), p[1]);
+                        fab.addChild("edit", p[1]).attr("position", p[0]).attr("type", type).build();
+                        return "Inserting " + value + " at char " + p[0] + " in the data";
+                    }
+                    case "append", "suffix" -> {
+                        if (value.equals("?"))
+                            return "ef:addedit," + cmds[1] + ",append:toappend or ef:addedit," + cmds[1] + ",suffix:toappend";
                         e.addAppend(value);
-                        return "Appending "+value+" to the data";
+                        return "Appending " + value + " to the data";
+                    }
                 }
                 return "Edit added";
         }
@@ -628,35 +660,39 @@ public class ForwardPool implements Commandable {
 
         String[] cmds = cmd.split(",");
 
+        String cyan = html?"":TelnetCodes.TEXT_CYAN;
+        String green=html?"":TelnetCodes.TEXT_GREEN;
+        String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
+
         StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
         FilterForward ff;
         switch( cmds[0] ){
             case "?":
-                join.add(TelnetCodes.TEXT_RED+"Purpose"+TelnetCodes.TEXT_YELLOW)
+                join.add(TelnetCodes.TEXT_RED+"Purpose"+reg)
                         .add("  If a next step in the processing doesn't want to receive some of the data, a filterforward can")
                         .add("  be used to remove this data from the source.");
-                join.add(TelnetCodes.TEXT_BLUE+"Notes"+TelnetCodes.TEXT_YELLOW)
+                join.add(TelnetCodes.TEXT_ORANGE+"Notes"+reg)
                         .add("  - Filter works based on exclusion, meaning no rules = all data goes through")
                         .add("  - Filter doesn't do anything if it doesn't have a target (label counts as target)")
-                        .add("  - Commands can start with ff: instead of filters:")
+                        .add("  - Commands can start with filters: instead of ff:")
                         .add("  - ...");
-                join.add("").add(TelnetCodes.TEXT_GREEN+"Create a FilterForward"+TelnetCodes.TEXT_YELLOW);
-                join.add( "  filters:addfilter/add,id<,source> -> Add a filter without rules and optional source.");
-                join.add( "  filters:rules -> Get a list of all the possible rules with a short explanation");
-                join.add( "  filters:addshort,id,src,rule:value -> Adds a filter with the given source and rule (type:value)");
-                join.add( "  filters:addsource,id,source -> Add a source to the given filter");
-                join.add( "  filters:addrule,id,rule:value -> Add a rule to the given filter");
+                join.add("").add(cyan+"Creation"+reg);
+                join.add( green+"  ff:add,id<,source> "+reg+"-> Add a filter without rules and optional source.");
+                join.add( green+"  ff:rules "+reg+"-> Get a list of all the possible rules with a short explanation");
+                join.add( green+"  ff:addshort,id,src,rule:value "+reg+"-> Adds a filter with the given source and rule (type:value)");
+                join.add( green+"  ff:addsource,id,source "+reg+"-> Add a source to the given filter");
+                join.add( green+"  ff:addrule,id,rule:value "+reg+"-> Add a rule to the given filter");
 
-                join.add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW);
-                join.add( "  filters:alter,id,param:value -> Alter a parameter, for now only altering the label is possible");
-                join.add( "  filters:reload,id -> Reload the filter with the given id");
-                join.add( "  filters:reload -> Clear the list and reload all the filters");
-                join.add( "  filters:remove,id -> Remove the filter with the given id");
-                join.add( "  filters:test,id,data -> Test if the data would pass the filter");
-                join.add( "  filters:list or ff -> Get a list of all the currently existing filters.");
-                join.add( "  filters:delrule,id,index -> Remove a rule from the filter based on the index given in ff:list");
-                join.add( "  filters:swaprawsrc,id,ori,new -> Swap the raw ori source of the given filter with the new raw one, mimick redundancy");
-                join.add( "  filter:id -> Receive the data in the telnet window, also the source reference");
+                join.add("").add(cyan+"Other"+reg);
+                join.add( green+"  ff:alter,id,param:value "+reg+"-> Alter a parameter, for now only altering the label is possible");
+                join.add( green+"  ff:reload,id "+reg+"-> Reload the filter with the given id");
+                join.add( green+"  ff:reload "+reg+"-> Clear the list and reload all the filters");
+                join.add( green+"  ff:remove,id "+reg+"-> Remove the filter with the given id");
+                join.add( green+"  ff:test,id,data "+reg+"-> Test if the data would pass the filter");
+                join.add( green+"  ff:list or ff "+reg+"-> Get a list of all the currently existing filters.");
+                join.add( green+"  ff:delrule,id,index "+reg+"-> Remove a rule from the filter based on the index given in ff:list");
+                join.add( green+"  ff:swaprawsrc,id,ori,new "+reg+"-> Swap the raw ori source of the given filter with the new raw one, mimick redundancy");
+                join.add( green+"  filter:id "+reg+"-> Receive the data in the telnet window, also the source reference");
 
                 return join.toString();
             case "debug":
@@ -702,7 +738,7 @@ public class ForwardPool implements Commandable {
                 if( getFilterForward(cmds[1]).map(f -> f.addSource(source) ).orElse(false) )
                     return "Source added";
                 return "Failed to add source, no such filter.";
-            case "addblank": case "addfilter": case "add":
+            case "addblank": case "addfilter": case "add": case "new":
                 if( cmds.length<2)
                     return "Not enough arguments, needs to be ff/filters:addfilter,id<,src,>";
                 if( getFilterForward(cmds[1]).isPresent() )
@@ -758,14 +794,16 @@ public class ForwardPool implements Commandable {
                 if( fab.selectChildAsParent("filter","id",cmds[1]).isEmpty() )
                     return "No such filter node '"+cmds[1]+"'";
 
-                switch( param ){
-                    case "label":
+                switch (param) {
+                    case "label" -> {
                         ff.setLabel(value);
                         fab.attr("label", value);
                         return fab.build() ? "Label changed" : "Label change failed";
-                    case "delim": case "delimiter":
+                    }
+                    case "delim", "delimiter" -> {
                         fab.attr("delimiter", value);
                         return fab.build() ? "Delimiter changed" : "Delimiter change failed";
+                    }
                 }
                 return "No valid alter target: " + param;
             case "swaprawsrc":
@@ -778,12 +816,6 @@ public class ForwardPool implements Commandable {
                 }
                 ff=fopt.get();
                 dQueue.add( Datagram.system("stop").writable(ff));
-                /*var oriopt = getStream(cmds[2]);
-                if( oriopt.isEmpty() )
-                    return "No valid ori given";
-                if( getStream(cmds[3]).isEmpty() )
-                    return "No valid new given";
-                oriopt.get().removeTarget(ff.getID());*/
 
                 ff.removeSource("raw:"+cmds[2]);
                 ff.addSource("raw:"+cmds[3]);
@@ -856,31 +888,36 @@ public class ForwardPool implements Commandable {
     public String replyToPathCmd(String cmd, Writable wr, boolean html ){
         var cmds =cmd.split(",");
         boolean blank=false;
+
+        String cyan = html?"":TelnetCodes.TEXT_CYAN;
+        String green=html?"":TelnetCodes.TEXT_GREEN;
+        String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
+
         XMLfab fab;
         switch(cmds[0]){
             case "?":
                 StringJoiner help = new StringJoiner("\r\n");
-                help.add(TelnetCodes.TEXT_RESET+TelnetCodes.TEXT_GREEN+"General info"+TelnetCodes.TEXT_YELLOW)
+                help.add(TelnetCodes.TEXT_RESET+TelnetCodes.TEXT_ORANGE+"Notes"+reg)
                 .add(" Paths are used to combine multiple different forwards in a single structure, this allows for a")
                 .add(" lot of attributes to be either generated by dcafs fe. src,label or omitted (id's) which reduces")
                 .add(" the amount of xml the user needs to write.");
-                help.add("").add(TelnetCodes.TEXT_GREEN+"Add/build new paths"+TelnetCodes.TEXT_YELLOW)
-                .add(" paths:addpath/add,id,src -> Add a path with the given id and src")
-                .add(" paths:addfile/add,id,src -> Add a path file with the given id and src")
-                .add(" paths:addsteps,id,format -> Add empty steps to the path")
+                help.add("").add(cyan+"Add/build new paths"+reg)
+                .add(green+" pf:addpath/add,id,src "+reg+"-> Add a path with the given id and src")
+                .add(green+" pf:addfile/add,id,src "+reg+"-> Add a path file with the given id and src")
+                .add(green+" pf:addsteps,id,format "+reg+"-> Add empty steps to the path")
                 .add("                             Format options are:")
                 .add("                             F -> filter without subs")
                 .add("                             f* -> filter with one sub per f fe. ff = two subnodes")
                 .add("                             Same applies for M(ath),m(op),E(ditor),e(edit)")
                 .add("                             Generic also has paths:addgen but G(eneric) and i(nt), r(eal),t(ext) work")
-                .add(" paths:addgen,pathid<:genid>,group,format -> genid is optional, default is same as pathid format is the same ")
+                .add(green+" pf:addgen,pathid<:genid>,group,format "+reg+"-> genid is optional, default is same as pathid format is the same ")
                 .add("                                             as gens:addblank fe. i2temp -> integer on index 2 named temp")
                 .add("                                             multiple with , delimiting is possible");
-                help.add("").add(TelnetCodes.TEXT_GREEN+"Other"+TelnetCodes.TEXT_YELLOW)
-                .add(" paths:reload,id -> reload the path with the given id")
-                .add(" paths:readpath,id,path -> Add a path using a path xml")
-                .add(" paths:list -> List all the currently loaded paths")
-                .add(" paths:debug,id,stepnr/stepid -> Request the data from a single step in the path (nr:0=first; -1=custom src)");
+                help.add("").add(cyan+"Other"+reg)
+                .add(green+" pf:reload,id "+reg+"-> reload the path with the given id")
+                .add(green+" pf:readpath,id,path "+reg+"-> Add a path using a path xml")
+                .add(green+" pf:list "+reg+"-> List all the currently loaded paths")
+                .add(green+" pf:debug,id,stepnr/stepid "+reg+"-> Request the data from a single step in the path (nr:0=first; -1=custom src)");
                 return help.toString();
             case "reload":
                 if( cmds.length==1) {
@@ -925,7 +962,7 @@ public class ForwardPool implements Commandable {
                 dQueue.add( Datagram.system("gens:reload") );
                 readPathsFromXML();
                 return "New path file added and reloaded";
-            case "addblank": case "addpath": case "add":
+            case "addpath": case "add": case "new":
                 blank=true;
                 if( cmds.length<2) {
                     return "To few arguments, expected pf:add,id,src";
@@ -1078,7 +1115,6 @@ public class ForwardPool implements Commandable {
     public void readPathsFromXML(){
         XMLfab.getRootChildren(settingsPath,"dcafs","paths","path").forEach(
                 pathEle -> {
-
                     PathForward path = new PathForward(dataProviding,dQueue,nettyGroup);
                     var p = paths.get(path.getID());
                     if( p!=null)

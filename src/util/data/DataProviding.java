@@ -1,7 +1,6 @@
 package util.data;
 
 import das.IssuePool;
-import util.gis.Waypoint;
 import util.gis.Waypoints;
 import util.xml.XMLfab;
 
@@ -18,27 +17,23 @@ public interface DataProviding {
     Optional<NumericVal> getNumericVal( String id);
     String buildNumericalMem( String exp, ArrayList<NumericVal> nums, int offset);
 
-    /* Double */
-    Optional<DoubleVal> getDoubleVal(String param );
-    DoubleVal getOrAddDoubleVal( String id );
-    boolean renameDouble( String from, String to, boolean alterXml);
-    boolean hasDouble( String id);
-    double getDouble(String id, double defVal, boolean createIfNew);
-    double getDouble(String id, double bad);
-
-    boolean setDouble(String id, double value);
-    boolean updateDouble(String id, double bad);
-    int updateDoubleGroup(String group, double value);
+    /* Real */
+    Optional<RealVal> getRealVal(String id );
+    boolean addRealVal( RealVal rv, boolean storeInXML );
+    boolean renameReal(String from, String to, boolean alterXml);
+    boolean hasReal(String id);
+    double getReal(String id, double bad);
+    boolean updateReal(String id, double value);
+    int updateRealGroup(String group, double value);
 
     /* Integer */
-    Optional<IntegerVal> getIntegerVal(String param );
-    IntegerVal getOrAddIntegerVal( String id );
+    Optional<IntegerVal> getIntegerVal(String id );
+    IntegerVal addIntegerVal( String group, String name );
+    IntegerVal addIntegerVal(IntegerVal iv, boolean storeInXML);
     boolean renameInteger( String from, String to, boolean alterXml);
     boolean hasInteger( String id);
-    int getInteger(String id, int defVal, boolean createIfNew);
     int getInteger(String id, int bad);
 
-    boolean setInteger(String id, int value);
     boolean updateInteger(String id, int bad);
     int updateIntegerGroup(String group, int value);
 

@@ -153,8 +153,11 @@ public class GisTools {
         }
 
         Document xml = XMLtools.readXML( gpxFile );
-        Element trk = XMLtools.getFirstElementByTag( xml, "trk" );
-        Element trkseg = XMLtools.getChildElements(trk, "trkseg").get(0);
+        var trkOpt = XMLtools.getFirstElementByTag( xml, "trk" );
+        if( trkOpt.isEmpty())
+            return;
+
+        Element trkseg = XMLtools.getChildElements(trkOpt.get(), "trkseg").get(0);
 
         Element req = xml.createElement("trkpt");
         req.setAttribute( "lat", ""+lat );

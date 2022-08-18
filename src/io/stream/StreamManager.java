@@ -1,5 +1,6 @@
 package io.stream;
 
+import das.Commandable;
 import das.IssuePool;
 import io.Writable;
 import io.collector.CollectorFuture;
@@ -17,7 +18,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.commons.lang3.StringUtils;
 import org.tinylog.Logger;
-import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import util.tools.TimeTools;
 import util.tools.Tools;
@@ -25,6 +25,7 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
+import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -36,28 +37,28 @@ import java.util.concurrent.*;
  * data from it. It uses the internal class StreamDescriptor to hold this
  * information. All connections are made using the Netty 4.x library.
  */
-public class StreamManager implements StreamListener, CollectorFuture {
+public class StreamManager implements StreamListener, CollectorFuture, Commandable {
 
-	private BlockingQueue<Datagram> dQueue; // Holds the data for the DataWorker
+	private final BlockingQueue<Datagram> dQueue; // Holds the data for the DataWorker
 
 	// Netty 
 	private Bootstrap bootstrapTCP;		// Bootstrap for TCP connections
 	private Bootstrap bootstrapUDP;	  	// Bootstrap for UDP connections
 
-	private EventLoopGroup eventLoopGroup;	// Event loop used by the netty stuff
+	private final EventLoopGroup eventLoopGroup;	// Event loop used by the netty stuff
 
-	private IssuePool issues;			// Handles the issues/problems that arise
+	private final IssuePool issues;			// Handles the issues/problems that arise
 	private int retryDelayMax = 30;			// The minimum time between reconnection attempts
 	private int retryDelayIncrement = 5;	// How much the delay increases between attempts
 
-	private HashMap<String, ConfirmCollector> confirmCollectors = new HashMap<>();
+	private final HashMap<String, ConfirmCollector> confirmCollectors = new HashMap<>();
 
-	private LinkedHashMap<String,BaseStream> streams = new LinkedHashMap<>();
+	private final LinkedHashMap<String,BaseStream> streams = new LinkedHashMap<>();
 
 	private Path settingsPath = Path.of("settings.xml"); // Path to the xml file
-	private boolean debug = false; // Whether or not in debug mode, gives more feedback
+	private boolean debug = false; // Whether in debug mode, gives more feedback
 
-	private ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(); // scheduler for the connection attempts
+	private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(); // scheduler for the connection attempts
 	private static final String XML_PARENT_TAG="streams";
 	private static final String XML_CHILD_TAG="stream";
 
@@ -160,15 +161,6 @@ public class StreamManager implements StreamListener, CollectorFuture {
 			join.add( "S" + (a++) + ":" + id);
 		}
 		return join.toString();
-	}
-	/**
-	 * Get a list of all the StreamDescriptors available
-	 * 
-	 * @return A String with a line for each StreamDescriptor which looks like
-	 *         Sxx=id
-	 */
-	public String getStreamList() {
-		return getStreamList(false);
 	}
 	/**
 	 * Get a list of all currently active labels
@@ -302,7 +294,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 					if( txt.indexOf("\\") < txt.length()-2 ){
 						txt = Tools.fromEscapedStringToBytes(txt);
 					}
-					boolean written = false;
+					boolean written;
 					if( txt.endsWith("\\0")){
 						written=((Writable)stream).writeString(StringUtils.removeEnd(txt,"\\0"));
 					}else{
@@ -356,35 +348,26 @@ public class StreamManager implements StreamListener, CollectorFuture {
 	public String reloadStream( String id ) {
 
 		Logger.info("Reloading "+id+ " from "+ settingsPath.toAbsolutePath());
-		Document xmlDoc = XMLtools.readXML(settingsPath);
-		if( xmlDoc != null ){
-			Element streamElement = XMLtools.getFirstElementByTag(xmlDoc, XML_PARENT_TAG);
-			var child = XMLfab.withRoot(settingsPath,"dcafs","streams").getChild("stream","id",id);
-			var base = getStream(id);
-			if( child.isEmpty() )
-				return "No stream named "+id+" found.";
-
-			if( base.isPresent() ){ // meaning reloading an existing one
-				var str = base.get();
-				str.disconnect();
-				str.readFromXML(child.get());
-				str.reconnectFuture = scheduler.schedule( new DoConnection( str ), 0, TimeUnit.SECONDS );
-				return "Reloaded and trying to reconnect";
-			}else{
-				addStreamFromXML(child.get());
-				return "Loading new stream.";
-			}
-		}else{
+		if(Files.notExists(settingsPath)){
 			Logger.error("Failed to read xml file at "+ settingsPath.toAbsolutePath());
 			return "Failed to read xml";
 		}
-	}
-	/**
-	 * Disconnect a stream
-	 * @param id The id of the stream to disconnect
-	 */
-	private void disconnectStream( String id ){
-		getStream(id).ifPresent(BaseStream::disconnect);
+
+		var childOpt = XMLfab.withRoot(settingsPath,"dcafs","streams").getChild("stream","id",id);
+		var baseOpt = getStream(id);
+		if( childOpt.isEmpty() )
+			return "No stream named "+id+" found.";
+
+		if( baseOpt.isPresent() ){ // meaning reloading an existing one
+			var str = baseOpt.get();
+			str.disconnect();
+			str.readFromXML(childOpt.get());
+			str.reconnectFuture = scheduler.schedule( new DoConnection( str ), 0, TimeUnit.SECONDS );
+			return "Reloaded and trying to reconnect";
+		}else{
+			addStreamFromXML(childOpt.get());
+			return "Loading new stream.";
+		}
 	}
 	/* ***************************** A D D I N G C H A N N E L S ******************************************/
 	/**
@@ -402,22 +385,22 @@ public class StreamManager implements StreamListener, CollectorFuture {
 			Logger.error(e);
 		}
 
-		Element streamsElement = XMLtools.getFirstElementByTag( xml, "streams");
-		if( streamsElement!=null) {
-			retryDelayIncrement = XMLtools.getChildIntValueByTag(streamsElement, "retrydelayincrement", 5);
-			retryDelayMax = XMLtools.getChildIntValueByTag(streamsElement, "retrydelaymax", 60);
-		}
 		if( !streams.isEmpty()){
-			streams.values().forEach( bs -> bs.disconnect());
+			streams.values().forEach(BaseStream::disconnect);
 		}
 		streams.clear(); // Clear out before the reread
 
-		for( Element el : XMLtools.getChildElements( streamsElement, XML_CHILD_TAG)){
-			BaseStream bs = addStreamFromXML(el);
-			if( bs != null ){
-				streams.put( bs.getID().toLowerCase(),bs);
+		XMLtools.getFirstElementByTag( xml, "streams").ifPresent( ele -> {
+			retryDelayIncrement = XMLtools.getChildIntValueByTag(ele, "retrydelayincrement", 5);
+			retryDelayMax = XMLtools.getChildIntValueByTag(ele, "retrydelaymax", 60);
+
+			for( Element el : XMLtools.getChildElements( ele, XML_CHILD_TAG)){
+				BaseStream bs = addStreamFromXML(el);
+				if( bs != null ){
+					streams.put( bs.getID().toLowerCase(),bs);
+				}
 			}
-		}	
+		});
 	}
 	/**
 	 * Add a single channel from an XML element
@@ -584,23 +567,26 @@ public class StreamManager implements StreamListener, CollectorFuture {
 		return isStreamOk(id,false);
 	}
 
-	/**
-	 * Checks if the given stream is from the Modbus TCP type
-	 * @param id The id of the stream
-	 * @return True if it's modbus
-	 */
-	public boolean isModbus( String id ){
-		BaseStream base = streams.get(id.toLowerCase());
-		return base.getClass() == ModbusTCPStream.class;
-	}
 	/* ***************************************************************************************************** */
+	@Override
+	public String replyToCommand(String[] request, Writable wr, boolean html) {
+		String find = request[0].toLowerCase().replaceAll("\\d+","_");
+		return switch( find ) {
+			case "ss", "streams" -> replyToStreamCommand(request[1], html);
+			case "rios" -> replyToStreamCommand("rios", html);
+			case "raw","stream" -> "Request for "+request[0]+":"+request[1]+" "+( addForwarding(request[1],wr)?"ok":"failed");
+			case "s_","h_" -> doSorH( request);
+			case "","stop" -> removeWritable(wr)?"Ok.":"";
+			default -> "Unknown Command";
+		};
+	}
 	/**
 	 * The streampool can give replies to certain predetermined questions
 	 * @param request The question to ask
-	 * @param html Whether or not the answer should use html or regular line endings
+	 * @param html Whether the answer should use html or regular line endings
 	 * @return The answer or Unknown Command if the question wasn't understood
 	 */
-	public String replyToCommand(String request, Writable wrOri, boolean html ){
+	public String replyToStreamCommand(String request, boolean html ){
 
 		String nl = html?"<br>":"\r\n";
 
@@ -610,42 +596,48 @@ public class StreamManager implements StreamListener, CollectorFuture {
 		if( cmds.length > 1 ){				
 			device = cmds[1].replace(" ", "").toLowerCase(); // Remove spaces
 		}
+
+		String cyan = html?"":TelnetCodes.TEXT_CYAN;
+		String green=html?"":TelnetCodes.TEXT_GREEN;
+		String ora = html?"":TelnetCodes.TEXT_ORANGE;
+		String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
+
 		StringJoiner join = new StringJoiner(nl);
 		BaseStream stream;
 		XMLfab fab;
 
 		switch( cmds[0] ){
 			case "?":
-				join.add(TelnetCodes.TEXT_RESET+TelnetCodes.TEXT_GREEN+"General info"+TelnetCodes.TEXT_YELLOW)
+				join.add(TelnetCodes.TEXT_RESET+ora+"Notes"+reg)
 					.add("-> ss: and streams: do the same thing")
 					.add("-> Every stream has at least:")
 					.add("   - a unique id which is used to identify it")
 					.add("   - a label which is used to determine how the data is processed")
 					.add("   - an eol (end of line), the default is crlf")
 					.add("   - ...");
-				join.add("").add(TelnetCodes.TEXT_GREEN+"Add new streams"+TelnetCodes.TEXT_YELLOW)
-					.add(" ss:addtcp,id,ip:port,label -> Add a TCP stream to xml and try to connect")
-					.add(" ss:addudp,id,ip:port,label -> Add a UDP stream to xml and connect")
-					.add(" ss:addserial,id,port:baudrate,label -> Add a serial stream to xml and try to connect" )
-					.add(" ss:addlocal,id,label,source -> Add a internal stream that handles internal data")
-				.add("").add(TelnetCodes.TEXT_GREEN+"Info about streams"+TelnetCodes.TEXT_YELLOW)
-					.add(" ss:labels -> get active labels.")
-					.add(" ss:buffers -> Get confirm buffers.")
-					.add(" ss:status -> Get streamlist.")
-					.add(" ss:requests -> Get an overview of all the datarequests held by the streams")
-				.add("").add(TelnetCodes.TEXT_GREEN+"Interact with stream objects"+TelnetCodes.TEXT_YELLOW)
-					.add(" ss:recon,id -> Try reconnecting the stream")
-					.add(" ss:reload<,id> -> Reload the stream with the given id or all if no id is specified.")
-					.add(" ss:store,id -> Update the xml entry for this stream")
-					.add(" ss:alter,id,parameter:value -> Alter the given parameter options label,baudrate,ttl")
-					.add(" ss:addwrite,id,when:data -> Add a triggered write, possible when are hello (stream opened) and wakeup (stream idle)")
-					.add(" ss:addcmd,id,when:data -> Add a triggered cmd, possible when are open,idle,!idle,close")
-				.add("").add(TelnetCodes.TEXT_GREEN+"Route data from or to a stream"+TelnetCodes.TEXT_YELLOW)
-					.add(" ss:forward,source,id -> Forward the data from a source to the stream, source can be any object that accepts a writable")
-					.add(" ss:connect,id1,if2 -> Data is interchanged between the streams with the given id's")
-					.add(" ss:echo,id -> Toggles that all the data received on this stream will be returned to sender")
-					.add(" ss:send,id,data(,reply) -> Send the given data to the id with optional reply")
-				.add("").add(TelnetCodes.TEXT_GREEN+"Send data to stream via telnet"+TelnetCodes.TEXT_YELLOW)
+				join.add("").add(cyan+"Add new streams"+reg)
+					.add(green+" ss:addtcp,id,ip:port<,label> "+reg+"-> Add a TCP stream to xml (optional label) and try to connect")
+					.add(green+" ss:addudp,id,ip:port<,label> "+reg+"-> Add a UDP stream to xml (optional label) and connect")
+					.add(green+" ss:addserial,id,port:baudrate<,label>"+reg+" -> Add a serial stream to xml (optional label) and try to connect" )
+					.add(green+" ss:addlocal,id,label,source "+reg+"-> Add a internal stream that handles internal data")
+				.add("").add(cyan+"Info about streams"+reg)
+					.add(green+" ss:labels "+reg+"-> get active labels.")
+					.add(green+" ss:buffers "+reg+"-> Get confirm buffers.")
+					.add(green+" ss:status "+reg+"-> Get streamlist.")
+					.add(green+" ss:requests "+reg+"-> Get an overview of all the datarequests held by the streams")
+				.add("").add(cyan+"Interact with stream objects"+reg)
+					.add(green+" ss:recon,id "+reg+"-> Try reconnecting the stream")
+					.add(green+" ss:reload<,id> "+reg+"-> Reload the stream with the given id or all if no id is specified.")
+					.add(green+" ss:store,id "+reg+"-> Update the xml entry for this stream")
+					.add(green+" ss:alter,id,parameter:value "+reg+"-> Alter the given parameter options label,baudrate,ttl")
+					.add(green+" ss:addwrite,id,when:data "+reg+"-> Add a triggered write, possible when are hello (stream opened) and wakeup (stream idle)")
+					.add(green+" ss:addcmd,id,when:data "+reg+"-> Add a triggered cmd, possible when are open,idle,!idle,close")
+				.add("").add(cyan+"Route data from or to a stream"+reg)
+					.add(green+" ss:forward,source,id "+reg+"-> Forward the data from a source to the stream, source can be any object that accepts a writable")
+					.add(green+" ss:connect,id1,if2 "+reg+"-> Data is interchanged between the streams with the given id's")
+					.add(green+" ss:echo,id "+reg+"-> Toggles that all the data received on this stream will be returned to sender")
+					.add(green+" ss:send,id,data(,reply) "+reg+"-> Send the given data to the id with optional reply")
+				.add("").add(cyan+"Send data to stream via telnet"+reg)
 					.add("Option 1) First get the index of the streams with ss or streams")
 					.add("          Then use Sx:data to send data to the given stream (eol will be added)")
 					.add("Option 2) ss:send,id,data -> Send the data to the given stream and append eol"+TelnetCodes.TEXT_BRIGHT);
@@ -670,7 +662,7 @@ public class StreamManager implements StreamListener, CollectorFuture {
 			case "cleartargets":
 				if( cmds.length != 2 ) // Make sure we got the correct amount of arguments
 					return "Bad amount of arguments, need 2 ss:clearrequests,id";
-				return "Targets cleared:"+getStream(cmds[1]).map( b -> b.clearTargets()).orElse(0);
+				return "Targets cleared:"+getStream(cmds[1]).map(BaseStream::clearTargets).orElse(0);
 			case "recon":
 				if( cmds.length != 2 ) // Make sure we got the correct amount of arguments
 					return "Bad amount of arguments, need 2 (recon,id)";
@@ -723,9 +715,9 @@ public class StreamManager implements StreamListener, CollectorFuture {
 				stream.addTriggeredAction(event,cmd);
 				return fab.build()?"Trigger added":"Altering xml failed";
 			case "alter":
-				stream = streams.get(cmds[1].toLowerCase());
 				if( cmds.length != 3)
 					return "Bad amount of arguments, should be ss:alter,id,param:value";
+				stream = streams.get(cmds[1].toLowerCase());
 
 				if( stream == null )
 					return "No such stream: "+cmds[1];
@@ -742,32 +734,31 @@ public class StreamManager implements StreamListener, CollectorFuture {
 				if( fab.selectChildAsParent("stream","id",cmds[1]).isEmpty() )
 					return "No such stream '"+cmds[1]+"'";
 
-				Element f;
 				boolean reload=false;
-				switch( alter[0] ){
-					case "label":
+				switch (alter[0]) {
+					case "label" -> {
 						stream.setLabel(alter[1]);
-						fab.alterChild("label",alter[1]);
-						break; 
-					case "baudrate":
-						if( !(stream instanceof SerialStream) )
+						fab.alterChild("label", alter[1]);
+					}
+					case "baudrate" -> {
+						if (!(stream instanceof SerialStream))
 							return "Not a Serial port, no baudrate to change";
-						((SerialStream)stream).setBaudrate(Tools.parseInt(alter[1], -1));
-						fab.alterChild("serialsettings",((SerialStream)stream).getSerialSettings());
-					break;
-					case "ttl": 
-						if( !alter[1].equals("-1")){
-							stream.setReaderIdleTime( TimeTools.parsePeriodStringToSeconds(alter[1]));
-							fab.alterChild("ttl",alter[1]);
-						}else{
+						((SerialStream) stream).setBaudrate(Tools.parseInt(alter[1], -1));
+						fab.alterChild("serialsettings", ((SerialStream) stream).getSerialSettings());
+					}
+					case "ttl" -> {
+						if (!alter[1].equals("-1")) {
+							stream.setReaderIdleTime(TimeTools.parsePeriodStringToSeconds(alter[1]));
+							fab.alterChild("ttl", alter[1]);
+						} else {
 							fab.removeChild("ttl");
 						}
-						reload=true;
-					break;
-					default:
-						fab.alterChild(alter[0],alter[1]);
-						reload=true;
-					break;
+						reload = true;
+					}
+					default -> {
+						fab.alterChild(alter[0], alter[1]);
+						reload = true;
+					}
 				}
 				if( fab.build() ){
 					if( reload )
@@ -894,10 +885,9 @@ public class StreamManager implements StreamListener, CollectorFuture {
 				if( streams.get(cmds[1].toLowerCase()) != null )// Make sure we don't overwrite an existing connection
 					return "Connection exists with that id ("+cmds[1]+") not creating it";
 
-				if( cmds.length>=4)
-					cmds[3]=request.substring( request.indexOf(","+cmds[3])+1);
+				cmds[3]=request.substring( request.indexOf(","+cmds[3])+1);
 
-				UdpServer udpserver = new UdpServer(cmds[1],Integer.parseInt(cmds[2]),dQueue,cmds[3]);
+				new UdpServer(cmds[1],Integer.parseInt(cmds[2]),dQueue,cmds[3]);
 
 				break;
 			case "addserial":
@@ -932,9 +922,9 @@ public class StreamManager implements StreamListener, CollectorFuture {
 
 				return serial.connect()?"Connected to "+port:"Failed to connect to "+port;	
 			case "addlocal":
-				if( cmds.length != 3 ) // Make sure we got the correct amount of arguments
-					return "Bad amount of arguments, need 3 (addlocal,id,label,source)";
-				LocalStream local = new LocalStream( cmds[1],cmds[2],cmds.length==4?cmds[3]:"",dQueue);
+				if( cmds.length != 4 ) // Make sure we got the correct amount of arguments
+					return "Bad amount of arguments, ss:addlocal,id,label,source";
+				LocalStream local = new LocalStream( cmds[1],cmds[2],cmds[3],dQueue);
 				local.addListener(this);
 				streams.put( cmds[1].toLowerCase(), local);
 				addStreamToXML(cmds[1],true);
@@ -1035,12 +1025,46 @@ public class StreamManager implements StreamListener, CollectorFuture {
 		return true;
 	}
 
+
+	private String doSorH( String[] request ){
+		return switch( request[1] ){
+			case "??" -> "Sx:y -> Send the string y to stream x";
+			case "" -> "No use sending an empty string";
+			default -> {
+				var stream = getStreamID( Tools.parseInt( request[0].substring(1), 0 ) -1);
+				if( !stream.isEmpty()){
+					request[1] = request[1].replace("<cr>", "\r").replace("<lf>", "\n"); // Normally the delimiters are used that are chosen in settings file, extra can be added
+
+					var written = "";
+					if( request[0].startsWith("h")){
+						written = writeBytesToStream(stream, Tools.fromHexStringToBytes(request[1]) );
+					}else{
+						written = writeToStream(stream, request[1], "" );
+					}
+					if( !written.isEmpty() )
+						yield "Sending '"+request[1]+"' to "+stream;
+					yield "Failed to send "+request[1]+" to "+stream;
+
+				}else{
+					yield switch( getStreamCount() ){
+						case 0 -> "No streams active to send data to.";
+						case 1 ->"Only one stream active. S1:"+getStreamID(0);
+						default -> "Invalid number chosen! Must be between 1 and "+getStreamCount();
+					};
+				}
+			}
+		};
+	}
+
 	/**
 	 * Remove the given writable from the various sources
 	 * @param wr The writable to remove
 	 * @return True if any were removed
 	 */
 	public boolean removeWritable(Writable wr) {
+		if( wr==null)
+			return false;
+
 		boolean removed=false;
 		for( BaseStream bs : streams.values() ){
 			if( bs.removeTarget(wr) )
@@ -1051,18 +1075,14 @@ public class StreamManager implements StreamListener, CollectorFuture {
 	@Override
 	public void collectorFinished(String id, String message, Object result) {
 		String[] ids = id.split(":");
-		switch( ids[0] ){
-			case "confirm":
+		switch (ids[0]) {
+			case "confirm" -> {
 				confirmCollectors.remove(ids[1]);
 				if (confirmCollectors.isEmpty())
 					Logger.info("Confirm tasks are empty");
-				break;
-			case "math":
-				dQueue.add( Datagram.system( "store:"+message+","+result) );
-				break;
-			default:
-				Logger.error("Unknown Collector type: "+id);
-				break;
+			}
+			case "math" -> dQueue.add(Datagram.system("store:" + message + "," + result));
+			default -> Logger.error("Unknown Collector type: " + id);
 		}
 	}
 

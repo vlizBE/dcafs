@@ -2,7 +2,7 @@ package util.gis;
 
 import das.Commandable;
 import util.data.DataProviding;
-import util.data.DoubleVal;
+import util.data.RealVal;
 import io.Writable;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
@@ -29,9 +29,9 @@ public class Waypoints implements Commandable {
     static final String XML_TRAVEL = "travel";
     static final String XML_CHILD_TAG = "waypoint";
 
-    DoubleVal latitude;
-    DoubleVal longitude;
-    DoubleVal sog;
+    RealVal latitude;
+    RealVal longitude;
+    RealVal sog;
 
     ScheduledExecutorService scheduler;
     int checkInterval=15;
@@ -73,6 +73,9 @@ public class Waypoints implements Commandable {
         }
         return false;
     }
+    public Collection<Waypoint> items(){
+        return wps.values();
+    }
     public boolean readFromXML(DataProviding rtvals){
         return readFromXML(rtvals,true);
     }
@@ -86,16 +89,27 @@ public class Waypoints implements Commandable {
             wps.clear();
         }
 
-        Element wpts = XMLtools.getFirstElementByTag( XMLtools.readXML(settingsPath), XML_TAG);
+        var wptsOpt = XMLtools.getFirstElementByTag( XMLtools.readXML(settingsPath), XML_TAG);
 
-        if( wpts == null )
+        if( wptsOpt.isEmpty() )
             return false;
+
+        var wpts = wptsOpt.get();
 
         if( rtvals!=null) {
             Logger.info("Looking for lat, lon, sog");
-            latitude = rtvals.getOrAddDoubleVal(XMLtools.getStringAttribute(wpts, "latval", ""));
-            longitude = rtvals.getOrAddDoubleVal(XMLtools.getStringAttribute(wpts, "lonval", ""));
-            sog = rtvals.getOrAddDoubleVal(XMLtools.getStringAttribute(wpts, "sogval", ""));
+            var latOpt = rtvals.getRealVal( XMLtools.getStringAttribute(wpts, "latval", ""));
+            var longOpt = rtvals.getRealVal(XMLtools.getStringAttribute(wpts, "lonval", ""));
+            var sogOpt = rtvals.getRealVal(XMLtools.getStringAttribute(wpts, "sogval", ""));
+
+            if( latOpt.isEmpty() || longOpt.isEmpty() || sogOpt.isEmpty() ){
+                Logger.error( "No corresponding lat/lon/sog realVals found for waypoints");
+                return false;
+            }
+
+            latitude = latOpt.get();
+            longitude = longOpt.get();
+            sog = sogOpt.get();
         }
 
         Logger.info("Reading Waypoints");
@@ -127,7 +141,7 @@ public class Waypoints implements Commandable {
     }
     /**
      * Write the waypoint data to the file it was read fom originally
-     * @param includeTemp Whether or not to also include the temp waypoints
+     * @param includeTemp Whether to also include the temp waypoints
      * @return True if successful
      */
     public boolean storeInXML( boolean includeTemp ){

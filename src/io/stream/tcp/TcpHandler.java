@@ -20,8 +20,8 @@ public class TcpHandler extends SimpleChannelInboundHandler<byte[]>{
     protected BlockingQueue<Datagram> dQueue;
 
     protected boolean idle=false;
-    protected String id="";
-    protected String label="";
+    protected String id;
+    protected String label;
     protected int priority = 1;
 
     protected List<StreamListener> listeners;
@@ -57,9 +57,6 @@ public class TcpHandler extends SimpleChannelInboundHandler<byte[]>{
     public void setTargets(List<Writable> targets){
         this.targets = targets;
     }
-    public void setEOL( String eol ){
-        this.eol=eol;
-    }
 	public String getIP(){
 		return remote.getAddress().getHostAddress();
     }
@@ -67,9 +64,8 @@ public class TcpHandler extends SimpleChannelInboundHandler<byte[]>{
         return timeStamp;
     }
     public void setPriority( int priority){this.priority=priority;}
-    public boolean toggleUDP(){
+    public void toggleUDP(){
         udp=!udp;
-        return udp;
     }
     /* StreamListener */
     public void setStreamListeners( List<StreamListener> listeners ){
@@ -82,8 +78,7 @@ public class TcpHandler extends SimpleChannelInboundHandler<byte[]>{
     }
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-    	if (evt instanceof IdleStateEvent) {
-            IdleStateEvent e = (IdleStateEvent) evt;
+    	if (evt instanceof IdleStateEvent e) {
             if (e.state() == IdleState.READER_IDLE ) {
             	if( !idle) {
 					Logger.error( "IdleNotify for "+id+" "+label);

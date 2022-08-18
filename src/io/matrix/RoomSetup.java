@@ -3,7 +3,6 @@ package io.matrix;
 import io.Writable;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 
 public class RoomSetup {
 

@@ -319,8 +319,8 @@ public class Configurator {
 
     /**
      * Find a match for the given input in the list
-     * @param list
-     * @param input
+     * @param list The lis to look into
+     * @param input The input to look for
      * @return
      */
     private String findMatch( ArrayList<String[]> list,String input){
@@ -390,7 +390,7 @@ public class Configurator {
 
     /**
      * Build the question for the node content
-     * @return
+     * @return Build question
      */
     private String formatNodeQuestion( ){
         String[] from = lvls.get(steps).get(0);
