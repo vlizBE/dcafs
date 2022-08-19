@@ -87,37 +87,39 @@ public class DAS implements Commandable{
     /* Threading */
     private EventLoopGroup nettyGroup = new NioEventLoopGroup(); // Single group so telnet,trans and streampool can share it
 
-    public DAS(Class c) {
+    public DAS() {
 
-        try {
-            Path p;
-            if( c==null) {
-                p = Path.of(getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
-            }else{
-                p = Path.of(c.getProtectionDomain().getCodeSource().getLocation().toURI());
-            }
-            System.out.println("Path found: "+ p);
-            if (!p.toString().endsWith(".jar")) { //meaning from ide
-                p = p.getParent();
-            }else{
-                TinyWrapErr.install();
-                System.setProperty("tinylog.stream","out");
-            }
-            workPath = p.getParent().toString();
-            if( workPath.matches(".*lib$")) { // Meaning used as a lib
-                workPath = Path.of(workPath).getParent().toString();
-            }else if( workPath.contains("repository")){
-                workPath = Path.of("").toAbsolutePath().toString();
-            }
-            System.out.println("Workpath lib: "+workPath);
-            if( System.getProperty("tinylog.directory") == null ) { // don't overwrite this
-                // Re set the paths for the file writers to use the same path as the rest of the program
-                System.setProperty("tinylog.directory", workPath); // Set work path as system property
-            }
-            settingsPath = Path.of(workPath, "settings.xml");
-        } catch (URISyntaxException e) {
-            Logger.error(e);
+        var classPath = getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
+
+        Logger.info("Checking for workpath at : "+classPath);
+        Path p;
+        if (classPath.endsWith("classes/")) { //meaning from ide
+            if( classPath.startsWith("/")) // for some reason this get prepended
+                classPath=classPath.substring(1);
+            p = Path.of(classPath).getParent(); // get parent to get out of the classes
+        }else{
+            p = Path.of(classPath);
         }
+
+        System.out.println("Path found: "+ p);
+        if (!p.toString().endsWith(".jar")) { //meaning from ide
+            p = p.getParent();
+        }else{
+            TinyWrapErr.install();
+            System.setProperty("tinylog.stream","out");
+        }
+        workPath = p.getParent().toString();
+        if( workPath.matches(".*lib$")) { // Meaning used as a lib
+            workPath = Path.of(workPath).getParent().toString();
+        }else if( workPath.contains("repository")){
+            workPath = Path.of("").toAbsolutePath().toString();
+        }
+        System.out.println("Workpath lib: "+workPath);
+        if( System.getProperty("tinylog.directory") == null ) { // don't overwrite this
+            // Re set the paths for the file writers to use the same path as the rest of the program
+            System.setProperty("tinylog.directory", workPath); // Set work path as system property
+        }
+        settingsPath = Path.of(workPath, "settings.xml");
 
         if (Files.notExists(settingsPath)) {
             Logger.warn("No Settings.xml file found, creating new one. Searched path: "
@@ -674,7 +676,7 @@ public class DAS implements Commandable{
 
     public static void main(String[] args) {
 
-        DAS das = new DAS(null);
+        DAS das = new DAS();
 
         if( das.telnet == null ){
             das.addTelnetServer();
