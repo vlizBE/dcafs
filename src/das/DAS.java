@@ -87,10 +87,15 @@ public class DAS implements Commandable{
     /* Threading */
     private EventLoopGroup nettyGroup = new NioEventLoopGroup(); // Single group so telnet,trans and streampool can share it
 
-    public DAS() {
+    public DAS(Class c) {
 
         try {
-            Path p = Path.of(getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
+            Path p;
+            if( c==null) {
+                p = Path.of(getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
+            }else{
+                p = Path.of(c.getProtectionDomain().getCodeSource().getLocation().toURI());
+            }
             System.out.println("Path found: "+ p);
             if (!p.toString().endsWith(".jar")) { //meaning from ide
                 p = p.getParent();
@@ -223,11 +228,6 @@ public class DAS implements Commandable{
             addTelnetServer();
         }
         this.attachShutDownHook();
-    }
-    public DAS(boolean start) {
-        this();
-        if( start )
-            startAll();
     }
     public String getVersion(){return version;}
     public Path getWorkPath(){
@@ -674,7 +674,7 @@ public class DAS implements Commandable{
 
     public static void main(String[] args) {
 
-        DAS das = new DAS();
+        DAS das = new DAS(null);
 
         if( das.telnet == null ){
             das.addTelnetServer();
