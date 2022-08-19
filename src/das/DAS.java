@@ -43,7 +43,7 @@ import java.util.concurrent.*;
 
 public class DAS implements Commandable{
 
-    private static final String version = "1.0.0";
+    private static final String version = "1.0.1";
 
     private Path settingsPath = Path.of("settings.xml");
     private String workPath=Path.of("").toString();
@@ -91,7 +91,7 @@ public class DAS implements Commandable{
 
         var classPath = getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
 
-        Logger.info("Checking for workpath at : "+classPath);
+        System.out.println("Checking for workpath at : "+classPath);
         Path p;
         if (classPath.endsWith("classes/")) { //meaning from ide
             if( classPath.startsWith("/")) // for some reason this get prepended
@@ -101,7 +101,6 @@ public class DAS implements Commandable{
             p = Path.of(classPath);
         }
 
-        System.out.println("Path found: "+ p);
         if (!p.toString().endsWith(".jar")) { //meaning from ide
             p = p.getParent();
         }else{
