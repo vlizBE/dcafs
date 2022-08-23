@@ -16,14 +16,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.PosixFilePermission;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.StringJoiner;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Stream;
 
@@ -72,10 +71,16 @@ public class FileCollector extends AbstractCollector{
         this.dQueue=dQueue;
         secondsTimeout = TimeTools.parsePeriodStringToSeconds(timeoutPeriod);
         this.scheduler=scheduler;
+
+        Logger.info("Trying to alter permissions");
+        FileTools.setAllPermissions(getPath().getParent());
     }
     public FileCollector(String id,BlockingQueue<Datagram> dQueue ){
         super(id);
         this.dQueue=dQueue;
+
+        Logger.info("Trying to alter permissions");
+        FileTools.setAllPermissions(getPath().getParent());
     }
     @Override
     public String getID(){ return "fc:"+id;}
@@ -398,16 +403,19 @@ public class FileCollector extends AbstractCollector{
             Logger.error(id+"(fc) -> No valid destination path");
             return;
         }
+        boolean isNewFile = false;
         if( Files.notExists(dest) ){
+            isNewFile=true;
             try { // So first create the dir structure
                 Files.createDirectories(dest.toAbsolutePath().getParent());
             } catch (IOException e) {
                 Logger.error(e);
+                return;
             }
         }
 
         StringJoiner join;
-        if( !headers.isEmpty() && (Files.notExists(dest) || headerChanged) ){ // the file doesn't exist yet
+        if( !headers.isEmpty() && (isNewFile || headerChanged) ){ // the file doesn't exist yet
             join = new StringJoiner( lineSeparator,"",lineSeparator );
             headers.forEach( hdr -> join.add(hdr.replace("{file}",dest.getFileName().toString()))); // Add the headers
         }else{
@@ -432,6 +440,7 @@ public class FileCollector extends AbstractCollector{
                         break;
                 }
                 Files.move(dest, dest.resolveSibling(renamed));
+                isNewFile=true;
             }
             headerChanged = false;
 
@@ -440,6 +449,10 @@ public class FileCollector extends AbstractCollector{
 
             Files.writeString(dest, join.toString(), charSet, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
             Logger.debug("Written " + join.toString().length() + " bytes to " + dest.getFileName().toString());
+
+            if(isNewFile){
+                FileTools.setAllPermissions(dest);
+            }
 
             if( maxBytes!=-1 ){
                 if( Files.size(dest) >= maxBytes  ){
@@ -471,6 +484,7 @@ public class FileCollector extends AbstractCollector{
             Logger.error(id + "(fc) -> Failed to write to "+ dest+" because "+e);
         }
     }
+
     /* ***************************** Overrides  ******************************************************************* */
     @Override
     public void addSource( String source ){

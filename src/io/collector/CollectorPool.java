@@ -7,6 +7,7 @@ import io.telnet.TelnetCodes;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import util.data.DataProviding;
+import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
@@ -271,7 +272,10 @@ public class CollectorPool implements Commandable, CollectorFuture {
                     fco.get().flushNow();
                     fco.get().readFromXML(opt.get(), workPath.toString() );
                 }
-
+                return "Reloaded";
+            case "perms":
+                fileCollectors.values().forEach( f -> FileTools.setAllPermissions(f.getPath().getParent()));
+                return "Tried to alter permissions";
         }
         return UNKNOWN_CMD+": "+request[0]+":"+request[1];
     }
