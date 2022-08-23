@@ -293,6 +293,9 @@ public class DAS implements Commandable{
         taskManagerPool.readFromXML();
         addCommandable("tm", taskManagerPool);
     }
+    public TaskManagerPool getTaskManagerPool(){
+        return taskManagerPool;
+    }
     /* ******************************************  S T R E A M P O O L ***********************************************/
     /**
      * Adds the streampool
@@ -332,7 +335,9 @@ public class DAS implements Commandable{
 
         addCommandable(labelWorker,"gens");
     }
-
+    public void addDatagramProcessor( DatagramProcessing dp ){
+        labelWorker.addDatagramProcessing(dp);
+    }
     public BlockingQueue<Datagram> getDataQueue() {
         addLabelWorker();
         return dQueue;
