@@ -1,11 +1,8 @@
 package worker;
 
 import io.Writable;
-
-import java.time.Instant;
-import java.util.Locale;
-
 import io.Readable;
+import java.time.Instant;
 
 /**
  * Simple storage class that holds the raw data before processing
@@ -14,7 +11,6 @@ public class Datagram {
 	
     String data;             // The received data
     byte[] raw;              // Raw received data
-    double messValue = 0;    // Alternative data
     int priority = 1;        // The priority of the data source
     String label="";            // The label of the data source
     int timeOffset = 0;      // The offset, only used for debug work (simulate arrival delays)
