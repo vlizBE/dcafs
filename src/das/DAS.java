@@ -33,7 +33,6 @@ import util.xml.XMLtools;
 import worker.*;
 
 import java.io.File;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -45,10 +44,10 @@ public class DAS implements Commandable{
 
     private static final String version = "1.0.1";
 
-    private Path settingsPath = Path.of("settings.xml");
-    private String workPath=Path.of("").toString();
+    private Path settingsPath;
+    private String workPath;
 
-    private Document settingsDoc;
+    private final Document settingsDoc;
 
     private final LocalDateTime bootupTimestamp = LocalDateTime.now(); // Store timestamp at boot up to calculate uptime
 
@@ -77,7 +76,7 @@ public class DAS implements Commandable{
     private boolean bootOK = false; // Flag to show if booting went ok
     String sdReason = "Unwanted shutdown."; // Reason for shutdown of das, default is unwanted
 
-    private BlockingQueue<Datagram> dQueue = new LinkedBlockingQueue<>();
+    private final BlockingQueue<Datagram> dQueue = new LinkedBlockingQueue<>();
     boolean rebootOnShutDown = false;
     private InterruptPins isrs;
 
@@ -85,7 +84,7 @@ public class DAS implements Commandable{
     private FileMonitor fileMonitor;
 
     /* Threading */
-    private EventLoopGroup nettyGroup = new NioEventLoopGroup(); // Single group so telnet,trans and streampool can share it
+    private final EventLoopGroup nettyGroup = new NioEventLoopGroup(); // Single group so telnet,trans and streampool can share it
 
     public DAS() {
 
@@ -94,7 +93,7 @@ public class DAS implements Commandable{
         System.out.println("Checking for workpath at : "+classPath);
         Path p;
         if (classPath.endsWith("classes/")) { //meaning from ide
-            if( classPath.startsWith("/")) // for some reason this get prepended
+            if( classPath.startsWith("/")) // for some reason this gets prepended
                 classPath=classPath.substring(1);
             p = Path.of(classPath).getParent(); // get parent to get out of the classes
         }else{
