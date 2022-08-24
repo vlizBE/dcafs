@@ -35,9 +35,11 @@ public class LabelWorker implements Runnable, Commandable {
 
 	static final String UNKNOWN_CMD = "unknown command";
 
-	Map<String, Generic> generics = new HashMap<>();
-	Map<String, ValMap> mappers = new HashMap<>();
-	Map<String, Readable> readables = new HashMap<>();
+	private Map<String, Generic> generics = new HashMap<>();
+	private Map<String, ValMap> mappers = new HashMap<>();
+	private Map<String, Readable> readables = new HashMap<>();
+
+	private ArrayList<DatagramProcessing> dgProc = new ArrayList<DatagramProcessing>();
 
 	private BlockingQueue<Datagram> dQueue;      // The queue holding raw data for processing
 	private DataProviding dp;
@@ -106,6 +108,9 @@ public class LabelWorker implements Runnable, Commandable {
 	 */
 	public void setDebugging(boolean deb) {
 		this.debugMode = deb;
+	}
+	public void addDatagramProcessing( DatagramProcessing dgp){
+		dgProc.add(dgp);
 	}
 	/* ****************************************** V A L M A P S *************************************************** */
 	private ValMap addValMap(ValMap map) {
@@ -402,7 +407,15 @@ public class LabelWorker implements Runnable, Commandable {
 							}
 							break;
 						default:
-							Logger.error("Unknown label: "+label);
+							boolean processed=false;
+							for( DatagramProcessing dgp : dgProc ){
+								if( dgp.processDatagram(d)) {
+									processed=true;
+									break;
+								}
+							}
+							if( ! processed)
+								Logger.error("Unknown label: "+label);
 							break;
 					}
 				}else {
@@ -427,7 +440,15 @@ public class LabelWorker implements Runnable, Commandable {
 							executor.execute(() -> checkTelnet(d) );
 							break;
 						default:
-							Logger.error("Unknown label: "+label);
+							boolean processed=false;
+							for( DatagramProcessing dgp : dgProc ){
+								if( dgp.processDatagram(d)) {
+									processed=true;
+									break;
+								}
+							}
+							if( ! processed)
+								Logger.error("Unknown label: "+label);
 							break;
 					}
 				}

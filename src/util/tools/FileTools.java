@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.PosixFilePermission;
 import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -19,6 +20,37 @@ import java.util.zip.ZipOutputStream;
 public class FileTools {
 
     /* ******************************* R E A D / W R I T E ****************************************************** */
+    public static void setAllPermissions(Path file){
+
+        String os = System.getProperty("os.name").toLowerCase();
+        if( !os.startsWith("linux") || Files.notExists(file)){
+            Logger.info("Couldn't set permissions, because wrong os or non-existing file");
+            return;
+        }
+
+        Set<PosixFilePermission> perms = new HashSet<>();
+        // Owner
+        perms.add(PosixFilePermission.OWNER_READ);
+        perms.add(PosixFilePermission.OWNER_WRITE);
+        perms.add(PosixFilePermission.OWNER_EXECUTE);
+
+        // Group
+        perms.add(PosixFilePermission.GROUP_READ);
+        perms.add(PosixFilePermission.GROUP_WRITE);
+        perms.add(PosixFilePermission.GROUP_EXECUTE);
+
+        // Others
+        perms.add(PosixFilePermission.OTHERS_READ);
+        perms.add(PosixFilePermission.OTHERS_WRITE);
+        perms.add(PosixFilePermission.OTHERS_EXECUTE);
+
+        try {
+            Files.setPosixFilePermissions(file, perms);
+            Logger.info( "File permission set successfully: "+file );
+        } catch (IOException e) {
+            Logger.error(e);
+        }
+    }
     /**
      * Method that opens a file (or creates it and needed directories) and appends the data to it
      * 
@@ -68,7 +100,7 @@ public class FileTools {
      * Reads a file and puts the contents in an ArrayList, 1 line is one item
      * @param content The ArrayList to hold the data
      * @param path The path of the file
-     * @return Whether or not the process succeeded
+     * @return Whether the process succeeded
      */
     public static boolean readTxtFile( ArrayList<String> content, String path) {
         return readTxtFile(content, Path.of(path));
@@ -77,7 +109,7 @@ public class FileTools {
      * Reads a file and puts the contents in an ArrayList, 1 line is one item
      * @param content The ArrayList to hold the data
      * @param path The path of the file
-     * @return Whether or not the process succeeded
+     * @return Whether the process succeeded
      */
     public static boolean readTxtFile( ArrayList<String> content, Path path) {
         try {
