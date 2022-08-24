@@ -96,6 +96,10 @@ public class TaskManagerPool implements Commandable {
         for (TaskManager tl : tasklists.values())
             tl.reloadTasks();
     }
+
+    public void recheckAllIntervalTasks(){
+        tasklists.values().forEach( tl -> tl.recheckIntervalTasks());
+    }
     /* ******************************************* C O M M A N D A B L E ******************************************* */
     @Override
     public String replyToCommand(String[] request, Writable wr, boolean html) {
