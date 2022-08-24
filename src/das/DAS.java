@@ -147,7 +147,7 @@ public class DAS implements Commandable{
 
             /* RealtimeValues */
             rtvals = new RealtimeValues( settingsPath, dQueue );
-
+            rtvals.setText("dcafs_version",version);
             /* Database manager */
             dbManager = new DatabaseManager(workPath,rtvals);
 
@@ -427,6 +427,7 @@ public class DAS implements Commandable{
     public DataProviding getDataProvider(){
         return rtvals;
     }
+    public IssuePool getIssuePool(){ return rtvals.getIssuePool();}
     /* ******************************** * S H U T D O W N S T U F F ***************************************** */
     /**
      * Attach a hook to the shutdown process, so we're sure that all queue's etc. get

@@ -394,7 +394,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 						}
 					}
 					case "is" -> { // issues
-						var i = issuePool.getIssue(p[1]);
+						var i = issuePool.getIssueAsNumerical(p[1]);
 						if (i.isPresent()) {
 							index = nums.indexOf(i.get());
 							if (index == -1) {
@@ -856,7 +856,8 @@ public class RealtimeValues implements DataProviding, Commandable {
 		}
 		var keys = texts.entrySet().stream().sorted(Entry.comparingByKey()).map(Entry::getKey).toList();
 		for( var dt : keys ){
-			fab.selectOrAddChildAsParent("text","id",dt).up();
+			if( !dt.startsWith("dcafs"))
+				fab.selectOrAddChildAsParent("text","id",dt).up();
 		}
 		var flags = flagVals.entrySet().stream().sorted(Entry.comparingByKey()).map(Entry::getValue).toList();
 		for( var fv : flags ){
@@ -1394,6 +1395,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 						.map( k -> k.split("_")[0] )
 						.distinct()
 						.filter( g -> !groups.contains(g))
+						.filter( g -> !g.equalsIgnoreCase("dcafs"))
 						.forEach(groups::add);
 		flagVals.values().stream()
 						.map(FlagVal::group)
