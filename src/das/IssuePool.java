@@ -79,8 +79,8 @@ public class IssuePool implements Commandable{
                 join = new StringJoiner(nl);
                 join.add("issue:? -> Show this message")
                         .add("issue:addblank -> Add a blank issue node with some example issues")
-                        .add("issue:start -> Start an issue")
-                        .add("issue:stop -> Stop an active issue")
+                        .add("issue:start,issueid -> Start an issue")
+                        .add("issue:stop,issueid -> Stop an active issue")
                         .add("issue:add,id,message -> Add a new issue")
                         .add("issue:listactive -> Return a list of active issues")
                         .add("issue:listresolved -> Return a list of currently inactive issues")
@@ -198,7 +198,40 @@ public class IssuePool implements Commandable{
             addIssue(id,message);
         issues.get(id).start();
     }
-
+    /**
+     * Add the issue if it's new and set the stare
+     * @param id The id of the issue
+     * @param message The message explaining it
+     * @param state The current state of the issue
+     */
+    public void addIfNewAndCheckState( String id, String message,boolean state){
+        var is = issues.get(id);
+        if( is==null)
+            addIssue(id,message);
+        if( state ){
+            issues.get(id).start();
+        }else{
+            issues.get(id).stop();
+        }
+    }
+    /**
+     * Add the issue if it's new and check if it's active or has been cleared.
+     * This is used for issue that have a margin between active and cleared
+     * @param id The id of the issue
+     * @param message The message explaining it
+     * @param active True if active
+     * @param clear True if cleared
+     */
+    public void addIfNewAndCheckStates( String id, String message,boolean active,boolean clear){
+        var is = issues.get(id);
+        if( is==null)
+            addIssue(id,message);
+        if( active ){
+            issues.get(id).start();
+        }else if (clear){
+            issues.get(id).stop();
+        }
+    }
     /**
      * Add the issue if it doesn't exist and stop it if it does exist and is active
      * @param id The id pf the issue
@@ -246,7 +279,7 @@ public class IssuePool implements Commandable{
         }
         issues.put(id,new Issue(id,message));
     }
-    public Optional<NumericVal> getIssue(String id ){
+    public Optional<NumericVal> getIssueAsNumerical(String id ){
         return Optional.ofNullable(issues.get(id));
     }
     public boolean isActive( String id ){
