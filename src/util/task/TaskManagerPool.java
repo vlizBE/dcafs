@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Optional;
 import java.util.StringJoiner;
 
 public class TaskManagerPool implements Commandable {
@@ -99,6 +100,9 @@ public class TaskManagerPool implements Commandable {
 
     public void recheckAllIntervalTasks(){
         tasklists.values().forEach( tl -> tl.recheckIntervalTasks());
+    }
+    public Optional<TaskManager> getTaskManager(String id){
+        return Optional.ofNullable( tasklists.get(id));
     }
     /* ******************************************* C O M M A N D A B L E ******************************************* */
     @Override
