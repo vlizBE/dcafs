@@ -28,7 +28,7 @@ From 0.5.0 onwards, this should be better documented...
 
 ### FileCollector
 - dcafs runs as root so files/directories created aren't changeable by users, changed this
-for FileCollects. Now those can be deleted etc by 'others'. 
+for FileCollects. Now those can be deleted etc. by 'others'. 
 
 ## 1.0.0 (released 17/08/2022)
 - Updated dependencies
