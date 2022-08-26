@@ -5,16 +5,6 @@ Note: Version numbering: x.y.z
   -> z goes up for minor additions and bugfixes
 From 0.5.0 onwards, this should be better documented...
 
-#### Todo
-- db connect in separate thread
-- Writable comparable on id?
-- ConfirmCollector give ok on no reply or nok on certain reply?
-- Trans as output in taskmanager?
-- Trans command >>>signin:id to claim to be a certain id and pass the ip test
-
-## Work in progress
-* Rework the TaskManager ( > 1.0.0 )
-
 ### To do/fix
 - cmd !idle not used properly when disconnected/reconnected
 - integerval telnet interface?
@@ -22,6 +12,9 @@ From 0.5.0 onwards, this should be better documented...
 ## 1.0.1 (work in progress)
 ### Planned
 - Resolve #34
+
+### Fixed
+- Looking for the workpath threw a hierarchy error for the uri when using as a lib.
 
 ### LabelWorker
 - Added an interface so the processing of datagrams can be expanded
