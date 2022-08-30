@@ -55,6 +55,7 @@ public class Waypoints implements Commandable {
     public Waypoint addWaypoint( String id, Waypoint wp ) {
         if(wps.isEmpty())
             scheduler.scheduleAtFixedRate(() -> checkWaypoints(),5,checkInterval, TimeUnit.SECONDS);
+        Logger.info("Adding waypoint: "+id);
     	wps.put(id,wp);
     	return wp;
     }
@@ -118,15 +119,14 @@ public class Waypoints implements Commandable {
         		String id = XMLtools.getStringAttribute(el,"id","");
         	    double lat = GisTools.convertStringToDegrees(el.getAttribute("lat"));
         		double lon = GisTools.convertStringToDegrees(el.getAttribute("lon"));
-        		String name = XMLtools.getChildValueByTag(el,"name",id);
                 double range = Tools.parseDouble( el.getAttribute("range"), -999);
 
-                var wp = addWaypoint( id, Waypoint.build(name).lat(lat).lon(lon).range(range) );
+                var wp = addWaypoint( id, Waypoint.build(id).lat(lat).lon(lon).range(range) );
 
                 Logger.info("Checking for travel...");
                 for( Element travelEle : XMLtools.getChildElements(el,XML_TRAVEL)){
                     if( travelEle != null ){
-                        String idTravel = XMLtools.getStringAttribute(travelEle,"id","");
+                        String idTravel = travelEle.getTextContent();//XMLtools.getStringAttribute(travelEle,"id","");
                         String dir = XMLtools.getStringAttribute(travelEle,"dir","");
                         String bearing = XMLtools.getStringAttribute(travelEle,"bearing","from 0 to 360");
 
