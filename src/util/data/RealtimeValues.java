@@ -74,7 +74,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 		int defInteger = XMLtools.getIntAttribute(fab.getCurrentElement(),"integerdefault",-999);
 
 		readingXML=true;
-		fab.getChildren("group").forEach( // The tag * is special and acts as wildcard
+		fab.getChildren("group").forEach(
 				rtval -> {
 					// Both id and name are valid attributes for the node name that forms the full id
 					var groupName = XMLtools.getStringAttribute(rtval,"id",""); // get the node id
@@ -83,6 +83,12 @@ public class RealtimeValues implements DataProviding, Commandable {
 						// First check if id is used
 						processRtvalElement(groupie, groupName, defReal, defText, defFlag,defInteger);
 					}
+				}
+		);
+		// Stuff that isn't in a group?
+		fab.getChildren("*").stream().filter( rt -> !rt.getTagName().equalsIgnoreCase("group")).forEach(
+				rtval -> {
+					processRtvalElement(rtval, "", defReal, defText, defFlag,defInteger);
 				}
 		);
 		readingXML=false;
