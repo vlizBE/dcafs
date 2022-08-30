@@ -114,6 +114,11 @@ public class RealtimeValues implements DataProviding, Commandable {
 				RealVal rv;
 				if (getRealVal(id).isEmpty()) // If it doesn't exist yet
 					addRealVal(RealVal.newVal(group, name), false); // create it
+				var rvOpt = getRealVal(id);
+				if( rvOpt.isEmpty()){
+					Logger.error("No such realVal ... but there should be: "+id);
+					return;
+				}
 				rv = getRealVal(id).get();
 				rv.reset(); // reset needed if this is called because of reload
 				rv.unit(XMLtools.getStringAttribute(rtval, "unit", ""))
