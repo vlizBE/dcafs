@@ -201,6 +201,8 @@ public class RealVal extends AbstractVal implements NumericVal{
         }
     }
     public String getID(){
+        if( group.isEmpty())
+            return name;
         return group+"_"+name;
     }
     /* ***************************************** U S I N G ********************************************************** */
