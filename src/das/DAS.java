@@ -91,13 +91,16 @@ public class DAS implements Commandable{
         var classPath = getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
 
         System.out.println("Checking for workpath at : "+classPath);
-        Path p;
+
+        if( classPath.startsWith("/")) // for some reason this gets prepended
+            classPath=classPath.substring(1);
+
+        Path p=Path.of(classPath);
+
         if (classPath.endsWith("classes/")) { //meaning from ide
-            if( classPath.startsWith("/")) // for some reason this gets prepended
-                classPath=classPath.substring(1);
-            p = Path.of(classPath).getParent(); // get parent to get out of the classes
-        }else{
-            p = Path.of(classPath);
+       //     if( classPath.startsWith("/")) // for some reason this gets prepended
+         //       classPath=classPath.substring(1);
+            p = p.getParent(); // get parent to get out of the classes
         }
 
         if (!p.toString().endsWith(".jar")) { //meaning from ide
