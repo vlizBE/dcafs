@@ -8,19 +8,20 @@ From 0.5.0 onwards, this should be better documented...
 ### To do/fix
 - cmd !idle not used properly when disconnected/reconnected
 - integerval telnet interface?
-
-## 1.0.1 (work in progress)
-### Planned
 - Resolve #34
+
+## 1.0.1 (31/08/2022)
 
 ### Fixed
 - Looking for the workpath threw a hierarchy error for the uri when using as a lib.
+- Rtvals without group weren't loaded properly nor have id read.
+- Waypoints xml format altered/fixed.
 
 ### LabelWorker
-- Added an interface so the processing of datagrams can be expanded
+- Added an interface so the processing of datagrams can be expanded (mainly meant for hardcoded usage).
 
 ### FileCollector
-- dcafs runs as root so files/directories created aren't changeable by users, changed this
+- [linux only] dcafs runs as root so files/directories created aren't changeable by users, changed this
 for FileCollects. Now those can be deleted etc. by 'others'. 
 
 ## 1.0.0 (released 17/08/2022)
