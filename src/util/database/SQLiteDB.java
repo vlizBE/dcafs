@@ -88,6 +88,10 @@ public class SQLiteDB extends SQLDB{
         if( path.contains("{rollover}"))
             return path.replace("{rollover}", currentForm);
 
+        // No extension, so add it
+        if( !path.contains(".sqlite"))
+            return path+currentForm+".sqlite";
+
         // with rollover but on default position
         return path.replace(".sqlite", currentForm+".sqlite");
     }
