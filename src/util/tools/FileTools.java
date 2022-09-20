@@ -146,8 +146,8 @@ public class FileTools {
 
         var read = new ArrayList<String>();
         if( start==0) {
-            Logger.error( "Readlines should start at 1, not 0 for "+path);
-            return read;
+            start=1;
+            amount++;
         }
         if( Files.notExists(path)){
             Logger.error("Tried to read lines from "+path+" but no such file");
