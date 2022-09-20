@@ -391,7 +391,9 @@ public class SQLDB extends Database{
                 // Create the tables
                 tables.values().forEach(tbl -> {
                     Logger.debug(id+"(db) -> Checking to create "+tbl.getName()+" read from?"+tbl.isReadFromDB());
-                    if( !tbl.isReadFromDB() ){
+                    if( !tbl.isServer() && !tbl.hasColumns() ) {
+                        lastError = "Note: Tried to create a table without columns, not allowed in SQLite.";
+                    }else if( !tbl.isReadFromDB() ){
                         try( Statement stmt = con.createStatement() ){
                             stmt.execute( tbl.create() );
                             if( tables.get(tbl.getName())!=null && tbl.hasIfNotExists() ){

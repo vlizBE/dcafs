@@ -44,6 +44,7 @@ public class SqlTable {
     public void toggleServer(){
         server=true;
     }
+    public boolean isServer(){return server;}
     public void setLastError(String error ){
         this.lastError=error;
     }
@@ -397,7 +398,7 @@ public class SqlTable {
      */
     public String toString() {
         if( columns.isEmpty() ) {
-            return "CREATE TABLE " + (ifnotexists ? "IF NOT EXISTS" : "")+ " " + name;
+            return "CREATE TABLE" + (ifnotexists ? " IF NOT EXISTS " : " ") + name+";";
         }
         StringJoiner join = new StringJoiner(", ",
                 "CREATE TABLE " + (ifnotexists ? "IF NOT EXISTS" : "") + " " + name + " (", " );");
