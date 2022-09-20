@@ -103,9 +103,7 @@ public class DAS implements Commandable{
             p = p.getParent(); // get parent to get out of the classes
         }
 
-        if (!p.toString().endsWith(".jar")) { //meaning from ide
-            p = p.getParent();
-        }else{
+        if (p.toString().endsWith(".jar")) { //meaning from ide
             TinyWrapErr.install();
             System.setProperty("tinylog.stream","out");
         }
@@ -205,9 +203,10 @@ public class DAS implements Commandable{
             addCommandable(collectorPool,"mc");
 
             /* File monitor */
-            if( XMLfab.hasRoot(settingsPath,"dcafs","monitor") )
-                fileMonitor = new FileMonitor(settingsPath.getParent(),dQueue);
-
+            if( XMLfab.hasRoot(settingsPath,"dcafs","monitor") ) {
+                fileMonitor = new FileMonitor(settingsPath.getParent(), dQueue);
+                addCommandable(fileMonitor,"fm","fms");
+            }
             /* GPIO's */
             if( XMLfab.hasRoot(settingsPath,"dcafs","gpio") ){
                 Logger.info("Reading interrupt gpio's from settings.xml");
