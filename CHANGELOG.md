@@ -12,6 +12,20 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 1.0.2 (work in progress)
 
+### Filemonitor
+- Can now respond to files created and read them as if they are a stream
+  - XML code 
+````xml
+  <monitor>
+    <file id="test" path="todo" read="true"/>
+    <!-- Request the data with 'fm:test' as src -->
+  </monitor>
+````
+
+### Fixes
+- When trying to reload a sqlite database with an empty table, an exception was thrown. 
+Instead it is no longer tried to create an empty table.
+
 ## 1.0.1 (31/08/2022)
 
 ### Fixed
