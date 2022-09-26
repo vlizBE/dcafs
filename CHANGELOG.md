@@ -10,7 +10,9 @@ From 0.5.0 onwards, this should be better documented...
 - integerval telnet interface?
 - Resolve #34
 
-## 1.0.2 (work in progress)
+## 1.0.3 (work in progress)
+
+## 1.0.2 (26/09/2022)
 
 ### Filemonitor
 - Can now respond to files created and read them as if they are a stream
@@ -25,6 +27,8 @@ From 0.5.0 onwards, this should be better documented...
 ### Fixes
 - When trying to reload a sqlite database with an empty table, an exception was thrown. 
 Instead it is no longer tried to create an empty table.
+- Refactoring from double to real was not complete in MathForward. When using reference to a double/real
+in an op it required {d and {r instead of twice the same...
 
 ## 1.0.1 (31/08/2022)
 
