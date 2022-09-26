@@ -359,7 +359,7 @@ public class MathForward extends AbstractForward {
             expression=expression.replace(split[0],ii[1]+","+ii[0]); //swap the {d to front
         }
 
-        if( ii[0].toLowerCase().startsWith("{d")&&ii.length==1) {
+        if( (ii[0].toLowerCase().startsWith("{d")||ii[0].toLowerCase().startsWith("{r"))&&ii.length==1) {
             if( split[1].matches("[i][0-9]{1,3}")){
                 var op = new Operation( expression, NumberUtils.toInt(split[1].substring(1),-1));
                 op.setCmd(cmd);
@@ -688,7 +688,7 @@ public class MathForward extends AbstractForward {
                 try {
                     String sub = ori.substring(ori.indexOf(":") + 1, ori.indexOf("}"));
 
-                    if (ori.startsWith("{r")) {
+                    if (ori.startsWith("{r")||ori.startsWith("{d")) {
                         dataProviding.getRealVal(sub)
                                 .ifPresent(dv -> {
                                     update = dv;
