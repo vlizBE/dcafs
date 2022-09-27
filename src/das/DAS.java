@@ -89,7 +89,7 @@ public class DAS implements Commandable{
     public DAS() {
 
         var classPath = getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
-
+        classPath = classPath.replace("%20"," ");
         System.out.println("Checking for workpath at : "+classPath);
 
         if( classPath.startsWith("/")) // for some reason this gets prepended
