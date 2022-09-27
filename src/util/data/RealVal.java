@@ -216,8 +216,12 @@ public class RealVal extends AbstractVal implements NumericVal{
 
         fab.alterChild("group","id",group)
                 .down(); // Go down in the group
-        fab.alterChild("real").attr("name",name);
 
+        if( fab.hasChild("real","name",name).isEmpty() ) { // If this one isn't present
+            fab.addChild("real").attr("name", name);
+        }else {
+            fab.alterChild("real", "name", name);
+        }
         fab.attr("unit",unit);
         if( digits !=-1)
             fab.attr("scale",digits);

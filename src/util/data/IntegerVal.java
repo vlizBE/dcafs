@@ -192,7 +192,13 @@ public class IntegerVal extends AbstractVal implements NumericVal{
 
         fab.alterChild("group","id",group)
                     .down(); // Go down in the group
-        fab.alterChild("integer").attr("name",name);
+
+        if( fab.hasChild("integer","name",name).isEmpty()
+                && fab.hasChild("int","name",name).isEmpty()) { // If this one isn't present
+            fab.addChild("integer").attr("name", name);
+        }else {
+            fab.alterChild("integer", "name", name);
+        }
 
         fab.attr("unit",unit);
 
