@@ -1219,6 +1219,16 @@ public class TaskManager implements CollectorFuture {
 		String[] parts = request.split(",");
 
 		switch( parts[0] ){
+			case "?":
+				StringJoiner join = new StringJoiner("\r\n");
+				join.add("reload/reloadtasks -> Reloads this TaskManager");
+				join.add("forcereload -> Reloads this TaskManager while ignoring interruptable");
+				join.add("listtasks/tasks -> Returns a listing of all the loaded tasks");
+				join.add("listsets/sets -> Returns a listing of all the loaded sets");
+				join.add("states/flags -> Returns a listing of all the current states & flags");
+				join.add("stop -> Stop all running tasks and tasksets");
+				join.add("run,x -> Run taskset with the id x");
+				return join.toString();
 			case "reload":case "reloadtasks":     return reloadTasks()?"Reloaded tasks...":"Reload Failed";
 			case "forcereload": return forceReloadTasks()?"Reloaded tasks":"Reload failed";
 			case "listtasks": case "tasks": return getTaskListing(html?"<br>":"\r\n");
@@ -1239,16 +1249,6 @@ public class TaskManager implements CollectorFuture {
 				}else{
 					return "not enough parameters";
 				}
-			case "?": 
-				StringJoiner join = new StringJoiner("\r\n");
-				join.add("reload/reloadtasks -> Reloads this TaskManager");
-				join.add("forcereload -> Reloads this TaskManager while ignoring interruptable");
-				join.add("listtasks/tasks -> Returns a listing of all the loaded tasks");
-				join.add("listsets/sets -> Returns a listing of all the loaded sets");
-				join.add("states/flags -> Returns a listing of all the current states & flags");
-				join.add("stop -> Stop all running tasks and tasksets");
-				join.add("run,x -> Run taskset with the id x");
-				return join.toString();
 			default:
 				return "unknown command: "+request;
 		} 
@@ -1276,7 +1276,6 @@ public class TaskManager implements CollectorFuture {
 	}
 	@Override
 	public void collectorFinished(String id, String message, Object result) {
-		// Ok isn't implemented because the manager doesn't care if all went well
 		boolean res= (boolean) result;
 		id = id.split(":")[1];
 		var set = tasksets.get(id.substring(0,id.indexOf("_")));
@@ -1286,7 +1285,8 @@ public class TaskManager implements CollectorFuture {
 			runFailure(tasksets.get(id.substring(0,id.indexOf("_"))),"confirmfailed");
 		}else{
 			Logger.tag(TINY_TAG).info("["+ this.id +"] Collector '"+id+"' finished fine");
-			startTask( set.getNextTask( set.getLastIndexRun() ));
+			if( set.getRunType()==RUNTYPE.STEP)
+				startTask( set.getNextTask( set.getLastIndexRun() ));
 			// do the next step?
 		}
 		if(streams !=null){

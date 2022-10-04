@@ -598,7 +598,7 @@ public class MathForward extends AbstractForward {
                     case "i", "int" -> dataProviding.getIntegerVal(p[1]).ifPresent(referencedNums::add);
                     case "f", "flag" -> dataProviding.getFlagVal(p[1]).ifPresent(referencedNums::add);
                     default -> {
-                        Logger.error(id + " (mf)-> Operation containing unknown pair: " + p[0] + ":" + p[1]);
+                        Logger.error(id + " (mf)-> Operation containing unknown pair: " + p[0] + " and " + p[1]);
                         return false;
                     }
                 }
@@ -628,7 +628,7 @@ public class MathForward extends AbstractForward {
      * Use the earlier found references and replace them with the corresponding index.
      * The indexes will be altered so that they match if the correct index of an array containing
      * - The received data split according to the delimiter up to the highest used index
-     * - The doubleVals found
+     * - The realVals found
      * - The flagVals found
      *
      * So if highest is 5 then the first double will be 6 and first flag will be 5 + size of double list + 1
@@ -641,18 +641,21 @@ public class MathForward extends AbstractForward {
         for( var p : Tools.parseKeyValue(exp,true) ) {
             if (p.length == 2) { // The pair should be an actual pair
                 boolean ok=false; // will be used at the end to check if ok
-                if ( p[0].equalsIgnoreCase("d")||p[0].equals("double")|| p[0].equalsIgnoreCase("f")||p[0].equals("flag") ) { // if the left of the pair is a double
-                    for( int pos=0;pos<referencedNums.size();pos++ ){ // go through the known doubleVals
-                        var d = referencedNums.get(pos);
-                        if( d.id().equalsIgnoreCase(p[1])) { // If a match is found
-                            exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + (highestI + pos + 1));
-                            ok=true;
-                            break;
+                p[0]=p[0].toLowerCase();
+                switch(p[0]){
+                    case "d","double","r","real","f","flag":
+                        for( int pos=0;pos<referencedNums.size();pos++ ){ // go through the known doubleVals
+                            var d = referencedNums.get(pos);
+                            if( d.id().equalsIgnoreCase(p[1])) { // If a match is found
+                                exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + (highestI + pos + 1));
+                                ok=true;
+                                break;
+                            }
                         }
-                    }
-                }else{
-                    Logger.error(id+" (mf)-> Operation containing unknown pair: "+String.join(":",p));
-                    return "";
+                        break;
+                    default:
+                        Logger.error(id+" (mf)-> Operation containing unknown pair: "+String.join(":",p));
+                        return "";
                 }
                 if(!ok){
                     Logger.error(id+" (mf)-> Didn't find a match when looking for "+String.join(":",p));

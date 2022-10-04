@@ -40,7 +40,7 @@ public class ConfirmCollector extends AbstractCollector {
      */
     public void setAttempts( int attempts, int secs){
         timeoutSeconds=secs;
-        this.maxAttempts=attempts;
+        maxAttempts=attempts;
     }
 
     /*  Class specific stuff */
@@ -53,15 +53,18 @@ public class ConfirmCollector extends AbstractCollector {
     public void addConfirm( String message, String reply ){
         confirms.add( new Confirm(message,reply.replace("**", message)) );
         if( confirms.size()==1){
-            logInfo(id+" -> Sending '"+confirms.get(0).msg+"'");
-            confirms.get(0).doAttempt();
+            confirms.get(0).doAttempt(false);
         }else{
-            logInfo(id+" -> Added '"+message+"' with reply '"+reply+"' to the queue");
+            if( reply.isEmpty()){
+                logInfo("Added '" + message + "' without reply to the queue for "+target.getID());
+            }else {
+                logInfo("Added '" + message + "' with reply '" + reply + "' to the queue for "+target.getID());
+            }
         }
     }
 
     /**
-     * Add mutliple confirms to this object with the same reply
+     * Add multiple confirms to this object with the same reply
      * @param messages The messages that should get the reply
      * @param reply the expected reply to the messages
      */
@@ -78,7 +81,7 @@ public class ConfirmCollector extends AbstractCollector {
         return confirms.isEmpty();
     }
     /**
-     * Get a list of all the confirms stored in this object
+     * Get a list of all the confirm's stored in this object
      * @return The list
      */
     public String getStored(){
@@ -107,7 +110,7 @@ public class ConfirmCollector extends AbstractCollector {
             var con = confirms.remove(0);
             if( !confirms.isEmpty() ){
                 logInfo("Received '"+msg+"' as reply for '"+con.msg+"' next up '"+confirms.get(0).msg+"'");
-                confirms.get(0).doAttempt();
+                confirms.get(0).doAttempt(false);
             }else{
                 logInfo("Confirm ended successfully for " + con.msg);
                 if( timeoutFuture!=null) {
@@ -130,15 +133,16 @@ public class ConfirmCollector extends AbstractCollector {
             return;
 
         if( confirms.get(0).reply.isEmpty() ){ // Meaning no reply requested (so just delayed sending)
-            confirms.remove(0); // remove the top one that doesn't need reply
+            confirms.remove(0); // remove the top one that was send
             if( !confirms.isEmpty() ) { // If that didn't empty the list
-                logInfo("Next to send '"+confirms.get(0).msg+"'");
-                confirms.get(0).doAttempt(); // try sending the top one
+                confirms.get(0).doAttempt(true); // try sending the top one
+                if( confirms.size()==1) // send the last one and no reply needed
+                    listeners.forEach( rw -> rw.collectorFinished("confirm:"+id,"", true) );
             }
-        }else if( !confirms.get(0).doAttempt() ){
+        }else if( !confirms.get(0).doAttempt(true) ){
             logError("Max amount of attempts done, stopping and clearing buffer (\"+confirms.size()+\" items)\"");
             confirms.clear();
-            listeners.forEach( rw -> rw.collectorFinished("confirm:"+id,/*"noconfirm"*/"", false) );
+            listeners.forEach( rw -> rw.collectorFinished("confirm:"+id,"", false) );
         }
     }
     private void logError( String error ){
@@ -148,11 +152,11 @@ public class ConfirmCollector extends AbstractCollector {
             Logger.error(id+" -> "+error);
         }
     }
-    private void logInfo( String error ){
+    private void logInfo( String message ){
         if( id.contains("_")) {
-            Logger.tag("task").info(id+" -> "+error);
+            Logger./*tag("task").*/info(id+" -> "+message);
         }else{
-            Logger.info(id+" -> "+error);
+            Logger.info(id+" -> "+message);
         }
     }
     /* *********************** Override of Writable ************************************************/
@@ -170,7 +174,7 @@ public class ConfirmCollector extends AbstractCollector {
             this.reply=reply;
             this.msg=msg;
         }
-        public boolean doAttempt(){
+        public boolean doAttempt( boolean timeout){
             if( timeoutFuture != null )
                 timeoutFuture.cancel(true);
 
@@ -178,13 +182,14 @@ public class ConfirmCollector extends AbstractCollector {
                 Logger.info(id+ " -> All attempts done ("+attempts+"), giving up.");
                 return false;
             }
+            logInfo("Sending '"+confirms.get(0).msg+"' to "+target.getID());
             target.writeLine(msg);
-            withTimeOut(timeoutSeconds+"s",scheduler);
-            
-            attempts++;
+            if( confirms.size()>1 || !timeout)
+                withTimeOut(timeoutSeconds+"s",scheduler);
+            if(!reply.isEmpty())// Can't fail, so no attempts counted
+                attempts++;
             return true;
         }
-
     }
     
 }

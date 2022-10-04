@@ -210,7 +210,7 @@ public class IntegerVal extends AbstractVal implements NumericVal{
         return true;
     }
     /**
-     * Get a , delimited string with all the used options
+     * Get a ',' delimited string with all the used options
      * @return The options in a listing or empty if none are used
      */
     private String getOptions(){

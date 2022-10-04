@@ -88,7 +88,7 @@ public class EditorForward extends AbstractForward{
                 .add("rexkeep -> Only retain the result of the regex given as value")
                 .add("    fe. <edit type='rexkeep' >\\d*</edit>  --> 162512")
                 .add("millisdate -> Convert epoch millis to a timestamp with given format")
-                .add("    fe. todo ");
+                .add("    fe. <edit type='millisdate'>yyyy-MM-dd HH:mm:ss.SSS</edit> ");
 
         return join.toString();
     }

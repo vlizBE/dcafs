@@ -28,7 +28,7 @@ public class MqttPool implements Commandable, MqttWriting {
         this.dQueue=dQueue;
 
         if( !readXMLsettings() )
-            Logger.error("Failed to read xml settings for MQTTPool");
+            Logger.warn("Failed to read xml settings for MQTTPool");
     }
     public boolean sendToBroker( String id, String device, String param, double value) {
         MqttWorker worker = mqttWorkers.get(id);
@@ -177,10 +177,30 @@ public class MqttPool implements Commandable, MqttWriting {
         String[] cmd = request[1].split(",");
         String nl = html ? "<br>" : "\r\n";
 
+        String cyan = html?"":TelnetCodes.TEXT_CYAN;
+        String green=html?"":TelnetCodes.TEXT_GREEN;
+        String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
+
         switch( cmd[0] ){
-            //mqtt:brokers
+            case "?":
+                StringJoiner join = new StringJoiner(nl);
+                join.add(TelnetCodes.TEXT_RED+"Purpose"+reg);
+                join.add("The MQTT manager manages the workers that connect to brokers").add("");
+                join.add(cyan+"General"+reg)
+                        .add( green+"   mqtt:addbroker,brokerid,address "+reg+"-> Add a new broker with the given id found at the address")
+                        .add( green+"   mqtt:brokers "+reg+"-> Get a listing of the current registered brokers")
+                        .add( green+"   mqtt:reload,brokerid "+reg+"-> Reload the settings for the broker from the xml.")
+                        .add( green+"   mqtt:store,brokerid"+reg+" -> Store the current settings of the broker to the xml.")
+                        .add( green+"   mqtt:?"+reg+" -> Show this message");
+                join.add(cyan+"Subscriptions"+reg)
+                        .add( green+"   mqtt:subscribe,brokerid,label,topic "+reg+"-> Subscribe to a topic with given label on given broker")
+                        .add( green+"   mqtt:unsubscribe,brokerid,topic "+reg+"-> Unsubscribe from a topic on given broker")
+                        .add( green+"   mqtt:unsubscribe,brokerid,all "+reg+"-> Unsubscribe from all topics on given broker");
+                join.add(cyan+"Send & Receive"+reg)
+                        .add( green+"   mqtt:brokerid "+reg+"-> Forwards the data received from the given broker to the issuing writable")
+                        .add( green+"   mqtt:send,brokerid,topic:value "+reg+"-> Sends the value to the topic of the brokerid");
+                return join.toString();
             case "brokers": return getMqttBrokersInfo();
-            //mqtt:subscribe,ubidots,aanderaa,outdoor_hub/1844_temperature
             case "addbroker":
                 if( cmd.length!=4)
                     return "Wrong amount of arguments: mqtt:addbroker,id,address,deftopic";
@@ -242,24 +262,14 @@ public class MqttPool implements Commandable, MqttWriting {
                 double val = rtvals.getReal(topVal[1], -999);
                 getMqttWorker(cmd[1]).ifPresent( w -> w.addWork(topVal[0],""+val));
                 return "Data send to "+cmd[1];
-            case "?":
-                StringJoiner join = new StringJoiner(nl);
-                join.add(TelnetCodes.TEXT_MAGENTA+"The MQTT manager manages the workers that connect to brokers");
-                join.add(TelnetCodes.TEXT_GREEN+"General"+TelnetCodes.TEXT_YELLOW)
-                        .add( "   mqtt:addbroker,brokerid,address -> Add a new broker with the given id found at the address")
-                        .add( "   mqtt:brokers -> Get a listing of the current registered brokers")
-                        .add( "   mqtt:reload,brokerid -> Reload the settings for the broker from the xml.")
-                        .add( "   mqtt:store,brokerid -> Store the current settings of the broker to the xml.")
-                        .add( "   mqtt:? -> Show this message");
-                join.add(TelnetCodes.TEXT_GREEN+"Subscriptions"+TelnetCodes.TEXT_YELLOW)
-                        .add( "   mqtt:subscribe,brokerid,label,topic -> Subscribe to a topic with given label on given broker")
-                        .add( "   mqtt:unsubscribe,brokerid,topic -> Unsubscribe from a topic on given broker")
-                        .add( "   mqtt:unsubscribe,brokerid,all -> Unsubscribe from all topics on given broker");
-                join.add(TelnetCodes.TEXT_GREEN+"Send & Receive"+TelnetCodes.TEXT_YELLOW)
-                        .add( "   mqtt:forward,brokerid -> Forwards the data received from the given broker to the issuing writable")
-                        .add( "   mqtt:send,brokerid,topic:value -> Sends the value to the topic of the brokerid");
-                return join.toString();
-            default: return UNKNOWN_CMD+": "+cmd[0];
+            default:
+                if( getMqttWorker(cmd[1]).map( x -> {
+                    x.registerWritable(wr);
+                    return true;
+                }).orElse(false) ){
+                    return "Request added";
+                }
+                return UNKNOWN_CMD+" +or id: "+cmd[0];
         }
     }
 

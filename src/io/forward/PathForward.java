@@ -250,7 +250,7 @@ public class PathForward {
 
         return "Request for "+s.getXmlChildTag()+":"+s.id+" received";
     }
-    private Optional<AbstractForward> lastStep(){
+    public Optional<AbstractForward> lastStep(){
         if( stepsForward.isEmpty())
             return Optional.empty();
         return Optional.ofNullable(stepsForward.get(stepsForward.size()-1));
@@ -313,13 +313,13 @@ public class PathForward {
         }
     }
     public void removeTarget( Writable wr){
-        if(stepsForward==null)
-            return;
-        if( stepsForward.isEmpty() ) {
+        if( stepsForward==null||stepsForward.isEmpty() ) {
             targets.remove(wr);// Stop giving data
         }else{
             for( var step : stepsForward )
                 step.removeTarget(wr);
+
+            lastStep().ifPresent( ls -> ls.removeTarget(wr));
 
             if( lastStep().isEmpty() )
                 return;
@@ -328,7 +328,12 @@ public class PathForward {
             }
         }
     }
-
+    public void stop(){
+        lastStep().ifPresent( ls -> ls.removeTargets());
+        targets.clear();
+        customs.forEach(CustomSrc::stop);
+        customs.clear();
+    }
     private class CustomSrc{
         String pathOrData;
         String path;

@@ -11,6 +11,17 @@ From 0.5.0 onwards, this should be better documented...
 - Resolve #34
 
 ## 1.0.3 (work in progress)
+### MQTT
+- Response to ? is now in line with the other commandables (coloring etc)
+- mqtt:brokerid now works as alternative to mqtt:forward,brokerid
+
+### TaskManager
+- tm:reload now also reloads
+
+### Fixes
+- MathForward still had a method that referred to d instead of r
+- TaskManager didn't handle oneshot tasksets properly if a reply was asked from a stream.
+This reply caused it to go to the next task in the set while this should only happen in step type.
 
 ### Fixes
 - Generic now properly generates new rtvals
