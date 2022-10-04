@@ -28,7 +28,7 @@ public class MqttPool implements Commandable, MqttWriting {
         this.dQueue=dQueue;
 
         if( !readXMLsettings() )
-            Logger.error("Failed to read xml settings for MQTTPool");
+            Logger.warn("Failed to read xml settings for MQTTPool");
     }
     public boolean sendToBroker( String id, String device, String param, double value) {
         MqttWorker worker = mqttWorkers.get(id);
