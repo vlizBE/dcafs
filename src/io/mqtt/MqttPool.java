@@ -262,24 +262,14 @@ public class MqttPool implements Commandable, MqttWriting {
                 double val = rtvals.getReal(topVal[1], -999);
                 getMqttWorker(cmd[1]).ifPresent( w -> w.addWork(topVal[0],""+val));
                 return "Data send to "+cmd[1];
-            case "?":
-                StringJoiner join = new StringJoiner(nl);
-                join.add(TelnetCodes.TEXT_MAGENTA+"The MQTT manager manages the workers that connect to brokers");
-                join.add(TelnetCodes.TEXT_GREEN+"General"+TelnetCodes.TEXT_YELLOW)
-                        .add( "   mqtt:addbroker,brokerid,address -> Add a new broker with the given id found at the address")
-                        .add( "   mqtt:brokers -> Get a listing of the current registered brokers")
-                        .add( "   mqtt:reload,brokerid -> Reload the settings for the broker from the xml.")
-                        .add( "   mqtt:store,brokerid -> Store the current settings of the broker to the xml.")
-                        .add( "   mqtt:? -> Show this message");
-                join.add(TelnetCodes.TEXT_GREEN+"Subscriptions"+TelnetCodes.TEXT_YELLOW)
-                        .add( "   mqtt:subscribe,brokerid,label,topic -> Subscribe to a topic with given label on given broker")
-                        .add( "   mqtt:unsubscribe,brokerid,topic -> Unsubscribe from a topic on given broker")
-                        .add( "   mqtt:unsubscribe,brokerid,all -> Unsubscribe from all topics on given broker");
-                join.add(TelnetCodes.TEXT_GREEN+"Send & Receive"+TelnetCodes.TEXT_YELLOW)
-                        .add( "   mqtt:forward,brokerid -> Forwards the data received from the given broker to the issuing writable")
-                        .add( "   mqtt:send,brokerid,topic:value -> Sends the value to the topic of the brokerid");
-                return join.toString();
-            default: return UNKNOWN_CMD+": "+cmd[0];
+            default:
+                if( getMqttWorker(cmd[1]).map( x -> {
+                    x.registerWritable(wr);
+                    return true;
+                }).orElse(false) ){
+                    return "Request added";
+                }
+                return UNKNOWN_CMD+" +or id: "+cmd[0];
         }
     }
 
