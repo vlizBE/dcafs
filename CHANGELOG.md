@@ -12,6 +12,9 @@ From 0.5.0 onwards, this should be better documented...
 
 ## 1.0.3 (work in progress)
 
+### Fixes
+- Generic now properly generates new rtvals
+
 ## 1.0.2 (26/09/2022)
 
 ### Filemonitor
