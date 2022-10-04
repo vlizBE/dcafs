@@ -1079,7 +1079,7 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 			case "confirm" -> {
 				confirmCollectors.remove(ids[1]);
 				if (confirmCollectors.isEmpty())
-					Logger.info("Confirm tasks are empty");
+					Logger.info("All confirm requests are finished");
 			}
 			case "math" -> dQueue.add(Datagram.system("store:" + message + "," + result));
 			default -> Logger.error("Unknown Collector type: " + id);
