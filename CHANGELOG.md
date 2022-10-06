@@ -23,6 +23,9 @@ From 0.5.0 onwards, this should be better documented...
 - TaskManager didn't handle oneshot tasksets properly if a reply was asked from a stream.
 This reply caused it to go to the next task in the set while this should only happen in step type.
 
+### Fixes
+- Generic now properly generates new rtvals
+
 ## 1.0.2 (26/09/2022)
 
 ### Filemonitor
