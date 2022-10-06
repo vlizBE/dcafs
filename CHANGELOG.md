@@ -10,7 +10,9 @@ From 0.5.0 onwards, this should be better documented...
 - integerval telnet interface?
 - Resolve #34
 
-## 1.0.3 (work in progress)
+## 1.0.4 (work in progress)
+
+## 1.0.3 (06/10/2022)
 ### MQTT
 - Response to ? is now in line with the other commandables (coloring etc)
 - mqtt:brokerid now works as alternative to mqtt:forward,brokerid
@@ -22,8 +24,6 @@ From 0.5.0 onwards, this should be better documented...
 - MathForward still had a method that referred to d instead of r
 - TaskManager didn't handle oneshot tasksets properly if a reply was asked from a stream.
 This reply caused it to go to the next task in the set while this should only happen in step type.
-
-### Fixes
 - Generic now properly generates new rtvals
 
 ## 1.0.2 (26/09/2022)
