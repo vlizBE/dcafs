@@ -62,7 +62,6 @@ public class CommandLineInterface {
                             }
                             break;
                         case 68: // Arrow Left
-
                             if( buffer.writerIndex() != 0 ) {
                                 writeString(TelnetCodes.CURSOR_LEFT);
                                 buffer.setIndex(buffer.readerIndex(), buffer.writerIndex() - 1);

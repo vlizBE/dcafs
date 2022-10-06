@@ -1,5 +1,6 @@
 package util.task;
 
+import io.telnet.TelnetCodes;
 import util.data.DataProviding;
 import io.email.Email;
 import io.email.EmailSending;
@@ -1218,18 +1219,23 @@ public class TaskManager implements CollectorFuture {
 	public String replyToCommand(String request, boolean html ){
 		String[] parts = request.split(",");
 
+		String cyan = html?"": TelnetCodes.TEXT_CYAN;
+		String green=html?"":TelnetCodes.TEXT_GREEN;
+		String ora = html?"":TelnetCodes.TEXT_ORANGE;
+		String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
+
 		switch( parts[0] ){
 			case "?":
 				StringJoiner join = new StringJoiner("\r\n");
-				join.add("reload/reloadtasks -> Reloads this TaskManager");
-				join.add("forcereload -> Reloads this TaskManager while ignoring interruptable");
-				join.add("listtasks/tasks -> Returns a listing of all the loaded tasks");
-				join.add("listsets/sets -> Returns a listing of all the loaded sets");
-				join.add("states/flags -> Returns a listing of all the current states & flags");
-				join.add("stop -> Stop all running tasks and tasksets");
-				join.add("run,x -> Run taskset with the id x");
+				join.add(green+"reload"+reg+" -> Reloads this TaskManager");
+				join.add(green+"forcereload "+reg+"-> Reloads this TaskManager while ignoring interruptable");
+				join.add(green+"listtasks/tasks "+reg+"-> Returns a listing of all the loaded tasks");
+				join.add(green+"listsets/sets "+reg+"-> Returns a listing of all the loaded sets");
+				join.add(green+"states/flags "+reg+"-> Returns a listing of all the current states & flags");
+				join.add(green+"stop "+reg+"-> Stop all running task(set)s");
+				join.add(green+"run,x "+reg+"-> Run taskset with the id x");
 				return join.toString();
-			case "reload":case "reloadtasks":     return reloadTasks()?"Reloaded tasks...":"Reload Failed";
+			case "reload":      return reloadTasks()?"Reloaded tasks...":"Reload Failed";
 			case "forcereload": return forceReloadTasks()?"Reloaded tasks":"Reload failed";
 			case "listtasks": case "tasks": return getTaskListing(html?"<br>":"\r\n");
 			case "listsets": case "sets":  return getTaskSetListing(html?"<br>":"\r\n");
@@ -1269,7 +1275,6 @@ public class TaskManager implements CollectorFuture {
 				}
 				if( !waitForRestore.isEmpty() ){
 					scheduler.schedule(new ChannelRestoreChecker(), 10, TimeUnit.SECONDS);
-					//Logger.tag(TINY_TAG).info("Rescheduled restore check.")
 				}
 			}
 		}
