@@ -97,22 +97,22 @@ public class ConfirmCollector extends AbstractCollector {
     /* *********************** Implementation of the abstract methods *********************** */
     /**
      * Process received data
-     * @param msg The received message
+     * @param reply The received message
      * @return True if ok, false if all confirms were processed
      */
-    protected boolean addData( String msg ){
-        if( confirms.isEmpty())
+    protected boolean addData( String reply ){
+        if( confirms.isEmpty() || confirms.get(0).reply.isEmpty() )
             return false;
 
-        Logger.debug("Comparing '"+confirms.get(0).reply+"' to received '"+msg+"'");
-        
-        if( msg.equalsIgnoreCase(confirms.get(0).reply)){ // matches
-            var con = confirms.remove(0);
+        Logger.debug("Comparing '"+confirms.get(0).reply+"' to received '"+reply+"'");
+
+        if( reply.equalsIgnoreCase(confirms.get(0).reply)){ // matches
+            logInfo("Received '"+reply+"' as reply for '"+confirms.get(0).reply+"' next up '"+confirms.get(0).msg+"'");
+            confirms.remove(0);
             if( !confirms.isEmpty() ){
-                logInfo("Received '"+msg+"' as reply for '"+con.msg+"' next up '"+confirms.get(0).msg+"'");
                 confirms.get(0).doAttempt(false);
             }else{
-                logInfo("Confirm ended successfully for " + con.msg);
+                Logger.tag("TASK").info(id+" -> All confirms received");
                 if( timeoutFuture!=null) {
                     timeoutFuture.cancel(true);
                 }else{
@@ -139,22 +139,24 @@ public class ConfirmCollector extends AbstractCollector {
                 if( confirms.size()==1) // send the last one and no reply needed
                     listeners.forEach( rw -> rw.collectorFinished("confirm:"+id,"", true) );
             }
-        }else if( !confirms.get(0).doAttempt(true) ){
-            logError("Max amount of attempts done, stopping and clearing buffer (\"+confirms.size()+\" items)\"");
-            confirms.clear();
-            listeners.forEach( rw -> rw.collectorFinished("confirm:"+id,"", false) );
+        }else {
+            if( !confirms.get(0).doAttempt(true) ){
+                logError("Max amount of attempts done, stopping and clearing buffer ("+confirms.size()+" items), failed: "+confirms.get(0).reply);
+                confirms.clear();
+                listeners.forEach( rw -> rw.collectorFinished("confirm:"+id,"", false) );
+            }
         }
     }
     private void logError( String error ){
         if( id.contains("_")) {
-            Logger.tag("task").error(id+" -> "+error);
+            Logger.tag("TASK").error(id+" -> "+error);
         }else{
             Logger.error(id+" -> "+error);
         }
     }
     private void logInfo( String message ){
         if( id.contains("_")) {
-            Logger./*tag("task").*/info(id+" -> "+message);
+            Logger.tag("TASK").info(id+" -> "+message);
         }else{
             Logger.info(id+" -> "+message);
         }
@@ -179,10 +181,10 @@ public class ConfirmCollector extends AbstractCollector {
                 timeoutFuture.cancel(true);
 
             if( maxAttempts <= attempts ) {
-                Logger.info(id+ " -> All attempts done ("+attempts+"), giving up.");
+                Logger.tag("TASK").info(id+ " -> All attempts done ("+attempts+" of "+maxAttempts+"), giving up.");
                 return false;
             }
-            logInfo("Sending '"+confirms.get(0).msg+"' to "+target.getID());
+            Logger.tag("TASK").info(id+ " -> Sending '"+confirms.get(0).msg+"' to "+target.getID()+" for attempt "+attempts);
             target.writeLine(msg);
             if( confirms.size()>1 || !timeout)
                 withTimeOut(timeoutSeconds+"s",scheduler);
