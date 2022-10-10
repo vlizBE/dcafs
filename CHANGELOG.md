@@ -11,6 +11,10 @@ From 0.5.0 onwards, this should be better documented...
 - Resolve #34
 
 ## 1.0.4 (work in progress)
+### Fixes
+- TaskManager fix in 1.0.3 caused another issue, should be fixed
+- FileCollector folder permissions were altered before the folder was known...
+- PathForward stepsforward could still be null, prevent nullpointer
 
 ## 1.0.3 (06/10/2022)
 ### MQTT
@@ -18,7 +22,7 @@ From 0.5.0 onwards, this should be better documented...
 - mqtt:brokerid now works as alternative to mqtt:forward,brokerid
 
 ### TaskManager
-- tm:reload now also reloads
+- tm:reload now also reloads all
 
 ### Fixes
 - MathForward still had a method that referred to d instead of r
