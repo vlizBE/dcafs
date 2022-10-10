@@ -71,16 +71,10 @@ public class FileCollector extends AbstractCollector{
         this.dQueue=dQueue;
         secondsTimeout = TimeTools.parsePeriodStringToSeconds(timeoutPeriod);
         this.scheduler=scheduler;
-
-        Logger.info("Trying to alter permissions");
-        FileTools.setAllPermissions(getPath().getParent());
     }
     public FileCollector(String id,BlockingQueue<Datagram> dQueue ){
         super(id);
         this.dQueue=dQueue;
-
-        Logger.info("Trying to alter permissions");
-        FileTools.setAllPermissions(getPath().getParent());
     }
     @Override
     public String getID(){ return "fc:"+id;}
@@ -143,6 +137,9 @@ public class FileCollector extends AbstractCollector{
         }
 
         setPath(path.get());
+
+        Logger.info("Trying to alter permissions");
+        FileTools.setAllPermissions(getPath().getParent());
 
         /* Headers */
         headers.clear();
@@ -292,6 +289,7 @@ public class FileCollector extends AbstractCollector{
      * @return The path to the file as a string
      */
     public Path getPath(){
+
         String path = destPath.toString();
 
         //without rollover
