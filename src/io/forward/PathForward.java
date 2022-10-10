@@ -251,7 +251,7 @@ public class PathForward {
         return "Request for "+s.getXmlChildTag()+":"+s.id+" received";
     }
     public Optional<AbstractForward> lastStep(){
-        if( stepsForward.isEmpty())
+        if( stepsForward == null ||stepsForward.isEmpty())
             return Optional.empty();
         return Optional.ofNullable(stepsForward.get(stepsForward.size()-1));
     }
