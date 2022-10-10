@@ -245,8 +245,8 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 	 * This creates the barebones settings in the xml
 	 * 
 	 * @param fab An XMLfab to build upon
-	 * @param sendEmails Whether or not to include sending emails
-	 * @param receiveEmails Whether or not to include checking for emails
+	 * @param sendEmails Whether to include sending emails
+	 * @param receiveEmails Whether to include checking for emails
 	 * @return True if changes were written to the xml
 	 */
 	public static boolean addBlankEmailToXML( XMLfab fab, boolean sendEmails, boolean receiveEmails ){

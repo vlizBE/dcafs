@@ -15,6 +15,7 @@ From 0.5.0 onwards, this should be better documented...
 - TaskManager fix in 1.0.3 caused another issue, should be fixed
 - FileCollector folder permissions were altered before the folder was known...
 - PathForward stepsforward could still be null, prevent nullpointer
+- TaskManager allowed for interval tasks with an interval of 0s
 
 ## 1.0.3 (06/10/2022)
 ### MQTT
