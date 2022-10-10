@@ -331,6 +331,10 @@ public class SQLDB extends Database{
                 Logger.debug(id+"(db) -> The table "+table.getName()+" has already been setup, not adding the columns");
                 continue;
             }
+            if( type == DBTYPE.MSSQL ){
+                Logger.debug(id+"(db) -> The table "+table.getName()+" is inside a MSSQL DB, no column request query.");
+                continue;
+            }
             try( Statement stmt = con.createStatement() ){
                 String tblName = table.getName();
                 if( type == DBTYPE.POSTGRESQL )
