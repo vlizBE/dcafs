@@ -365,7 +365,7 @@ public class TaskManager implements CollectorFuture {
 					if(task.startDelay==-1){ // Figure out the delay
 						delay = TimeTools.millisDelayToCleanTime(task.interval);
 					}
-					if( delay <= 0 || task.interval <= 0){
+					if( task.interval == 0){
 						Logger.error(id+" -> Bad delay calculated from "+task.interval+ "for "+task.id+", so not starting.");
 					}else {
 						task.future = scheduler.scheduleAtFixedRate(new DelayedControl(task), delay,
