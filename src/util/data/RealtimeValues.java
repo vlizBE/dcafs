@@ -57,8 +57,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 		this.settingsPath=settingsPath;
 		this.dQueue=dQueue;
 
-		readFromXML( XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals") );
-
+		readFromXML( XMLfab.withRoot(settingsPath,"dcafs", "rtvals") );
 		issuePool = new IssuePool(dQueue, settingsPath,this);
 	}
 
