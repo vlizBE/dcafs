@@ -16,6 +16,12 @@ From 0.5.0 onwards, this should be better documented...
 - FileCollector folder permissions were altered before the folder was known...
 - PathForward stepsforward could still be null, prevent nullpointer
 - TaskManager allowed for interval tasks with an interval of 0s
+- Realtimevalues used the 'get' to check if a real already instead of the bool one
+
+### Changes
+- Rtvals node doesn't have to be inside settings
+- waitfor task can now have the check as content instead of attribute
+- task with interval of 0 are now ignored
 
 ## 1.0.3 (06/10/2022)
 ### MQTT
