@@ -107,6 +107,8 @@ public class Task implements Comparable<Task>{
 				case "waitfor" -> triggerType = TRIGGERTYPE.WAITFOR;
 			}
 			var check = XMLtools.getStringAttribute(tsk,"check","");
+			if( check.isEmpty() )
+				check = tsk.getTextContent();
 			if( !check.isEmpty() ){
 				for( int a=0;a<sharedChecks.size();a++ ){
 					if( sharedChecks.get(a).matchesOri(check)){
