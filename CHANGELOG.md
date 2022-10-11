@@ -10,7 +10,8 @@ From 0.5.0 onwards, this should be better documented...
 - integerval telnet interface?
 - Resolve #34
 
-## 1.0.4 (work in progress)
+## 1.0.5
+## 1.0.4 (11/10/2022)
 ### Fixes
 - TaskManager fix in 1.0.3 caused another issue, should be fixed
 - FileCollector folder permissions were altered before the folder was known...
