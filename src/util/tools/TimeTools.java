@@ -282,6 +282,17 @@ public class TimeTools {
 			default: return -1;
     	}
     }
+    public static long convertPeriodtoMillis( long time, TimeUnit unit ){
+        switch( unit ){
+            case DAYS: return time * 3600 * 24 * 1000;
+            case HOURS: return time * 3600 * 1000;
+            case MINUTES: return time * 60 * 1000;
+            case SECONDS: return time * 1000;
+            case MILLISECONDS: return time;
+            case MICROSECONDS: return time/1000;
+            default: return -1;
+        }
+    }
     /**
      * Parses a period formatted for a Task to a Duration
      * 
