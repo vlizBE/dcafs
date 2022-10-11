@@ -370,7 +370,7 @@ public class TaskManager implements CollectorFuture {
 					}else {
 						task.future = scheduler.scheduleAtFixedRate(new DelayedControl(task), delay,
 								task.interval, task.unit);
-						Logger.info(id + " -> Delay set to " + TimeTools.convertPeriodtoString(delay, TimeUnit.MILLISECONDS) + " for " + task.interval / 1000 + "s interval");
+						Logger.info(id + " -> Delay set to " + TimeTools.convertPeriodtoString(delay, TimeUnit.MILLISECONDS) + " for " + task.interval +" "+ task.unit + " interval");
 					}
 				} catch (IllegalArgumentException e) {
 					Logger.tag(TINY_TAG).error("Illegal Argument: start=" + task.startDelay + " interval=" + task.interval + " unit="
@@ -520,7 +520,7 @@ public class TaskManager implements CollectorFuture {
 					}
 				} else if (task.triggerType == TRIGGERTYPE.WHILE || task.triggerType == TRIGGERTYPE.WAITFOR ) {
 					task.attempts++;
-					Logger.info("Attempts "+task.attempts+" of runs "+task.runs);
+					Logger.tag(TINY_TAG).info("Attempts "+task.attempts+" of runs "+task.runs);
 					if (task.runs == task.attempts) {
 						task.reset();
 						Logger.info("Reset attempts to "+task.attempts+" and go to next task");
@@ -542,7 +542,7 @@ public class TaskManager implements CollectorFuture {
 					task.reset();
 				}else if (task.triggerType == TRIGGERTYPE.WAITFOR) {
 					failure = false;
-					Logger.info("Requirement not met, resetting counter failed "+getCheckInfo(task.getReqIndex()));
+					Logger.tag(TINY_TAG).info("Requirement not met, resetting counter failed "+getCheckInfo(task.getReqIndex()));
 					task.attempts = 0; // reset the counter
 				}else if (task.triggerType == TRIGGERTYPE.RETRY || (task.triggerType == TRIGGERTYPE.INTERVAL && executed!=FAILREASON.NOREQ)) {
 					failure = false;
@@ -604,10 +604,8 @@ public class TaskManager implements CollectorFuture {
 		boolean verify = ver==1;
 		FAILREASON executed = verify?FAILREASON.ERROR:FAILREASON.NOREQ;
 
-		if (task.skipExecutions == 0 // Check if the next execution shouldn't be skipped (related to the 'link'
-										// keyword)
-				&& task.doToday // Check if the task is allowed to be executed today (related to the 'link'
-								// keyword)
+		if (task.skipExecutions == 0 // Check if the next execution shouldn't be skipped (related to the 'link' keyword)
+				&& task.doToday // Check if the task is allowed to be executed today (related to the 'link' keyword)
 				&& verify // Check if the earlier executed pre req checked out
 				&& checkState(task.when)) { // Verify that the state is correct
 
