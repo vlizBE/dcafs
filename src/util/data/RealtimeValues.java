@@ -271,8 +271,8 @@ public class RealtimeValues implements DataProviding, Commandable {
 	/**
 	 * Stricter version to parse a realtime line, must contain the references within { }
 	 * Options are:
-	 * - RealVal: {d:id} and {real:id} if it should already exist, or {D:id} if it should be created if new (value is 0.0)
-	 * - FlagVal: {f:id} or {b:id} and {flag:id} if it should already exist, or {F:id} if it should be created if new (state will be false)
+	 * - RealVal: {d:id} and {real:id}
+	 * - FlagVal: {f:id} or {b:id} and {flag:id}
 	 * This also checks for {utc}/{utclong},{utcshort} to insert current timestamp
 	 * @param line The original line to parse/alter
 	 * @param error Value to put if the reference isn't found
@@ -503,7 +503,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 		if( realVals.containsKey(rv.getID()))
 			return false;
 		if(storeInXML)
-			rv.storeInXml(XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals"));
+			rv.storeInXml(XMLfab.withRoot(settingsPath,"dcafs","rtvals"));
 		return realVals.put(rv.getID(),rv)==null;
 	}
 
@@ -512,7 +512,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 	 * @param id The reference with which the object was stored
 	 * @return The requested RealVal or null if not found
 	 */
-	public Optional<RealVal> getRealVal(String id ){
+	public Optional<RealVal> getRealVal( String id ){
 		if( realVals.get(id)==null)
 			Logger.error( "Tried to retrieve non existing realval "+id);
 		return Optional.ofNullable(realVals.get(id));
@@ -639,7 +639,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 		if( !integerVals.containsKey(iv.getID())){
 			integerVals.put(iv.getID(),iv);
 			if(xmlStore)
-				iv.storeInXml(XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals"));
+				iv.storeInXml(XMLfab.withRoot(settingsPath,"dcafs","rtvals"));
 			return iv;
 		}
 		return val;
