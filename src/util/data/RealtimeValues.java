@@ -601,8 +601,8 @@ public class RealtimeValues implements DataProviding, Commandable {
 	 * @return The value found or the bad value
 	 */
 	public double getReal(String id, double defVal) {
-
-		RealVal d = realVals.get(id);
+		var star = id.indexOf("*");
+		RealVal d = realVals.get(star==-1?id:id.substring(0,star));
 		if (d == null) {
 			return defVal;
 		}
@@ -610,7 +610,16 @@ public class RealtimeValues implements DataProviding, Commandable {
 			Logger.error("ID: " + id + " is NaN.");
 			return defVal;
 		}
-		return d.value();
+		if( star==-1)
+			return d.value();
+
+		return switch( id.substring(star+1) ){
+			case "stdev", "stdv"-> d.getStdev();
+			case "avg", "average" ->  d.getAvg();
+			case "min" -> d.min();
+			case "max" -> d.max();
+			default -> d.value();
+		};
 	}
 	/* ************************************ I N T E G E R V A L ***************************************************** */
 
@@ -715,13 +724,21 @@ public class RealtimeValues implements DataProviding, Commandable {
 	 * @return The value found or the bad value
 	 */
 	public int getInteger(String id, int defVal) {
-
-		IntegerVal i = integerVals.get(id);
+		var star = id.indexOf("*");
+		IntegerVal i = integerVals.get(star==-1?id:id.substring(0,star));
 		if (i == null) {
 			Logger.debug("No such id: " + id);
 			return defVal;
 		}
-		return i.intValue();
+
+		if( star==-1)
+			return i.intValue();
+
+		return switch( id.substring(star+1) ){
+			case "min" -> i.min();
+			case "max" -> i.max();
+			default -> i.intValue();
+		};
 	}
 	/* *********************************** T E X T S  ************************************************************* */
 	public boolean hasText(String id){
