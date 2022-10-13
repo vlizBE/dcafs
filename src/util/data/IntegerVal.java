@@ -21,8 +21,8 @@ public class IntegerVal extends AbstractVal implements NumericVal{
     private int defVal=0;
 
     /* Min max*/
-    private double min=Integer.MAX_VALUE;
-    private double max=Integer.MIN_VALUE;
+    private int min=Integer.MAX_VALUE;
+    private int max=Integer.MIN_VALUE;
     private boolean keepMinMax=false;
 
     /* History */
@@ -97,8 +97,8 @@ public class IntegerVal extends AbstractVal implements NumericVal{
 
         /* Keep min max */
         if( keepMinMax ){
-            min = Math.min(min,val);
-            max = Math.max(max,val);
+            min = (int)Math.min(min,val);
+            max = (int)Math.max(max,val);
         }
         /* Respond to triggered command based on value */
         if( dQueue!=null && triggered!=null ) {
@@ -234,7 +234,12 @@ public class IntegerVal extends AbstractVal implements NumericVal{
             return null;
         }
     }
-
+    public int max(){
+        return max;
+    }
+    public int min(){
+        return min;
+    }
     @Override
     public double value() {
         return value;

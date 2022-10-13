@@ -284,7 +284,12 @@ public class RealVal extends AbstractVal implements NumericVal{
             return null;
         }
     }
-
+    public double min(){
+        return min;
+    }
+    public double max(){
+        return max;
+    }
     /**
      * Calculate the average of all the values stored in the history
      * @return The average of the stored values
