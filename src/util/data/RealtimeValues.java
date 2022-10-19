@@ -325,9 +325,9 @@ public class RealtimeValues implements DataProviding, Commandable {
 
 	/**
 	 * Checks the exp for any mentions of the numerical rtvals and if found adds these to the nums arraylist and replaces
-	 * the reference with i followed by the index in nums+offset. {D:id} and {F:id} will add the rtvals if they don't
+	 * the reference with 'i' followed by the index in nums+offset. {D:id} and {F:id} will add the rtvals if they don't
 	 * exist yet.
-	 *
+
 	 * fe. {d:temp}+30, nums still empty and offset 1: will add the RealVal temp to nums and alter exp to i1 + 30
 	 * @param exp The expression to check
 	 * @param nums The Arraylist to hold the numerical values
