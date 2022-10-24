@@ -98,14 +98,12 @@ public class DAS implements Commandable{
         Path p=Path.of(classPath);
 
         if (classPath.endsWith("classes/")) { //meaning from ide
-       //     if( classPath.startsWith("/")) // for some reason this gets prepended
-         //       classPath=classPath.substring(1);
             p = p.getParent(); // get parent to get out of the classes
         }
 
         if (p.toString().endsWith(".jar")) { //meaning from ide
-            TinyWrapErr.install();
-            System.setProperty("tinylog.stream","out");
+           // TinyWrapErr.install();
+           // System.setProperty("tinylog.stream","out");
         }
         workPath = p.getParent().toString();
         if( workPath.matches(".*lib$")) { // Meaning used as a lib
