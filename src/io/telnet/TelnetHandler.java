@@ -10,6 +10,7 @@ import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
+import util.xml.XMLtools;
 import worker.Datagram;
 
 import java.net.Inet4Address;
@@ -42,7 +43,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 
  	String repeat = "";
 	String title = "dcafs";
-	String id="";
+	String id="telnet";
 	String start="";
 
 	boolean config=false;
@@ -87,7 +88,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 				XMLfab.withRoot(settingsPath, "dcafs", "settings", "telnet")
 						.selectChildAsParent("client", "host", remote.getHostName())
 						.ifPresent(f -> {
-							id = f.getCurrentElement().getAttribute("id");
+							id = XMLtools.getStringAttribute(f.getCurrentElement(),"id",id);
 							start = f.getChild("start").map(Node::getTextContent).orElse("");
 							for (var c : f.getChildren("macro")) {
 								macros.put(c.getAttribute("ref"), c.getTextContent());
@@ -96,7 +97,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 
 				id = XMLfab.withRoot(settingsPath, "dcafs", "settings", "telnet")
 						.selectChildAsParent("client", "host", remote.getHostName())
-						.map(f -> f.getCurrentElement().getAttribute("id")).orElse("");
+						.map(f -> f.getCurrentElement().getAttribute("id")).orElse(id);
 			}
 		}else{
 			Logger.error( "Channel.remoteAddress is null in channelActive method");
@@ -189,13 +190,12 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 			if( d.getData().length()>2) {
 				repeat = d.getData().replace("!!", "");
 				writeString("Mode changed to '"+repeat+"'\r\n>");
-				return;
 			}else {
 				d.label(LABEL);
 				repeat="";
 				writeString("Mode cleared!\r\n>");
-				return;
 			}
+			return;
 		}else if( d.getData().startsWith(">>")) {
 			var split = new String[2];
 			if( !d.getData().contains(":")){
@@ -268,7 +268,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 			ChannelFuture future = channel.writeAndFlush( "Have a good day!\r\n");   			
 			future.addListener(ChannelFutureListener.CLOSE);
         } else {
-			dQueue.add(d);
+			dQueue.add( d );
         }
 	}
     @Override
@@ -328,6 +328,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 	public Writable getWritable() {
 		return this;
 	}
+
 	/* ***********************************************************************************************************/
 	/**
 	 * Change the title of the handler, title is used for telnet client etc representation
@@ -354,7 +355,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 	}
 	@Override
 	public String getID() {
-		return id.isEmpty()?LABEL:id;
+		return "telnet:"+(id.isEmpty()?LABEL:id);
 	}
 
 
