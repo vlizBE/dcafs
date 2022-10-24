@@ -91,6 +91,9 @@ public abstract class AbstractBlock implements TaskBlock{
         next.forEach(TaskBlock::stop);
         return true;
     }
+    public boolean isValid(){
+        return valid;
+    }
     public void nextOk(){
         parentBlock.ifPresent(TaskBlock::nextOk);
     }
