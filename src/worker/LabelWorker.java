@@ -324,6 +324,7 @@ public class LabelWorker implements Runnable, Commandable {
 	}
 	public void checkTelnet(Datagram d) {
 		Writable dt = d.getWritable();
+		d.origin("telnet");
 
 		if( d.getData().equalsIgnoreCase("spy:off")||d.getData().equalsIgnoreCase("spy:stop")){
 			spy.writeLine("Stopped spying...");
@@ -353,14 +354,11 @@ public class LabelWorker implements Runnable, Commandable {
 		}
 		String[] split = d.getLabel().split(":");
 		if (dt != null) {
-			if (!d.isSilent()) {
-				if( d.getData().startsWith("telnet:write")){
-					dt.writeString(TelnetCodes.PREV_LINE+TelnetCodes.CLEAR_LINE+response);
-				}else{
-					dt.writeLine(response);
-					dt.writeString((split.length >= 2 ? "<" + split[1] : "") + ">");
-				}
-
+			if( d.getData().startsWith("telnet:write")){
+				dt.writeString(TelnetCodes.PREV_LINE+TelnetCodes.CLEAR_LINE+response);
+			}else{
+				dt.writeLine(response);
+				dt.writeString((split.length >= 2 ? "<" + split[1] : "") + ">");
 			}
 		} else {
 			Logger.info(response);

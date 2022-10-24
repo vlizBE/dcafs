@@ -18,7 +18,7 @@ public class Datagram {
     long timestamp;          // Timestamp when the data was received
     Writable writable;  //
     Readable readable;
-    boolean silent = false;     
+    boolean silent = true;
     Object payload=null;
 
     public Datagram(String data){
