@@ -46,6 +46,10 @@ public class CheckBlock extends AbstractBlock{
     }
     @Override
     public boolean start(TaskBlock starter) {
+        if( !valid) {
+            Logger.error("Checkblock failed because invalid");
+            return false;
+        }
         Double[] work= new Double[steps.size()+sharedMem.size()];
         for (int a = 0; a < sharedMem.size();a++ ){
             work[steps.size()+a]=sharedMem.get(a).value();
@@ -70,6 +74,7 @@ public class CheckBlock extends AbstractBlock{
 
         if( ori.isEmpty()) {
             Logger.error("Ori is empty");
+            valid=false;
             return false;
         }
         // Fix the flag/issue and diff?
@@ -105,6 +110,7 @@ public class CheckBlock extends AbstractBlock{
 
         if( exp.isEmpty() ){
             Logger.error( "Couldn't process "+ori+", vals missing");
+            valid=false;
             return false;
         }
 
@@ -112,8 +118,10 @@ public class CheckBlock extends AbstractBlock{
         // First check if the amount of brackets is correct
         int opens = StringUtils.countMatches(exp,"(");
         int closes = StringUtils.countMatches(exp,")");
-        if( opens!=closes)
+        if( opens!=closes) {
+            valid=false;
             return false;
+        }
 
         if( exp.charAt(0)!='(') // Make sure it has surrounding brackets
             exp= "("+exp+")";

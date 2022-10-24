@@ -67,7 +67,7 @@ public class Task implements Comparable<Task>{
 	/* Output */
 	enum OUTPUT { SYSTEM, MANAGER, LOG, FILE, EMAIL, SMS, STREAM, MQTT, I2C, TELNET, MATRIX }    // The different options for the output, see manual for further explanation
 	OUTPUT out = OUTPUT.SYSTEM;											// The output of the task, default is system
-	String outputRef="";												// The actual output ie. channel, email address, filename, sms number etc
+	String outputRef="";												// The actual output fe. channel, email address, filename, sms number etc
 
 	/* Link */ 
 	enum LINKTYPE { NONE , DISABLE_24H, NOT_TODAY, DO_NOW, SKIP_ONE} // The options for the linking of a task
@@ -77,7 +77,7 @@ public class Task implements Comparable<Task>{
 	int skipExecutions=0;				// How many executions should be skipped
 
 	public enum TRIGGERTYPE {KEYWORD,CLOCK,INTERVAL,DELAY,EXECUTE,RETRY,WHILE,WAITFOR} // The trigger possibilities
-	TRIGGERTYPE triggerType = TRIGGERTYPE.EXECUTE;								  		// Default trigger type is execute (no trigger)
+	TRIGGERTYPE triggerType = TRIGGERTYPE.EXECUTE;								  	   // Default trigger type is execute (no trigger)
 
 	int reqIndex=-1;
 	int checkIndex=-1;
@@ -85,7 +85,7 @@ public class Task implements Comparable<Task>{
 	/* Taskset */ 
 	private String taskset="";			// The taskset this task is part of
 	private int tasksetIndex=-1;		// The index the task has in the taskset it's part of
-	private boolean stopOnFail=true;	// Whether or not this task should stop the taskset on failure
+	private boolean stopOnFail=true;	// Whether this task should stop the taskset on failure
 	/* *************************************  C O N S T R U C T O R S ***********************************************/
 	/**
 	 * Constructor that parses an Element to get all the info
@@ -123,12 +123,10 @@ public class Task implements Comparable<Task>{
 					}else{
 						cb.setSharedMem(sharedChecks.get(0).getSharedMem());
 					}
-					if( cb.build() ){
-						sharedChecks.add(cb);
-						reqIndex = sharedChecks.size()-1;
-					}else{
-						Logger.error("Failed to parse "+check);
-					}
+					if( !cb.build() )
+						Logger.error("Failed to parse "+check+" adding it anyway but with default false result" );
+					sharedChecks.add(cb);
+					reqIndex = sharedChecks.size()-1;
 				}
 			}
 		}else{
@@ -160,12 +158,10 @@ public class Task implements Comparable<Task>{
 					}else{
 						cb.setSharedMem(sharedChecks.get(0).getSharedMem());
 					}
-					if( cb.build() ) {
-						sharedChecks.add(cb);
-						reqIndex = sharedChecks.size() - 1;
-					}else{
-						Logger.error("Failed to parse "+req);
-					}
+					if( !cb.build() )
+						Logger.error("Failed to parse "+req+" adding it anyway but with default false result" );
+					sharedChecks.add(cb);
+					reqIndex = sharedChecks.size() - 1;
 				}
 			}
 			String check = XMLtools.getStringAttribute( tsk, "check", "");
@@ -183,12 +179,10 @@ public class Task implements Comparable<Task>{
 					}else{
 						cb.setSharedMem(sharedChecks.get(0).getSharedMem());
 					}
-					if( cb.build() ){
-						sharedChecks.add(cb);
-						checkIndex = sharedChecks.size()-1;
-					}else{
-						Logger.error("Failed to parse "+check);
-					}
+					if( !cb.build() )
+						Logger.error("Failed to parse "+check+" adding it anyway but with default false result" );
+					sharedChecks.add(cb);
+					checkIndex = sharedChecks.size()-1;
 				}
 			}
 
