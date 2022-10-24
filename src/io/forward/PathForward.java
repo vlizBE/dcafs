@@ -407,7 +407,7 @@ public class PathForward {
 
             switch( srcType){
                 case CMD:
-                    targets.forEach(t->dQueue.add( Datagram.build(pathOrData).label("telnet").writable(t))); break;
+                    targets.forEach(t->dQueue.add( Datagram.build(pathOrData).label("system").writable(t).toggleSilent())); break;
                 case RTVALS:
                     var write = dataProviding.parseRTline(pathOrData,"-999");
                     targets.forEach( x -> x.writeLine(write));
