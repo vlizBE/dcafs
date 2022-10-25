@@ -78,7 +78,6 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 	int maxEmailAgeInHours=-1;
 	String allowedDomain = ""; // From which domain are emails accepted
 
-	Path xml; // Link to the setting xml
 	boolean deleteReceivedZip = true;
 
 	Session mailSession = null;
@@ -282,7 +281,7 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 	 */
 	public boolean writeToXML( ){
 
-		XMLfab fab = XMLfab.withRoot(xml,"dcafs","settings");
+		XMLfab fab = XMLfab.withRoot(settingsPath,"dcafs","settings");
 		fab.digRoot("email");
 		if( outbox != null ) {
 			fab.selectOrAddChildAsParent("outbox")
@@ -311,8 +310,8 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 		return false;
 	}
 	private boolean writePermits(){
-		if( xml != null ){
-			var fab = XMLfab.withRoot(xml,"dcafs","settings","email");
+		if( settingsPath != null ){
+			var fab = XMLfab.withRoot(settingsPath,"dcafs","settings","email");
 			fab.selectOrAddChildAsParent("permits");
 			fab.clearChildren();
 			for( var permit : permits ){
@@ -436,7 +435,7 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 
 		if( !ready ){
 			if(request[1].equals("reload")
-					&& XMLfab.withRoot(settingsPath, "settings").getChild("email").isPresent() ){
+					&& XMLfab.withRoot(settingsPath, "dcafs","settings").getChild("email").isPresent() ){
 				if( !readFromXML() )
 					return "No proper email node yet";
 			}else{
@@ -463,7 +462,7 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 						.add(green+"email:adddeny,from,cmd(,isRegex) "+reg+"-> Adds permit deny node, default no regex")
 						.add(green+"email:interval,x "+reg+"-> Change the inbox check interval to x").toString();
 			case "reload":
-				if( xml == null )
+				if( settingsPath == null )
 					return "No xml defined yet...";
 				readFromXML();
 				return "Settings reloaded";
