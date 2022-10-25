@@ -80,9 +80,9 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 			remote = (InetSocketAddress)ctx.channel().remoteAddress();;	// Store this as remote address
 			remoteIP = remote.getAddress().getHostAddress();
 			if( remote.getAddress() instanceof Inet4Address){
-				Logger.info("IPv4: "+ remote.getAddress());
+				Logger.debug("IPv4: "+ remote.getAddress());
 			}else{
-				Logger.info("IPv6: "+((Inet6Address)remote.getAddress()));
+				Logger.debug("IPv6: "+((Inet6Address)remote.getAddress()));
 			}
 			if( dQueue != null ) {
 				XMLfab.withRoot(settingsPath, "dcafs", "settings", "telnet")
