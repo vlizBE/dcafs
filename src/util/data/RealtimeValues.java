@@ -604,6 +604,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 		var star = id.indexOf("*");
 		RealVal d = realVals.get(star==-1?id:id.substring(0,star));
 		if (d == null) {
+			Logger.error("No such real "+id);
 			return defVal;
 		}
 		if (Double.isNaN(d.value())) {
@@ -727,7 +728,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 		var star = id.indexOf("*");
 		IntegerVal i = integerVals.get(star==-1?id:id.substring(0,star));
 		if (i == null) {
-			Logger.debug("No such id: " + id);
+			Logger.error("No such id: " + id);
 			return defVal;
 		}
 

@@ -230,7 +230,9 @@ public class CommandPool {
 				result = result.replace("<br>",System.lineSeparator());
 				result = result.replaceAll("<.{1,2}>","");
 				wr.writeLine(result);
-			}else if (!wr.getID().equalsIgnoreCase("telnet")) {
+			}else if(!d.isSilent()) {
+				wr.writeLine(result);
+			}else{
 				Logger.debug("Hidden response for " + wr.getID() + ": " + result);
 			}
 		}else{

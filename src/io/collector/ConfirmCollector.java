@@ -107,7 +107,7 @@ public class ConfirmCollector extends AbstractCollector {
         Logger.debug("Comparing '"+confirms.get(0).reply+"' to received '"+reply+"'");
 
         if( reply.equalsIgnoreCase(confirms.get(0).reply)){ // matches
-            logInfo("Received '"+reply+"' as reply for '"+confirms.get(0).reply+"' next up '"+confirms.get(0).msg+"'");
+            logInfo("Received '"+reply+"' as reply for '"+confirms.get(0).msg);
             confirms.remove(0);
             if( !confirms.isEmpty() ){
                 confirms.get(0).doAttempt(false);
