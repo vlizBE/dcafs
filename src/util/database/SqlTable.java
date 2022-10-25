@@ -565,18 +565,27 @@ public class SqlTable {
                 }else if( col.type == COLUMN_TYPE.TEXT){
                     val = dp.getText(ref,"");
                 }else if( col.type == COLUMN_TYPE.INTEGER){
-                    var ivOpt = dp.getIntegerVal(ref);
-                    if( ivOpt.isPresent()) {
-                        val = ivOpt.get().value();
+                    if( dp.hasInteger(ref) ){
+                        val = dp.getInteger(ref,-999);
                     }else{
-                        if( col.hasDefault )
-                            val = NumberUtils.toInt(def);
+                        if( col.hasDefault) {
+                            Logger.debug(id + " -> Didn't find rtval for " + ref);
+                        }else {
+                            Logger.error(id + " -> Didn't find rtval for " + ref);
+                        }
+                        val = col.hasDefault?NumberUtils.createInteger(def):null;
                     }
                 }else if( col.type == COLUMN_TYPE.REAL){
-                    var dvOpt = dp.getRealVal(ref);
-                    val = dvOpt.isPresent()?dvOpt.get().value():null;
-                    if( val==null && col.hasDefault )
-                        val = NumberUtils.createDouble(def);
+                    if( dp.hasReal(ref) ){
+                        val = dp.getReal(ref,-999);
+                    }else{
+                        if( col.hasDefault) {
+                            Logger.debug(id + " -> Didn't find rtval for " + ref);
+                        }else {
+                            Logger.error(id + " -> Didn't find rtval for " + ref);
+                        }
+                        val = col.hasDefault?NumberUtils.createDouble(def):null;
+                    }
                 }else if( col.type == COLUMN_TYPE.LOCALDTNOW){
                     val = OffsetDateTime.now();
                     if( !server )
