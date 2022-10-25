@@ -200,7 +200,7 @@ public class TaskManager implements CollectorFuture {
 	 * @param repeats   How often the task should be repeated, default is once
 	 * @param failure   Which taskset (short) should be run if a task in the set
 	 *                  fails
-	 * @return The tasket if it was added or null if this failed because it already exists
+	 * @return The tasket if it was added or it if it already exists
 	 */
 	public TaskSet addTaskSet(String id, String description, RUNTYPE run, int repeats, String failure) {
 		
@@ -212,7 +212,8 @@ public class TaskManager implements CollectorFuture {
 			Logger.tag(TINY_TAG).info("[" + this.id + "] Created new Task set: " + id + " , " + description);
 			return set;
 		}
-		return null;
+		Logger.error("[" + this.id + "] Already such Task set: " + id + " , " + description);
+		return tasksets.get(id);
 	}
 	/* ***************************** WAYS OF ENABLING TASKS ***************************************************/
 	/**
