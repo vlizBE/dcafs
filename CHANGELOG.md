@@ -3,14 +3,18 @@ Note: Version numbering: x.y.z
   -> x goes up with major breaking api changes
   -> Y goes up with major addition/changes
   -> z goes up for minor additions and bugfixes
-From 0.5.0 onwards, this should be better documented...
 
 ### To do/fix
 - cmd !idle not used properly when disconnected/reconnected
 - integerval telnet interface?
 - Resolve #34
 
-## 1.0.5
+## 1.0.5 (work in progress)
+### Fixes
+- EmailWorker, reload etc wasn't working because checking wrong variable
+- PathForward with a cmd as customsrc now properly works in telnet
+### Changes
+- SQLtable won't complain anymore if a value is found if def is specified
 ## 1.0.4 (11/10/2022)
 ### Fixes
 - TaskManager fix in 1.0.3 caused another issue, should be fixed
