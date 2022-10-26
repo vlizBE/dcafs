@@ -148,8 +148,8 @@ public class Waypoints implements Commandable {
                 Logger.error( "Invalid waypoint in the node");
             }
         }
-        if( wps.values().stream().anyMatch(wp -> wp.hasTracelCmd()) )
-            scheduler.scheduleAtFixedRate( () -> checkWaypoints(),5,20,TimeUnit.SECONDS);
+        if( wps.values().stream().anyMatch(Waypoint::hasTracelCmd) )
+            scheduler.scheduleAtFixedRate(this::checkWaypoints,5,20,TimeUnit.SECONDS);
         return true;
     }
     /**
@@ -348,6 +348,8 @@ public class Waypoints implements Commandable {
                     StringJoiner b = new StringJoiner(html?"<br>":"\r\n");
                     b.add( "wpts:list -> Get a listing of all waypoints with travel.")
                     .add( "wpts:states -> Get a listing  of the state of each waypoint.")
+                    .add( "wpts:exists,id -> Check if a waypoint with the given id exists")
+                    .add( "wpts:nearest -> Get the id of the nearest waypoint")
                     .add( "wpts:reload -> Reloads the waypoints from the settings file.")
                     .add( "wpts:remove,<name> -> Remove a waypoint with a specific name")
                     .add( "wpts:new,<id,<lat>,<lon>,<range> -> Create a new waypoint with the name and coords lat and lon in decimal degrees")
@@ -355,6 +357,15 @@ public class Waypoints implements Commandable {
                     .add( "wpts:travel,waypoint,bearing,name -> Add travel to a waypoint.");
                     return b.toString();
 			case "list": return getWaypointList(html?"<br>":"\r\n");
+            case "exists": return isExisting(cmd[1])?"Waypoint exists":"No such waypoint";
+            case "disntanceto":
+                if( cmd.length==1)
+                    return "No id given, must be wpts:distanceto,id";
+                var d = distanceTo(cmd[1]);
+                if( d==-1)
+                    return "No such waypoint";
+                return "Distance to "+cmd[1] +" is "+d+"m";
+            case "nearest": return "The nearest waypoint is "+getNearestWaypoint();
             case "states":
                 if( sog == null)
                     return "Can't determine state, no sog defined";
