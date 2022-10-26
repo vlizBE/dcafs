@@ -36,7 +36,7 @@ public class Waypoint implements Comparable<Waypoint>{
 	boolean temp=false;
 	
 	double bearing=0;
-	
+
 	/* Stuff to determine enter and leave time if entered and left multiple times in succession */
 	boolean active = false;
 	boolean movementReady=false;
@@ -74,7 +74,12 @@ public class Waypoint implements Comparable<Waypoint>{
 		temp=true;
 		return this;
 	}
-
+	public boolean hasTracelCmd(){
+		for( var travel: travels )
+			if( !travel.cmds.isEmpty())
+				return true;
+		return false;
+	}
 	public STATE currentState( OffsetDateTime when, double lat, double lon ){
 		lastDist = GisTools.roughDistanceBetween(lon, lat, this.lon, this.lat, 3)*1000;// From km to m				
 		bearing = GisTools.calcBearing( lon, lat, this.lon, this.lat, 2 );
@@ -111,14 +116,12 @@ public class Waypoint implements Comparable<Waypoint>{
 	public double getLastDistance( ) {
 		return lastDist;
 	}
-	public Travel checkIt(OffsetDateTime when, double lat, double lon ){
+	public Optional<Travel> checkIt(OffsetDateTime when, double lat, double lon ){
 
 		switch( currentState( when , lat, lon ) ){
 			case ENTER:
 			case LEAVE:
 				return checkTravel();
-			case INSIDE:
-				return null;
 			case OUTSIDE:
 				String l = getLastMovement();
 				if( !l.isBlank()){
@@ -126,10 +129,11 @@ public class Waypoint implements Comparable<Waypoint>{
 					Logger.info( "Travel: "+l);
 				}
 				break;
+			case INSIDE:
 			default:
 				break;    		
 		}
-		return null;
+		return Optional.empty();
 	}
 	public String getLastMovement(){		
 		if( movementReady ){
@@ -287,14 +291,14 @@ public class Waypoint implements Comparable<Waypoint>{
 	 * Check if any travel occurred, if so return the travel in question
 	 * @return The travel that occurred
 	 */
-	public Travel checkTravel(){
+	public Optional<Travel> checkTravel(){
 		for( Travel t : travels ){
 			if( t.check(state,bearing) ){
 				Logger.info("Travel occurred "+t.name);
-				return t;
+				return Optional.of(t);
 			}
 		}
-		return null;
+		return Optional.empty();
 	}
 	public List<Travel> getTravels(){
 		return this.travels;
@@ -319,25 +323,29 @@ public class Waypoint implements Comparable<Waypoint>{
 		STATE direction;		
 
 		ArrayList<String> cmds;
+		boolean valid = true;
 
 		public Travel( String name, String dir, String bearing ){
 			this.name=name;
-			if( dir.equals("in")||dir.equals("enter"))
-				direction = STATE.ENTER;
-			if( dir.equals("out")||dir.equals("leave"))
-				direction = STATE.LEAVE;
+			direction = switch( dir ){
+				case "in","enter" -> STATE.ENTER;
+				case "out","leave" -> STATE.LEAVE;
+				default -> STATE.UNKNOWN;
+			};
+
 			check=MathUtils.parseSingleCompareFunction(bearing);
 			if( check == null){
 				Logger.error( name+" (wp)-> Failed to convert the bearing to a comparison: "+bearing);
+				valid=false;
 			}else {
 				this.bearing = bearing;
 			}
 		}
 		public boolean isValid(){
-			return check!=null;
+			return valid;
 		}
 		public boolean check(STATE state, double curBearing){
-			if( check == null)
+			if( !valid )
 				return false;
 			return state == direction && check.apply(curBearing);
 		}
@@ -357,7 +365,7 @@ public class Waypoint implements Comparable<Waypoint>{
 				return info;
 			return info+" with a bearing "+bearing+"°";
 		}
-		public Travel addCmd( String cmd){
+		public Travel addCmd( String cmd ){
 			if( cmd==null) {
 				Logger.error(name+" -> Invalid cmd given");
 				return this;

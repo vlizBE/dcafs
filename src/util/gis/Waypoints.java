@@ -23,7 +23,7 @@ public class Waypoints implements Commandable {
 
     HashMap<String,Waypoint> wps = new HashMap<>();
 
-    Path settingsPath=null;
+    Path settingsPath;
 
     static final String XML_TAG = "waypoints";
     static final String XML_TRAVEL = "travel";
@@ -89,19 +89,20 @@ public class Waypoints implements Commandable {
         if( clear ){
             wps.clear();
         }
+        // Get the waypoints node
 
         var wptsOpt = XMLtools.getFirstElementByTag( XMLtools.readXML(settingsPath), XML_TAG);
 
-        if( wptsOpt.isEmpty() )
+        if( wptsOpt.isEmpty() ) // If no node, quit
             return false;
 
         var wpts = wptsOpt.get();
 
-        if( rtvals!=null) {
+        if( rtvals!=null) { // if Dataproviding exist
             Logger.info("Looking for lat, lon, sog");
-            var latOpt = rtvals.getRealVal( XMLtools.getStringAttribute(wpts, "latval", ""));
-            var longOpt = rtvals.getRealVal(XMLtools.getStringAttribute(wpts, "lonval", ""));
-            var sogOpt = rtvals.getRealVal(XMLtools.getStringAttribute(wpts, "sogval", ""));
+            var latOpt = rtvals.getRealVal( XMLtools.getStringAttribute(wpts, "latval", "") );
+            var longOpt = rtvals.getRealVal( XMLtools.getStringAttribute(wpts, "lonval", "") );
+            var sogOpt = rtvals.getRealVal( XMLtools.getStringAttribute(wpts, "sogval", "") );
 
             if( latOpt.isEmpty() || longOpt.isEmpty() || sogOpt.isEmpty() ){
                 Logger.error( "No corresponding lat/lon/sog realVals found for waypoints");
@@ -111,32 +112,44 @@ public class Waypoints implements Commandable {
             latitude = latOpt.get();
             longitude = longOpt.get();
             sog = sogOpt.get();
+        }else{
+            Logger.error("Couldn't process waypoints because of missing dataproviding");
+            return false;
         }
 
         Logger.info("Reading Waypoints");
-        for( Element el : XMLtools.getChildElements(wpts, XML_CHILD_TAG)){
-        	if( el != null ){
-        		String id = XMLtools.getStringAttribute(el,"id","");
-        	    double lat = GisTools.convertStringToDegrees(el.getAttribute("lat"));
-        		double lon = GisTools.convertStringToDegrees(el.getAttribute("lon"));
-                double range = Tools.parseDouble( el.getAttribute("range"), -999);
+        for( Element el : XMLtools.getChildElements(wpts, XML_CHILD_TAG)){ // Get the individual waypoints
+        	if( el != null ){ // Check if it's valid
+        		String id = XMLtools.getStringAttribute(el,"id",""); // Get the id
+        	    double lat = GisTools.convertStringToDegrees(el.getAttribute("lat")); // Get the latitude
+        		double lon = GisTools.convertStringToDegrees(el.getAttribute("lon")); // Get the longitude
+                double range = Tools.parseDouble( el.getAttribute("range"), -999); // Range that determines inside or outside
 
-                var wp = addWaypoint( id, Waypoint.build(id).lat(lat).lon(lon).range(range) );
+                var wp = addWaypoint( id, Waypoint.build(id).lat(lat).lon(lon).range(range) );// Add it
 
-                Logger.info("Checking for travel...");
+                Logger.debug("Checking for travel...");
+
                 for( Element travelEle : XMLtools.getChildElements(el,XML_TRAVEL)){
-                    if( travelEle != null ){
-                        String idTravel = travelEle.getTextContent();//XMLtools.getStringAttribute(travelEle,"id","");
-                        String dir = XMLtools.getStringAttribute(travelEle,"dir","");
-                        String bearing = XMLtools.getStringAttribute(travelEle,"bearing","from 0 to 360");
+                    if( travelEle != null ){ // Only try processing if valid
+                        String idTravel = XMLtools.getStringAttribute(travelEle,"id",""); // The id of the travel
+                        String dir = XMLtools.getStringAttribute(travelEle,"dir",""); // The direction (going in, going out)
+                        String bearing = XMLtools.getStringAttribute(travelEle,"bearing","from 0 to 360");// Which bearing used
 
-                        wp.addTravel(idTravel,dir,bearing).ifPresent(
-                                t -> XMLfab.getRootChildren(settingsPath, "dcafs", "settings", XML_TAG, XML_CHILD_TAG,XML_TRAVEL,"cmd")
-                                            .forEach( x -> t.addCmd(x.getTextContent())));
+                        wp.addTravel(idTravel,dir,bearing).ifPresent( // meaning travel parsed fin
+                                    t -> {
+                                        for (var cmd : XMLtools.getChildElements(travelEle, "cmd")) {
+                                            t.addCmd(cmd.getTextContent());
+                                        }
+                                    }
+                                );
                     }
                 }
-        	}
+        	}else{
+                Logger.error( "Invalid waypoint in the node");
+            }
         }
+        if( wps.values().stream().anyMatch(wp -> wp.hasTracelCmd()) )
+            scheduler.scheduleAtFixedRate( () -> checkWaypoints(),5,20,TimeUnit.SECONDS);
         return true;
     }
     /**
@@ -299,10 +312,9 @@ public class Waypoints implements Commandable {
     private void checkWaypoints(){
         var now = OffsetDateTime.now(ZoneOffset.UTC);
         wps.values().forEach( wp -> {
-            var travel = wp.checkIt(now, latitude.value(), longitude.value());
-            if( travel !=null) {
-                travel.getCmds().forEach(cmd -> dQueue.add(Datagram.system(cmd)));
-            }
+            wp.checkIt(now, latitude.value(), longitude.value()).ifPresent(
+                    travel -> travel.getCmds().forEach(cmd -> dQueue.add(Datagram.system(cmd)))
+            );
         });
     }
 
