@@ -121,7 +121,9 @@ public class Waypoint implements Comparable<Waypoint>{
 		switch( currentState( when , lat, lon ) ){
 			case ENTER:
 			case LEAVE:
-				return checkTravel();
+				if( getLastDistance() < 500 && getLastDistance() > 1) // Ignore abnormal movements
+					return checkTravel();
+				break;
 			case OUTSIDE:
 				String l = getLastMovement();
 				if( !l.isBlank()){
