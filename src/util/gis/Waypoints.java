@@ -297,6 +297,32 @@ public class Waypoints implements Commandable {
             return -1;
         return wp.distanceTo(latitude.value(), longitude.value());
     }
+    /* ******************************** G E T ********************************************/
+
+    /**
+     * Get the waypoint with the given name
+     * @param id The id of the waypoint
+     * @return An optional waypoint
+     */
+    public Optional<Waypoint> getWaypoint( String id ) {
+        return Optional.ofNullable(getWaypoint(id,"",false));
+    }
+    public Waypoint getWaypoint( String id, String name, boolean createIfNew ) {
+        var wp = wps.get(id);
+        if (wp == null){
+            if (createIfNew) {
+                wps.put(id, new Waypoint(name));
+                return wps.get(id);
+            }
+            Logger.error("No such waypoint "+id+" in list of "+wps.size());
+            return null;
+        }else{
+            return wp;
+        }
+    }
+    public boolean hasWaypoint( String id ){
+        return wps.get(id)!=null;
+    }
     /* ****************************************************************************************************/
     /* ****************************************************************************************************/
     /**
