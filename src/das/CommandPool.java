@@ -190,9 +190,9 @@ public class CommandPool {
 			var cmdOpt = commandables.entrySet().stream()
 						.filter( ent -> {
 							String key = ent.getKey();
-							if( key.equals(split[0])||key.equals(f)||key.equals(split[0].replace("html","")))
+							if( key.equals(split[0])||key.equals(f))
 								return true;
-							return Arrays.stream(key.split(";")).anyMatch(k->k.equals(split[0])||k.equals(f)||key.equals(split[0].replace("html","")));
+							return Arrays.stream(key.split(";")).anyMatch(k->k.equals(split[0])||k.equals(f));
 						}).map(Map.Entry::getValue).findFirst();
 
 			if( cmdOpt.isPresent()) {
