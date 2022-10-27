@@ -137,6 +137,10 @@ public class Waypoint implements Comparable<Waypoint>{
 	public boolean isTemp(){
 		return temp;
 	}
+	public Waypoint makeTemp(){
+		temp=true;
+		return this;
+	}
 	public String getName(){
 		return name;
 	}
