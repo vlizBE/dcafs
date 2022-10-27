@@ -162,7 +162,7 @@ public class IssuePool implements Commandable{
     public String getReport( boolean html, boolean clear ){
         String nl = html?"<br>":"\r\n";
         var join = new StringJoiner(nl,html?"<b>Active Issues</b><br>":"Active Issues\r\n","");
-        join.setEmptyValue("None yet.");
+        join.setEmptyValue((html?"<b>Active Issues</b><br>":"Active Issues\r\n")+"None yet.");
         issues.values().stream().filter( is -> is.active)
                 .forEach( is->join.add(is.message+" --> total time "+ TimeTools.convertPeriodtoString(is.getTotalActiveTime(), TimeUnit.SECONDS)));
 

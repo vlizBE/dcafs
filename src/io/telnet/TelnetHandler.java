@@ -105,11 +105,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 
 		cli = new CommandLineInterface(channel); // Start the cli
 		if( dQueue !=null ) {
-			if (id.isEmpty()) {
-				writeString(TelnetCodes.TEXT_RED + "Welcome to " + title + "!\r\n" + TelnetCodes.TEXT_RESET);
-			} else {
-				writeString(TelnetCodes.TEXT_RED + "Welcome back " + id + "!\r\n" + TelnetCodes.TEXT_RESET);
-			}
+			writeString(TelnetCodes.TEXT_RED + "Welcome to " + title + "!\r\n" + TelnetCodes.TEXT_RESET);
 			writeString(TelnetCodes.TEXT_GREEN + "It is " + new Date() + " now.\r\n" + TelnetCodes.TEXT_RESET);
 			writeString(TelnetCodes.TEXT_BRIGHT_BLUE + "> Common Commands: [h]elp,[st]atus, rtvals, exit...\r\n");
 			writeString(TelnetCodes.TEXT_BRIGHT_YELLOW + ">");
