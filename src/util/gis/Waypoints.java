@@ -1,6 +1,7 @@
 package util.gis;
 
 import das.Commandable;
+import io.telnet.TelnetCodes;
 import util.data.DataProviding;
 import util.data.RealVal;
 import io.Writable;
@@ -17,6 +18,7 @@ import java.time.*;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 public class Waypoints implements Commandable {
@@ -34,8 +36,9 @@ public class Waypoints implements Commandable {
     RealVal sog;
 
     ScheduledExecutorService scheduler;
-    int checkInterval=15;
+    final static int CHECK_INTERVAL = 20;
     BlockingQueue<Datagram> dQueue;
+    ScheduledFuture<?> checkTravel;
 
     /* *************************** C O N S T R U C T O R *********************************/
     public Waypoints(Path settingsPath, ScheduledExecutorService scheduler, DataProviding rtvals, BlockingQueue<Datagram> dQueue){
@@ -46,33 +49,20 @@ public class Waypoints implements Commandable {
         readFromXML(rtvals);
 
     }
-
     /* ****************************** A D D I N G ****************************************/
     /**
      * Adding a waypoint to the list
      * @param wp The waypoint to add
      */
     public Waypoint addWaypoint( String id, Waypoint wp ) {
-        if(wps.isEmpty())
-            scheduler.scheduleAtFixedRate(() -> checkWaypoints(),5,checkInterval, TimeUnit.SECONDS);
+        if(wp.hasTracelCmd()&&checkTravel==null)
+            checkTravel = scheduler.scheduleAtFixedRate(this::checkWaypoints,5, CHECK_INTERVAL, TimeUnit.SECONDS);
         Logger.info("Adding waypoint: "+id);
     	wps.put(id,wp);
     	return wp;
     }
-    public void addWaypoint( String id, double lat, double lon) {
-    	addWaypoint(id,lat,lon,50);
-    }
     public void addWaypoint( String id, double lat, double lon, double range) {
-    	if(wps.isEmpty())
-            scheduler.scheduleAtFixedRate(() -> checkWaypoints(),5,checkInterval, TimeUnit.SECONDS);
         wps.put( id, Waypoint.build(id).lat(lat).lon(lon).range(range) );
-    }
-    public boolean addHere(  String id, double range) {
-        if( latitude!= null && longitude != null) {
-            addWaypoint(id, latitude.value(), longitude.value(),range);
-            return true;
-        }
-        return false;
     }
     public Collection<Waypoint> items(){
         return wps.values();
@@ -98,7 +88,7 @@ public class Waypoints implements Commandable {
 
         var wpts = wptsOpt.get();
 
-        if( rtvals!=null) { // if Dataproviding exist
+        if( rtvals!=null) { // if DataProviding exist
             Logger.info("Looking for lat, lon, sog");
             var latOpt = rtvals.getRealVal( XMLtools.getStringAttribute(wpts, "latval", "") );
             var longOpt = rtvals.getRealVal( XMLtools.getStringAttribute(wpts, "lonval", "") );
@@ -133,7 +123,7 @@ public class Waypoints implements Commandable {
                     if( travelEle != null ){ // Only try processing if valid
                         String idTravel = XMLtools.getStringAttribute(travelEle,"id",""); // The id of the travel
                         String dir = XMLtools.getStringAttribute(travelEle,"dir",""); // The direction (going in, going out)
-                        String bearing = XMLtools.getStringAttribute(travelEle,"bearing","from 0 to 360");// Which bearing used
+                        String bearing = XMLtools.getStringAttribute(travelEle,"bearing","0 -> 360");// Which bearing used
 
                         wp.addTravel(idTravel,dir,bearing).ifPresent( // meaning travel parsed fin
                                     t -> {
@@ -148,8 +138,10 @@ public class Waypoints implements Commandable {
                 Logger.error( "Invalid waypoint in the node");
             }
         }
-        if( wps.values().stream().anyMatch(Waypoint::hasTracelCmd) )
-            scheduler.scheduleAtFixedRate(this::checkWaypoints,5,20,TimeUnit.SECONDS);
+        if( wps.values().stream().anyMatch(Waypoint::hasTracelCmd) ) {
+            if( checkTravel == null) // If it doesn't exist yet
+                checkTravel =  scheduler.scheduleAtFixedRate(this::checkWaypoints, 5, CHECK_INTERVAL, TimeUnit.SECONDS);
+        }
         return true;
     }
     /**
@@ -174,14 +166,16 @@ public class Waypoints implements Commandable {
                 cnt++;
                 fab.addParentToRoot(XML_CHILD_TAG)
                         .attr("lat",wp.getLat())
-                        .attr("lat",wp.getLon())
+                        .attr("lon",wp.getLon())
                         .attr("range",wp.getRange());
                 
                 for( Travel tr : wp.getTravels() ){
                     fab.addChild(XML_TRAVEL)
                             .attr("dir", tr.getDirection() )
-                            .attr("bearing", tr.bearing )
-                            .attr(XML_CHILD_TAG, "" + wp.getName() );
+                            .attr("bearing", tr.getBearingString() )
+                            .attr(XML_CHILD_TAG, "" + wp.getName() )
+                            .down();
+                    tr.cmds.forEach( travel -> fab.addChild("cmd",travel));
                 }
             }
         }
@@ -189,32 +183,6 @@ public class Waypoints implements Commandable {
 
         return fab.build();//overwrite the file
         
-    }
-    /* ******************************** G E T ********************************************/
-
-    /**
-     * Get the waypoint with the given name
-     * @param id The id of the waypoint
-     * @return An optional waypoint
-     */
-    public Optional<Waypoint> getWaypoint( String id ) {
-    	return Optional.ofNullable(getWaypoint(id,"",false));
-    }
-    public Waypoint getWaypoint( String id, String name, boolean createIfNew ) {
-        var wp = wps.get(id);
-        if (wp == null){
-            if (createIfNew) {
-                wps.put(id, new Waypoint(name));
-                return wps.get(id);
-            }
-            Logger.error("No such waypoint "+id+" in list of "+wps.size());
-            return null;
-        }else{
-            return wp;
-        }
-    }
-    public boolean hasWaypoint( String id ){
-        return wps.get(id)!=null;
     }
     /* ****************************** R E M O V E ****************************************/
 
@@ -342,23 +310,33 @@ public class Waypoints implements Commandable {
     public String replyToCommand(String[] request, Writable wr, boolean html) {
         
         String[] cmd = request[1].split(",");
+        String cyan = html?"": TelnetCodes.TEXT_CYAN;
+        String green=html?"":TelnetCodes.TEXT_GREEN;
+        String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
 
 		switch( cmd[0] ){
             case "?":
                     StringJoiner b = new StringJoiner(html?"<br>":"\r\n");
-                    b.add( "wpts:list -> Get a listing of all waypoints with travel.")
-                    .add( "wpts:states -> Get a listing  of the state of each waypoint.")
-                    .add( "wpts:exists,id -> Check if a waypoint with the given id exists")
-                    .add( "wpts:nearest -> Get the id of the nearest waypoint")
-                    .add( "wpts:reload -> Reloads the waypoints from the settings file.")
-                    .add( "wpts:remove,<name> -> Remove a waypoint with a specific name")
-                    .add( "wpts:new,<id,<lat>,<lon>,<range> -> Create a new waypoint with the name and coords lat and lon in decimal degrees")
-                    .add( "wpts:update,id,lat,lon -> Update the waypoint coords lat and lon in decimal degrees")
-                    .add( "wpts:travel,waypoint,bearing,name -> Add travel to a waypoint.");
+                    b.add(cyan+"Add/remove/alter waypoints")
+                     .add( green+"wpts:add,<id,<lat>,<lon>,<range> "+reg+"-> Create a new waypoint with the name and coords lat and lon in decimal degrees")
+                     .add( green+"wpts:addblank"+reg+"-> Add a blank waypoints node with a single empty waypoint node inside")
+                     .add( green+"wpts:addtravel,waypoint,bearing,name"+reg+" -> Add travel to a waypoint.")
+                     .add( green+"wpts:cleartemps "+reg+"-> Clear temp waypoints")
+                     .add( green+"wpts:remove,<name> "+reg+"-> Remove a waypoint with a specific name")
+                     .add( green+"wpts:update,id,lat,lon "+reg+"-> Update the waypoint coordinates lat and lon in decimal degrees")
+                     .add(cyan+"Get waypoint info")
+                     .add( green+"wpts:list "+reg+"-> Get a listing of all waypoints with travel.")
+                     .add( green+"wpts:states "+reg+"-> Get a listing  of the state of each waypoint.")
+                     .add( green+"wpts:exists,id "+reg+"-> Check if a waypoint with the given id exists")
+                     .add( green+"wpts:nearest "+reg+"-> Get the id of the nearest waypoint")
+                     .add( green+"wpts:reload "+reg+"-> Reloads the waypoints from the settings file.");
                     return b.toString();
 			case "list": return getWaypointList(html?"<br>":"\r\n");
             case "exists": return isExisting(cmd[1])?"Waypoint exists":"No such waypoint";
-            case "disntanceto":
+            case "cleartemps":
+                clearTempWaypoints();
+                return "Temp waypoints cleared";
+            case "distanceto":
                 if( cmd.length==1)
                     return "No id given, must be wpts:distanceto,id";
                 var d = distanceTo(cmd[1]);
@@ -395,7 +373,7 @@ public class Waypoints implements Commandable {
                                     .content("wp_id")
                         .build();
                 return "Blank section added";
-            case "new": //wpts:new,51.1253,2.2354,wrak
+            case "add": //wpts:new,51.1253,2.2354,wrak
                 if( cmd.length < 4)
                     return "Not enough parameters given";
                 if( cmd.length > 5)
@@ -427,7 +405,7 @@ public class Waypoints implements Commandable {
                 }else {
                     return "No waypoint found with the name.";
                 }
-            case XML_TRAVEL:
+            case "addtravel":
                 Waypoint way = wps.get(cmd[1]);
                 if( way == null ){
                     return "No such waypoint: "+cmd[1];
@@ -438,7 +416,7 @@ public class Waypoints implements Commandable {
                 way.addTravel(cmd[5], cmd[4], cmd[2]);
                 return "Added travel "+cmd[5]+" to "+ cmd[1];
             default:
-                return "Unknown waypoints command";
+                return "Unknown command";
         }
     }
     @Override
