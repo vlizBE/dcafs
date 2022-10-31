@@ -84,41 +84,14 @@ public class FileTools {
         return true;
     }
     /**
-     * Reads the content of a file and returns this as a string
-     * @param path The path of the file to read
-     * @return The string with the content of the file, null if failed
-     */
-    public static String readTxtFileToString(String path) {        
-        try {
-            return Files.readString(Path.of(path));        
-        } catch (IOException e) {
-            Logger.error(e);
-            return null;
-        }
-    }
-    /**
-     * Reads a file and puts the contents in an ArrayList, 1 line is one item
-     * @param content The ArrayList to hold the data
-     * @param path The path of the file
-     * @return Whether the process succeeded
-     */
-    public static boolean readTxtFile( ArrayList<String> content, String path) {
-        return readTxtFile(content, Path.of(path));
-    }   
-/**
      * Reads a file and puts the contents in an ArrayList, 1 line is one item
      * @param content The ArrayList to hold the data
      * @param path The path of the file
      * @return Whether the process succeeded
      */
     public static boolean readTxtFile( ArrayList<String> content, Path path) {
-        try {
-            content.addAll(Files.readAllLines(path));
-            return true;
-        } catch (IOException ex) {
-            Logger.error(ex);
-            return false;
-        }
+        content.addAll( readLines(path,1,-1) );
+        return true;
     }
 
     /**
@@ -142,7 +115,7 @@ public class FileTools {
      * @param amount The amount of lines to read, if less lines are available it will read till end of file
      * @return List of read lines or an empty list of none were read
      */
-    public static ArrayList<String> readLines( Path path, int start, int amount) {
+    public static ArrayList<String> readLines( Path path, int start, long amount) {
 
         var read = new ArrayList<String>();
         if( start==0) {
@@ -153,8 +126,10 @@ public class FileTools {
             Logger.error("Tried to read lines from "+path+" but no such file");
             return read;
         }
-
-        if( start<0 || amount<0 )
+        if( amount == -1){
+            amount = FileTools.getLineCount(path);
+        }
+        if( start<0 || amount==0 )
             return read;
 
         if( !readLimitedLines(path,start, StandardCharsets.UTF_8,read) ){

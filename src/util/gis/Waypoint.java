@@ -1,6 +1,7 @@
 package util.gis;
 
 import io.telnet.TelnetCodes;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import util.math.MathUtils;
 import util.tools.FileTools;
@@ -27,16 +28,13 @@ public class Waypoint implements Comparable<Waypoint>{
 	double lon;
 	double range;
 	double lastDist=-1;
-	double depth;
 	String name;
 	int id;
-	boolean inRange = false;
-	boolean lastCheck = false;
 	STATE state=STATE.UNKNOWN;
 	boolean temp=false;
 	
 	double bearing=0;
-	
+
 	/* Stuff to determine enter and leave time if entered and left multiple times in succession */
 	boolean active = false;
 	boolean movementReady=false;
@@ -66,15 +64,12 @@ public class Waypoint implements Comparable<Waypoint>{
 		this.range=range;
 		return this;
 	}
-	public Waypoint depth( double depth){
-		this.depth=depth;
-		return this;
+	public boolean hasTracelCmd(){
+		for( var travel: travels )
+			if( !travel.cmds.isEmpty())
+				return true;
+		return false;
 	}
-	public Waypoint makeTemp(){
-		temp=true;
-		return this;
-	}
-
 	public STATE currentState( OffsetDateTime when, double lat, double lon ){
 		lastDist = GisTools.roughDistanceBetween(lon, lat, this.lon, this.lat, 3)*1000;// From km to m				
 		bearing = GisTools.calcBearing( lon, lat, this.lon, this.lat, 2 );
@@ -111,25 +106,26 @@ public class Waypoint implements Comparable<Waypoint>{
 	public double getLastDistance( ) {
 		return lastDist;
 	}
-	public Travel checkIt(OffsetDateTime when, double lat, double lon ){
+	public Optional<Travel> checkIt(OffsetDateTime when, double lat, double lon ){
 
 		switch( currentState( when , lat, lon ) ){
 			case ENTER:
 			case LEAVE:
-				return checkTravel();
-			case INSIDE:
-				return null;
+				if( getLastDistance() < 500 && getLastDistance() > 1) // Ignore abnormal movements
+					return checkTravel();
+				break;
 			case OUTSIDE:
 				String l = getLastMovement();
 				if( !l.isBlank()){
-					FileTools.appendToTxtFile(Path.of("logs","stationMoves.txt"), l+"\r\n");
+					FileTools.appendToTxtFile(Path.of("logs","waypointsMoves.txt"), l+"\r\n");
 					Logger.info( "Travel: "+l);
 				}
 				break;
+			case INSIDE:
 			default:
 				break;    		
 		}
-		return null;
+		return Optional.empty();
 	}
 	public String getLastMovement(){		
 		if( movementReady ){
@@ -138,14 +134,12 @@ public class Waypoint implements Comparable<Waypoint>{
 		}		
 		return "";
 	}
-	public OffsetDateTime getEnterTimeStamp(){
-		return enterTime;
-	}
-	public OffsetDateTime getLeaveTimeStamp(){
-		return leaveTime;
-	}
 	public boolean isTemp(){
 		return temp;
+	}
+	public Waypoint makeTemp(){
+		temp=true;
+		return this;
 	}
 	public String getName(){
 		return name;
@@ -223,9 +217,6 @@ public class Waypoint implements Comparable<Waypoint>{
 	public double getRange(){
 		return range;
 	}
-	public boolean samePosition( double lat, double lon){
-		return this.lat == lat && this.lon == lon;
-	}
 	public boolean isNear() {
 		return state == STATE.INSIDE || state == STATE.ENTER;
 	}
@@ -236,33 +227,7 @@ public class Waypoint implements Comparable<Waypoint>{
 	public void setName( String name ){
 		this.name=name;
 	}
-	/* **********************************************************************************/
-	/**
-	 * Generate a WPL sentence based on this waypoint
-	 * @return The generated WPL sentence
-	 */
-	public String generateWPL(){
-		/*
-		 * WPL Waypoint Location
-				1      2   3      4   5   6
-				|      |   |      |   |   |
-			$--WPL,llll.ll,a,yyyyy.yy,a,c--c*hh
-			1) Latitude
-			2) N or S (North or South)
-			3) Longitude
-			4) E or W (East or West)
-			5) Waypoint Name
-			6) Checksum
-		 */
-		
-		String latWPL = GisTools.parseDegreesToGGA(this.lat)+","+(this.lat>0?"N":"S")+",";		
-		String lonWPL = GisTools.parseDegreesToGGA(this.lon)+","+(this.lon>0?"E":"W")+",";
-		if( this.lon < 100)
-			lonWPL = "0"+lonWPL;
-		String result = "$GPWPL,"+latWPL+lonWPL+name+"*";
-		result += MathUtils.getNMEAchecksum(result+"00");
-		return result;
-	}
+
 	/* ******************************************************************************** **/
 	/**
 	 * Adds a travel to the waypoint
@@ -287,14 +252,14 @@ public class Waypoint implements Comparable<Waypoint>{
 	 * Check if any travel occurred, if so return the travel in question
 	 * @return The travel that occurred
 	 */
-	public Travel checkTravel(){
+	public Optional<Travel> checkTravel(){
 		for( Travel t : travels ){
 			if( t.check(state,bearing) ){
 				Logger.info("Travel occurred "+t.name);
-				return t;
+				return Optional.of(t);
 			}
 		}
-		return null;
+		return Optional.empty();
 	}
 	public List<Travel> getTravels(){
 		return this.travels;
@@ -314,32 +279,40 @@ public class Waypoint implements Comparable<Waypoint>{
 	}
 	public class Travel{
 		String name="";
-		String bearing="";
-		Function<Double,Boolean> check;
+		double maxBearing=360.0,minBearing=0.0;
 		STATE direction;		
 
 		ArrayList<String> cmds;
+		boolean valid = true;
 
 		public Travel( String name, String dir, String bearing ){
 			this.name=name;
-			if( dir.equals("in")||dir.equals("enter"))
-				direction = STATE.ENTER;
-			if( dir.equals("out")||dir.equals("leave"))
-				direction = STATE.LEAVE;
-			check=MathUtils.parseSingleCompareFunction(bearing);
-			if( check == null){
-				Logger.error( name+" (wp)-> Failed to convert the bearing to a comparison: "+bearing);
-			}else {
-				this.bearing = bearing;
+			direction = switch( dir ){
+				case "in","enter" -> STATE.ENTER;
+				case "out","leave" -> STATE.LEAVE;
+				default -> STATE.UNKNOWN;
+			};
+			if( !bearing.contains("->")){
+				Logger.error("Incorrect bearing for "+name+" must be of format 0->360 or 0 -> 360");
+				valid=false;
+			}else{
+				var br = bearing.replace(" ","").split("->");
+				if( br.length!=2){
+					Logger.error("Incorrect bearing for "+name+" must be of format 0->360 or 0 -> 360");
+					valid=false;
+				}else {
+					minBearing = NumberUtils.createDouble(br[0]);
+					maxBearing = NumberUtils.createDouble(br[1]);
+				}
 			}
 		}
 		public boolean isValid(){
-			return check!=null;
+			return valid;
 		}
 		public boolean check(STATE state, double curBearing){
-			if( check == null)
+			if( !valid )
 				return false;
-			return state == direction && check.apply(curBearing);
+			return state == direction && Double.compare(curBearing,minBearing) >=0 && Double.compare(curBearing,maxBearing)<=0;
 		}
 		public ArrayList<String> getCmds(){
 			return cmds;
@@ -353,11 +326,12 @@ public class Waypoint implements Comparable<Waypoint>{
 		}
 		public String toString(){
 			String info = name +" = "+(direction==STATE.ENTER?" coming closer than "+range+"m":" going further away than "+range+"m");
-			if( bearing.equalsIgnoreCase("from 0 to 360"))
-				return info;
-			return info+" with a bearing "+bearing+"°";
+			return info+" with a bearing from"+minBearing+ " to "+maxBearing+"°";
 		}
-		public Travel addCmd( String cmd){
+		public String getBearingString(){
+			return (minBearing+" -> "+maxBearing).replace(".0","");
+		}
+		public Travel addCmd( String cmd ){
 			if( cmd==null) {
 				Logger.error(name+" -> Invalid cmd given");
 				return this;

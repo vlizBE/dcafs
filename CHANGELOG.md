@@ -8,13 +8,24 @@ Note: Version numbering: x.y.z
 - cmd !idle not used properly when disconnected/reconnected
 - integerval telnet interface?
 - Resolve #34
+## 1.0.6 (work in progress)
 
-## 1.0.5 (work in progress)
+## 1.0.5 (27/10/2022)
+
+### Waypoints
+- Now the waypoints code checks for occurred travel instead of external trigger
+- Now cmd nodes inside travel nodes are actually implemented properly
+- Changed format of bearing attribute to only accept x -> y fe 0->360 or 0 -> 360
+- Cleanup up the commandable interface
+- Store to xml now stores cmds
+
 ### Fixes
 - EmailWorker, reload etc wasn't working because checking wrong variable
 - PathForward with a cmd as customsrc now properly works in telnet
+
 ### Changes
-- SQLtable won't complain anymore if a value is found if def is specified
+- SQLtable won't complain anymore if a value isn't found if def is specified
+
 ## 1.0.4 (11/10/2022)
 ### Fixes
 - TaskManager fix in 1.0.3 caused another issue, should be fixed

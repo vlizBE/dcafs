@@ -77,11 +77,6 @@ public class TelnetServer implements Commandable {
                     @Override
                     public void initChannel(SocketChannel ch){
                         var pipeline = ch.pipeline();
-                       // pipeline.addLast("framer",
-                         //       new DelimiterBasedFrameDecoder(512, true, Delimiters.lineDelimiter())); // Max 512
-                        // char,
-                        // strip
-                        // delimiter
                         pipeline.addLast("decoder", new ByteArrayDecoder())
                                 .addLast("encoder", new ByteArrayEncoder())
                                 .addLast( new ReadTimeoutHandler(1800) );// close connection after set time without traffic
