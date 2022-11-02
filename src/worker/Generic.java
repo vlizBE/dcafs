@@ -246,8 +246,8 @@ public class Generic {
                     case INTEGER:
                             if( doubles!=null && doubles.length>entry.index && doubles[entry.index]!=null){
                                 val = doubles[entry.index].intValue();
-                            }else if( NumberUtils.isCreatable(split[entry.index])) {
-                                val=NumberUtils.toInt(split[entry.index],Integer.MAX_VALUE);
+                            }else if( NumberUtils.isCreatable(split[entry.index].trim())) {
+                                val=NumberUtils.toInt(split[entry.index].trim(),Integer.MAX_VALUE);
                             }else{
                                 val = Double.NaN;
                                 if( split[entry.index].isEmpty()){
@@ -267,8 +267,8 @@ public class Generic {
                     case REAL:
                             if( doubles!=null && doubles.length>entry.index && doubles[entry.index]!=null){
                                 val=doubles[entry.index];
-                            }else if( NumberUtils.isCreatable(split[entry.index])) {
-                                val = NumberUtils.toDouble(split[entry.index], val);
+                            }else if( NumberUtils.isCreatable(split[entry.index].trim())) {
+                                val = NumberUtils.toDouble(split[entry.index].trim(), val);
                             }else{
                                 val = Double.NaN;
                                 if( split[entry.index].isEmpty()){
