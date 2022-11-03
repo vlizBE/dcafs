@@ -132,6 +132,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 						case "scale" -> rv.scale(NumberUtils.toInt(arg[1], -1));
 						case "order" -> rv.order(NumberUtils.toInt(arg[1], -1));
 						case "history" -> rv.enableHistory(NumberUtils.toInt(arg[1], -1));
+						case "abs" -> rv.enableAbs();
 					}
 				}
 				if (!XMLtools.getChildElements(rtval, "cmd").isEmpty())
@@ -157,6 +158,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 						case "time" -> iv.keepTime();
 						case "order" -> iv.order(NumberUtils.toInt(arg[1], -1));
 						case "history" -> iv.enableHistory(NumberUtils.toInt(arg[1], -1));
+						case "abs" -> iv.enableAbs();
 					}
 				}
 				if (!XMLtools.getChildElements(rtval, "cmd").isEmpty())
