@@ -192,7 +192,11 @@ public class PathForward {
         }
         if( !lastStep().map(AbstractForward::noTargets).orElse(false) || hasLabel) {
             if (customs.isEmpty() ) { // If no custom sources
-                dQueue.add(Datagram.system(this.src).writable(stepsForward.get(0)));
+                if(stepsForward.isEmpty()) {
+                    Logger.error(id+" -> No steps to take, this often means something went wrong processing it");
+                }else{
+                    dQueue.add(Datagram.system(this.src).writable(stepsForward.get(0)));
+                }
             } else {// If custom sources
                 if( !stepsForward.isEmpty()) // and there are steps
                     targets.add(stepsForward.get(0));
