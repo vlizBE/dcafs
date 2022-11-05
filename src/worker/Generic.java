@@ -6,6 +6,7 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.influxdb.dto.Point;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.data.FlagVal;
 import util.data.IntegerVal;
 import util.data.RealVal;
 import util.database.QueryWriting;
@@ -14,6 +15,7 @@ import util.tools.Tools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 
+import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -24,12 +26,9 @@ import java.util.StringJoiner;
 
 public class Generic {
 
-    enum DATATYPE{REAL,INTEGER,TEXT,FILLER,TAG,LOCALDT,UTCDT}
-
-    enum FILTERTYPE{REPLACE_ALL,REPLACE_FIRST}
+    enum DATATYPE{REAL,INTEGER,FLAG,TEXT,FILLER,TAG,LOCALDT,UTCDT}
 
     ArrayList<Entry> entries = new ArrayList<>();
-    ArrayList<Filter> filters = new ArrayList<>();
     String delimiter=",";
     String id;
     private String[] dbid;
@@ -40,9 +39,11 @@ public class Generic {
     private String influxID="";
     private String influxMeasurement="";
 
-    boolean dbWrite = true;
-    int maxIndex=-1;
-    boolean tableMatch=false;
+    private boolean dbWrite = true;
+    private int maxIndex=-1;
+    private boolean tableMatch=false;
+
+    private Path settingsPath;
 
     /* Macro */
     String macro="";
@@ -91,47 +92,46 @@ public class Generic {
     }
     /**
      * Add looking for a real/double on the given index
+     *
      * @param index The index to look at
      * @param title The name under which to store this ( or table_title if table is defined)
-     * @return this object
      */
-    public Generic addReal( int index, String title, String mqttDevice){
-        maxIndex = Math.max(maxIndex, index);
-        Entry ent = new Entry(index, title, DATATYPE.REAL);
-        if( !mqttDevice.isEmpty() )
+    public void addReal(int index, String title, String mqttDevice){
+        var ent = addThing(index,title,DATATYPE.REAL);
+        if( !mqttDevice.isEmpty())
             ent.enableMQTT(mqttDevice);
-        entries.add( ent );       
-        return this;
     }
     /**
      * Add looking for an integer/long on the given index
+     *
      * @param index The index to look at
      * @param title The name under which to store this ( or table_title if table is defined)
-     * @return this object
      */
-    public Entry addInteger( int index, String title,String mqttDevice){
-        maxIndex = Math.max(maxIndex, index);
-        Entry ent = new Entry(index, title, DATATYPE.INTEGER);
+    public void addInteger(int index, String title, String mqttDevice){
+        var ent = addThing(index,title,DATATYPE.INTEGER);
         if( !mqttDevice.isEmpty())
             ent.enableMQTT(mqttDevice);
-        entries.add( ent );  
-        return ent;
+    }
+    public void addFlag(int index, String title, String mqttDevice ){
+        var ent = addThing(index,title,DATATYPE.FLAG);
+        if( !mqttDevice.isEmpty())
+            ent.enableMQTT(mqttDevice);
     }
     /**
      * Add looking for a string on the given index (WiP doesn't work yet)
+     *
      * @param index The index to look at
      * @param title The name under which to store this ( or table_title if table is defined)
-     * @return this object
      */
-    public Entry addText( int index, String title){
-        return addThing(index,title,DATATYPE.TEXT);
+    public void addText(int index, String title){
+        addThing(index, title, DATATYPE.TEXT);
     }
-    public Entry addTag( int index, String title){
-        return addThing(index,title,DATATYPE.TAG);
+    public void addTag(int index, String title){
+        addThing(index, title, DATATYPE.TAG);
     }
-    public Entry addFiller( int index, String title){
+    public void addFiller(int index, String title){
         tableMatch=true;
-        return addThing(index,title,DATATYPE.FILLER);
+        addThing(index, title, DATATYPE.FILLER);
     }
     private Entry addThing( int index, String title, DATATYPE type){
         maxIndex = Math.max(maxIndex, index);
@@ -154,21 +154,7 @@ public class Generic {
     public boolean writesInDB(){
         return dbWrite;
     }
-    /**
-     * Add a filter that is applied before the split etc
-     * @param type Which filtertype (only has replace_all, replace_first for now)
-     * @param from What should be looked for
-     * @param to What the 'from' should be replaced with
-     * @return this object
-     */
-    public Generic addFilter( String type, String from, String to ){
-        switch(type){
-            case "replace_all": filters.add(new Filter(FILTERTYPE.REPLACE_ALL, from, to)); break;
-            case "replace_first": filters.add(new Filter(FILTERTYPE.REPLACE_FIRST, from, to)); break;
-            default: Logger.warn("Tried to add filter with wrong type: "+type); break;
-        }
-        return this;
-    }
+
     public String[] getDBID(){
         return dbid;
     }
@@ -206,9 +192,6 @@ public class Generic {
      */
     public Object[] apply(String line, Double[] doubles, DataProviding dp, QueryWriting queryWriting, MqttWriting mqtt){
         uses++;
-        for( Filter filter : filters ){
-            line = filter.apply(line);
-        }
 
         String[] split;
         if( delimiter.isEmpty() ){
@@ -281,13 +264,21 @@ public class Generic {
                             if( dp.hasReal(ref) ){
                                 dp.updateReal(ref,val);
                             }else{
-                                dp.addRealVal(RealVal.newVal(entry.group, entry.name).value(val),true);
+                                dp.addRealVal(RealVal.newVal(entry.group, entry.name).value(val),settingsPath);
                             }
                             break;                
                     case TEXT: case TAG:
                             data[a]=split[entry.index];
                             dp.setText( ref, split[entry.index]);
                             break;
+                    case FLAG:
+                            data[a] = val;
+                            if( dp.hasFlag(ref) ){
+                                dp.setFlagState(ref,split[entry.index]);
+                            }else{
+                                dp.addFlagVal(FlagVal.newVal(entry.group, entry.name).setState(split[entry.index]),settingsPath);
+                            }
+                        break;
                     case FILLER:
                             if( ref.endsWith("timestamp") ){
                                 data[a]=TimeTools.formatLongUTCNow();
@@ -312,12 +303,12 @@ public class Generic {
                         break;
                 }
                 if( !influxID.isEmpty() && pb!=null ){
-                   switch (entry.type ){
-                       case INTEGER:  pb.addField(entry.name,(int)data[a]); break;
-                       case REAL: pb.addField(entry.name,(double)data[a]); break;
-                       case TEXT: pb.addField(entry.name, data[a].toString()); break;
-                       case TAG: pb.tag(entry.name, data[a].toString()); break;
-                   }
+                    switch (entry.type) {
+                        case INTEGER -> pb.addField(entry.name, (int) data[a]);
+                        case REAL -> pb.addField(entry.name, (double) data[a]);
+                        case TEXT -> pb.addField(entry.name, data[a].toString());
+                        case TAG -> pb.tag(entry.name, data[a].toString());
+                    }
                 }
                 if( mqtt!=null && !mqttID.isEmpty() && !entry.mqttDevice.isEmpty() )
                     mqtt.sendToBroker(mqttID, entry.mqttDevice,ref,(double)data[a]);
@@ -327,6 +318,7 @@ public class Generic {
         }
         if( !influxID.isEmpty() ) {
             //pb.time(Instant.now().toEpochMilli(), TimeUnit.MILLISECONDS); // Set is here because unsure what happens on delayed execution...?
+            assert pb != null;
             queryWriting.writeInfluxPoint(influxID,pb.build());
         }
         return data;
@@ -358,11 +350,6 @@ public class Generic {
         }
         join.add("\r\n");
 
-        if( !filters.isEmpty() ){
-            for( Filter filter:filters){
-                join.add("> "+filter.toString()+"\r\n");
-            }
-        }
         if( macroIndex!=-1 ){
             join.add("Macro is found on index "+macroIndex+"\r\n" );
         }
@@ -374,7 +361,7 @@ public class Generic {
         }
         return join.toString();
     }
-    public static Generic readFromXML( Element gen ){
+    public static Generic readFromXML( Element gen, Path xmlPath ){
 
         Generic generic = Generic.create(gen.getAttribute("id"));
         String group = gen.getAttribute("group");
@@ -383,6 +370,7 @@ public class Generic {
         generic.setMQTTID(gen.getAttribute("mqtt"));
         generic.setInfluxID(gen.getAttribute("influx"));
         generic.setTableMatch( XMLtools.getBooleanAttribute(gen, "exact", false));
+        generic.settingsPath = xmlPath;
 
         if ( gen.hasAttribute("db")) {
             var db = gen.getAttribute("db").split(":");
@@ -395,56 +383,24 @@ public class Generic {
 
         for (Element ent : XMLtools.getChildElements(gen)) {
             String title = ent.getTextContent();
+            String mqtt = XMLtools.getStringAttribute(ent, "mqtt", "");
 
             switch (ent.getNodeName()) {
-                case "macro":
-                    generic.setMacro(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), ent.getTextContent());
-                    break;
-                case "filter":
-                    String repAll = ent.getAttribute("replaceall");
-                    if (!repAll.isEmpty()) {
-                        generic.addFilter("replace_all", repAll, ent.getAttribute("with"));
-                    }
-                    break;
-                case "real":case "double":
-                   generic.addReal(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title,
-                            XMLtools.getStringAttribute(ent, "mqtt", ""));
-                    if( ent.hasAttribute("group") ){
-                        generic.getLastEntry().get().setGroup(ent.getAttribute("group"));
-                    }else{
-                        generic.getLastEntry().get().setGroup(group);
-                    }
-                    break;
-                case "integer":case "int":
-                    generic.addInteger(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title,
-                            XMLtools.getStringAttribute(ent, "mqtt", ""));
-                    if( ent.hasAttribute("group") ){
-                        generic.getLastEntry().get().setGroup(ent.getAttribute("group"));
-                    }else{
-                        generic.getLastEntry().get().setGroup(group);
-                    }
-                    break;
-                case "text": case "timestamp":
-                    generic.addText(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title );
-                    if( ent.hasAttribute("group") ){
-                        generic.getLastEntry().get().setGroup(ent.getAttribute("group"));
-                    }else{
-                        generic.getLastEntry().get().setGroup(group);
-                    }
-                    break;
-                case "filler":
-                    generic.addFiller(-1, ent.getTextContent());
-                    break;
-                case "tag":
-                    generic.addTag(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), ent.getTextContent());
-                    break;
-                case "localdt":
-                    generic.addThing(XMLtools.getIntAttribute(ent, INDEX_STRING, -1),title,DATATYPE.LOCALDT);
-                    break;
-                case "utcdt":
-                    generic.addThing(XMLtools.getIntAttribute(ent, INDEX_STRING, -1),title,DATATYPE.UTCDT);
-                    break;
-                default: Logger.warn("Tried to add generic part with wrong tag: "+ent.getNodeName()); break;
+                case "macro" -> generic.setMacro(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), ent.getTextContent());
+                case "real", "double" -> generic.addReal(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title,mqtt);
+                case "integer", "int" -> generic.addInteger(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title,mqtt);
+                case "flag", "bool" -> generic.addFlag(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title,mqtt);
+                case "text", "timestamp" -> generic.addText(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title);
+                case "filler" -> generic.addFiller(-1, ent.getTextContent());
+                case "tag" -> generic.addTag(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), ent.getTextContent());
+                case "localdt" -> generic.addThing(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title, DATATYPE.LOCALDT);
+                case "utcdt" -> generic.addThing(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title, DATATYPE.UTCDT);
+                default -> Logger.warn("Tried to add generic part with wrong tag: " + ent.getNodeName());
+            }
+            if( ent.hasAttribute("group") ){
+                generic.getLastEntry().ifPresent(g->g.setGroup(ent.getAttribute("group")));
+            }else{
+                generic.getLastEntry().ifPresent(g->g.setGroup(group));
             }
         }
         return generic;
@@ -490,47 +446,6 @@ public class Generic {
 
         return fab.build();
     }
-    /**
-     * Class to store filters that can be applied before the generic is applied
-     */
-    private static class Filter{
-        String from;
-        String to;
-        FILTERTYPE type;
-
-        public Filter( FILTERTYPE type, String from, String to ){
-            this.to=to;
-            this.from=from;
-            this.type=type;
-        }
-        public String toString(){
-            switch( type ){
-                case REPLACE_ALL: return "Replace all '"+from+"' with '"+to+"'";					
-				case REPLACE_FIRST: return "Replace first '"+from+"' with '"+to+"'";
-				default:
-					break;
-            }
-            return "";
-        }
-        /**
-         * Apply this filter to the given data
-         * @param line The data to apply the filter to
-         * @return The resulting line
-         */
-        public String apply(String line){
-            switch( type ){
-                case REPLACE_ALL:
-                    while( line.contains(from))
-                        line=line.replace(from, to);
-                    break;
-                case REPLACE_FIRST: line=line.replace(from, to); break;
-                default:
-                    break;         
-            }
-            return line;
-        }
-    }
-
     /**
      * Class for entries that define a single value looked for in the raw data
      */
