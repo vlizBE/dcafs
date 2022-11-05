@@ -8,7 +8,24 @@ Note: Version numbering: x.y.z
 - cmd !idle not used properly when disconnected/reconnected
 - integerval telnet interface?
 - Resolve #34
+
 ## 1.0.6 (work in progress)
+
+### RealtimeValues
+- RealVal, IntVal now have the 'abs' option that makes it store the absolute value instead
+
+### PathForward
+- Rtval nodes can now be added to a separate path xml and will be processed first. 
+If all the vals should belong to the default group (the one without name/id) then no group node
+is required.
+- Generics inside a path will create rtvals in the file the path is in
+- Instead of the node 'generic', the node 'store' can be used inside a path. Thought that might
+be more logical...
+
+### Generics
+- Added flags/bool
+- Removed filters
+
 
 ## 1.0.5 (27/10/2022)
 
