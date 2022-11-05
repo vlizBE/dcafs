@@ -87,6 +87,10 @@ public class PathForward {
                 pathEle = p.get();
                 delimiter = XMLtools.getStringAttribute(pathEle,"delimiter","");
                 Logger.info("Valid path script found at "+importPath);
+
+                // Check for rtvals
+                var rtvals = XMLfab.getRootChildren(importPath,"dcafs","rtvals").findFirst();
+                rtvals.ifPresent( rtEle -> dataProviding.readFromXML(rtEle) );
             }else{
                 Logger.error("No valid path script found: "+importPath);
                 return false;

@@ -16,6 +16,7 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.Map.Entry;
@@ -65,34 +66,43 @@ public class RealtimeValues implements DataProviding, Commandable {
 	/**
 	 * Read the rtvals node in the settings.xml
 	 */
-	public void readFromXML( XMLfab fab ){
+	public void readFromXML( Element rtvalsEle ){
 
-		double defReal = XMLtools.getDoubleAttribute(fab.getCurrentElement(),"realdefault",Double.NaN);
-		String defText = XMLtools.getStringAttribute(fab.getCurrentElement(),"textdefault","");
-		boolean defFlag = XMLtools.getBooleanAttribute(fab.getCurrentElement(),"flagdefault",false);
-		int defInteger = XMLtools.getIntAttribute(fab.getCurrentElement(),"integerdefault",-999);
+		double defReal = XMLtools.getDoubleAttribute(rtvalsEle,"realdefault",Double.NaN);
+		String defText = XMLtools.getStringAttribute(rtvalsEle,"textdefault","");
+		boolean defFlag = XMLtools.getBooleanAttribute(rtvalsEle,"flagdefault",false);
+		int defInteger = XMLtools.getIntAttribute(rtvalsEle,"integerdefault",-999);
 
 		readingXML=true;
-		fab.getChildren("group").forEach(
-				rtval -> {
-					// Both id and name are valid attributes for the node name that forms the full id
-					var groupName = XMLtools.getStringAttribute(rtval,"id",""); // get the node id
-					groupName = XMLtools.getStringAttribute(rtval,"name",groupName);
-					for( var groupie : XMLtools.getChildElements(rtval)){ // Get the nodes inside the group node
-						// First check if id is used
-						processRtvalElement(groupie, groupName, defReal, defText, defFlag,defInteger);
+		if( XMLtools.hasChildByTag(rtvalsEle,"group") ) {
+			XMLtools.getChildElements(rtvalsEle, "group").forEach(
+					rtval -> {
+						// Both id and name are valid attributes for the node name that forms the full id
+						var groupName = XMLtools.getStringAttribute(rtval, "id", ""); // get the node id
+						groupName = XMLtools.getStringAttribute(rtval, "name", groupName);
+						for (var groupie : XMLtools.getChildElements(rtval)) { // Get the nodes inside the group node
+							// First check if id is used
+							processRtvalElement(groupie, groupName, defReal, defText, defFlag, defInteger);
+						}
 					}
-				}
-		);
+			);
+		}else{ // Rtvals node without group nodes
+			XMLtools.getChildElements(rtvalsEle).forEach(
+					ele -> processRtvalElement(ele,"",defReal,defText,defFlag,defInteger)
+			);
+		}
+
 		// Stuff that isn't in a group?
-		fab.getChildren("*").stream().filter( rt -> !rt.getTagName().equalsIgnoreCase("group")).forEach(
+		/*XMLtools.getChildElements(rtvalsEle,"*").stream().filter( rt -> !rt.getTagName().equalsIgnoreCase("group")).forEach(
 				rtval -> {
 					processRtvalElement(rtval, "", defReal, defText, defFlag,defInteger);
 				}
-		);
+		);*/
 		readingXML=false;
 	}
-
+	public void readFromXML( XMLfab fab ){
+		readFromXML(fab.getCurrentElement());
+	}
 	/**
 	 * Process a Val node
 	 * @param rtval The node to process
@@ -171,7 +181,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 			}
 			case "text" -> setText(id, XMLtools.getStringAttribute(rtval, "default", defText));
 			case "flag" -> {
-				var fv = getOrAddFlagVal(id);
+				var fv = getOrAddFlagVal(id,false);
 				fv.reset(); // reset is needed if this is called because of reload
 				fv.name(XMLtools.getChildValueByTag(rtval, "name", fv.name()))
 						.group(XMLtools.getChildValueByTag(rtval, "group", fv.group()))
@@ -500,15 +510,28 @@ public class RealtimeValues implements DataProviding, Commandable {
 	}
 	/* ************************************ R E A L V A L ***************************************************** */
 
-	@Override
-	public boolean addRealVal(RealVal rv, boolean storeInXML) {
+	/**
+	 * Add a RealVal to the collection if it doesn't exist yet, optionally writing it to xml
+	 * @param rv The RealVal to add
+	 * @param xmlPath The path to the xml
+	 * @return True if it was added
+	 */
+	public boolean addRealVal(RealVal rv, Path xmlPath) {
+		if( rv==null) {
+			Logger.error("Invalid RealVal received, won't try adding it");
+			return false;
+		}
 		if( realVals.containsKey(rv.getID()))
 			return false;
-		if(storeInXML)
-			rv.storeInXml(XMLfab.withRoot(settingsPath,"dcafs","rtvals"));
+
+		if(xmlPath!=null&& Files.exists(xmlPath))
+			rv.storeInXml(XMLfab.withRoot(xmlPath,"dcafs","rtvals"));
 		return realVals.put(rv.getID(),rv)==null;
 	}
-
+	@Override
+	public boolean addRealVal(RealVal rv, boolean storeInXML) {
+		return addRealVal(rv,storeInXML?settingsPath:null);
+	}
 	/**
 	 * Retrieve a RealVal from the hashmap based on the id
 	 * @param id The reference with which the object was stored
@@ -640,25 +663,38 @@ public class RealtimeValues implements DataProviding, Commandable {
 	/**
 	 * Retrieves the id or adds it if it doesn't exist yet
 	 * @param iv The IntegerVal to add
-	 * @param xmlStore Whether it needs to be stored in xml
-	 * @return The object if found or made or null if something went wrong
+	 * @param xmlPath The path of the xml to store it in
+	 * @return The requested or newly made integerval
 	 */
-	public IntegerVal addIntegerVal( IntegerVal iv, boolean xmlStore ){
+	public IntegerVal addIntegerVal( IntegerVal iv, Path xmlPath ){
 		if( iv==null)
 			return null;
 
 		var val = integerVals.get(iv.getID());
 		if( !integerVals.containsKey(iv.getID())){
 			integerVals.put(iv.getID(),iv);
-			if(xmlStore)
-				iv.storeInXml(XMLfab.withRoot(settingsPath,"dcafs","rtvals"));
+			if(xmlPath!=null && Files.exists(xmlPath)) {
+				iv.storeInXml(XMLfab.withRoot(xmlPath, "dcafs", "rtvals"));
+			}else if( xmlPath!=null){
+				Logger.error("No such file found: "+xmlPath);
+			}
 			return iv;
 		}
 		return val;
 	}
-	public IntegerVal addIntegerVal( String group, String name ){
-		return addIntegerVal( IntegerVal.newVal(group,name),true);
+	/**
+	 * Retrieves the id or adds it if it doesn't exist yet
+	 * @param iv The IntegerVal to add
+	 * @param xmlStore Whether it needs to be stored in xml
+	 * @return The object if found or made or null if something went wrong
+	 */
+	public IntegerVal addIntegerVal( IntegerVal iv, boolean xmlStore ){
+		return addIntegerVal(iv,xmlStore?settingsPath:null);
 	}
+	public IntegerVal addIntegerVal( String group, String name ){
+		return addIntegerVal( IntegerVal.newVal(group,name),settingsPath);
+	}
+
 	public boolean renameInteger( String from, String to, boolean alterXml){
 		if( hasInteger(to) ){
 			return false;
@@ -777,7 +813,25 @@ public class RealtimeValues implements DataProviding, Commandable {
 	}
 
 	/* ************************************** F L A G S ************************************************************* */
-	public FlagVal getOrAddFlagVal( String id ){
+	public FlagVal getOrAddFlagVal( String id, boolean storeInXML ){
+		return getOrAddFlagVal(id,storeInXML?settingsPath:null);
+	}
+	public FlagVal addFlagVal( FlagVal fv, Path xmlPath ){
+		if( fv==null) {
+			Logger.error("Invalid flagval given");
+			return null;
+		}
+		if( !hasFlag(fv.id())){
+			flagVals.put(fv.id(),fv);
+			if(xmlPath!=null && Files.exists(xmlPath)) {
+				fv.storeInXml(XMLfab.withRoot(xmlPath, "dcafs", "rtvals"));
+			}else if( xmlPath!=null){
+				Logger.error("No such file found: "+xmlPath);
+			}
+		}
+		return getFlagVal(fv.id()).get();
+	}
+	public FlagVal getOrAddFlagVal( String id, Path xmlPath ){
 		if( id.isEmpty())
 			return null;
 
@@ -787,23 +841,8 @@ public class RealtimeValues implements DataProviding, Commandable {
 			val = FlagVal.newVal(id);
 			flagVals.put(id,val);
 
-			if( !readingXML ) { // Only add to xml if not reading from xml
-				var fab = XMLfab.withRoot(settingsPath, "dcafs", "settings", "rtvals");
-
-				if (fab.hasChild("flag", "id", id).isPresent())
-					return val;
-
-				if (val.group().isEmpty()) {
-					fab.alterChild("flag", "id", id).build();
-				} else {
-					if (fab.hasChild("group", "id", val.group()).isEmpty()) {
-						fab.addChild("group").attr("id", val.group()).down();
-					} else {
-						fab.selectChildAsParent("group", "id", val.group());
-					}
-					fab.alterChild("flag").attr("name", val.name()).build();
-				}
-				fab.build();
+			if( xmlPath!=null && Files.exists(xmlPath) ) { // Only add to xml if not reading from xml
+				val.storeInXml(XMLfab.withRoot(xmlPath, "dcafs", "rtvals"));
 			}
 		}
 		return val;
@@ -839,7 +878,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 	public boolean raiseFlag( String... flags ){
 		int cnt = flagVals.size();
 		for( var f : flags) {
-			getOrAddFlagVal(f).setState(true);
+			getOrAddFlagVal(f,true).setState(true);
 		}
 		return cnt != flagVals.size();
 	}
@@ -851,7 +890,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 	public boolean lowerFlag( String... flag ){
 		int cnt = flagVals.size();
 		for( var f : flag){
-			getOrAddFlagVal(f).setState(false);
+			getOrAddFlagVal(f,true).setState(false);
 		}
 		return cnt!= flagVals.size();
 	}
@@ -859,13 +898,24 @@ public class RealtimeValues implements DataProviding, Commandable {
 	 * Set the state of the flag
 	 * @param id The flag id
 	 * @param state The new state for the flag
-	 * @return True if the state was changed, false if a new flag was made
+	 * @return True if the state was changed, false if it failed
 	 */
 	public boolean setFlagState( String id, boolean state){
 
-		int size = flagVals.size();
-		getOrAddFlagVal(id).setState(state);
-		return size==flagVals.size();
+		if(!hasFlag(id)) {
+			Logger.error("No such flagVal "+id);
+			return false;
+		}
+		getFlagVal(id).map( fv->fv.setState(state));
+		return true;
+	}
+	public boolean setFlagState( String id, String state){
+		if(!hasFlag(id)) {
+			Logger.error("No such flagVal "+id);
+			return false;
+		}
+		getFlagVal(id).map( fv->fv.setState(state));
+		return true;
 	}
 	public ArrayList<String> listFlags(){
 		return flagVals.entrySet().stream().map(ent -> ent.getKey()+" : "+ent.getValue()).collect(Collectors.toCollection(ArrayList::new));
@@ -1036,21 +1086,49 @@ public class RealtimeValues implements DataProviding, Commandable {
 						.add( green+"  fv:raise,id"+reg+" or "+green+"flags:set,id"+reg+" -> Raises the flag/Sets the bit, created if new")
 						.add( green+"  fv:lower,id"+reg+" or "+green+"flags:clear,id"+reg+" -> Lowers the flag/Clears the bit, created if new")
 						.add( green+"  fv:toggle,id"+reg+" -> Toggles the flag/bit, not created if new")
+						.add( green+"  fv:match,id,refid"+reg+" -> The state of the flag becomes the same as the ref flag")
+						.add( green+"  fv:negated,id,refid"+reg+" -> The state of the flag becomes the opposite of the ref flag")
 						.add( green+"  fv:addcmd,id,when:cmd"+reg+" -> Add a cmd with the given trigger to id, current triggers:raised,lowered")
 						.add("").add( cyan+" Get info"+reg)
 						.add( green+"  fv:list"+reg+" -> Give a listing of all current flags and their state");
 				return join.toString();
 			case "list":
 				return getRtvalsList(html,false,true,false,false);
-			case "new":
+			case "new": case "add":
 				if( cmds.length <2)
 					return "Not enough arguments, need flags:new,id<,state> or fv:new,id<,state>";
-				getOrAddFlagVal(cmds[1]).setState(Tools.parseBool( cmds.length==3?cmds[2]:"false",false));
+				getOrAddFlagVal(cmds[1],true).setState(Tools.parseBool( cmds.length==3?cmds[2]:"false",false));
 				return "Flag created/updated "+cmds[1];
 			case "raise": case "set":
 				if( cmds.length !=2)
 					return "Not enough arguments, need flags:raise,id or flags:set,id";
 				return raiseFlag(cmds[1])?"New flag raised":"Flag raised";
+			case "match":
+				if( cmds.length < 3 )
+					return "Not enough arguments, fv:match,id,targetflag";
+				if( !hasFlag(cmds[1]))
+					return "No such flag: "+cmds[1];
+				if( !hasFlag(cmds[2]))
+					return "No such flag: "+cmds[2];
+				if( isFlagUp(cmds[2])){
+					raiseFlag(cmds[1]);
+				}else{
+					lowerFlag(cmds[1]);
+				}
+				return "Flag matched accordingly";
+			case "negated":
+				if( cmds.length < 3 )
+					return "Not enough arguments, fv:negated,id,targetflag";
+				if( !hasFlag(cmds[1]))
+					return "No such flag: "+cmds[1];
+				if( !hasFlag(cmds[2]))
+					return "No such flag: "+cmds[2];
+				if( isFlagUp(cmds[2])){
+					lowerFlag(cmds[1]);
+				}else{
+					raiseFlag(cmds[1]);
+				}
+				return "Flag negated accordingly";
 			case "lower": case "clear":
 				if( cmds.length !=2)
 					return "Not enough arguments, need flags:lower,id or flags:clear,id";
@@ -1083,6 +1161,12 @@ public class RealtimeValues implements DataProviding, Commandable {
 						.selectChildAsParent("flag","id",cmds[1])
 						.ifPresent( f -> f.addChild("cmd",cmd).attr("when",when).build());
 				return "Cmd added";
+			case "update":
+				if( cmds.length < 3)
+					return "Not enough arguments, fv:update,id,comparison";
+				if( !hasFlag(cmds[1]))
+					return "No such flag: "+cmds[1];
+
 		}
 		return "unknown command "+request[0]+":"+request[1];
 	}
