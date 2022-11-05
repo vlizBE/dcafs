@@ -281,6 +281,7 @@ public class MathUtils {
         // 15 < x <= 25   or x <= 25
         op = op.replace("not below ",">=");   // retain support for below
         op = op.replace("not above ","<=");   // retain support for above
+        op = op.replace("at least ",">=");
         op = op.replace("below ","<");   // retain support for below
         op = op.replace("above ",">");   // retain support for above
         op = op.replace("equals ","=="); // retain support for equals
