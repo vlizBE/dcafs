@@ -192,8 +192,8 @@ public class LabelWorker implements Runnable, Commandable {
 
 		XMLfab.getRootChildren(settingsPath, "dcafs","generics","generic")
 				.forEach( ele ->  {
-					var gen = Generic.readFromXML(ele);
-					if( gen!=null && !gen.getID().isEmpty()) {
+					var gen = Generic.readFromXML(ele,settingsPath);
+					if( !gen.getID().isEmpty()) {
 						if( generics.containsKey(gen.getID())){
 							Logger.error("Tried to add generic with duplicate ID: "+gen.getID());
 						}else {
@@ -232,8 +232,9 @@ public class LabelWorker implements Runnable, Commandable {
 				Logger.error("No such xml file: "+importPath+", aborting.");
 				return;
 			}
-
-			for( Element gen : XMLfab.getRootChildren(importPath, "dcafs","path","generic").collect(Collectors.toList())){
+			var gens = XMLfab.getRootChildren(importPath, "dcafs", "path", "generic").toList();
+			gens.addAll(XMLfab.getRootChildren(importPath, "dcafs", "path", "store").toList());
+			for( Element gen : gens){
 				if( !gen.hasAttribute("id")){ //if it hasn't got an id, give it one
 					gen.setAttribute("id",setId+"_gen"+a);
 					a++;
@@ -241,7 +242,7 @@ public class LabelWorker implements Runnable, Commandable {
 				String delim = ((Element)gen.getParentNode()).getAttribute("delimiter");
 				if( !gen.hasAttribute("delimiter") ) //if it hasn't got an id, give it one
 					gen.setAttribute("delimiter",delim);
-				addGeneric( Generic.readFromXML(gen) );
+				addGeneric( Generic.readFromXML(gen,importPath) );
 			}
 		}
 		String delimiter = XMLtools.getStringAttribute(pathElement,"delimiter","");
@@ -252,7 +253,7 @@ public class LabelWorker implements Runnable, Commandable {
 			}
 			if( !gen.hasAttribute("delimiter") && !delimiter.isEmpty()) //if it hasn't got an id, give it one
 				gen.setAttribute("delimiter",delimiter);
-			addGeneric( Generic.readFromXML(gen) );
+			addGeneric( Generic.readFromXML(gen,settingsPath) );
 		}
 	}
 	/* ******************************** Q U E U E S **********************************************/
@@ -364,7 +365,9 @@ public class LabelWorker implements Runnable, Commandable {
 		}
 		procCount.incrementAndGet();
 	}
-
+	public void stop(){
+		goOn=false;
+	}
 	/* ************************************** RUNNABLES ******************************************************/
 	@Override
 	public void run() {
