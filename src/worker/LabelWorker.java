@@ -235,6 +235,9 @@ public class LabelWorker implements Runnable, Commandable {
 			var gens = XMLfab.getRootChildren(importPath, "dcafs", "path", "generic").toList();
 			gens.addAll(XMLfab.getRootChildren(importPath, "dcafs", "path", "store").toList());
 			for( Element gen : gens){
+				if( !gen.hasAttribute("group")){
+					gen.setAttribute("group",setId);
+				}
 				if( !gen.hasAttribute("id")){ //if it hasn't got an id, give it one
 					gen.setAttribute("id",setId+"_gen"+a);
 					a++;
