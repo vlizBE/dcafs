@@ -87,6 +87,10 @@ public class PathForward {
                 pathEle = p.get();
                 delimiter = XMLtools.getStringAttribute(pathEle,"delimiter","");
                 Logger.info("Valid path script found at "+importPath);
+
+                // Check for rtvals
+                var rtvals = XMLfab.getRootChildren(importPath,"dcafs","rtvals").findFirst();
+                rtvals.ifPresent( rtEle -> dataProviding.readFromXML(rtEle) );
             }else{
                 Logger.error("No valid path script found: "+importPath);
                 return false;
@@ -192,7 +196,11 @@ public class PathForward {
         }
         if( !lastStep().map(AbstractForward::noTargets).orElse(false) || hasLabel) {
             if (customs.isEmpty() ) { // If no custom sources
-                dQueue.add(Datagram.system(this.src).writable(stepsForward.get(0)));
+                if(stepsForward.isEmpty()) {
+                    Logger.error(id+" -> No steps to take, this often means something went wrong processing it");
+                }else{
+                    dQueue.add(Datagram.system(this.src).writable(stepsForward.get(0)));
+                }
             } else {// If custom sources
                 if( !stepsForward.isEmpty()) // and there are steps
                     targets.add(stepsForward.get(0));

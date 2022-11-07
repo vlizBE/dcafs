@@ -25,20 +25,18 @@ public class FlagVal extends AbstractVal implements NumericVal{
 
     /**
      * Construct a new FlagVal
-     * @param combined The concatenation of the group + underscore + name or just the name if no group
+     * @param group The group the flag belongs to
+     * @param name The name of the flag
      * @return The constructed FlagVal
      */
+    public static FlagVal newVal(String group, String name){
+        return new FlagVal().group(group).name(name);
+    }
     public static FlagVal newVal(String combined){
-        String[] spl = combined.split("_");
-
-        if( spl.length==2) {
-            return new FlagVal().group(spl[0]).name(spl[1]);
-        }else if( spl.length>2){
-            String name = String.join("_",spl);
-            name = name.substring(name.indexOf("_")+1); // Remove spl[0]
-            return new FlagVal().group(spl[0]).name(name);
-        }
-        return new FlagVal().name(spl[0]);
+        if( !combined.contains("_"))
+            return new FlagVal().name(combined);
+        int a = combined.indexOf("_");
+        return new FlagVal().group(combined.substring(0,a)).name(combined.substring(a+1));
     }
     /* **************************** C O N S T R U C T I N G ******************************************************* */
 
@@ -61,7 +59,17 @@ public class FlagVal extends AbstractVal implements NumericVal{
         this.group=group;
         return this;
     }
-
+    public FlagVal setState( String state ){
+        if( state.equalsIgnoreCase("true")
+                || state.equalsIgnoreCase("1")
+                || state.equalsIgnoreCase("on")) {
+            setState(true);
+        }else if( state.equalsIgnoreCase("false")|| state.equalsIgnoreCase("0")
+                || state.equalsIgnoreCase("off")) {
+            setState(false);
+        }
+        return this;
+    }
     /**
      * Set the state, apply the options and check for triggered cmd's
      * @param val The new state

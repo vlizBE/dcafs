@@ -19,6 +19,7 @@ public class IntegerVal extends AbstractVal implements NumericVal{
     private int value;
 
     private int defVal=0;
+    private boolean abs=false;
 
     /* Min max*/
     private int min=Integer.MAX_VALUE;
@@ -97,17 +98,22 @@ public class IntegerVal extends AbstractVal implements NumericVal{
 
         /* Keep min max */
         if( keepMinMax ){
-            min = (int)Math.min(min,val);
-            max = (int)Math.max(max,val);
+            min = Math.min(min,val);
+            max = Math.max(max,val);
         }
+        if( abs )
+            val=Math.abs(val);
+
         /* Respond to triggered command based on value */
         if( dQueue!=null && triggered!=null ) {
+            double v = val;
             // Execute all the triggers, only if it's the first time
-            triggered.stream().forEach(tc -> tc.apply(val));
+            triggered.stream().forEach(tc -> tc.apply(v));
         }
         value=val;
         if( targets!=null ){
-            targets.forEach( wr -> wr.writeLine(id()+":"+val));
+            double v = val;
+            targets.forEach( wr -> wr.writeLine(id()+":"+v));
         }
         return this;
     }
@@ -130,7 +136,9 @@ public class IntegerVal extends AbstractVal implements NumericVal{
         keepMinMax=true;
         return this;
     }
-
+    public void enableAbs(){
+        abs=true;
+    }
     @Override
     public boolean enableHistory(int count){
         if( count > 0)

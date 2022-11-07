@@ -35,20 +35,18 @@ public class LabelWorker implements Runnable, Commandable {
 
 	static final String UNKNOWN_CMD = "unknown command";
 
-	private Map<String, Generic> generics = new HashMap<>();
-	private Map<String, ValMap> mappers = new HashMap<>();
-	private Map<String, Readable> readables = new HashMap<>();
+	private final Map<String, Generic> generics = new HashMap<>();
+	private final Map<String, ValMap> mappers = new HashMap<>();
+	private final Map<String, Readable> readables = new HashMap<>();
 
-	private ArrayList<DatagramProcessing> dgProc = new ArrayList<DatagramProcessing>();
+	private final ArrayList<DatagramProcessing> dgProc = new ArrayList<>();
 
 	private BlockingQueue<Datagram> dQueue;      // The queue holding raw data for processing
-	private DataProviding dp;
+	private final DataProviding dp;
 	private final QueryWriting queryWriting;
 	private MqttWriting mqtt;
-	private Path settingsPath;
-
-	private boolean goOn = true; // General process boolean, clean way of stopping thread
-
+	private final Path settingsPath;
+	private boolean goOn=true;
 	protected CommandPool reqData;
 
 	protected boolean debugMode = false;
@@ -84,7 +82,7 @@ public class LabelWorker implements Runnable, Commandable {
 		this.queryWriting=queryWriting;
 
 		Logger.info("Using " + Math.min(3, Runtime.getRuntime().availableProcessors()) + " threads");
-		debug.scheduleAtFixedRate(()->selfCheck(),5,30,TimeUnit.MINUTES);
+		debug.scheduleAtFixedRate(this::selfCheck,5,30,TimeUnit.MINUTES);
 
 		loadGenerics();
 		loadValMaps(true);
@@ -139,7 +137,7 @@ public class LabelWorker implements Runnable, Commandable {
 								String file = importPath.getFileName().toString();
 								file = file.substring(0,file.length()-4);//remove the .xml
 
-								for( Element vm : XMLfab.getRootChildren(importPath, "dcafs","paths","path","valmap").collect(Collectors.toList())){
+								for( Element vm : XMLfab.getRootChildren(importPath, "dcafs", "paths", "path", "valmap").toList()){
 									if( !vm.hasAttribute("id")){ //if it hasn't got an id, give it one
 										vm.setAttribute("id",file+"_vm"+a);
 										a++;
@@ -194,8 +192,8 @@ public class LabelWorker implements Runnable, Commandable {
 
 		XMLfab.getRootChildren(settingsPath, "dcafs","generics","generic")
 				.forEach( ele ->  {
-					var gen = Generic.readFromXML(ele);
-					if( gen!=null && !gen.getID().isEmpty()) {
+					var gen = Generic.readFromXML(ele,settingsPath);
+					if( !gen.getID().isEmpty()) {
 						if( generics.containsKey(gen.getID())){
 							Logger.error("Tried to add generic with duplicate ID: "+gen.getID());
 						}else {
@@ -207,7 +205,7 @@ public class LabelWorker implements Runnable, Commandable {
 				} );
 		// Find the path ones?
 		XMLfab.getRootChildren(settingsPath, "dcafs","paths","path")
-				.forEach( ele -> readGenericElementInPath(ele));
+				.forEach(this::readGenericElementInPath);
 		Logger.info("Finished loading generics.");
 	}
 
@@ -234,8 +232,9 @@ public class LabelWorker implements Runnable, Commandable {
 				Logger.error("No such xml file: "+importPath+", aborting.");
 				return;
 			}
-
-			for( Element gen : XMLfab.getRootChildren(importPath, "dcafs","path","generic").collect(Collectors.toList())){
+			var gens = XMLfab.getRootChildren(importPath, "dcafs", "path", "generic").toList();
+			gens.addAll(XMLfab.getRootChildren(importPath, "dcafs", "path", "store").toList());
+			for( Element gen : gens){
 				if( !gen.hasAttribute("id")){ //if it hasn't got an id, give it one
 					gen.setAttribute("id",setId+"_gen"+a);
 					a++;
@@ -243,7 +242,7 @@ public class LabelWorker implements Runnable, Commandable {
 				String delim = ((Element)gen.getParentNode()).getAttribute("delimiter");
 				if( !gen.hasAttribute("delimiter") ) //if it hasn't got an id, give it one
 					gen.setAttribute("delimiter",delim);
-				addGeneric( Generic.readFromXML(gen) );
+				addGeneric( Generic.readFromXML(gen,importPath) );
 			}
 		}
 		String delimiter = XMLtools.getStringAttribute(pathElement,"delimiter","");
@@ -254,7 +253,7 @@ public class LabelWorker implements Runnable, Commandable {
 			}
 			if( !gen.hasAttribute("delimiter") && !delimiter.isEmpty()) //if it hasn't got an id, give it one
 				gen.setAttribute("delimiter",delimiter);
-			addGeneric( Generic.readFromXML(gen) );
+			addGeneric( Generic.readFromXML(gen,settingsPath) );
 		}
 	}
 	/* ******************************** Q U E U E S **********************************************/
@@ -366,7 +365,9 @@ public class LabelWorker implements Runnable, Commandable {
 		}
 		procCount.incrementAndGet();
 	}
-
+	public void stop(){
+		goOn=false;
+	}
 	/* ************************************** RUNNABLES ******************************************************/
 	@Override
 	public void run() {
@@ -398,10 +399,10 @@ public class LabelWorker implements Runnable, Commandable {
 						case "read":    executor.execute( ()-> checkRead(d.getOriginID(),d.getWritable(),readID) );break;
 						case "telnet":  executor.execute( ()-> checkTelnet(d)); break;
 						case "log":
-							switch(d.label.split(":")[1]){
-								case "info":Logger.info(d.getData()); break;
-								case "warn":Logger.warn(d.getData()); break;
-								case "error":Logger.error(d.getData()); break;
+							switch (d.label.split(":")[1]) {
+								case "info" -> Logger.info(d.getData());
+								case "warn" -> Logger.warn(d.getData());
+								case "error" -> Logger.error(d.getData());
 							}
 							break;
 						default:
@@ -613,7 +614,7 @@ public class LabelWorker implements Runnable, Commandable {
 				if( dbs.isEmpty())
 					return "No such database found "+cmds[1];
 
-				if( dbs.get().buildGenericsFromTables(XMLfab.withRoot(settingsPath, "dcafs","generics"),false,cmds.length>2?cmds[2]:",") >0 ){
+				if( dbs.get().buildGenericsFromTables(XMLfab.withRoot(settingsPath, "dcafs","generics"),false,cmds[2]) >0 ){
 					loadGenerics();
 					return "Generic(s) written";
 				}else{

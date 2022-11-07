@@ -21,6 +21,7 @@ public class RealVal extends AbstractVal implements NumericVal{
     private double defVal=Double.NaN;
 
     private int digits=-1;
+    private boolean abs=false;
 
     /* Min max*/
     private double min=Double.MAX_VALUE;
@@ -99,18 +100,24 @@ public class RealVal extends AbstractVal implements NumericVal{
             min = Math.min(min,val);
             max = Math.max(max,val);
         }
-        /* Respond to triggered command based on value */
-        if( dQueue!=null && triggered!=null ) {
-            // Execute all the triggers, only if it's the first time
-            triggered.forEach(tc -> tc.apply(val));
-        }
+        if(abs)
+            val = Math.abs(val);
+
         if( digits != -1) {
             value = Tools.roundDouble(val, digits);
         }else{
             value=val;
         }
+        /* Respond to triggered command based on value */
+        if( dQueue!=null && triggered!=null ) {
+            double v = val;
+            // Execute all the triggers, only if it's the first time
+            triggered.forEach(tc -> tc.apply(v));
+        }
+
         if( targets!=null ){
-            targets.forEach( wr -> wr.writeLine(id()+":"+val));
+            double v = val;
+            targets.forEach( wr -> wr.writeLine(id()+":"+v));
         }
         return this;
     }
@@ -165,7 +172,9 @@ public class RealVal extends AbstractVal implements NumericVal{
             history=new ArrayList<>();
         return super.enableHistory(count);
     }
-
+    public void enableAbs(){
+        abs=true;
+    }
     /**
      * Tries to add a cmd with given trigger, will warn if no valid queue is present to actually execute them
      * @param cmd The cmd to trigger, $ will be replaced with the current value
@@ -250,6 +259,8 @@ public class RealVal extends AbstractVal implements NumericVal{
             join.add("minmax");
         if( order !=-1 )
             join.add("order:"+order);
+        if( abs )
+            join.add("abs");
         return join.toString();
     }
 
