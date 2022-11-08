@@ -569,9 +569,9 @@ public class SqlTable {
                         val = dp.getInteger(ref,-999);
                     }else{
                         if( col.hasDefault) {
-                            Logger.debug(id + " -> Didn't find rtval for " + ref);
+                            Logger.debug(id + " -> Didn't find integer with id " + ref);
                         }else {
-                            Logger.error(id + " -> Didn't find rtval for " + ref);
+                            Logger.error(id + " -> Didn't find integer with id " + ref);
                         }
                         val = col.hasDefault?NumberUtils.createInteger(def):null;
                     }
@@ -580,9 +580,9 @@ public class SqlTable {
                         val = dp.getReal(ref,-999);
                     }else{
                         if( col.hasDefault) {
-                            Logger.debug(id + " -> Didn't find rtval for " + ref);
+                            Logger.debug(id + " -> Didn't find real with id " + ref);
                         }else {
-                            Logger.error(id + " -> Didn't find rtval for " + ref);
+                            Logger.error(id + " -> Didn't find real with id " + ref);
                         }
                         val = col.hasDefault?NumberUtils.createDouble(def):null;
                     }
