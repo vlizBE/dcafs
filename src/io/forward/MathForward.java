@@ -416,6 +416,7 @@ public class MathForward extends AbstractForward {
         if( index.equalsIgnoreCase("-1") ){
             Logger.warn(id + " -> Bad/No index given in '"+cmd+"'|"+expression+" for "+type);
         }
+        highestI = Math.max(highestI,NumberUtils.toInt(index,-1));
 
         exp=replaceReferences(exp);
         if( exp.isEmpty() )
