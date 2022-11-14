@@ -184,9 +184,6 @@ public class DAS implements Commandable{
             /* I2C */
             addI2CWorker();
 
-            /* TaskManagerPool */
-            addTaskManager();
-
             /* Forwards */
             ForwardPool forwardPool = new ForwardPool(dQueue, settingsPath, rtvals, nettyGroup);
             addCommandable(forwardPool,"filter","ff","filters");
@@ -221,6 +218,9 @@ public class DAS implements Commandable{
             }else{
                 Logger.info("No matrix settings");
             }
+
+            /* TaskManagerPool */
+            addTaskManager();
 
             bootOK = true;
 
