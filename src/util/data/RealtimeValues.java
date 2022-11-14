@@ -183,7 +183,7 @@ public class RealtimeValues implements DataProviding, Commandable {
 			case "flag" -> {
 				var fv = getOrAddFlagVal(id,false);
 				fv.reset(); // reset is needed if this is called because of reload
-				fv.name(XMLtools.getChildValueByTag(rtval, "name", fv.name()))
+				fv.name(name)
 						.group(XMLtools.getChildValueByTag(rtval, "group", fv.group()))
 						.defState(XMLtools.getBooleanAttribute(rtval, "default", defFlag));
 				if (XMLtools.getBooleanAttribute(rtval, "keeptime", false))
@@ -782,6 +782,22 @@ public class RealtimeValues implements DataProviding, Commandable {
 	/* *********************************** T E X T S  ************************************************************* */
 	public boolean hasText(String id){
 		return texts.containsKey(id);
+	}
+	public void addTextVal( String parameter, String value, Path xmlPath){
+		boolean created = setText(parameter,value);
+
+		if( created ){
+			var fab = XMLfab.withRoot(xmlPath, "dcafs", "rtvals");
+			var name = parameter.contains("_")?parameter.substring(parameter.indexOf("_")+1):parameter;
+			fab.alterChild("group","id",parameter.contains("_")?parameter.substring(0,parameter.indexOf("_")):"")
+					.down(); // Go down in the group
+
+			if( fab.hasChild("text","name",name).isEmpty()) { // If this one isn't present
+				fab.addChild("text").attr("name", name);
+			}
+			fab.build();
+		}
+
 	}
 	public boolean setText(String parameter, String value) {
 
