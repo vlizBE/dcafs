@@ -86,6 +86,10 @@ public abstract class AbstractForward implements Writable {
      * @param target The writable the result of the filter will be written to
      */
     public synchronized void addTarget( Writable target ){
+        if( target.getID().isEmpty()) {
+            Logger.error(id+" -> Tried to add target with empty id");
+            return;
+        }
         if( !targets.contains(target)){
             if( !valid ){
                 valid=true;
@@ -116,20 +120,24 @@ public abstract class AbstractForward implements Writable {
         deleteNoTargets=true;
     }
     public String toString(){
+        String type = this instanceof MathForward?"math":"editor";
         StringJoiner join = new StringJoiner("\r\n" );
-        join.add(id+ (sources.isEmpty()?" without sources":" getting data from "+String.join( ";",sources)));
+        join.add(type+":"+id+ (sources.isEmpty()?"":" getting data from "+String.join( ";",sources)));
         join.add(getRules());
 
-        StringJoiner ts = new StringJoiner(", " );
-        ts.setEmptyValue("\tNo targets yet.");
-        if( !targets.isEmpty())
-            join.add("\t\tTargets: ");
-        targets.forEach( x -> ts.add(x.getID()+", "
+        if(!targets.isEmpty()) {
+            StringJoiner ts = new StringJoiner(", ", "    Targets: ", "");
+            targets.forEach(x -> ts.add(x.getID()));
+            join.add(ts.toString());
+        }
 
-
-        ));
-        join.add(ts.toString());
-
+        if( !label.isEmpty()) {
+            if( label.startsWith("generic")){
+                join.add("    Given to generic/store " + label.substring(8));
+            }else {
+                join.add("    To label " + label);
+            }
+        }
         return join.toString();
     }
     /**

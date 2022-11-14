@@ -81,16 +81,26 @@ public class FilterForward extends AbstractForward {
     @Override
     public String toString(){
         StringJoiner join = new StringJoiner("\r\n" );
-        join.add(id+ (sources.isEmpty()?" without sources":" getting data from "+String.join( ";",sources)));
+        join.add("filter:"+id+ (sources.isEmpty()?"":" getting data from "+String.join( ";",sources)));
         join.add(getRules());
 
-        StringJoiner ts = new StringJoiner(", ","Targets: ","" );
-        ts.setEmptyValue("No targets yet.");
+        StringJoiner ts = new StringJoiner(", ","    Approved data target: ","" );
         targets.forEach( x -> ts.add(x.getID()));
-        reversed.forEach( x -> ts.add(x.getID()+"!"));
+        if( !targets.isEmpty())
+            join.add(ts.toString());
 
-        join.add(ts.toString());
+        StringJoiner ts2 = new StringJoiner(", ","    Rejected data target: ","" );
+        reversed.forEach( x -> ts2.add(x.getID()));
+        if( !reversed.isEmpty())
+            join.add(ts2.toString());
 
+        if( !label.isEmpty()) {
+            if (label.startsWith("generic")) {
+                join.add("    Given to generic/store " + label.substring(8));
+            } else {
+                join.add("    To label " + label);
+            }
+        }
         return join.toString();
     }
     @Override
