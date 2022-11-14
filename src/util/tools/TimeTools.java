@@ -71,6 +71,10 @@ public class TimeTools {
         return "";
     }
     public static String reformatTime(String date, String inputFormat, String outputFormat){
+        if( date.isEmpty() ){
+            Logger.error("Can't reformat an empty date from "+inputFormat+" to "+outputFormat);
+            return date;
+        }
         try {
             LocalTime dt = LocalTime.parse(date, DateTimeFormatter.ofPattern(inputFormat));
             if (dt != null) {
