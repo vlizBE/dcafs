@@ -254,7 +254,7 @@ public class Generic {
                                 dp.updateInteger(ref,(int)val);
                             }else{
                                 var iv = IntegerVal.newVal(entry.group, entry.name).value((int)val);
-                                dp.addIntegerVal( iv, true );
+                                dp.addIntegerVal( iv, settingsPath );
                             }
                             break;
                     case REAL:
@@ -281,7 +281,7 @@ public class Generic {
                             break;                
                     case TEXT: case TAG:
                             data[a]=split[entry.index];
-                            dp.setText( ref, split[entry.index]);
+                            dp.addTextVal(ref,split[entry.index],settingsPath);
                             break;
                     case FLAG:
                             data[a] = val;
