@@ -1063,7 +1063,7 @@ public class MathUtils {
     }
 
     /**
-     * Convert a delimited string to BigDecimals arra where possible, fills in null if not
+     * Convert a delimited string to BigDecimals array where possible, fills in null if not
      * @param list The delimited string
      * @param delimiter The delimiter to use
      * @return The resulting array
