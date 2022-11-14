@@ -21,6 +21,11 @@ is required.
 - Generics inside a path will create rtvals in the file the path is in
 - Instead of the node 'generic', the node 'store' can be used inside a path. Thought that might
 be more logical...
+- Improved the feedback given by `pf:list` a lot
+
+### Fixes
+- MathForward checks the highest used index to not convert more than needed. This 
+however didn't take the special calculations (fe. sound velocity) in account.
 
 ### Generics
 - Added flags/bool
