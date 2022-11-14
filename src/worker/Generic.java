@@ -96,10 +96,14 @@ public class Generic {
      * @param index The index to look at
      * @param title The name under which to store this ( or table_title if table is defined)
      */
-    public void addReal(int index, String title, String mqttDevice){
+    public void addReal(int index, String title, String mqttDevice, String def){
         var ent = addThing(index,title,DATATYPE.REAL);
         if( !mqttDevice.isEmpty())
             ent.enableMQTT(mqttDevice);
+        if( !def.isEmpty() ){
+            if( NumberUtils.isCreatable(def))
+                ent.defReal=NumberUtils.toDouble(def);
+        }
     }
     /**
      * Add looking for an integer/long on the given index
@@ -107,10 +111,14 @@ public class Generic {
      * @param index The index to look at
      * @param title The name under which to store this ( or table_title if table is defined)
      */
-    public void addInteger(int index, String title, String mqttDevice){
+    public void addInteger(int index, String title, String mqttDevice, String def){
         var ent = addThing(index,title,DATATYPE.INTEGER);
         if( !mqttDevice.isEmpty())
             ent.enableMQTT(mqttDevice);
+        if( !def.isEmpty() ){
+            if( NumberUtils.isCreatable(def))
+                ent.defInt=NumberUtils.toInt(def);
+        }
     }
     public void addFlag(int index, String title, String mqttDevice ){
         var ent = addThing(index,title,DATATYPE.FLAG);
@@ -233,7 +241,9 @@ public class Generic {
                                 val=NumberUtils.toInt(split[entry.index].trim(),Integer.MAX_VALUE);
                             }else{
                                 val = Double.NaN;
-                                if( split[entry.index].isEmpty()){
+                                if( entry.defInt!=Integer.MAX_VALUE) {
+                                    val = entry.defInt;
+                                }else if( split[entry.index].isEmpty()){
                                     Logger.error(id +" -> Got an empty value at "+ entry.index+" instead of integer for "+ ref);
                                 }else{
                                     Logger.error(id +" -> Failed to convert "+split[entry.index]+" to integer for "+ ref);
@@ -254,7 +264,9 @@ public class Generic {
                                 val = NumberUtils.toDouble(split[entry.index].trim(), val);
                             }else{
                                 val = Double.NaN;
-                                if( split[entry.index].isEmpty()){
+                                if( entry.defReal!=Double.NaN) {
+                                    val = entry.defReal;
+                                }else if( split[entry.index].isEmpty()){
                                     Logger.error(id +" -> Got an empty value at "+ entry.index+" instead of real for "+ ref);
                                 }else{
                                     Logger.error(id +" -> Failed to convert "+split[entry.index]+" to real for "+ ref);
@@ -384,11 +396,12 @@ public class Generic {
         for (Element ent : XMLtools.getChildElements(gen)) {
             String title = ent.getTextContent();
             String mqtt = XMLtools.getStringAttribute(ent, "mqtt", "");
+            String def = XMLtools.getStringAttribute(ent,"def","");
 
             switch (ent.getNodeName()) {
                 case "macro" -> generic.setMacro(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), ent.getTextContent());
-                case "real", "double" -> generic.addReal(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title,mqtt);
-                case "integer", "int" -> generic.addInteger(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title,mqtt);
+                case "real", "double" -> generic.addReal(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title,mqtt,def);
+                case "integer", "int" -> generic.addInteger(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title,mqtt,def);
                 case "flag", "bool" -> generic.addFlag(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title,mqtt);
                 case "text", "timestamp" -> generic.addText(XMLtools.getIntAttribute(ent, INDEX_STRING, -1), title);
                 case "filler" -> generic.addFiller(-1, ent.getTextContent());
@@ -455,6 +468,8 @@ public class Generic {
         String name;
         String mqttDevice="";
         String group="";
+        double defReal = Double.NaN;
+        int defInt = Integer.MAX_VALUE;
 
         public Entry(int index, String name, DATATYPE type){
             this.index=index;
@@ -473,6 +488,12 @@ public class Generic {
         }
         public String getID(){
             return group.isEmpty()? name:group+"_"+name;
+        }
+        public void setDefReal( double def){
+            defReal=def;
+        }
+        public void setDefInt( int def){
+            defInt=def;
         }
     }
 }
