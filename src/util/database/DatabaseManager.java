@@ -7,8 +7,6 @@ import org.apache.commons.lang3.math.NumberUtils;
 import util.data.RealtimeValues;
 import org.influxdb.dto.Point;
 import org.tinylog.Logger;
-import org.w3c.dom.Document;
-import util.data.RealtimeValues;
 import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.xml.XMLfab;
@@ -85,13 +83,12 @@ public class DatabaseManager implements QueryWriting, Commandable {
 
     /**
      * Add an influxdb to the manager
+     *
      * @param id The id of the influxdb
      * @param db The influxdb
-     * @return The added influxdb
      */
-    public InfluxDB addInfluxDB(String id, InfluxDB db){
+    public void addInfluxDB(String id, InfluxDB db){
         influxes.put(id,db);
-        return db;
     }
     /**
      * Check if the manager has a database with the given id
@@ -213,7 +210,6 @@ public class DatabaseManager implements QueryWriting, Commandable {
     public int addDirectInsert(String id, String table, Object... values) {
         lites.entrySet().stream().filter(ent -> ent.getKey().equalsIgnoreCase(id)).forEach(db -> db.getValue().addDirectInsert(table,values));
         sqls.entrySet().stream().filter(ent -> ent.getKey().equalsIgnoreCase(id)).forEach(db -> db.getValue().addDirectInsert(table,values));
-        int applied=0;
         for( SQLiteDB sqlite : lites.values() ){
             if( sqlite.getID().equalsIgnoreCase(id))
                 return sqlite.addDirectInsert(table,values);

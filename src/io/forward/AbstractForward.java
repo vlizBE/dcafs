@@ -116,9 +116,6 @@ public abstract class AbstractForward implements Writable {
     /**
      * The forward will request to be deleted if there are no writables to write to
      */
-    public void enableRemoveIfNoTargets(){
-        deleteNoTargets=true;
-    }
     public String toString(){
         String type = this instanceof MathForward?"math":"editor";
         StringJoiner join = new StringJoiner("\r\n" );

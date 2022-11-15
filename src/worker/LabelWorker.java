@@ -111,10 +111,9 @@ public class LabelWorker implements Runnable, Commandable {
 		dgProc.add(dgp);
 	}
 	/* ****************************************** V A L M A P S *************************************************** */
-	private ValMap addValMap(ValMap map) {
+	private void addValMap(ValMap map) {
 		mappers.put(map.getID(), map);
 		Logger.info("Added generic " + map.getID());
-		return map;
 	}
 	public void loadValMaps(boolean clear){
 		var settingsDoc = XMLtools.readXML(settingsPath);
@@ -161,16 +160,15 @@ public class LabelWorker implements Runnable, Commandable {
 				);
 	}
 	/* *************************** GENERICS **********************************************/
-	public Generic addGeneric(Generic gen) {
+	public void addGeneric(Generic gen) {
 		if( gen == null)
-			return null;
+			return;
 		if( generics.containsKey(gen.getID())){
 			Logger.error("Tried to add generic with same id twice: "+gen.getID());
 		}else {
 			generics.put(gen.getID(), gen);
 			Logger.info("Added generic " + gen.getID());
 		}
-		return gen;
 	}
 	public String getGenericInfo() {
 		StringJoiner join = new StringJoiner("\r\n", "Generics:\r\n", "");

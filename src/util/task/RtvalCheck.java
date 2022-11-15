@@ -3,7 +3,6 @@ package util.task;
 import util.data.RealtimeValues;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
-import util.data.RealtimeValues;
 import util.math.MathUtils;
 
 import java.util.ArrayList;
@@ -31,6 +30,7 @@ public class RtvalCheck {
             return;
 
         equ=equ.replace(" not below ",">=");
+        equ=equ.replace(" at least ",">=");
         equ=equ.replace(" not above ","<=");
         equ=equ.replace(" not ","!=");
         equ=equ.replace(" below ","<");   // retain support for below
@@ -38,7 +38,7 @@ public class RtvalCheck {
         equ=equ.replace(" equals ","=="); // retain support for equals
         equ=equ.replace(" diff ","~");
 
-        // Split on and/or etc?
+        // Split on and/or etc.?
         if( equ.contains(" and ") ){
             for( String and : equ.split(" and "))
                 comparisons.add(getCompareFunction(and.replace(" ","")));
