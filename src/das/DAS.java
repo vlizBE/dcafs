@@ -11,6 +11,7 @@ import io.matrix.MatrixClient;
 import io.mqtt.MqttPool;
 import io.stream.StreamManager;
 import io.forward.ForwardPool;
+import util.gis.Waypoints;
 import util.tools.FileMonitor;
 import io.stream.tcp.TcpServer;
 import io.telnet.TelnetCodes;
@@ -42,7 +43,7 @@ public class DAS implements Commandable{
 
     private static final String version = "1.0.6";
 
-    private Path settingsPath;
+    private final Path settingsPath;
     private String workPath;
 
     private final Document settingsDoc;
@@ -62,6 +63,7 @@ public class DAS implements Commandable{
 
     private RealtimeValues rtvals;
     private CommandPool commandPool;
+    private Waypoints waypoints; // waypoints
 
     /* Managers & Pools */
     private DatabaseManager dbManager;
@@ -145,6 +147,7 @@ public class DAS implements Commandable{
             /* RealtimeValues */
             rtvals = new RealtimeValues( settingsPath, dQueue );
             rtvals.setText("dcafs_version",version);
+
             /* Database manager */
             dbManager = new DatabaseManager(workPath,rtvals);
 
@@ -154,9 +157,12 @@ public class DAS implements Commandable{
             addCommandable("flags;fv;reals;real;rv;texts;tv;int;integer",rtvals);
             addCommandable(rtvals,"rtval","rtvals");
             addCommandable("stop",rtvals);
-            addCommandable( "wpts",rtvals.enableWaypoints(nettyGroup) );
             addCommandable(dbManager,"dbm","myd");
             addCommandable(this,"st");
+
+            /* Waypoints */
+            waypoints = new Waypoints(settingsPath,nettyGroup,rtvals,dQueue);
+            addCommandable("wpts",waypoints);
 
             /* TransServer */
             addTransServer(-1);
@@ -426,6 +432,7 @@ public class DAS implements Commandable{
         return rtvals;
     }
     public IssuePool getIssuePool(){ return rtvals.getIssuePool();}
+
     /* ******************************** * S H U T D O W N S T U F F ***************************************** */
     /**
      * Attach a hook to the shutdown process, so we're sure that all queue's etc. get

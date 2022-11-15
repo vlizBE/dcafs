@@ -348,7 +348,7 @@ public class PathForward {
         }
     }
     public void stop(){
-        lastStep().ifPresent( ls -> ls.removeTargets());
+        lastStep().ifPresent(AbstractForward::removeTargets);
         targets.clear();
         customs.forEach(CustomSrc::stop);
         customs.clear();

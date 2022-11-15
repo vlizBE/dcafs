@@ -7,7 +7,6 @@ import io.telnet.TelnetCodes;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
-import util.gis.Waypoints;
 import util.math.MathUtils;
 import util.tools.TimeTools;
 import util.tools.Tools;
@@ -19,7 +18,6 @@ import worker.Datagram;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.concurrent.*;
 import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
@@ -37,7 +35,6 @@ public class RealtimeValues implements Commandable {
 	private final ConcurrentHashMap<String, String> texts = new ConcurrentHashMap<>(); 			 // strings
 	private final ConcurrentHashMap<String, FlagVal> flagVals = new ConcurrentHashMap<>(); 		 // booleans
 
-	private Waypoints waypoints; // waypoints
 	private final IssuePool issuePool;
 
 	/* Data update requests */
@@ -201,7 +198,7 @@ public class RealtimeValues implements Commandable {
 							if( !error.equalsIgnoreCase("ignore"))
 								return error;
 						}
-						repl = isFlagUp(id) ? "1" : "0";
+						repl = getFlagState(id) ? "1" : "0";
 						break;
 					case 't': case 'T':
 						var te = texts.get(id);
@@ -230,7 +227,7 @@ public class RealtimeValues implements Commandable {
 						if (hasText(word)) { //next, try text
 							line = line.replace(word, getText(word,""));
 						} else if (hasFlag(word)) { // if it isn't a text, check if it's a flag
-							line = line.replace(word, isFlagUp(word) ? "1" : "0");
+							line = line.replace(word, getFlagState(word) ? "1" : "0");
 						} else if (!error.equalsIgnoreCase("ignore")) { // if it's not ignore
 							Logger.error("Couldn't process " + word + " found in " + line); // log it and abort
 							return error;
@@ -296,180 +293,6 @@ public class RealtimeValues implements Commandable {
 		}
 		return line;
 	}
-
-	/**
-	 * Checks the exp for any mentions of the numerical rtvals and if found adds these to the nums arraylist and replaces
-	 * the reference with 'i' followed by the index in nums+offset. {D:id} and {F:id} will add the rtvals if they don't
-	 * exist yet.
-
-	 * fe. {d:temp}+30, nums still empty and offset 1: will add the RealVal temp to nums and alter exp to i1 + 30
-	 * @param exp The expression to check
-	 * @param nums The Arraylist to hold the numerical values
-	 * @param offset The index offset to apply
-	 * @return The altered expression
-	 */
-	public String buildNumericalMem( String exp, ArrayList<NumericVal> nums, int offset){
-		if( nums==null)
-			nums = new ArrayList<>();
-
-		// Find all the real/flag pairs
-		var pairs = Tools.parseKeyValue(exp,true); // Add those of the format {d:id}
-		//pairs.addAll( Tools.parseKeyValueNoBrackets(exp) ); // Add those of the format d:id
-
-		for( var p : pairs ) {
-			boolean ok=false;
-			if (p.length == 2) {
-				for( int pos=0;pos<nums.size();pos++ ){ // go through the known realVals
-					var d = nums.get(pos);
-					if( d.id().equalsIgnoreCase(p[1])) { // If a match is found
-						exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + (offset + pos));
-						exp = exp.replace(p[0] + ":" + p[1], "i" + (offset + pos));
-						ok=true;
-						break;
-					}
-				}
-				if( ok )
-					continue;
-				int index;
-				switch (p[0]) {
-					case "d", "double", "r", "real" -> {
-						var d = getRealVal(p[1]);
-						if (d.isPresent()) {
-							index = nums.indexOf(d.get());
-							if (index == -1) {
-								nums.add(d.get());
-								index = nums.size() - 1;
-							}
-							index += offset;
-							exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + index);
-						} else {
-							Logger.error("Couldn't find a real with id " + p[1]);
-							return "";
-						}
-					}
-					case "int", "i" -> {
-						var ii = getIntegerVal(p[1]);
-						if (ii.isPresent()) {
-							index = nums.indexOf(ii.get());
-							if (index == -1) {
-								nums.add(ii.get());
-								index = nums.size() - 1;
-							}
-							index += offset;
-							exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + index);
-						} else {
-							Logger.error("Couldn't find a integer with id " + p[1]);
-							return "";
-						}
-					}
-					case "f", "flag", "b" -> {
-						var f = getFlagVal(p[1]);
-						if (f.isPresent()) {
-							index = nums.indexOf(f.get());
-							if (index == -1) {
-								nums.add(f.get());
-								index = nums.size() - 1;
-							}
-							index += offset;
-							exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + index);
-						} else {
-							Logger.error("Couldn't find a FlagVal with id " + p[1]);
-							return "";
-						}
-					}
-					case "is" -> { // issues
-						var i = issuePool.getIssueAsNumerical(p[1]);
-						if (i.isPresent()) {
-							index = nums.indexOf(i.get());
-							if (index == -1) {
-								nums.add(i.get());
-								index = nums.size() - 1;
-							}
-							index += offset;
-							exp = exp.replace("{" + p[0] + ":" + p[1] + "}", "i" + index);
-						} else {
-							Logger.error("Couldn't find an Issue with id " + p[1]);
-							return "";
-						}
-					}
-					default -> {
-						Logger.error("Operation containing unknown pair: " + p[0] + ":" + p[1]);
-						return "";
-					}
-				}
-			}else{
-				Logger.error( "Pair containing odd amount of elements: "+String.join(":",p));
-			}
-		}
-		// Figure out the rest?
-		var found = words.matcher(exp).results().map(MatchResult::group).toList();
-		for( String fl : found){
-			if( fl.matches("^i\\d+") )
-				continue;
-			int index;
-			if( fl.startsWith("flag:")){
-				var f = getFlagVal(fl.substring(5));
-				if( f.isPresent() ){
-					index = nums.indexOf(f.get());
-					if(index==-1){
-						nums.add( f.get() );
-						index = nums.size()-1;
-					}
-					index += offset;
-					exp = exp.replace(fl, "i" + index);
-				}else{
-					Logger.error("Couldn't find a FlagVal with id "+fl);
-					return "";
-				}
-			}else{
-				var d = getRealVal(fl);
-				if( d.isPresent() ){
-					index = nums.indexOf(d.get());
-					if(index==-1){
-						nums.add( d.get() );
-						index = nums.size()-1;
-					}
-					index += offset;
-					exp = exp.replace(fl, "i" + index);
-				}else{
-					var f = getFlagVal(fl);
-					if( f.isPresent() ){
-						index = nums.indexOf(f.get());
-						if(index==-1){
-							nums.add( f.get() );
-							index = nums.size()-1;
-						}
-						index += offset;
-						exp = exp.replace(fl, "i" + index);
-					}else{
-						Logger.error("Couldn't find a realval with id "+fl);
-						return "";
-					}
-					return exp;
-				}
-			}
-		}
-		nums.trimToSize();
-		return exp;
-	}
-	/**
-	 * Look for a numerical val (i.e. RealVal, IntegerVal or FlagVal) with the given id
-	 * @param id The id to look for
-	 * @return An optional Numericalval that's empty if nothing was found
-	 */
-	public Optional<NumericVal> getNumericVal( String id){
-		if( id.startsWith("{")){ // First check if the id is contained inside a { }
-			id = id.substring(1,id.length()-2);
-			var pair = id.split(":");
-			return switch (pair[0].toLowerCase()) {
-				case "i", "int", "integer" -> Optional.ofNullable(integerVals.get(id));
-				case "d", "double", "r", "real" -> Optional.ofNullable(realVals.get(id));
-				case "f", "flag", "b" -> Optional.ofNullable(flagVals.get(id));
-				default -> Optional.empty();
-			};
-		} // If it isn't inside { } just check if a match is found in the realVals and then the FlagVals
-		return getRealVal(id).map(d -> Optional.of((NumericVal)d)).orElse(Optional.ofNullable((flagVals.get(id))));
-	}
 	/* ************************************ R E A L V A L ***************************************************** */
 
 	/**
@@ -493,60 +316,27 @@ public class RealtimeValues implements Commandable {
 	public boolean addRealVal(RealVal rv, boolean storeInXML) {
 		return addRealVal(rv,storeInXML?settingsPath:null);
 	}
+	public boolean hasReal(String id){
+		if( id.isEmpty()) {
+			Logger.error("Realval -> Empty id given");
+			return false;
+		}
+		return realVals.containsKey(id);
+	}
 	/**
 	 * Retrieve a RealVal from the hashmap based on the id
 	 * @param id The reference with which the object was stored
 	 * @return The requested RealVal or null if not found
 	 */
 	public Optional<RealVal> getRealVal( String id ){
-		if( realVals.get(id)==null)
+		if( id.isEmpty()) {
+			Logger.error("Realval -> Empty id given");
+			return Optional.empty();
+		}
+		var opt = Optional.ofNullable(realVals.get(id));
+		if( opt.isEmpty())
 			Logger.error( "Tried to retrieve non existing realval "+id);
-		return Optional.ofNullable(realVals.get(id));
-	}
-
-	/**
-	 * Rename a real
-	 * @param from The old name
-	 * @param to The new name
-	 * @param alterXml Whether to also alter the xml
-	 * @return True if ok
-	 */
-	public boolean renameReal(String from, String to, boolean alterXml){
-		if( hasReal(to) ){
-			return false;
-		}
-		var rv = getRealVal(from);
-		if( rv.isPresent() ){
-			// Alter the RealVal
-			realVals.remove(from); // Remove it from the list
-			var name = to;
-			if( name.contains("_") )
-				name = name.substring(name.indexOf("_")+1);
-			String newName = name;
-			String oriName = rv.get().name();
-			rv.get().name(name);
-			realVals.put(to,rv.get()); // Add it renamed
-
-			// Correct the XML
-			if( alterXml ) {
-				if (name.equalsIgnoreCase(to)) { // so didn't contain a group
-					XMLfab.withRoot(settingsPath, "dcafs", "rtvals").selectChildAsParent("real", "id", from)
-							.ifPresent(fab -> fab.attr("id", to).build());
-				} else { // If it did contain a group
-					var grOpt = XMLfab.withRoot(settingsPath, "dcafs", "rtvals").selectChildAsParent("group", "id", from.substring(0, from.indexOf("_")));
-					if (grOpt.isPresent()) { // If the group tag is already present alter it there
-						grOpt.get().selectChildAsParent("real", "name", oriName).ifPresent(f -> f.attr("name", newName).build());
-					} else { // If not
-						XMLfab.withRoot(settingsPath, "dcafs", "rtvals").selectChildAsParent("real", "id", from)
-								.ifPresent(fab -> fab.attr("id", to).build());
-					}
-				}
-			}
-		}
-		return true;
-	}
-	public boolean hasReal(String id){
-		return realVals.containsKey(id);
+		return opt;
 	}
 	/**
 	 * Sets the value of a real (in a hashmap)
@@ -555,18 +345,7 @@ public class RealtimeValues implements Commandable {
 	 * @return True if it was created
 	 */
 	public boolean updateReal(String id, double value) {
-
-		if( id.isEmpty()) {
-			Logger.error("Empty id given");
-			return false;
-		}
-		RealVal r = realVals.get(id);
-		if( r==null ) {
-			Logger.error("No such real "+id+" yet, create it first");
-			return false;
-		}
-		r.updateValue(value);
-		return true;
+		return getRealVal(id).map( r -> {r.updateValue(value);return true;}).orElse(false);
 	}
 	/**
 	 * Alter all the values of the reals in the given group
@@ -588,25 +367,12 @@ public class RealtimeValues implements Commandable {
 	 */
 	public double getReal(String id, double defVal) {
 		var star = id.indexOf("*");
-		RealVal d = realVals.get(star==-1?id:id.substring(0,star));
-		if (d == null) {
-			Logger.error("No such real "+id);
-			return defVal;
-		}
-		if (Double.isNaN(d.value())) {
-			Logger.error("ID: " + id + " is NaN.");
-			return defVal;
-		}
-		if( star==-1)
-			return d.value();
+		var dOpt = getRealVal(star==-1?id:id.substring(0,star));
 
-		return switch( id.substring(star+1) ){
-			case "stdev", "stdv"-> d.getStdev();
-			case "avg", "average" ->  d.getAvg();
-			case "min" -> d.min();
-			case "max" -> d.max();
-			default -> d.value();
-		};
+		if (dOpt.isEmpty()) {
+			return defVal;
+		}
+		return dOpt.get().value(star==-1?"":id.substring(star+1));
 	}
 	/* ************************************ I N T E G E R V A L ***************************************************** */
 
@@ -620,17 +386,20 @@ public class RealtimeValues implements Commandable {
 			Logger.error( "Tried to retrieve non existing integerval "+id);
 		return Optional.ofNullable(integerVals.get(id));
 	}
-
+	public boolean hasInteger( String id ){
+		return integerVals.containsKey(id);
+	}
 	/**
 	 * Retrieves the id or adds it if it doesn't exist yet
 	 * @param iv The IntegerVal to add
 	 * @param xmlPath The path of the xml to store it in
-	 * @return The requested or newly made integerval
+	 * @return The requested or newly made IntegerVal
 	 */
 	public IntegerVal addIntegerVal( IntegerVal iv, Path xmlPath ){
-		if( iv==null)
+		if( iv==null) {
+			Logger.error("Invalid IntegerVal given, can't add it");
 			return null;
-
+		}
 		var val = integerVals.get(iv.getID());
 		if( !integerVals.containsKey(iv.getID())){
 			integerVals.put(iv.getID(),iv);
@@ -644,66 +413,13 @@ public class RealtimeValues implements Commandable {
 		return val;
 	}
 	/**
-	 * Retrieves the id or adds it if it doesn't exist yet
-	 * @param iv The IntegerVal to add
-	 * @param xmlStore Whether it needs to be stored in xml
-	 * @return The object if found or made or null if something went wrong
-	 */
-	public IntegerVal addIntegerVal( IntegerVal iv, boolean xmlStore ){
-		return addIntegerVal(iv,xmlStore?settingsPath:null);
-	}
-	public IntegerVal addIntegerVal( String group, String name ){
-		return addIntegerVal( IntegerVal.newVal(group,name),settingsPath);
-	}
-
-	public boolean renameInteger( String from, String to, boolean alterXml){
-		if( hasInteger(to) ){
-			return false;
-		}
-		var iv = getIntegerVal(from);
-		if( iv.isPresent() ){
-			// Alter the RealVal
-			integerVals.remove(from); // Remove it from the list
-			var name = to;
-			if( name.contains("_") )
-				name = name.substring(name.indexOf("_")+1);
-			String newName = name;
-			String oriName = iv.get().name();
-			iv.get().name(name);
-			integerVals.put(to,iv.get()); // Add it renamed
-
-			// Correct the XML
-			if( alterXml ) {
-				if (name.equalsIgnoreCase(to)) { // so didn't contain a group
-					XMLfab.withRoot(settingsPath, "dcafs", "rtvals").selectChildAsParent("int", "id", from)
-							.ifPresent(fab -> fab.attr("id", to).build());
-				} else { // If it did contain a group
-					var grOpt = XMLfab.withRoot(settingsPath, "dcafs", "rtvals").selectChildAsParent("group", "id", from.substring(0, from.indexOf("_")));
-					if (grOpt.isPresent()) { // If the group tag is already present alter it there
-						grOpt.get().selectChildAsParent("int", "name", oriName).ifPresent(f -> f.attr("name", newName).build());
-					} else { // If not
-						XMLfab.withRoot(settingsPath, "dcafs", "rtvals").selectChildAsParent("int", "id", from)
-								.ifPresent(fab -> fab.attr("id", to).build());
-					}
-				}
-			}
-		}
-		return true;
-	}
-	public boolean hasInteger( String id){
-		return integerVals.containsKey(id);
-	}
-	/**
 	 * Sets the value of a parameter (in a hashmap)
-	 * @param id The integerval id
+	 * @param id The IntegerVal id
 	 * @param value the new value
 	 * @return True if it was updated
 	 */
 	public boolean updateInteger(String id, int value) {
-		if( !integerVals.containsKey(id))
-			return false;
-		integerVals.get(id).value(value);
-		return true;
+		return getIntegerVal(id).map( i -> {i.value(value); return true;}).orElse(false);
 	}
 
 	/**
@@ -730,15 +446,7 @@ public class RealtimeValues implements Commandable {
 			Logger.error("No such id: " + id);
 			return defVal;
 		}
-
-		if( star==-1)
-			return i.intValue();
-
-		return switch( id.substring(star+1) ){
-			case "min" -> i.min();
-			case "max" -> i.max();
-			default -> i.intValue();
-		};
+		return i.intValue( star==-1?"":id.substring(star+1) );
 	}
 	/* *********************************** T E X T S  ************************************************************* */
 	public boolean hasText(String id){
@@ -753,13 +461,20 @@ public class RealtimeValues implements Commandable {
 			fab.alterChild("group","id",parameter.contains("_")?parameter.substring(0,parameter.indexOf("_")):"")
 					.down(); // Go down in the group
 
-			if( fab.hasChild("text","name",name).isEmpty()) { // If this one isn't present
-				fab.addChild("text").attr("name", name);
+			if( fab.hasChild("text","id",name).isEmpty()) { // If this one isn't present
+				fab.addChild("text").attr("id", name);
 			}
 			fab.build();
 		}
 
 	}
+
+	/**
+	 * Set the value of a textval and create it if it doesn't exist yet
+	 * @param parameter The name/id of the val
+	 * @param value The new content
+	 * @return True if it was created
+	 */
 	public boolean setText(String parameter, String value) {
 
 		if( parameter.isEmpty()) {
@@ -777,6 +492,13 @@ public class RealtimeValues implements Commandable {
 		}
 		return created;
 	}
+
+	/**
+	 * Update an existing textval
+	 * @param id The id of the TextVal
+	 * @param value The new content
+	 * @return True if found and updated
+	 */
 	public boolean updateText( String id, String value){
 		if( texts.containsKey(id)) {
 			texts.put(id, value);
@@ -830,21 +552,13 @@ public class RealtimeValues implements Commandable {
 	public boolean hasFlag( String flag){
 		return flagVals.get(flag)!=null;
 	}
-	public boolean isFlagUp( String flag ){
+	public boolean getFlagState(String flag ){
 		var f = flagVals.get(flag);
 		if( f==null) {
 			Logger.warn("No such flag: " + flag);
 			return false;
 		}
 		return f.isUp();
-	}
-	public boolean isFlagDown( String flag ){
-		var f = flagVals.get(flag);
-		if( f==null) {
-			Logger.warn("No such flag: " + flag);
-			return false;
-		}
-		return f.isDown();
 	}
 
 	/**
@@ -871,56 +585,12 @@ public class RealtimeValues implements Commandable {
 		}
 		return cnt!= flagVals.size();
 	}
-	/**
-	 * Set the state of the flag
-	 * @param id The flag id
-	 * @param state The new state for the flag
-	 * @return True if the state was changed, false if it failed
-	 */
-	public boolean setFlagState( String id, boolean state){
-
-		if(!hasFlag(id)) {
-			Logger.error("No such flagVal "+id);
-			return false;
-		}
-		getFlagVal(id).map( fv->fv.setState(state));
-		return true;
-	}
 	public boolean setFlagState( String id, String state){
 		if(!hasFlag(id)) {
 			Logger.error("No such flagVal "+id);
 			return false;
 		}
 		getFlagVal(id).map( fv->fv.setState(state));
-		return true;
-	}
-	public ArrayList<String> listFlags(){
-		return flagVals.entrySet().stream().map(ent -> ent.getKey()+" : "+ent.getValue()).collect(Collectors.toCollection(ArrayList::new));
-	}
-	/* ********************************* O V E R V I E W *********************************************************** */
-
-	/**
-	 * Store the rtvals in the settings.xml
-	 * @return The result
-	 */
-	public boolean storeValsInXml(boolean clearFirst){
-		XMLfab fab = XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals");
-		if( clearFirst ) // If it needs to cleared first, remove child nodes
-			fab.clearChildren();
-		var vals = realVals.entrySet().stream().sorted(Entry.comparingByKey()).map(Entry::getValue).toList();
-		for( var rv : vals ){
-			rv.storeInXml(fab);
-		}
-		var keys = texts.entrySet().stream().sorted(Entry.comparingByKey()).map(Entry::getKey).toList();
-		for( var dt : keys ){
-			if( !dt.startsWith("dcafs"))
-				fab.selectOrAddChildAsParent("text","id",dt).up();
-		}
-		var flags = flagVals.entrySet().stream().sorted(Entry.comparingByKey()).map(Entry::getValue).toList();
-		for( var fv : flags ){
-			fv.storeInXml(fab);
-		}
-		fab.build();
 		return true;
 	}
 	/* ******************************************************************************************************/
@@ -969,13 +639,13 @@ public class RealtimeValues implements Commandable {
 	public String replyToCommand(String[] request, Writable wr, boolean html) {
 
 		switch( request[0] ){
-			case "doubles": case "dv": case "rv": case "reals":
+			case "rv": case "reals":
 				return replyToRealsCmd(request,html);
 			case "texts": case "tv":
 				return replyToTextsCmd(request,html);
 			case "flags": case "fv":
 				return replyToFlagsCmd(request,html);
-			case "rtval": case "double": case "real": case "int": case "integer":
+			case "rtval": case "real": case "int": case "integer":
 				int s = addRequest(wr,request[0],request[1]);
 				return s!=0?"Request added to "+s+" realvals":"Request failed";
 			case "rtvals": case "rvs":
@@ -989,6 +659,7 @@ public class RealtimeValues implements Commandable {
 	}
 	public boolean removeWritable(Writable writable ) {
 		realVals.values().forEach(rv -> rv.removeTarget(writable));
+		integerVals.values().forEach( iv -> iv.removeTarget(writable));
 		textRequest.forEach( (key, list) -> list.remove(writable));
 		return true;
 	}
@@ -1087,11 +758,7 @@ public class RealtimeValues implements Commandable {
 					return "No such flag: "+cmds[1];
 				if( !hasFlag(cmds[2]))
 					return "No such flag: "+cmds[2];
-				if( isFlagUp(cmds[2])){
-					raiseFlag(cmds[1]);
-				}else{
-					lowerFlag(cmds[1]);
-				}
+				getFlagVal(cmds[2]).ifPresent( to -> to.setState( getFlagVal(cmds[1]).get().isUp()));
 				return "Flag matched accordingly";
 			case "negated":
 				if( cmds.length < 3 )
@@ -1100,7 +767,7 @@ public class RealtimeValues implements Commandable {
 					return "No such flag: "+cmds[1];
 				if( !hasFlag(cmds[2]))
 					return "No such flag: "+cmds[2];
-				if( isFlagUp(cmds[2])){
+				if( getFlagState(cmds[2])){
 					lowerFlag(cmds[1]);
 				}else{
 					raiseFlag(cmds[1]);
@@ -1109,20 +776,13 @@ public class RealtimeValues implements Commandable {
 			case "lower": case "clear":
 				if( cmds.length !=2)
 					return "Not enough arguments, need flags:lower,id or flags:clear,id";
-				return lowerFlag(cmds[1])?"New flag raised":"Flag raised";
+				return lowerFlag(cmds[1])?"New flag raised":"Flag lowered";
 			case "toggle":
 				if( cmds.length !=2)
 					return "Not enough arguments, need flags:toggle,id";
-
 				if( !hasFlag(cmds[1]) )
 					return "No such flag";
-
-				if( isFlagUp(cmds[1])) {
-					lowerFlag(cmds[1]);
-					return "flag lowered";
-				}
-				raiseFlag(cmds[1]);
-				return "Flag raised";
+				return getFlagVal(cmds[1]).map(FlagVal::toggleState).orElse(false)?"Flag raised":"Flag Lowered";
 			case "addcmd":
 				if( cmds.length < 3 )
 					return "Not enough arguments, fv:addcmd,id,when:cmd";
@@ -1293,23 +953,24 @@ public class RealtimeValues implements Commandable {
 		join.setEmptyValue("None Yet");
 
 		if( cmds.length==1 ){
-			switch( cmds[0]){
-				case "?":
-					join.add( cyan+" Interact with XML"+reg)
-							.add(green+"  rtvals:store"+reg+" -> Store all rtvals to XML")
-							.add(green+"  rtvals:reload"+reg+" -> Reload all rtvals from XML")
-							.add("").add( cyan+" Get info"+reg)
-							.add(green+"  rtvals:?"+reg+" -> Get this message")
-							.add(green+"  rtvals"+reg+" -> Get a listing of all rtvals")
-							.add(green+"  rtvals:groups"+reg+" -> Get a listing of all the available groups")
-							.add(green+"  rtvals:group,groupid"+reg+" -> Get a listing of all rtvals belonging to the group")
-							.add(green+"  rtvals:name,valname"+reg+" -> Get a listing of all rtvals with the given valname (independent of group)")
-							.add(green+"  rtvals:resetgroup,groupid"+reg+" -> Reset the integers and real rtvals in the given group");
+			switch (cmds[0]) {
+				case "?" -> {
+					join.add(cyan + " Interact with XML" + reg)
+							.add(green + "  rtvals:store" + reg + " -> Store all rtvals to XML")
+							.add(green + "  rtvals:reload" + reg + " -> Reload all rtvals from XML")
+							.add("").add(cyan + " Get info" + reg)
+							.add(green + "  rtvals:?" + reg + " -> Get this message")
+							.add(green + "  rtvals" + reg + " -> Get a listing of all rtvals")
+							.add(green + "  rtvals:groups" + reg + " -> Get a listing of all the available groups")
+							.add(green + "  rtvals:group,groupid" + reg + " -> Get a listing of all rtvals belonging to the group")
+							.add(green + "  rtvals:name,valname" + reg + " -> Get a listing of all rtvals with the given valname (independent of group)")
+							.add(green + "  rtvals:resetgroup,groupid" + reg + " -> Reset the integers and real rtvals in the given group");
 					return join.toString();
-				case "store": return  storeValsInXml(false)?"Written in xml":"Failed to write to xml";
-				case "reload":
-					readFromXML( XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals") );
+				}
+				case "reload" -> {
+					readFromXML(XMLfab.withRoot(settingsPath, "dcafs", "settings", "rtvals"));
 					return "Reloaded rtvals";
+				}
 			}
 		}else if(cmds.length==2){
 			switch(cmds[0]){
@@ -1335,7 +996,9 @@ public class RealtimeValues implements Commandable {
 	public String getRTValsGroupList(String group, boolean showReals, boolean showFlags, boolean showTexts, boolean showInts, boolean html) {
 		String eol = html ? "<br>" : "\r\n";
 		String title = html ? "<b>Group: " + group + "</b>" : TelnetCodes.TEXT_CYAN + "Group: " + group + TelnetCodes.TEXT_YELLOW;
-		String space = "  ";//html ? "  " : "  ";
+		if( group.isEmpty()){
+			title = html ? "<b>Ungrouped</b>" : TelnetCodes.TEXT_CYAN + "Ungrouped" + TelnetCodes.TEXT_YELLOW;
+		}
 
 		StringJoiner join = new StringJoiner(eol, title + eol, "");
 		join.setEmptyValue("None yet");
@@ -1357,25 +1020,53 @@ public class RealtimeValues implements Commandable {
 					})
 					.map(nv -> {
 						if( nv instanceof RealVal)
-							return space + nv.name() + " : "+ nv.value()+ nv.unit();
-						return space + nv.name() + " : "+ nv.intValue() + nv.unit();
+							return "  " + nv.name() + " : "+ nv.value()+ nv.unit();
+						return "  " + nv.name() + " : "+ nv.intValue() + nv.unit();
 					} ) // change it to strings
 					.forEach(join::add);
 		}
 		if( showTexts ) {
 			texts.entrySet().stream().filter(ent -> ent.getKey().startsWith(group + "_"))
-					.map(ent -> space + ent.getKey().split("_")[1] + " : " + ent.getValue())
+					.map(ent -> "  " + ent.getKey().split("_")[1] + " : " + ent.getValue())
 					.sorted().forEach(join::add);
 		}
 		if( showFlags ) {
 			flagVals.values().stream().filter(fv -> fv.group().equalsIgnoreCase(group))
-					.map(v -> space + v.name() + " : " + v) //Change it to strings
+					.map(v -> "  " + v.name() + " : " + v) //Change it to strings
 					.sorted().forEach(join::add); // Then add the sorted the strings
 		}
 		return join.toString();
 	}
 	/**
-	 * Get a listing of all stored variables that have the given name
+	 * Get the full listing of all reals,flags and text, so both grouped and ungrouped
+	 * @param html If true will use html newline etc
+	 * @return The listing
+	 */
+	public String getRtvalsList(boolean html, boolean showReals, boolean showFlags, boolean showTexts, boolean showInts){
+		String eol = html?"<br>":"\r\n";
+		StringJoiner join = new StringJoiner(eol,"Status at "+ TimeTools.formatShortUTCNow()+eol+eol,"");
+		join.setEmptyValue("None yet");
+
+		// Find & add the groups
+		for( var group : getGroups() ){
+			var res = getRTValsGroupList(group,showReals,showFlags,showTexts,showInts,html);
+			if( !res.isEmpty() && !res.equalsIgnoreCase("none yet"))
+				join.add(res).add("");
+		}
+		var res = getRTValsGroupList("",showReals,showFlags,showTexts,showInts,html);
+		if( !res.isEmpty() && !res.equalsIgnoreCase("none yet"))
+			join.add(res).add("");
+
+		if( !html)
+			return join.toString();
+
+		// Try to fix some symbols to correct html counterpart
+		return join.toString().replace("°C","&#8451") // fix the °C
+								.replace("m²","&#13217;") // Fix m²
+								.replace("m³","&#13221;"); // Fix m³
+	}
+	/**
+	 * Get a listing of all stored variables that have the given name, so across groups
 	 * @param name The name of the variable or the string the name starts with if ending it with *
 	 * @param html Use html formatting or telnet
 	 * @return The listing
@@ -1383,7 +1074,6 @@ public class RealtimeValues implements Commandable {
 	public String getAllIDsList(String name, boolean html) {
 		String eol = html?"<br>":"\r\n";
 		String title = html?"<b>Name: "+name+"</b>":TelnetCodes.TEXT_CYAN+"Name: "+name+TelnetCodes.TEXT_YELLOW;
-		String space = "  ";//html?"  ":"  ";
 
 		StringJoiner join = new StringJoiner(eol,title+eol,"");
 		join.setEmptyValue("No matches found");
@@ -1395,78 +1085,15 @@ public class RealtimeValues implements Commandable {
 			regex=name;
 		}
 		realVals.values().stream().filter(rv -> rv.name().matches(regex))
-				.forEach(rv -> join.add(space+(rv.group().isEmpty()?"":rv.group()+" -> ")+rv.name()+" : "+rv));
+				.forEach(rv -> join.add("  "+(rv.group().isEmpty()?"":rv.group()+" -> ")+rv.name()+" : "+rv));
 		integerVals.values().stream().filter( iv -> iv.name().matches(regex))
-				.forEach(iv -> join.add(space+(iv.group().isEmpty()?"":iv.group()+" -> ")+iv.name()+" : "+iv));
+				.forEach(iv -> join.add("  "+(iv.group().isEmpty()?"":iv.group()+" -> ")+iv.name()+" : "+iv));
 		texts.entrySet().stream().filter(ent -> ent.getKey().matches(regex))
-				.forEach( ent -> join.add( space+ent.getKey().replace("_","->")+" : "+ent.getValue()) );
+				.forEach( ent -> join.add( "  "+ent.getKey().replace("_","->")+" : "+ent.getValue()) );
 		flagVals.values().stream().filter(fv -> fv.name().matches(regex))
-				.forEach(fv -> join.add(space+(fv.group().isEmpty()?"":fv.group()+" -> ")+fv.name()+" : "+fv));
+				.forEach(fv -> join.add("  "+(fv.group().isEmpty()?"":fv.group()+" -> ")+fv.name()+" : "+fv));
 		return join.toString();
 	}
-
-	/**
-	 * Get the full listing of all reals,flags and text, so both grouped and ungrouped
-	 * @param html If true will use html newline etc
-	 * @return The listing
-	 */
-	public String getRtvalsList(boolean html, boolean showReals, boolean showFlags, boolean showTexts, boolean showInts){
-		String eol = html?"<br>":"\r\n";
-		String space = "  ";//html?"  ":"  ";
-		StringJoiner join = new StringJoiner(eol,"Status at "+ TimeTools.formatShortUTCNow()+eol+eol,"");
-		join.setEmptyValue("None yet");
-
-		// Find & add the groups
-		for( var group : getGroups() ){
-			var res = getRTValsGroupList(group,showReals,showFlags,showTexts,showInts,html);
-			if( !res.isEmpty() && !res.equalsIgnoreCase("none yet"))
-				join.add(res).add("");
-		}
-
-		// Add the not grouped ones
-		boolean ngReals = realVals.values().stream().anyMatch(rv -> rv.group().isEmpty())&&showReals;
-		boolean ngTexts = !texts.isEmpty() && texts.keySet().stream().noneMatch(k -> k.contains("_")) && showTexts;
-		boolean ngFlags = flagVals.values().stream().anyMatch( fv -> fv.group().isEmpty())&&showFlags;
-		boolean ngIntegers = integerVals.values().stream().anyMatch( iv -> iv.group().isEmpty())&&showInts;
-
-		if( ngReals || ngTexts || ngFlags || ngIntegers ) {
-			join.add("");
-			join.add(html ? "<b>Default group</b>" : TelnetCodes.TEXT_ORANGE + "Default group" + TelnetCodes.TEXT_YELLOW);
-
-			if (ngReals) {
-				join.add(html ? "<b>Reals</b>" : TelnetCodes.TEXT_MAGENTA + "Reals" + TelnetCodes.TEXT_YELLOW);
-				realVals.values().stream().filter(rv -> rv.group().isEmpty())
-						.map(rv->space + rv.name() + " : " + rv).sorted().forEach(join::add);
-			}
-			if (ngIntegers){
-				join.add(html ? "<b>Integers</b>" : TelnetCodes.TEXT_MAGENTA + "Integers" + TelnetCodes.TEXT_YELLOW);
-				integerVals.values().stream().filter(iv -> iv.group().isEmpty())
-						.map(iv->space + iv.name() + " : " + iv).sorted().forEach(join::add);
-			}
-			if (ngTexts) {
-				join.add("");
-				join.add(html ? "<b>Texts</b>" : TelnetCodes.TEXT_MAGENTA + "Texts" + TelnetCodes.TEXT_YELLOW);
-				texts.entrySet().stream().filter(e -> !e.getKey().contains("_"))
-						.map( e -> space + e.getKey() + " : " + e.getValue()).sorted().forEach(join::add);
-			}
-			if (ngFlags) {
-				join.add("");
-				join.add(html ? "<b>Flags</b>" : TelnetCodes.TEXT_MAGENTA + "Flags" + TelnetCodes.TEXT_YELLOW);
-				flagVals.values().stream().filter(fv -> fv.group().isEmpty())
-						.map(fv->space + fv.name() + " : " + fv).sorted().forEach(join::add);
-			}
-		}
-		String result = join.toString();
-		if( !html)
-			return result;
-
-		// Try to fix some symbols to correct html counterpart
-		result = result.replace("°C","&#8451"); // fix the °C
-		result = result.replace("m²","&#13217;"); // Fix m²
-		result = result.replace("m³","&#13221;"); // Fix m³
-		return result;
-	}
-
 	/**
 	 * Get a list of all the groups that exist in the rtvals
 	 * @return The list of the groups
@@ -1474,29 +1101,30 @@ public class RealtimeValues implements Commandable {
 	public List<String> getGroups(){
 		var groups = realVals.values().stream()
 				.map(RealVal::group)
-				.filter(group -> !group.isEmpty()).distinct()
+				.distinct()
+				.filter(group -> !group.isEmpty())
 				.collect(Collectors.toList());
+
 		integerVals.values().stream()
 				.map(IntegerVal::group)
-				.filter(group -> !group.isEmpty() && !groups.contains(group))
+				.filter(group -> !group.isEmpty() )
 				.distinct()
 				.forEach(groups::add);
-		texts.keySet().stream()
-						.filter( k -> k.contains("_"))
-						.map( k -> k.split("_")[0] )
-						.distinct()
-						.filter( g -> !groups.contains(g))
-						.filter( g -> !g.equalsIgnoreCase("dcafs"))
-						.forEach(groups::add);
-		flagVals.values().stream()
-						.map(FlagVal::group)
-						.filter(group -> !group.isEmpty() )
-						.distinct()
-						.filter( g -> !groups.contains(g))
-						.forEach(groups::add);
 
-		Collections.sort(groups);
-		return groups;
+		texts.keySet().stream()
+				.filter( k -> k.contains("_"))
+				.map( k -> k.split("_")[0] )
+				.distinct()
+				.filter( g -> !g.equalsIgnoreCase("dcafs"))
+				.forEach(groups::add);
+
+		flagVals.values().stream()
+				.map(FlagVal::group)
+				.filter(group -> !group.isEmpty() )
+				.distinct()
+				.forEach(groups::add);
+
+		return groups.stream().distinct().sorted().toList();
 	}
 	/* ******************************** I S S U E P O O L ********************************************************** */
 
@@ -1514,23 +1142,5 @@ public class RealtimeValues implements Commandable {
 	 */
 	public IssuePool getIssuePool(){
 		return issuePool;
-	}
-
-	/* ******************************** W A Y P O I N T S *********************************************************** */
-	/**
-	 * Enable tracking/storing waypoints
-	 * @param scheduler Scheduler to use for the tracking
-	 * @return The Waypoints object
-	 */
-	public Waypoints enableWaypoints(ScheduledExecutorService scheduler){
-		waypoints = new Waypoints(settingsPath,scheduler,this,dQueue);
-		return waypoints;
-	}
-	/**
-	 * Get the waypoints object in an optional, which is empty if it doesn't exist yet
-	 * @return The optional that could contain the waypoints object
-	 */
-	public Optional<Waypoints> getWaypoints(){
-		return Optional.ofNullable(waypoints);
 	}
 }

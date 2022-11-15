@@ -92,6 +92,22 @@ public class FlagVal extends AbstractVal implements NumericVal{
     }
 
     /**
+     * Toggle the state of the flag and return the new state
+     * @return
+     */
+    public boolean toggleState(){
+        if( keepTime )
+            timestamp= Instant.now();
+        state=!state;// toggle the state
+        /* Check if valid and issue commands if trigger is met */
+        if( state ){ // If the flag goes from FALSE to TRUE => raised
+            raisedList.forEach( c -> dQueue.add(Datagram.system(c.replace("$","true"))));
+        }else{ // If the flag goes from TRUE to FALSE => lowered
+            loweredList.forEach( c -> dQueue.add(Datagram.system(c.replace("$","false"))));
+        }
+        return state;
+    }
+    /**
      * Alter the default state (default is false)
      * @param defState The new default state
      */
