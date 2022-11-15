@@ -1,7 +1,9 @@
 package util.data;
 
 import org.tinylog.Logger;
+import org.w3c.dom.Element;
 import util.xml.XMLfab;
+import util.xml.XMLtools;
 import worker.Datagram;
 
 import java.math.BigDecimal;
@@ -32,14 +34,35 @@ public class FlagVal extends AbstractVal implements NumericVal{
     public static FlagVal newVal(String group, String name){
         return new FlagVal().group(group).name(name);
     }
-    public static FlagVal newVal(String combined){
-        if( !combined.contains("_"))
-            return new FlagVal().name(combined);
-        int a = combined.indexOf("_");
-        return new FlagVal().group(combined.substring(0,a)).name(combined.substring(a+1));
-    }
-    /* **************************** C O N S T R U C T I N G ******************************************************* */
 
+    /* **************************** C O N S T R U C T I N G ******************************************************* */
+    public static FlagVal build(Element rtval, String group, boolean def){
+        String name = XMLtools.getStringAttribute(rtval,"name","");
+        name = XMLtools.getStringAttribute(rtval,"id",name);
+        if( name.isEmpty())
+            name = rtval.getTextContent();
+        String id = group.isEmpty()?name:group+"_"+name;
+
+        var fv = FlagVal.newVal(group,name);
+        fv.alter(rtval,def);
+        return fv;
+    }
+    public FlagVal alter( Element rtval, boolean defFlag){
+        reset(); // reset is needed if this is called because of reload
+        name(name)
+                .group(XMLtools.getChildValueByTag(rtval, "group", group()))
+                .defState(XMLtools.getBooleanAttribute(rtval, "default", defFlag));
+        if (XMLtools.getBooleanAttribute(rtval, "keeptime", false))
+            keepTime();
+        if (!XMLtools.getChildElements(rtval, "cmd").isEmpty())
+            enableTriggeredCmds(dQueue);
+        for (Element trigCmd : XMLtools.getChildElements(rtval, "cmd")) {
+            String trig = trigCmd.getAttribute("when");
+            String cmd = trigCmd.getTextContent();
+            addTriggeredCmd(trig, cmd);
+        }
+        return this;
+    }
     /**
      * Set the name
      * @param name The name

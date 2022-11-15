@@ -15,6 +15,7 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
+import javax.mail.Flags;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -113,7 +114,6 @@ public class RealtimeValues implements Commandable {
 				RealVal rv;
 				if( !hasReal(id) ) {
 					rv = RealVal.build(rtval,group,defReal);
-
 				}else{
 					rv = getRealVal(id).map( r -> r.alter(rtval,defReal)).orElse(null);
 				}
@@ -131,23 +131,17 @@ public class RealtimeValues implements Commandable {
 				if( iv!=null && iv.hasTriggeredCmds() )
 					iv.enableTriggeredCmds(dQueue);
 			}
-			case "text" -> setText(id, XMLtools.getStringAttribute(rtval, "default", defText));
 			case "flag" -> {
-				var fv = getOrAddFlagVal(id,false);
-				fv.reset(); // reset is needed if this is called because of reload
-				fv.name(name)
-						.group(XMLtools.getChildValueByTag(rtval, "group", fv.group()))
-						.defState(XMLtools.getBooleanAttribute(rtval, "default", defFlag));
-				if (XMLtools.getBooleanAttribute(rtval, "keeptime", false))
-					fv.keepTime();
-				if (!XMLtools.getChildElements(rtval, "cmd").isEmpty())
-					fv.enableTriggeredCmds(dQueue);
-				for (Element trigCmd : XMLtools.getChildElements(rtval, "cmd")) {
-					String trig = trigCmd.getAttribute("when");
-					String cmd = trigCmd.getTextContent();
-					fv.addTriggeredCmd(trig, cmd);
+				FlagVal fv;
+				if( !hasFlag(id)){
+					fv = FlagVal.build(rtval,group,defFlag);
+				}else{
+					fv = getFlagVal(id).map( f -> f.alter(rtval,defFlag)).orElse(null);
 				}
+				if( fv!=null && fv.hasTriggeredCmds() )
+					fv.enableTriggeredCmds(dQueue);
 			}
+			case "text" -> setText(id, XMLtools.getStringAttribute(rtval, "default", defText));
 		}
 	}
 	/* ************************************* P A R S I N G ********************************************************* */
@@ -492,7 +486,7 @@ public class RealtimeValues implements Commandable {
 	}
 
 	/**
-	 * Update an existing textval
+	 * Update an existing TextVal
 	 * @param id The id of the TextVal
 	 * @param value The new content
 	 * @return True if found and updated
@@ -510,9 +504,6 @@ public class RealtimeValues implements Commandable {
 	}
 
 	/* ************************************** F L A G S ************************************************************* */
-	public FlagVal getOrAddFlagVal( String id, boolean storeInXML ){
-		return getOrAddFlagVal(id,storeInXML?settingsPath:null);
-	}
 	public FlagVal addFlagVal( FlagVal fv, Path xmlPath ){
 		if( fv==null) {
 			Logger.error("Invalid flagval given");
@@ -525,63 +516,56 @@ public class RealtimeValues implements Commandable {
 			}else if( xmlPath!=null){
 				Logger.error("No such file found: "+xmlPath);
 			}
+			return fv;
 		}
 		return getFlagVal(fv.id()).get();
 	}
-	public FlagVal getOrAddFlagVal( String id, Path xmlPath ){
-		if( id.isEmpty())
-			return null;
-
-		var val = flagVals.get(id);
-
-		if( val==null){
-			val = FlagVal.newVal(id);
-			flagVals.put(id,val);
-
-			if( xmlPath!=null && Files.exists(xmlPath) ) { // Only add to xml if not reading from xml
-				val.storeInXml(XMLfab.withRoot(xmlPath, "dcafs", "rtvals"));
-			}
-		}
-		return val;
-	}
-	public Optional<FlagVal> getFlagVal( String flag){
+	public Optional<FlagVal> getFlagVal( String flag ){
+		if( flag.isEmpty())
+			return Optional.empty();
 		return Optional.ofNullable(flagVals.get(flag));
 	}
-	public boolean hasFlag( String flag){
-		return flagVals.get(flag)!=null;
+	public boolean hasFlag( String flag ){
+		return getFlagVal(flag).isPresent();
 	}
 	public boolean getFlagState(String flag ){
-		var f = flagVals.get(flag);
-		if( f==null) {
+		var f = getFlagVal(flag);
+		if( f.isEmpty()) {
 			Logger.warn("No such flag: " + flag);
 			return false;
 		}
-		return f.isUp();
+		return f.get().isUp();
 	}
 
 	/**
 	 * Raises a flag
 	 * @param flags The flags/bits to set
-	 * @return True if this is a new flag/bit
+	 * @return The amount of flags changed
 	 */
-	public boolean raiseFlag( String... flags ){
-		int cnt = flagVals.size();
+	public int raiseFlag( String... flags ){
+		int cnt=0;
 		for( var f : flags) {
-			getOrAddFlagVal(f,true).setState(true);
+			int res = getFlagVal(f).map(fv->{fv.setState(true); return 1;}).orElse(0);
+			if( res==0)
+				Logger.error("No flags found with the name/id: "+f);
+			cnt+=res;
 		}
-		return cnt != flagVals.size();
+		return cnt;
 	}
 	/**
 	 * Lowers a flag or clears a bool.
-	 * @param flag The flags/bits to clear
-	 * @return True if this is a new flag/bit
+	 * @param flags The flags/bits to clear
+	 * @return The amount of flags changed
 	 */
-	public boolean lowerFlag( String... flag ){
-		int cnt = flagVals.size();
-		for( var f : flag){
-			getOrAddFlagVal(f,true).setState(false);
+	public int lowerFlag( String... flags ){
+		int cnt=0;
+		for( var f : flags) {
+			int res = getFlagVal(f).map(fv->{fv.setState(false); return 1;}).orElse(0);
+			if( res==0)
+				Logger.error("No flags found with the name/id: "+f);
+			cnt+=res;
 		}
-		return cnt!= flagVals.size();
+		return cnt;
 	}
 	public boolean setFlagState( String id, String state){
 		if(!hasFlag(id)) {
@@ -743,12 +727,18 @@ public class RealtimeValues implements Commandable {
 			case "new": case "add":
 				if( cmds.length <2)
 					return "Not enough arguments, need flags:new,id<,state> or fv:new,id<,state>";
-				getOrAddFlagVal(cmds[1],true).setState(Tools.parseBool( cmds.length==3?cmds[2]:"false",false));
+				if( hasFlag(cmds[1]))
+					return "Flag already exists with that name";
+				int pos = cmds[1].indexOf("_");
+				String group = pos!=-1?cmds[1].substring(0,pos):"";
+				String name = pos==-1?cmds[1]:cmds[1].substring(pos+1);
+				var flag = FlagVal.newVal(group,name).setState(Tools.parseBool( cmds.length==3?cmds[2]:"false",false));
+				addFlagVal(flag,settingsPath);
 				return "Flag created/updated "+cmds[1];
 			case "raise": case "set":
 				if( cmds.length !=2)
 					return "Not enough arguments, need flags:raise,id or flags:set,id";
-				return raiseFlag(cmds[1])?"New flag raised":"Flag raised";
+				return raiseFlag(cmds[1])==0?"No such flag":"Flag raised";
 			case "match":
 				if( cmds.length < 3 )
 					return "Not enough arguments, fv:match,id,targetflag";
@@ -774,7 +764,7 @@ public class RealtimeValues implements Commandable {
 			case "lower": case "clear":
 				if( cmds.length !=2)
 					return "Not enough arguments, need flags:lower,id or flags:clear,id";
-				return lowerFlag(cmds[1])?"New flag raised":"Flag lowered";
+				return lowerFlag(cmds[1])==0?"No such flag":"Flag lowered";
 			case "toggle":
 				if( cmds.length !=2)
 					return "Not enough arguments, need flags:toggle,id";
