@@ -21,6 +21,7 @@ is required.
 - Generics inside a path will create rtvals in the file the path is in
 - Instead of the node 'generic', the node 'store' can be used inside a path. Thought that might
 be more logical...
+- If no (empty) group is given to a generic/store inside a path, the id of the path is used
 
 ### Generics
 - Added flags/bool
