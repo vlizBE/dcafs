@@ -88,13 +88,6 @@ public class RealtimeValues implements Commandable {
 					ele -> processRtvalElement(ele,"",defReal,defText,defFlag,defInteger)
 			);
 		}
-
-		// Stuff that isn't in a group?
-		/*XMLtools.getChildElements(rtvalsEle,"*").stream().filter( rt -> !rt.getTagName().equalsIgnoreCase("group")).forEach(
-				rtval -> {
-					processRtvalElement(rtval, "", defReal, defText, defFlag,defInteger);
-				}
-		);*/
 		readingXML=false;
 	}
 	public void readFromXML( XMLfab fab ){
@@ -160,7 +153,8 @@ public class RealtimeValues implements Commandable {
 	/* ************************************* P A R S I N G ********************************************************* */
 	/**
 	 * Simple version of the parse realtime line, just checks all the words to see if any matches the hashmaps.
-	 * It assumes all words are reals, but also allows for d:id,t:id and f:id
+	 * If anything goes wrong, the 'error' will be returned. If this is set to ignore if something is not found it
+	 * will be replaced according to the type: real-> NaN, int -> Integer.MAX
 	 * @param line The line to parse
 	 * @param error The line to return on an error or 'ignore' if errors should be ignored
 	 * @return The (possibly) altered line
@@ -168,73 +162,77 @@ public class RealtimeValues implements Commandable {
 	public String simpleParseRT( String line,String error ){
 
 		var found = words.matcher(line).results().map(MatchResult::group).toList();
-
 		for( var word : found ){
+			String replacement;
 			if( word.contains(":")){ // Check if the word contains a : with means it's {d:id} etc
 				var id = word.split(":")[1];
-				String repl="";
-				switch( word.charAt(0) ) {
-					case 'd': case 'r':
-						if( hasReal(id) ) { // ID found
-							repl = ""+getReal(id,Double.NaN);
-						}else{
+
+				replacement = switch (word.charAt(0) ){
+					case 'd','r' -> {
+						if( !hasReal(id) ){
 							Logger.error("No such real "+id+", extracted from "+line); // notify
 							if( !error.equalsIgnoreCase("ignore")) // if errors should be ignored
-								return error;
+								yield error;
 						}
-						break;
-					case 'i':
-						if( hasInteger(id) ) { // ID found
-							repl = "" + getInteger(id,Integer.MAX_VALUE);
-						}else{
+						yield ""+getReal(id,Double.NaN);
+					}
+					case 'i' -> {
+						if( !hasInteger(id) ) { // ID found
 							Logger.error("No such integer "+id+", extracted from "+line); // notify
 							if( !error.equalsIgnoreCase("ignore")) // if errors should be ignored
-								return error;
+								yield error;
 						}
-						break;
-					case 'f':
-						if( !hasFlag(id)) {
-							Logger.error("No such flag "+id+ ", extracted from "+line);
-							if( !error.equalsIgnoreCase("ignore"))
-								return error;
+						yield "" + getInteger(id,Integer.MAX_VALUE);
+					}
+					case 'f'-> {
+						if (!hasFlag(id)) {
+							Logger.error("No such flag " + id + ", extracted from " + line);
+							if (!error.equalsIgnoreCase("ignore"))
+								yield error;
 						}
-						repl = getFlagState(id) ? "1" : "0";
-						break;
-					case 't': case 'T':
+						yield getFlagState(id) ? "1" : "0";
+					}
+					case 't', 'T' -> {
 						var te = texts.get(id);
-						if( te == null && word.charAt(0)=='T') {
+						if (te == null && word.charAt(0) == 'T') {
 							texts.put(id, "");
-							te="";
+							te = "";
 						}
-						if( te !=null ) {
-							line = line.replace(word, te);
-						}else{
-							Logger.error("No such text "+id+", extracted from "+line);
-							if( !error.equalsIgnoreCase("ignore"))
-								return error;
+						if (te == null) {
+							Logger.error("No such text " + id + ", extracted from " + line);
+							if (!error.equalsIgnoreCase("ignore"))
+								yield error;
 						}
-						break;
-				}
-				if( !repl.isEmpty() )
-					line = line.replace(word,repl);
+						yield te;
+					}
+					default -> {
+						Logger.error("No such type: "+word.charAt(0));
+						yield error;
+					}
+				};
 			}else { // If it doesn't contain : it could be anything...
 				if (hasReal(word)) { //first check for real
-					line = line.replace(word, "" + getReal(word,Double.NaN));
+					replacement = "" + getReal(word,Double.NaN);
  				} else { // if not
 					if( hasInteger(word)){
-						line = line.replace(word, "" + getInteger(word,-999));
+						replacement = ""  + getInteger(word,-999);
 					}else {
 						if (hasText(word)) { //next, try text
-							line = line.replace(word, getText(word,""));
+							replacement = getText(word,"");
 						} else if (hasFlag(word)) { // if it isn't a text, check if it's a flag
-							line = line.replace(word, getFlagState(word) ? "1" : "0");
-						} else if (!error.equalsIgnoreCase("ignore")) { // if it's not ignore
+							replacement = getFlagState(word) ? "1" : "0";
+						} else{
 							Logger.error("Couldn't process " + word + " found in " + line); // log it and abort
 							return error;
 						}
 					}
 				}
 			}
+			assert replacement != null;
+			if( replacement.equalsIgnoreCase(error))
+				return error;
+			if( !replacement.isEmpty() )
+				line = line.replace(word,replacement);
 		}
 		return line;
 	}
