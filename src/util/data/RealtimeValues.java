@@ -15,7 +15,6 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
-import javax.mail.Flags;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -114,17 +113,21 @@ public class RealtimeValues implements Commandable {
 				RealVal rv;
 				if( !hasReal(id) ) {
 					rv = RealVal.build(rtval,group,defReal);
+					if( rv!=null)
+						realVals.put(rv.id(),rv);
 				}else{
 					rv = getRealVal(id).map( r -> r.alter(rtval,defReal)).orElse(null);
 				}
 				if( rv!=null && rv.hasTriggeredCmds() )
 					rv.enableTriggeredCmds(dQueue);
+
 			}
 			case "integer", "int" -> {
 				IntegerVal iv;
 				if( !hasInteger(id) ) {
 					iv = IntegerVal.build(rtval,group,defInteger);
-
+					if( iv!=null)
+						integerVals.put(iv.id(),iv);
 				}else{
 					iv = getIntegerVal(id).map( i -> i.alter(rtval, defInteger)	).orElse(null);
 				}
@@ -135,6 +138,8 @@ public class RealtimeValues implements Commandable {
 				FlagVal fv;
 				if( !hasFlag(id)){
 					fv = FlagVal.build(rtval,group,defFlag);
+					if( fv!=null)
+						flagVals.put(fv.id(),fv);
 				}else{
 					fv = getFlagVal(id).map( f -> f.alter(rtval,defFlag)).orElse(null);
 				}
@@ -1087,6 +1092,7 @@ public class RealtimeValues implements Commandable {
 	 * @return The list of the groups
 	 */
 	public List<String> getGroups(){
+
 		var groups = realVals.values().stream()
 				.map(RealVal::group)
 				.distinct()
