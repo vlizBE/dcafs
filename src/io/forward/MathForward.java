@@ -7,7 +7,6 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.data.NumericVal;
-import util.data.RealtimeValues;
 import util.gis.GisTools;
 import util.math.Calculations;
 import util.math.MathFab;
@@ -333,7 +332,7 @@ public class MathForward extends AbstractForward {
         findReferences(expression);
 
         if( !expression.contains("=") ) {// If this doesn't contain a '=' it's no good
-            if(expression.matches("[i][0-9]{1,3}")){
+            if(expression.matches("i[0-9]{1,3}")){
                 var op = new Operation( expression, NumberUtils.toInt(expression.substring(1),-1));
                 op.setCmd(cmd);
                 op.setScale(scale);
@@ -345,7 +344,7 @@ public class MathForward extends AbstractForward {
             }
         }
         String exp = expression;
-        var split = expression.split("[+-/*^]?[=]");
+        var split = expression.split("[+-/*^]?=");
 
         if( split[0].length()+split[1].length()+1 != exp.length()){ // Support += -= *= and /= fe. i0+=1
             String[] spl = exp.split("="); //[0]:i0+ [1]:1
@@ -361,7 +360,7 @@ public class MathForward extends AbstractForward {
         }
 
         if( (ii[0].toLowerCase().startsWith("{d")||ii[0].toLowerCase().startsWith("{r"))&&ii.length==1) {
-            if( split[1].matches("[i][0-9]{1,3}")){
+            if( split[1].matches("i[0-9]{1,3}")){
                 var op = new Operation( expression, NumberUtils.toInt(split[1].substring(1),-1));
                 op.setCmd(cmd);
                 op.setScale(scale);
@@ -408,7 +407,7 @@ public class MathForward extends AbstractForward {
         return Optional.ofNullable(ops.get(ops.size()-1)); // return the one that was added last
     }
 
-    public Optional<Operation> addOperation( String index, int scale, OP_TYPE type, String cmd , String expression  ){
+    public void addOperation(String index, int scale, OP_TYPE type, String cmd , String expression  ){
 
         expression=expression.replace(" ",""); //remove spaces
 
@@ -421,7 +420,7 @@ public class MathForward extends AbstractForward {
 
         exp=replaceReferences(exp);
         if( exp.isEmpty() )
-            return Optional.empty();
+            return;
 
         Operation op;
         String[] indexes = exp.split(",");
@@ -433,28 +432,28 @@ public class MathForward extends AbstractForward {
             case SALINITY:
                 if( indexes.length != 3 ){
                     Logger.error(id+" (mf)-> Not enough args for salinity calculation");
-                    return Optional.empty();
+                    return;
                 }
                 op = new Operation(expression, Calculations.procSalinity(indexes[0],indexes[1],indexes[2]), NumberUtils.toInt(index));
                 break;
             case SVC:
                 if( indexes.length != 3 ){
                     Logger.error(id+" (mf)-> Not enough args for soundvelocity calculation");
-                    return Optional.empty();
+                    return;
                 }
                 op = new Operation(expression, Calculations.procSoundVelocity(indexes[0],indexes[1],indexes[2]), NumberUtils.toInt(index));
                 break;
             case TRUEWINDSPEED:
                 if( indexes.length != 5 ){
                     Logger.error(id+" (mf)-> Not enough args for True wind speed calculation");
-                    return Optional.empty();
+                    return;
                 }
                 op = new Operation(expression, Calculations.procTrueWindSpeed(indexes[0],indexes[1],indexes[2],indexes[3],indexes[4]), NumberUtils.toInt(index));
                 break;
             case TRUEWINDDIR:
                 if( indexes.length != 5 ){
                     Logger.error(id+" (mf)-> Not enough args for True wind direction calculation");
-                    return Optional.empty();
+                    return;
                 }
                 op = new Operation(expression, Calculations.procTrueWindDirection(indexes[0],indexes[1],indexes[2],indexes[3],indexes[4]), NumberUtils.toInt(index));
                 break;
@@ -467,7 +466,7 @@ public class MathForward extends AbstractForward {
                         Arrays.stream(index.split(",")).map(NumberUtils::toInt).toArray( Integer[]::new)),-1);
                 break;
             default:
-                return Optional.empty();
+                return;
         }
         ops.add(op);
 
@@ -481,7 +480,6 @@ public class MathForward extends AbstractForward {
             op.setCmd(cmd);
             rulesString.add(new String[]{type.toString().toLowerCase(),""+index,expression});
         }
-        return Optional.ofNullable(ops.get(ops.size()-1)); // return the one that was added last
     }
     /**
      * Convert a string version of OP_TYPE to the enum
@@ -612,7 +610,7 @@ public class MathForward extends AbstractForward {
             referencedNums.trimToSize();
 
         // Find the highest used 'i' index
-        var is = Pattern.compile("[i][0-9]{1,2}")
+        var is = Pattern.compile("i[0-9]{1,2}")
                 .matcher(exp)
                 .results()
                 .map(MatchResult::group)
@@ -632,7 +630,7 @@ public class MathForward extends AbstractForward {
      * - The received data split according to the delimiter up to the highest used index
      * - The realVals found
      * - The flagVals found
-     *
+
      * So if highest is 5 then the first double will be 6 and first flag will be 5 + size of double list + 1
      *
      * @param exp The expression to replace the references in
