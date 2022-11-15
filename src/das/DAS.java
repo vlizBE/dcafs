@@ -428,11 +428,14 @@ public class DAS implements Commandable{
         addCommandable("i2c",i2cWorker);
     }
     /* ******************************** R E A L T I M E  D A T A  ******************************************* */
-    public RealtimeValues getDataProvider(){
+    // Note: these are used when dcafs is used as a library
+    public IssuePool getIssuePool(){ return rtvals.getIssuePool();}
+    public Waypoints getWaypoints(){
+        return waypoints;
+    }
+    public RealtimeValues getRealtimeValues(){
         return rtvals;
     }
-    public IssuePool getIssuePool(){ return rtvals.getIssuePool();}
-
     /* ******************************** * S H U T D O W N S T U F F ***************************************** */
     /**
      * Attach a hook to the shutdown process, so we're sure that all queue's etc. get

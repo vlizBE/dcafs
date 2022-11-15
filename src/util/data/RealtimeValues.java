@@ -509,6 +509,12 @@ public class RealtimeValues implements Commandable {
 	}
 
 	/* ************************************** F L A G S ************************************************************* */
+	public FlagVal addFlagVal( FlagVal fv ){
+		return addFlagVal(fv,null);
+	}
+	public FlagVal addFlagVal( String group,String name ){
+		return addFlagVal(FlagVal.newVal(group,name),null);
+	}
 	public FlagVal addFlagVal( FlagVal fv, Path xmlPath ){
 		if( fv==null) {
 			Logger.error("Invalid flagval given");
@@ -518,8 +524,8 @@ public class RealtimeValues implements Commandable {
 			flagVals.put(fv.id(),fv);
 			if(xmlPath!=null && Files.exists(xmlPath)) {
 				fv.storeInXml(XMLfab.withRoot(xmlPath, "dcafs", "rtvals"));
-			}else if( xmlPath!=null){
-				Logger.error("No such file found: "+xmlPath);
+			}else if( xmlPath==null){
+				fv.storeInXml(XMLfab.withRoot(settingsPath, "dcafs", "rtvals"));
 			}
 			return fv;
 		}
@@ -573,6 +579,14 @@ public class RealtimeValues implements Commandable {
 		return cnt;
 	}
 	public boolean setFlagState( String id, String state){
+		if(!hasFlag(id)) {
+			Logger.error("No such flagVal "+id);
+			return false;
+		}
+		getFlagVal(id).map( fv->fv.setState(state));
+		return true;
+	}
+	public boolean setFlagState( String id, boolean state){
 		if(!hasFlag(id)) {
 			Logger.error("No such flagVal "+id);
 			return false;
