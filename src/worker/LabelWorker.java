@@ -673,28 +673,6 @@ public class LabelWorker implements Runnable, Commandable {
 					String attr = cmds[2].substring(0,in);
 					var val = cmds[2].substring(in+1);
 					switch( attr ){
-						case "names":
-							cmds[2]=val;
-							int i=0;
-							for( var f : fab.get().getChildren("*")){
-								if( cmds.length-2>i){
-									if( !cmds[i+2].equalsIgnoreCase(".")) {
-										var gr = f.getAttribute("group");
-										gr=(gr.isEmpty()?"":gr+"_");
-										if( !rtvals.hasReal(gr+cmds[i + 2])){
-											rtvals.renameReal( gr+f.getTextContent(),gr+cmds[i + 2],false );
-											f.setTextContent(cmds[i + 2]);
-										}else{
-											return "Failed to rename to already existing one";
-										}
-									}
-								}
-								i++;
-							}
-							fab.get().build();
-							rtvals.storeValsInXml(true);
-							loadGenerics();
-							return "Names set, generics reloaded";
 						case "delim":
 							attr="delimiter";
 						case "group": // if

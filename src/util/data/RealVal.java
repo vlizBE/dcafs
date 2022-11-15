@@ -325,6 +325,15 @@ public class RealVal extends AbstractVal implements NumericVal{
      * @return Get the current value as a double
      */
     public double value(){ return value; }
+    public double value( String type ){
+        return switch( type ){
+            case "stdev", "stdv"-> getStdev();
+            case "avg", "average" ->  getAvg();
+            case "min" -> min();
+            case "max" -> max();
+            default -> value();
+        };
+    }
     public int intValue(){ return ((Double)value).intValue(); }
     /**
      * Update the value

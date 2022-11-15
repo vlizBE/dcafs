@@ -134,7 +134,7 @@ public class RtvalCheck {
         Double[] vals = new Double[is.size()];
         for(int a=0;a< vals.length;a++){
             if( is.get(a).startsWith("flag:")){
-                vals[a] = rtvals.isFlagUp(is.get(a).substring(5))?1.0:0;
+                vals[a] = rtvals.getFlagState(is.get(a).substring(5))?1.0:0;
             }else if( is.get(a).startsWith("issue:")){
                 vals[a] = rtvals.getActiveIssues().contains(is.get(a).substring(5))?1.0:0;
             }else{
@@ -160,7 +160,7 @@ public class RtvalCheck {
         String rep = ori;
         for( String i : is){
             if( i.startsWith("flag:")){
-                rep=rep.replace(i,rtvals.isFlagUp(i.substring(5))?"true":"false");
+                rep=rep.replace(i,rtvals.getFlagState(i.substring(5))?"true":"false");
             }else if( i.startsWith("issue:")){
                 rep=rep.replace(i,rtvals.getActiveIssues().contains(i.substring(5))?"true":"false");
             }else{

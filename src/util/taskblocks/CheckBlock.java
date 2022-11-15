@@ -4,6 +4,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.tinylog.Logger;
 import util.data.RealtimeValues;
 import util.data.RealVal;
+import util.data.ValTools;
 import util.math.MathUtils;
 import util.tools.Tools;
 
@@ -101,7 +102,7 @@ public class CheckBlock extends AbstractBlock{
         if( rtvals != null ) {
             if (sharedMem == null) // If it didn't receive a shared Mem
                 sharedMem = new ArrayList<>(); // make it
-            exp = rtvals.buildNumericalMem(exp, sharedMem, 0);
+            exp = ValTools.buildNumericalMem(rtvals,exp, sharedMem, 0);
             if( sharedMem.isEmpty()) // Remove the reference if it remained empty
                 sharedMem=null;
         }else{

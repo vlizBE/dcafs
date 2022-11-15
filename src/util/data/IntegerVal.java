@@ -306,6 +306,13 @@ public class IntegerVal extends AbstractVal implements NumericVal{
     public int intValue() {
         return value;
     }
+    public int intValue( String type) {
+        return switch( type ){
+            case "min" -> min();
+            case "max" -> max();
+            default -> intValue();
+        };
+    }
     @Override
     public void updateValue(double val) {
         this.value = ((Double)val).intValue();
