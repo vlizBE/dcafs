@@ -120,10 +120,11 @@ public class PathForward {
                 continue;
             }
 
-            // Check if the next step is a generic, if so change the label attribute of the current step
+            // Check if the next step is a generic/store, if so change the label attribute of the current step
             if( a<steps.size()-1 ){
                 var next = steps.get(a+1);
-                if(next.getTagName().equalsIgnoreCase("generic")){// Next element is a generic
+                if(next.getTagName().equalsIgnoreCase("generic")
+                        ||next.getTagName().equalsIgnoreCase("store")){// Next element is a generic
                     if( !step.hasAttribute("label")) { // If this step doesn't have a label
                         var genid = next.getAttribute("id"); // get the id of the generic
                         genid = genid.isEmpty()?id+"_gen"+gens:genid; // If no id is given, take the path id and append gen
@@ -147,6 +148,7 @@ public class PathForward {
             if( !stepsForward.isEmpty() ) {
                 var prev = steps.get(a - 1);
                 lastGenMap = prev.getTagName().equalsIgnoreCase("generic")
+                                ||prev.getTagName().equalsIgnoreCase("store")
                                 ||prev.getTagName().equalsIgnoreCase("valmap");
             }
 
@@ -177,15 +179,20 @@ public class PathForward {
                 case "math" -> {
                     MathForward mf = new MathForward(step, dQueue, dataProviding);
                     mf.removeSources();
-                    addAsTarget(mf, src);
+                    if( lastff!=null && lastGenMap)
+                        lastff.addReverseTarget(mf);
+                    addAsTarget(mf,  src,!(lastff!=null && lastGenMap));
                     stepsForward.add(mf);
                 }
                 case "editor" -> {
                     var ef = new EditorForward(step, dQueue, dataProviding);
                     if( !ef.readOk)
                         return false;
+                    if( lastff!=null && lastGenMap) {
+                        lastff.addReverseTarget(ef);
+                    }
                     ef.removeSources();
-                    addAsTarget(ef, src);
+                    addAsTarget(ef, src,!(lastff!=null && lastGenMap));
                     stepsForward.add(ef);
                 }
             }
@@ -210,7 +217,11 @@ public class PathForward {
         customs.trimToSize();
         return true;
     }
+
     private void addAsTarget( AbstractForward f, String src ){
+        addAsTarget(f,src,true);
+    }
+    private void addAsTarget( AbstractForward f, String src, boolean notReversed ){
         if( !src.isEmpty() ){
             var s = getStep(src);
             if( s!= null ) {
@@ -220,7 +231,7 @@ public class PathForward {
                     s.addTarget(f);
                 }
             }
-        }else if( !stepsForward.isEmpty() ) {
+        }else if( !stepsForward.isEmpty() && notReversed) {
             lastStep().ifPresent( ls -> ls.addTarget(f));
         }
     }
@@ -289,10 +300,10 @@ public class PathForward {
         customs.forEach(c->join.add(c.toString()));
         if(stepsForward!=null) {
             for (AbstractForward abstractForward : stepsForward) {
-                join.add("   -> " + abstractForward.toString());
+                join.add("|-> " + abstractForward.toString()).add("");
             }
             if( !stepsForward.isEmpty() )
-                join.add( " gives the data from "+stepsForward.get(stepsForward.size()-1).getID() );
+                join.add( "=> gives the data from "+stepsForward.get(stepsForward.size()-1).getID() );
         }
         return join.toString();
     }

@@ -45,7 +45,7 @@ public interface DataProviding {
     /* Text */
     String getText(String parameter, String bad);
     boolean setText(String param, String value );
-
+    void addTextVal( String parameter, String value, Path xmlPath);
     /* Flags */
     Optional<FlagVal> getFlagVal( String flag);
     FlagVal getOrAddFlagVal( String id, boolean storeInXML );
