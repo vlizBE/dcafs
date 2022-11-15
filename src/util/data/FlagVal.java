@@ -40,12 +40,9 @@ public class FlagVal extends AbstractVal implements NumericVal{
         String name = XMLtools.getStringAttribute(rtval,"name","");
         name = XMLtools.getStringAttribute(rtval,"id",name);
         if( name.isEmpty())
-            name = rtval.getTextContent();
-        String id = group.isEmpty()?name:group+"_"+name;
+            return null;
 
-        var fv = FlagVal.newVal(group,name);
-        fv.alter(rtval,def);
-        return fv;
+        return FlagVal.newVal(group,name).alter(rtval,def);
     }
     public FlagVal alter( Element rtval, boolean defFlag){
         reset(); // reset is needed if this is called because of reload
@@ -103,7 +100,7 @@ public class FlagVal extends AbstractVal implements NumericVal{
         if( keepTime )
             timestamp= Instant.now();
         /* Check if valid and issue commands if trigger is met */
-        if( val!=state){ // If there are cmds stored and the value has changed
+        if( val!=state){ // If the value has changed
             if( val ){ // If the flag goes from FALSE to TRUE => raised
                 raisedList.forEach( c -> dQueue.add(Datagram.system(c.replace("$","true"))));
             }else{ // If the flag goes from TRUE to FALSE => lowered
@@ -116,7 +113,7 @@ public class FlagVal extends AbstractVal implements NumericVal{
 
     /**
      * Toggle the state of the flag and return the new state
-     * @return
+     * @return The new state
      */
     public boolean toggleState(){
         if( keepTime )
