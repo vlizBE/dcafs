@@ -64,11 +64,8 @@ public class IntegerVal extends AbstractVal implements NumericVal{
         name = XMLtools.getStringAttribute(rtval,"id",name);
         if( name.isEmpty())
             name = rtval.getTextContent();
-        String id = group.isEmpty()?name:group+"_"+name;
 
-        IntegerVal iv = IntegerVal.newVal(group,name);
-        iv.alter(rtval,defVal);
-        return iv;
+        return IntegerVal.newVal(group,name).alter(rtval,defVal);
     }
 
     /**
@@ -161,7 +158,7 @@ public class IntegerVal extends AbstractVal implements NumericVal{
         }
         value=val;
         if( targets!=null ){
-            double v = val;
+            int v = val;
             targets.forEach( wr -> wr.writeLine(id()+":"+v));
         }
         return this;
@@ -173,9 +170,7 @@ public class IntegerVal extends AbstractVal implements NumericVal{
      * @param defVal The default value
      */
     public IntegerVal defValue(int defVal){
-        if( !Double.isNaN(defVal) ) { // If the given value isn't NaN
-            this.defVal = defVal;
-        }
+        this.defVal = defVal;
         return this;
     }
     /**
@@ -213,13 +208,13 @@ public class IntegerVal extends AbstractVal implements NumericVal{
      */
     public boolean addTriggeredCmd(String trigger,String cmd ){
         if( dQueue==null)
-            Logger.error(id() + "(dv)-> Tried to add cmd "+cmd+" but dQueue still null");
+            Logger.error(id() + "(iv)-> Tried to add cmd "+cmd+" but dQueue still null");
         if( triggered==null)
             triggered = new ArrayList<>();
 
         var td = new TriggeredCmd(cmd,trigger);
         if( td.isInvalid()) {
-            Logger.error(id()+" (dv)-> Failed to convert trigger: "+trigger);
+            Logger.error(id()+" (iv)-> Failed to convert trigger: "+trigger);
             return false;
         }
         triggered.add( new TriggeredCmd(cmd,trigger) );
@@ -315,10 +310,10 @@ public class IntegerVal extends AbstractVal implements NumericVal{
     }
     @Override
     public void updateValue(double val) {
-        this.value = ((Double)val).intValue();
+        value = ((Double)val).intValue();
     }
     public void updateValue(int val){
-        this.value=val;
+        value=val;
     }
     /**
      * Calculate the average of all the values stored in the history
@@ -331,7 +326,7 @@ public class IntegerVal extends AbstractVal implements NumericVal{
                 total+=h;
             }
         }else{
-            Logger.warn(id() + "(dv)-> Asked for the average of "+(group.isEmpty()?"":group+"_")+name+" but no history kept");
+            Logger.warn(id() + "(iv)-> Asked for the average of "+(group.isEmpty()?"":group+"_")+name+" but no history kept");
             return value;
         }
         return Tools.roundDouble(total/history.size(),3);
@@ -343,7 +338,7 @@ public class IntegerVal extends AbstractVal implements NumericVal{
      */
     public double getStdev(){
         if( history==null) {
-            Logger.error(id()+" (dv)-> Can't calculate standard deviation without history");
+            Logger.error(id()+" (iv)-> Can't calculate standard deviation without history");
             return Double.NaN;
         }else if( history.size() != keepHistory){
             return Double.NaN;
