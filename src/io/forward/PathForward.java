@@ -89,8 +89,8 @@ public class PathForward {
                 Logger.info("Valid path script found at "+importPath);
 
                 // Check for rtvals
-                var rtvals = XMLfab.getRootChildren(importPath,"dcafs","rtvals").findFirst();
-                rtvals.ifPresent( rtEle -> rtvals.readFromXML(rtEle) );
+                var rtvalsOpt = XMLfab.getRootChildren(importPath,"dcafs","rtvals").findFirst();
+                rtvalsOpt.ifPresent( rtEle -> rtvals.readFromXML(rtEle) );
             }else{
                 Logger.error("No valid path script found: "+importPath);
                 return false;
