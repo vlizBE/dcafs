@@ -1,10 +1,13 @@
 package util.data;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
+import org.w3c.dom.Element;
 import util.math.MathUtils;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
+import util.xml.XMLtools;
 import worker.Datagram;
 
 import java.math.BigDecimal;
@@ -49,6 +52,54 @@ public class RealVal extends AbstractVal implements NumericVal{
 
     /* ********************************* Constructing ************************************************************ */
 
+    /**
+     * Create a new Realval based on a rtval real node
+     * @param rtval The node
+     * @param group The group the node is found in
+     * @param defReal The global default real
+     * @return The created node, still needs dQueue set
+     */
+    public static RealVal build( Element rtval, String group, double defReal){
+        String name = XMLtools.getStringAttribute(rtval,"name","");
+        name = XMLtools.getStringAttribute(rtval,"id",name);
+        if( name.isEmpty())
+            name = rtval.getTextContent();
+
+        RealVal rv = RealVal.newVal(group,name);
+        rv.alter(rtval,defReal);
+        return rv;
+    }
+
+    /**
+     * Change the RealVal according to a xml node
+     * @param rtval The node
+     * @param defReal The global default
+     */
+    public RealVal alter( Element rtval,double defReal ){
+        reset();
+        unit(XMLtools.getStringAttribute(rtval, "unit", ""))
+                .scale(XMLtools.getIntAttribute(rtval, "scale", -1))
+                .defValue(XMLtools.getDoubleAttribute(rtval, "default", defReal))
+                .defValue(XMLtools.getDoubleAttribute(rtval, "def", defVal));
+        String options = XMLtools.getStringAttribute(rtval, "options", "");
+        for (var opt : options.split(",")) {
+            var arg = opt.split(":");
+            switch (arg[0]) {
+                case "minmax" -> keepMinMax();
+                case "time" -> keepTime();
+                case "scale" -> scale(NumberUtils.toInt(arg[1], -1));
+                case "order" -> order(NumberUtils.toInt(arg[1], -1));
+                case "history" -> enableHistory(NumberUtils.toInt(arg[1], -1));
+                case "abs" -> enableAbs();
+            }
+        }
+        for (Element trigCmd : XMLtools.getChildElements(rtval, "cmd")) {
+            String trig = trigCmd.getAttribute("when");
+            String cmd = trigCmd.getTextContent();
+            addTriggeredCmd(trig, cmd);
+        }
+        return this;
+    }
     /**
      * Set the name, this needs to be unique within the group
      * @param name The new name

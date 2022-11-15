@@ -1,10 +1,13 @@
 package util.data;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
+import org.w3c.dom.Element;
 import util.math.MathUtils;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
+import util.xml.XMLtools;
 import worker.Datagram;
 
 import java.math.BigDecimal;
@@ -49,7 +52,53 @@ public class IntegerVal extends AbstractVal implements NumericVal{
         return group+"_"+name;
     }
     /* ********************************* Constructing ************************************************************ */
+    /**
+     * Create a new IntegerVal based on a rtval real node
+     * @param rtval The node
+     * @param group The group the node is found in
+     * @param defVal The global default real
+     * @return The created node, still needs dQueue set
+     */
+    public static IntegerVal build(Element rtval, String group, int defVal){
+        String name = XMLtools.getStringAttribute(rtval,"name","");
+        name = XMLtools.getStringAttribute(rtval,"id",name);
+        if( name.isEmpty())
+            name = rtval.getTextContent();
+        String id = group.isEmpty()?name:group+"_"+name;
 
+        IntegerVal iv = IntegerVal.newVal(group,name);
+        iv.alter(rtval,defVal);
+        return iv;
+    }
+
+    /**
+     * Change the RealVal according to a xml node
+     * @param rtval The node
+     * @param defInt The global default
+     */
+    public IntegerVal alter( Element rtval,int defInt ){
+        reset();
+        unit(XMLtools.getStringAttribute(rtval, "unit", "")).
+                defValue( XMLtools.getIntAttribute(rtval, "default", defInt) ).
+                defValue( XMLtools.getIntAttribute(rtval, "default", defVal) );
+        String options = XMLtools.getStringAttribute(rtval, "options", "");
+        for (var opt : options.split(",")) {
+            var arg = opt.split(":");
+            switch (arg[0]) {
+                case "minmax" -> keepMinMax();
+                case "time" -> keepTime();
+                case "order" -> order(NumberUtils.toInt(arg[1], -1));
+                case "history" -> enableHistory(NumberUtils.toInt(arg[1], -1));
+                case "abs" -> enableAbs();
+            }
+        }
+        for (Element trigCmd : XMLtools.getChildElements(rtval, "cmd")) {
+            String trig = trigCmd.getAttribute("when");
+            String cmd = trigCmd.getTextContent();
+            addTriggeredCmd(trig, cmd);
+        }
+        return this;
+    }
     /**
      * Set the name, this needs to be unique within the group
      * @param name The new name
@@ -123,10 +172,11 @@ public class IntegerVal extends AbstractVal implements NumericVal{
      *
      * @param defVal The default value
      */
-    public void defValue(int defVal){
+    public IntegerVal defValue(int defVal){
         if( !Double.isNaN(defVal) ) { // If the given value isn't NaN
             this.defVal = defVal;
         }
+        return this;
     }
     /**
      * Enable keeping track of the max and min values received since last reset

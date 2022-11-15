@@ -32,10 +32,10 @@ import java.util.stream.Collectors;
 public class RealtimeValues implements Commandable {
 
 	/* Data stores */
-	private final ConcurrentHashMap<String, RealVal> realVals = new ConcurrentHashMap<>(); // doubles
+	private final ConcurrentHashMap<String, RealVal> realVals = new ConcurrentHashMap<>(); 		 // doubles
 	private final ConcurrentHashMap<String, IntegerVal> integerVals = new ConcurrentHashMap<>(); // integers
-	private final ConcurrentHashMap<String, String> texts = new ConcurrentHashMap<>(); // strings
-	private final ConcurrentHashMap<String, FlagVal> flagVals = new ConcurrentHashMap<>(); // booleans
+	private final ConcurrentHashMap<String, String> texts = new ConcurrentHashMap<>(); 			 // strings
+	private final ConcurrentHashMap<String, FlagVal> flagVals = new ConcurrentHashMap<>(); 		 // booleans
 
 	private Waypoints waypoints; // waypoints
 	private final IssuePool issuePool;
@@ -64,7 +64,7 @@ public class RealtimeValues implements Commandable {
 
 	/* ************************************ X M L ****************************************************************** */
 	/**
-	 * Read the rtvals node in the settings.xml
+	 * Read an rtvals node
 	 */
 	public void readFromXML( Element rtvalsEle ){
 
@@ -121,63 +121,25 @@ public class RealtimeValues implements Commandable {
 		switch (rtval.getTagName()) {
 			case "double", "real" -> {
 				RealVal rv;
-				if( !hasReal(id) )
-					addRealVal(RealVal.newVal(group, name), false); // create it
-				var rvOpt = getRealVal(id);
-				if( rvOpt.isEmpty()){
-					Logger.error("No such realVal ... but there should be: "+id);
-					return;
+				if( !hasReal(id) ) {
+					rv = RealVal.build(rtval,group,defReal);
+
+				}else{
+					rv = getRealVal(id).map( r -> r.alter(rtval,defReal)).orElse(null);
 				}
-				rv = rvOpt.get();
-				rv.reset(); // reset needed if this is called because of reload
-				rv.unit(XMLtools.getStringAttribute(rtval, "unit", ""))
-						.scale(XMLtools.getIntAttribute(rtval, "scale", -1))
-						.defValue(XMLtools.getDoubleAttribute(rtval, "default", defReal));
-				String options = XMLtools.getStringAttribute(rtval, "options", "");
-				for (var opt : options.split(",")) {
-					var arg = opt.split(":");
-					switch (arg[0]) {
-						case "minmax" -> rv.keepMinMax();
-						case "time" -> rv.keepTime();
-						case "scale" -> rv.scale(NumberUtils.toInt(arg[1], -1));
-						case "order" -> rv.order(NumberUtils.toInt(arg[1], -1));
-						case "history" -> rv.enableHistory(NumberUtils.toInt(arg[1], -1));
-						case "abs" -> rv.enableAbs();
-					}
-				}
-				if (!XMLtools.getChildElements(rtval, "cmd").isEmpty())
+				if( rv!=null && rv.hasTriggeredCmds() )
 					rv.enableTriggeredCmds(dQueue);
-				for (Element trigCmd : XMLtools.getChildElements(rtval, "cmd")) {
-					String trig = trigCmd.getAttribute("when");
-					String cmd = trigCmd.getTextContent();
-					rv.addTriggeredCmd(trig, cmd);
-				}
 			}
 			case "integer", "int" -> {
-				if (!hasInteger(id)) // If it doesn't exist yet
-					addIntegerVal(IntegerVal.newVal(group, name), false); // create it
-				var iv = getIntegerVal(id).get();//
-				iv.reset(); // reset needed if this is called because of reload
-				iv.unit(XMLtools.getStringAttribute(rtval, "unit", ""))
-						.defValue(XMLtools.getIntAttribute(rtval, "default", defInteger));
-				String opts = XMLtools.getStringAttribute(rtval, "options", "");
-				for (var opt : opts.split(",")) {
-					var arg = opt.split(":");
-					switch (arg[0]) {
-						case "minmax" -> iv.keepMinMax();
-						case "time" -> iv.keepTime();
-						case "order" -> iv.order(NumberUtils.toInt(arg[1], -1));
-						case "history" -> iv.enableHistory(NumberUtils.toInt(arg[1], -1));
-						case "abs" -> iv.enableAbs();
-					}
+				IntegerVal iv;
+				if( !hasInteger(id) ) {
+					iv = IntegerVal.build(rtval,group,defInteger);
+
+				}else{
+					iv = getIntegerVal(id).map( i -> i.alter(rtval, defInteger)	).orElse(null);
 				}
-				if (!XMLtools.getChildElements(rtval, "cmd").isEmpty())
+				if( iv!=null && iv.hasTriggeredCmds() )
 					iv.enableTriggeredCmds(dQueue);
-				for (Element trigCmd : XMLtools.getChildElements(rtval, "cmd")) {
-					String trig = trigCmd.getAttribute("when");
-					String cmd = trigCmd.getTextContent();
-					iv.addTriggeredCmd(trig, cmd);
-				}
 			}
 			case "text" -> setText(id, XMLtools.getStringAttribute(rtval, "default", defText));
 			case "flag" -> {
