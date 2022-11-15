@@ -122,15 +122,15 @@ public class MqttWork {
 	public MqttMessage getUbidotsMessage( int qos ) {
 		StringBuilder content=new StringBuilder();
 		content.append("{");
-		for( Entry<String,Variable> dp : datapoints.entrySet() ) {
-			Variable v = dp.getValue();
+		for( Entry<String,Variable> rtvals : datapoints.entrySet() ) {
+			Variable v = rtvals.getValue();
 
 			Long timestamp = v.timestamp;
 			
 			if( content.length()!=1)
 				content.append(",");
 			
-			content.append('"').append(dp.getKey()).append('"').append(":");
+			content.append('"').append(rtvals.getKey()).append('"').append(":");
 			
 			if( timestamp == -1 ) {
 				content.append( v.value );

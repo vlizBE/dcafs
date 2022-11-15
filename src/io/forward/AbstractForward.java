@@ -1,9 +1,9 @@
 package io.forward;
 
-import util.data.DataProviding;
 import io.Writable;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.data.RealtimeValues;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
@@ -35,19 +35,19 @@ public abstract class AbstractForward implements Writable {
     protected int badDataCount=0;               // Keep track of the amount of bad data received
     static final protected int MAX_BAD_COUNT=5;
     protected boolean log = false;
-    protected final DataProviding dataProviding;
+    protected final RealtimeValues rtvals;
     protected boolean readOk=false;
 
-    protected AbstractForward(String id, String source, BlockingQueue<Datagram> dQueue, DataProviding dataProviding ){
+    protected AbstractForward(String id, String source, BlockingQueue<Datagram> dQueue, RealtimeValues rtvals ){
         this.id=id;
-        this.dataProviding=dataProviding;
+        this.rtvals=rtvals;
         if( !source.isEmpty() )
             sources.add(source);
         this.dQueue=dQueue;
     }
-    protected AbstractForward( BlockingQueue<Datagram> dQueue, DataProviding dataProviding){
+    protected AbstractForward( BlockingQueue<Datagram> dQueue, RealtimeValues rtvals){
         this.dQueue=dQueue;
-        this.dataProviding=dataProviding;
+        this.rtvals=rtvals;
     }
     public void setDebug( boolean debug ){
         this.debug=debug;

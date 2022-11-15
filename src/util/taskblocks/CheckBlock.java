@@ -2,7 +2,7 @@ package util.taskblocks;
 
 import org.apache.commons.lang3.StringUtils;
 import org.tinylog.Logger;
-import util.data.DataProviding;
+import util.data.RealtimeValues;
 import util.data.RealVal;
 import util.math.MathUtils;
 import util.tools.Tools;
@@ -15,17 +15,17 @@ import java.util.stream.Collectors;
 
 public class CheckBlock extends AbstractBlock{
 
-    DataProviding dp;
+    RealtimeValues rtvals;
     ArrayList<Function<Double[],Double>> steps = new ArrayList<>();
     int resultIndex;
     boolean negate = false;
 
-    public CheckBlock(DataProviding dp,String set){
-        this.dp=dp;
+    public CheckBlock(RealtimeValues rtvals,String set){
+        this.rtvals=rtvals;
         this.ori=set;
     }
-    public static CheckBlock prepBlock(DataProviding dp, String set){
-        return new CheckBlock(dp,set);
+    public static CheckBlock prepBlock(RealtimeValues rtvals, String set){
+        return new CheckBlock(rtvals,set);
     }
     public void setNegate(boolean neg){
         negate=neg;
@@ -98,14 +98,14 @@ public class CheckBlock extends AbstractBlock{
         exp=Tools.parseExpression(exp); // rewrite to math symbols
 
         // Figure out the realtime stuff
-        if( dp != null ) {
+        if( rtvals != null ) {
             if (sharedMem == null) // If it didn't receive a shared Mem
                 sharedMem = new ArrayList<>(); // make it
-            exp = dp.buildNumericalMem(exp, sharedMem, 0);
+            exp = rtvals.buildNumericalMem(exp, sharedMem, 0);
             if( sharedMem.isEmpty()) // Remove the reference if it remained empty
                 sharedMem=null;
         }else{
-            Logger.warn("No dp, skipping numerical mem");
+            Logger.warn("No rtvals, skipping numerical mem");
         }
 
         if( exp.isEmpty() ){

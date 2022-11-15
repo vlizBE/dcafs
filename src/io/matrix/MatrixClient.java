@@ -7,7 +7,7 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.tinylog.Logger;
-import util.data.DataProviding;
+import util.data.RealtimeValues;
 import util.tools.FileTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
@@ -79,10 +79,10 @@ public class MatrixClient implements Writable, Commandable {
 
     private ArrayList<String[]> failedMessages = new ArrayList<>();
 
-    public MatrixClient(BlockingQueue<Datagram> dQueue, DataProviding dp, Path settingsFile ){
+    public MatrixClient(BlockingQueue<Datagram> dQueue, RealtimeValues rtvals, Path settingsFile ){
         this.dQueue=dQueue;
         this.settingsFile=settingsFile;
-        math = new MathForward(null,dp);
+        math = new MathForward(null,rtvals);
         readFromXML();
     }
 

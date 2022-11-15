@@ -1,6 +1,6 @@
 package worker;
 
-import util.data.DataProviding;
+import util.data.RealtimeValues;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
@@ -38,15 +38,15 @@ public class ValMap {
     public void setGroup(String group){
         this.group=group;
     }
-    public void apply(String data, DataProviding dp){
+    public void apply(String data, RealtimeValues rtvals){
         if( multi.isEmpty()) {
-            processSingle(data,dp);
+            processSingle(data,rtvals);
         }else {
             for (String piece : data.split(multi))
-                processSingle(piece,dp);
+                processSingle(piece,rtvals);
         }
     }
-    private void processSingle( String data, DataProviding dp ){
+    private void processSingle( String data, RealtimeValues rtvals ){
         String[] pair = data.split(split);
         Mapping mapped;
 
@@ -62,13 +62,13 @@ public class ValMap {
         if (mapped != null) {
             if (!mapped.rtval.isEmpty()) {
                 try {
-                    dp.updateReal(mapped.rtval, NumberUtils.createDouble(pair[1]));
+                    rtvals.updateReal(mapped.rtval, NumberUtils.createDouble(pair[1]));
                 } catch (NumberFormatException e) {
                     Logger.error(id + " -> No valid number in " + data);
                 }
             }
             if (!mapped.rttext.isEmpty())
-                dp.setText(mapped.rttext, mapped.convert(pair[1]));
+                rtvals.setText(mapped.rttext, mapped.convert(pair[1]));
         } else {
             //Logger.warn(id + " -> No mapping found for " + data);
         }

@@ -1,6 +1,6 @@
 package worker;
 
-import util.data.DataProviding;
+import util.data.RealtimeValues;
 import io.mqtt.MqttWriting;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.influxdb.dto.Point;
@@ -195,10 +195,10 @@ public class Generic {
      * Apply this generic to the given line and use the RealtimeValues object store the values
      * @param line The raw data line
      * @param doubles The double array if any
-     * @param dp The DataProviding implementation to add the data to
+     * @param rtvals The RealtimeValues implementation to add the data to
      * @return an array with the data
      */
-    public Object[] apply(String line, Double[] doubles, DataProviding dp, QueryWriting queryWriting, MqttWriting mqtt){
+    public Object[] apply(String line, Double[] doubles, RealtimeValues rtvals, QueryWriting queryWriting, MqttWriting mqtt){
         uses++;
 
         String[] split;
@@ -250,11 +250,11 @@ public class Generic {
                                 }
                             }
                             data[a] = val;
-                            if( dp.hasInteger(ref) ){
-                                dp.updateInteger(ref,(int)val);
+                            if( rtvals.hasInteger(ref) ){
+                                rtvals.updateInteger(ref,(int)val);
                             }else{
                                 var iv = IntegerVal.newVal(entry.group, entry.name).value((int)val);
-                                dp.addIntegerVal( iv, settingsPath );
+                                rtvals.addIntegerVal( iv, settingsPath );
                             }
                             break;
                     case REAL:
@@ -273,22 +273,22 @@ public class Generic {
                                 }
                             }
                             data[a] = val;
-                            if( dp.hasReal(ref) ){
-                                dp.updateReal(ref,val);
+                            if( rtvals.hasReal(ref) ){
+                                rtvals.updateReal(ref,val);
                             }else{
-                                dp.addRealVal(RealVal.newVal(entry.group, entry.name).value(val),settingsPath);
+                                rtvals.addRealVal(RealVal.newVal(entry.group, entry.name).value(val),settingsPath);
                             }
                             break;                
                     case TEXT: case TAG:
                             data[a]=split[entry.index];
-                            dp.addTextVal(ref,split[entry.index],settingsPath);
+                            rtvals.addTextVal(ref,split[entry.index],settingsPath);
                             break;
                     case FLAG:
                             data[a] = val;
-                            if( dp.hasFlag(ref) ){
-                                dp.setFlagState(ref,split[entry.index]);
+                            if( rtvals.hasFlag(ref) ){
+                                rtvals.setFlagState(ref,split[entry.index]);
                             }else{
-                                dp.addFlagVal(FlagVal.newVal(entry.group, entry.name).setState(split[entry.index]),settingsPath);
+                                rtvals.addFlagVal(FlagVal.newVal(entry.group, entry.name).setState(split[entry.index]),settingsPath);
                             }
                         break;
                     case FILLER:
@@ -306,12 +306,12 @@ public class Generic {
                             break;
                     case LOCALDT:
                         data[a]=OffsetDateTime.parse( split[entry.index], TimeTools.LONGDATE_FORMATTER );
-                        dp.setText( ref, split[entry.index]);
+                        rtvals.setText( ref, split[entry.index]);
                         break;
                     case UTCDT:
                         var ldt = LocalDateTime.parse( split[entry.index], TimeTools.LONGDATE_FORMATTER_UTC );
                         data[a]=OffsetDateTime.of(ldt,ZoneOffset.UTC);
-                        dp.setText( ref, split[entry.index]);
+                        rtvals.setText( ref, split[entry.index]);
                         break;
                 }
                 if( !influxID.isEmpty() && pb!=null ){

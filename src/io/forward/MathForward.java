@@ -1,12 +1,13 @@
 package io.forward;
 
-import util.data.DataProviding;
+import util.data.RealtimeValues;
 import util.data.RealVal;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.data.NumericVal;
+import util.data.RealtimeValues;
 import util.gis.GisTools;
 import util.math.Calculations;
 import util.math.MathFab;
@@ -38,23 +39,23 @@ public class MathForward extends AbstractForward {
     private ArrayList<NumericVal> referencedNums = new ArrayList<>();
     private int highestI=-1;
 
-    public MathForward(String id, String source, BlockingQueue<Datagram> dQueue, DataProviding dp){
-        super(id,source,dQueue,dp);
+    public MathForward(String id, String source, BlockingQueue<Datagram> dQueue, RealtimeValues rtvals){
+        super(id,source,dQueue,rtvals);
     }
-    public MathForward(Element ele, BlockingQueue<Datagram> dQueue, DataProviding dp){
-        super(dQueue,dp);
+    public MathForward(Element ele, BlockingQueue<Datagram> dQueue, RealtimeValues rtvals){
+        super(dQueue,rtvals);
         readOk = readFromXML(ele);
     }
-    public MathForward(BlockingQueue<Datagram> dQueue, DataProviding dp){
-        super(dQueue,dp);
+    public MathForward(BlockingQueue<Datagram> dQueue, RealtimeValues rtvals){
+        super(dQueue,rtvals);
     }
     /**
      * Read a mathForward from an element in the xml
      * @param ele The element containing the math info
      * @return The MathForward created based on the xml element
      */
-    public static MathForward fromXML(Element ele, BlockingQueue<Datagram> dQueue, DataProviding dp ){
-        return new MathForward( ele,dQueue,dp );
+    public static MathForward fromXML(Element ele, BlockingQueue<Datagram> dQueue, RealtimeValues rtvals ){
+        return new MathForward( ele,dQueue,rtvals );
     }
     /**
      * Alter the delimiter used
@@ -595,9 +596,9 @@ public class MathForward extends AbstractForward {
         for( var p : pairs ) {
             if (p.length == 2) {
                 switch (p[0]) {
-                    case "d", "double", "r", "real" -> dataProviding.getRealVal(p[1]).ifPresent(referencedNums::add);
-                    case "i", "int" -> dataProviding.getIntegerVal(p[1]).ifPresent(referencedNums::add);
-                    case "f", "flag" -> dataProviding.getFlagVal(p[1]).ifPresent(referencedNums::add);
+                    case "d", "double", "r", "real" -> rtvals.getRealVal(p[1]).ifPresent(referencedNums::add);
+                    case "i", "int" -> rtvals.getIntegerVal(p[1]).ifPresent(referencedNums::add);
+                    case "f", "flag" -> rtvals.getFlagVal(p[1]).ifPresent(referencedNums::add);
                     default -> {
                         Logger.error(id + " (mf)-> Operation containing unknown pair: " + p[0] + " and " + p[1]);
                         return false;
@@ -693,7 +694,7 @@ public class MathForward extends AbstractForward {
                     String sub = ori.substring(ori.indexOf(":") + 1, ori.indexOf("}"));
 
                     if (ori.startsWith("{r")||ori.startsWith("{d")) {
-                        dataProviding.getRealVal(sub)
+                        rtvals.getRealVal(sub)
                                 .ifPresent(dv -> {
                                     update = dv;
                                     doUpdate = true;
@@ -701,7 +702,7 @@ public class MathForward extends AbstractForward {
                         if (!doUpdate)
                             Logger.error("Asking to update {r:" + ori.substring(ori.indexOf(":") + 1, ori.indexOf("}") + 1) + " but doesn't exist");
                     } else if (ori.startsWith("{i")) {
-                        dataProviding.getIntegerVal(sub)
+                        rtvals.getIntegerVal(sub)
                                 .ifPresent(iv -> {
                                     update = iv;
                                     doUpdate = true;
@@ -741,7 +742,7 @@ public class MathForward extends AbstractForward {
 
             if( ((cmd.startsWith("doubles:update")||cmd.startsWith("dv")) && cmd.endsWith(",$"))  ){
                 String val = cmd.substring(8).split(",")[1];
-                this.cmd = dataProviding.getRealVal(val).map(dv-> {
+                this.cmd = rtvals.getRealVal(val).map(dv-> {
                     update=dv;
                     doUpdate=true;
                     return "";

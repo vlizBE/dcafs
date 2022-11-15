@@ -8,7 +8,7 @@ import io.stream.StreamManager;
 import io.stream.tcp.TcpServer;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
-import util.data.DataProviding;
+import util.data.RealtimeValues;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 
@@ -23,14 +23,14 @@ public class BlockPool {
     ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(3);
 
     CommandPool cp;
-    DataProviding dp;
+    RealtimeValues rtvals;
     StreamManager ss;
     TcpServer ts;
     EmailSending es;
 
-    public BlockPool( CommandPool cp, DataProviding dp, StreamManager ss ){
+    public BlockPool( CommandPool cp, RealtimeValues rtvals, StreamManager ss ){
         this.cp=cp;
-        this.dp=dp;
+        this.rtvals=rtvals;
         this.ss=ss;
     }
     public void setTransServer(TcpServer ts){
@@ -72,7 +72,7 @@ public class BlockPool {
             startBlocks.put( tsId,tree.getMetaBlock());
 
             if( !req.isEmpty()){ // add the req step if any
-                tree.addTwig( CheckBlock.prepBlock(dp,req));
+                tree.addTwig( CheckBlock.prepBlock(rtvals,req));
             }
 
             for( var t : XMLtools.getChildElements(ts)){
@@ -106,13 +106,13 @@ public class BlockPool {
         state=state.replace("always",""); // remove the old default
         if( !state.isEmpty() && state.contains(":")){
             var stat = state.split(":");
-            tree.branchOut( CheckBlock.prepBlock(dp, "{t:"+stat[0]+"} equals "+stat[1]));
+            tree.branchOut( CheckBlock.prepBlock(rtvals, "{t:"+stat[0]+"} equals "+stat[1]));
         }
 
         // Read and process the req attribute
         var req = XMLtools.getStringAttribute(t,"req","");
         if( !req.isEmpty()){
-            tree.branchOut( CheckBlock.prepBlock(dp,req));
+            tree.branchOut( CheckBlock.prepBlock(rtvals,req));
         }
         // Read and process the check attribute
         var check = XMLtools.getStringAttribute(t,"check","");
@@ -187,7 +187,7 @@ public class BlockPool {
                 tree.addTwig(outblock);
             }else{// and a check needs to be done
                 tree.branchOut(outblock);
-                tree.addTwig(CheckBlock.prepBlock(dp,check));
+                tree.addTwig(CheckBlock.prepBlock(rtvals,check));
                 tree.branchIn();
             }
         }

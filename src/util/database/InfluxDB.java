@@ -1,6 +1,6 @@
 package util.database;
 
-import util.data.DataProviding;
+import util.data.RealtimeValues;
 import org.apache.commons.lang3.StringUtils;
 import org.influxdb.InfluxDBFactory;
 import org.influxdb.InfluxDBIOException;
@@ -8,6 +8,7 @@ import org.influxdb.dto.Point;
 import org.influxdb.dto.Query;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.data.RealtimeValues;
 import util.tools.TimeTools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
@@ -281,7 +282,7 @@ public class InfluxDB extends Database{
     }
 
     @Override
-    public boolean buildInsert(String table, DataProviding dp, String macro) {
+    public boolean buildInsert(String table, RealtimeValues rtvals, String macro) {
         Logger.error("Not supported for influxdb");
         return false;
     }

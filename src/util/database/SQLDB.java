@@ -1,8 +1,8 @@
 package util.database;
 
-import util.data.DataProviding;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.data.RealtimeValues;
 import util.tools.TimeTools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
@@ -478,7 +478,7 @@ public class SQLDB extends Database{
         return Optional.of(data);
     }
 
-    public synchronized boolean buildInsert(String table, DataProviding dp, String macro) {
+    public synchronized boolean buildInsert(String table, RealtimeValues rtvals, String macro) {
         if (!hasRecords())
             firstPrepStamp = Instant.now().toEpochMilli();
 
@@ -487,7 +487,7 @@ public class SQLDB extends Database{
             return false;
         }
 
-        if (getTable(table).map(t -> t.buildInsert(dp, macro)).orElse(false)) {
+        if (getTable(table).map(t -> t.buildInsert(rtvals, macro)).orElse(false)) {
             if(tables.values().stream().mapToInt(SqlTable::getRecordCount).sum() > maxQueries)
                 flushPrepared();
             return true;

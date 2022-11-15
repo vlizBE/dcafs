@@ -1,8 +1,8 @@
 package util.database;
 
-import util.data.DataProviding;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.data.RealtimeValues;
 import util.tools.TimeTools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
@@ -195,10 +195,10 @@ public abstract class Database{
     /**
      * Build the insert for the given table based on current data and add it to the buffer
      * @param table The name of the table
-     * @param dp Instance that holds the data
+     * @param rtvals Instance that holds the data
      * @param macro The macro argument to fill in
      * @return True If successful
      */
-    public abstract boolean buildInsert(String table, DataProviding dp, String macro);
+    public abstract boolean buildInsert(String table, RealtimeValues rtvals, String macro);
 
 }

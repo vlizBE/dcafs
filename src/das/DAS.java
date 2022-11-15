@@ -11,7 +11,6 @@ import io.matrix.MatrixClient;
 import io.mqtt.MqttPool;
 import io.stream.StreamManager;
 import io.forward.ForwardPool;
-import util.data.DataProviding;
 import util.tools.FileMonitor;
 import io.stream.tcp.TcpServer;
 import io.telnet.TelnetCodes;
@@ -25,7 +24,6 @@ import org.w3c.dom.Document;
 import util.data.RealtimeValues;
 import util.database.*;
 import util.task.TaskManagerPool;
-import util.tools.TinyWrapErr;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
@@ -335,8 +333,8 @@ public class DAS implements Commandable{
 
         addCommandable(labelWorker,"gens");
     }
-    public void addDatagramProcessor( DatagramProcessing dp ){
-        labelWorker.addDatagramProcessing(dp);
+    public void addDatagramProcessor( DatagramProcessing rtvals ){
+        labelWorker.addDatagramProcessing(rtvals);
     }
     public BlockingQueue<Datagram> getDataQueue() {
         addLabelWorker();
@@ -424,7 +422,7 @@ public class DAS implements Commandable{
         addCommandable("i2c",i2cWorker);
     }
     /* ******************************** R E A L T I M E  D A T A  ******************************************* */
-    public DataProviding getDataProvider(){
+    public RealtimeValues getDataProvider(){
         return rtvals;
     }
     public IssuePool getIssuePool(){ return rtvals.getIssuePool();}

@@ -24,14 +24,15 @@ be more logical...
 - Improved the feedback given by `pf:list` a lot
 - If no (empty) group is given to a generic/store inside a path, the id of the path is used
 
-### Fixes
-- MathForward checks the highest used index to not convert more than needed. This 
-however didn't take the special calculations (fe. sound velocity) in account.
-
 ### Generics
 - Added flags/bool
 - Removed filters
+- Allow def attribute to set a default value incase the parsing fails (only for int/real)
+- Add rtvals to the file the generic is found in (so settings.xml or a path xml)
 
+### Fixes
+- MathForward checks the highest used index to not convert more than needed. This 
+however didn't take the special calculations (fe. sound velocity) in account.
 
 ## 1.0.5 (27/10/2022)
 

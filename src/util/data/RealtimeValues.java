@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
  * A storage class
  *
  */
-public class RealtimeValues implements DataProviding, Commandable {
+public class RealtimeValues implements Commandable {
 
 	/* Data stores */
 	private final ConcurrentHashMap<String, RealVal> realVals = new ConcurrentHashMap<>(); // doubles
@@ -528,7 +528,6 @@ public class RealtimeValues implements DataProviding, Commandable {
 			rv.storeInXml(XMLfab.withRoot(xmlPath,"dcafs","rtvals"));
 		return realVals.put(rv.getID(),rv)==null;
 	}
-	@Override
 	public boolean addRealVal(RealVal rv, boolean storeInXML) {
 		return addRealVal(rv,storeInXML?settingsPath:null);
 	}

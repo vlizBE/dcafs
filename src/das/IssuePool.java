@@ -3,8 +3,8 @@ package das;
 import io.Writable;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
-import util.data.DataProviding;
 import util.data.NumericVal;
+import util.data.RealtimeValues;
 import util.task.RtvalCheck;
 import util.tools.TimeTools;
 import util.xml.XMLfab;
@@ -26,12 +26,12 @@ public class IssuePool implements Commandable{
     private final HashMap<String,Issue> issues = new HashMap<>();
     private final BlockingQueue<Datagram> dQueue;
     private final Path settingsPath;
-    private final DataProviding dp;
+    private final RealtimeValues rtvals;
 
-    public IssuePool( BlockingQueue<Datagram> dQueue, Path settingsPath, DataProviding dp){
+    public IssuePool( BlockingQueue<Datagram> dQueue, Path settingsPath, RealtimeValues rtvals){
         this.dQueue=dQueue;
         this.settingsPath=settingsPath;
-        this.dp=dp;
+        this.rtvals=rtvals;
         readFromXML();
     }
 
@@ -335,14 +335,14 @@ public class IssuePool implements Commandable{
             }
             if( resolve!=null){ // meaning both and activate test and a resolve test
                 if( active ){
-                    if( resolve.test(dp) )
+                    if( resolve.test(rtvals) )
                         stop();
                 }else{
-                    if( activate.test(dp))
+                    if( activate.test(rtvals))
                         start();
                 }
             }else{ //meaning only an activated test
-                if( activate.test(dp) ){
+                if( activate.test(rtvals) ){
                     start();
                 }else{
                     stop();

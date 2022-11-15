@@ -4,7 +4,7 @@ import io.Writable;
 import org.apache.commons.lang3.tuple.Pair;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
-import util.data.DataProviding;
+import util.data.RealtimeValues;
 import util.taskblocks.CheckBlock;
 import util.tools.TimeTools;
 import util.tools.Tools;
@@ -91,7 +91,7 @@ public class Task implements Comparable<Task>{
 	 * Constructor that parses an Element to get all the info
 	 * @param tsk The element for a task
 	 */
-	public Task(Element tsk, DataProviding dp, ArrayList<CheckBlock> sharedChecks){
+	public Task(Element tsk, RealtimeValues rtvals, ArrayList<CheckBlock> sharedChecks){
 
 		when  = XMLtools.getStringAttribute( tsk, "state", "always"); //The state that determines if it's done or not
 
@@ -117,7 +117,7 @@ public class Task implements Comparable<Task>{
 					}
 				}
 				if( checkIndex==-1){
-					var cb = CheckBlock.prepBlock(dp,check);
+					var cb = CheckBlock.prepBlock(rtvals,check);
 					if( sharedChecks.isEmpty()) {
 						cb.setSharedMem(new ArrayList<>());
 					}else{
@@ -152,7 +152,7 @@ public class Task implements Comparable<Task>{
 					}
 				}
 				if( reqIndex==-1){
-					var cb = CheckBlock.prepBlock(dp,req);
+					var cb = CheckBlock.prepBlock(rtvals,req);
 					if( sharedChecks.isEmpty()) {
 						cb.setSharedMem(new ArrayList<>());
 					}else{
@@ -173,7 +173,7 @@ public class Task implements Comparable<Task>{
 					}
 				}
 				if( checkIndex==-1){
-					var cb = CheckBlock.prepBlock(dp,check);
+					var cb = CheckBlock.prepBlock(rtvals,check);
 					if( sharedChecks.isEmpty()) {
 						cb.setSharedMem(new ArrayList<>());
 					}else{

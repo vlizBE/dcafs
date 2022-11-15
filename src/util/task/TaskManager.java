@@ -1,7 +1,7 @@
 package util.task;
 
 import io.telnet.TelnetCodes;
-import util.data.DataProviding;
+import util.data.RealtimeValues;
 import io.email.Email;
 import io.email.EmailSending;
 import io.stream.StreamManager;
@@ -41,7 +41,7 @@ public class TaskManager implements CollectorFuture {
 	/* The different outputs */
 	private EmailSending emailer = null;    // Reference to the email send, so emails can be send
 	private StreamManager streams; 			// Reference to the streampool, so sensors can be talked to
-	private final DataProviding dp;
+	private final RealtimeValues rtvals;
 
 	private CommandPool commandPool; // Source to get the data from nexus
 	private String id;
@@ -61,9 +61,9 @@ public class TaskManager implements CollectorFuture {
 
 	/* ****************************** * C O N S T R U C T O R **************************************************/
 
-	public TaskManager(String id, DataProviding dp, CommandPool commandPool) {
+	public TaskManager(String id, RealtimeValues rtvals, CommandPool commandPool) {
 		this.commandPool = commandPool;
-		this.dp = dp;
+		this.rtvals = rtvals;
 		this.id = id;
 	}
 	public TaskManager(String id, Path xml ){
@@ -125,8 +125,8 @@ public class TaskManager implements CollectorFuture {
 	 */
 	public boolean changeState(String state) {
 		String[] split = state.split(":");
-		boolean altered = dp.getText(split[0],"").equalsIgnoreCase(split[1]);
-		dp.setText(split[0],split[1]);
+		boolean altered = rtvals.getText(split[0],"").equalsIgnoreCase(split[1]);
+		rtvals.setText(split[0],split[1]);
 		return altered;
 	}
 
@@ -140,7 +140,7 @@ public class TaskManager implements CollectorFuture {
 		if (id.isBlank() || id.equalsIgnoreCase("always"))
 			return true;
 		var state = id.split(":");
-		return dp.getText(state[0],"").equalsIgnoreCase(state[1]);
+		return rtvals.getText(state[0],"").equalsIgnoreCase(state[1]);
 	}
 
 	/* ************************ * WAYS OF RETRIEVING TASKS ************************************************/
@@ -166,7 +166,7 @@ public class TaskManager implements CollectorFuture {
 	 * @param tsk The Element that contains the task info
 	 */
 	public void addTask(Element tsk) {
-		Task task = new Task(tsk, dp, sharedChecks);
+		Task task = new Task(tsk, rtvals, sharedChecks);
 
 		if (startOnLoad && task.getTriggerType()!=TRIGGERTYPE.EXECUTE && task.isEnableOnStart()) {
 			startTask(task);
@@ -774,7 +774,7 @@ public class TaskManager implements CollectorFuture {
 						}
 						break;
 					case TELNET:
-						var send = dp.parseRTline(task.value,"");
+						var send = rtvals.parseRTline(task.value,"");
 						commandPool.createResponse(Datagram.build("telnet:broadcast,"+task.outputRef+","+send),false);
 						break;
 					case MANAGER:
@@ -784,8 +784,8 @@ public class TaskManager implements CollectorFuture {
 						}
 
 						switch (com[0]) {
-							case "raiseflag" -> dp.raiseFlag(com[1]);
-							case "lowerflag" -> dp.lowerFlag(com[1]);
+							case "raiseflag" -> rtvals.raiseFlag(com[1]);
+							case "lowerflag" -> rtvals.lowerFlag(com[1]);
 							case "start" -> startTaskset(com[1]);
 							case "stop" -> {
 								int a = stopTaskSet(com[1]);
@@ -1017,7 +1017,7 @@ public class TaskManager implements CollectorFuture {
 			to = Tools.getMAC( line.substring(i+5,i+end) );
 			line = line.replace(line.substring(i,i+end+1),to);
 		}
-		line = dp.parseRTline(line,"");
+		line = rtvals.parseRTline(line,"");
     	line = line.replace("[EOL]", "\r\n");
     	return line;
     }
@@ -1124,7 +1124,7 @@ public class TaskManager implements CollectorFuture {
 				Logger.tag(TINY_TAG).info("["+ id +"] Tasks File ["+ref+"] found!");
 			}
 
-			dp.readFromXML(XMLfab.withRoot(path,"tasklist","rtvals"));
+			rtvals.readFromXML(XMLfab.withRoot(path,"tasklist","rtvals"));
 
 			var ssOpt = XMLtools.getFirstElementByTag( doc, "tasklist" );
 			if(ssOpt.isEmpty()) {
@@ -1146,7 +1146,7 @@ public class TaskManager implements CollectorFuture {
 						}
 					}
 					if( reqIndex==-1){
-						var cb = CheckBlock.prepBlock(dp,req);
+						var cb = CheckBlock.prepBlock(rtvals,req);
 						if( sharedChecks.isEmpty()) {
 							cb.setSharedMem(new ArrayList<>());
 						}else{
@@ -1181,7 +1181,7 @@ public class TaskManager implements CollectorFuture {
 
 				sets++;
 				for( Element ll : XMLtools.getChildElements( el )){
-					addTaskToSet( tasksetID, new Task(ll, dp, sharedChecks) );
+					addTaskToSet( tasksetID, new Task(ll, rtvals, sharedChecks) );
 				}
 			 }
 			

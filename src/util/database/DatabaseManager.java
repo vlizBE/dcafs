@@ -4,10 +4,11 @@ import das.Commandable;
 import io.Writable;
 import io.telnet.TelnetCodes;
 import org.apache.commons.lang3.math.NumberUtils;
-import util.data.DataProviding;
+import util.data.RealtimeValues;
 import org.influxdb.dto.Point;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
+import util.data.RealtimeValues;
 import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.xml.XMLfab;
@@ -32,16 +33,15 @@ public class DatabaseManager implements QueryWriting, Commandable {
 
     private static final int CHECK_INTERVAL=5;                          // How often to check the state
     private final ScheduledExecutorService scheduler;                   // Scheduler for the request data action
-    private static final String XML_PARENT_TAG = "databases";           // Main tag in xml
-    private String workPath;                                            // dcafs workpath
-    private Path settingsPath;                                          // Path to dcafs settings.xml
-    private DataProviding dataProvider;                                 // Reference to the realtime data
+    private final String workPath;                                            // dcafs workpath
+    private final Path settingsPath;                                          // Path to dcafs settings.xml
+    private final RealtimeValues rtvals;                                 // Reference to the realtime data
     /**
      * Create a manager that uses its own scheduler
      */
-    public DatabaseManager( String workPath, DataProviding dataProvider) {
+    public DatabaseManager( String workPath, RealtimeValues rtvals) {
         this.workPath=workPath;
-        this.dataProvider=dataProvider;
+        this.rtvals=rtvals;
 
         settingsPath = Path.of(workPath,"settings.xml");
         scheduler = Executors.newScheduledThreadPool(1); // create a scheduler with a single thread
@@ -226,16 +226,16 @@ public class DatabaseManager implements QueryWriting, Commandable {
     }
 
     @Override
-    public boolean buildInsert(String ids, String table, DataProviding dp, String macro) {
+    public boolean buildInsert(String ids, String table, String macro) {
         int ok=0;
         for( var id : ids.split(",")) {
            for (SQLiteDB sqlite : lites.values()) {
                if (sqlite.getID().equalsIgnoreCase(id))
-                  ok+=sqlite.buildInsert(table, dp, macro)?1:0;
+                  ok+=sqlite.buildInsert(table, rtvals, macro)?1:0;
            }
            for (SQLDB sqldb : sqls.values()) {
                if (sqldb.getID().equalsIgnoreCase(id))
-                   ok+=sqldb.buildInsert(table, dp, macro)?1:0;
+                   ok+=sqldb.buildInsert(table, rtvals, macro)?1:0;
            }
        }
        return ok==ids.split(",").length;
@@ -652,7 +652,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
             case "store":
                 if( cmds.length < 3 )
                     return "Not enough arguments, needs to be dbm:store,dbId,tableid";
-                if( buildInsert(cmds[1],cmds[2],dataProvider,"") )
+                if( buildInsert(cmds[1],cmds[2],"") )
                     return "Wrote record";
                 return "Failed to write record";
             default:

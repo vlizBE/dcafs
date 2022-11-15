@@ -6,7 +6,7 @@ import io.netty.channel.EventLoopGroup;
 import io.telnet.TelnetCodes;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
-import util.data.DataProviding;
+import util.data.RealtimeValues;
 import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.tools.Tools;
@@ -31,13 +31,13 @@ public class CollectorPool implements Commandable, CollectorFuture {
     private final Path workPath;
     private final BlockingQueue<Datagram> dQueue;
     private final EventLoopGroup nettyGroup;
-    private final DataProviding dp;
+    private final RealtimeValues rtvals;
 
-    public CollectorPool(Path workpath, BlockingQueue<Datagram> dQueue, EventLoopGroup nettyGroup, DataProviding dp ){
+    public CollectorPool(Path workpath, BlockingQueue<Datagram> dQueue, EventLoopGroup nettyGroup, RealtimeValues rtvals ){
         this.workPath=workpath;
         this.dQueue=dQueue;
         this.nettyGroup=nettyGroup;
-        this.dp=dp;
+        this.rtvals=rtvals;
 
         // Load the collectors
         loadMathCollectors();
@@ -81,7 +81,7 @@ public class CollectorPool implements Commandable, CollectorFuture {
     public void collectorFinished(String id, String message, Object result) {
         String[] ids = id.split(":");
         if(ids[0].equalsIgnoreCase("math"))
-            dp.updateReal(message,(double)result);
+            rtvals.updateReal(message,(double)result);
     }
     /* *************************************** F I L E C O L L E C T O R ************************************ */
 

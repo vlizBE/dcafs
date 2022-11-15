@@ -1,6 +1,6 @@
 package util.database;
 
-import util.data.DataProviding;
+import util.data.RealtimeValues;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
@@ -524,19 +524,19 @@ public class SqlTable {
     }
     /**
      * Use the given rtvals to fill in the create statement, rtval/title must match elements
-     * @param dp The DataProviding object containing the values
+     * @param rtvals The RealtimeValues object containing the values
      * @return The INSERT statement or an empty string if a value wasn't found
      */
-    public boolean buildInsert( DataProviding dp ,String macro ){
-        return buildInsert("",dp,macro);
+    public boolean buildInsert( RealtimeValues rtvals ,String macro ){
+        return buildInsert("",rtvals,macro);
     }
     /**
      * Use the given rtvals object and macro to fill in the INSERT statement (@macro defined in xml)
-     * @param dp The DataProviding object containing the values
+     * @param rtvals The RealtimeValues object containing the values
      * @param macro The string to replace the @macro in the rtval with
      * @return The INSERT statement or an empty string if a value wasn't found
      */
-    public boolean buildInsert( String id, DataProviding dp, String macro ){
+    public boolean buildInsert( String id, RealtimeValues rtvals, String macro ){
        
         PrepStatement prep = preps.get(id);
         if( prep==null){
@@ -557,16 +557,16 @@ public class SqlTable {
             Object val = null;
             try{
                 if( col.type==COLUMN_TYPE.TIMESTAMP ){
-                    record[index] = index==0?TimeTools.formatLongUTCNow():dp.getText(ref,"");
+                    record[index] = index==0?TimeTools.formatLongUTCNow():rtvals.getText(ref,"");
                     continue;
                 }else if( col.type == COLUMN_TYPE.EPOCH){
                     record[index]=Instant.now().toEpochMilli();
                     continue;
                 }else if( col.type == COLUMN_TYPE.TEXT){
-                    val = dp.getText(ref,"");
+                    val = rtvals.getText(ref,"");
                 }else if( col.type == COLUMN_TYPE.INTEGER){
-                    if( dp.hasInteger(ref) ){
-                        val = dp.getInteger(ref,-999);
+                    if( rtvals.hasInteger(ref) ){
+                        val = rtvals.getInteger(ref,-999);
                     }else{
                         if( col.hasDefault) {
                             Logger.debug(id + " -> Didn't find integer with id " + ref);
@@ -576,8 +576,8 @@ public class SqlTable {
                         val = col.hasDefault?NumberUtils.createInteger(def):null;
                     }
                 }else if( col.type == COLUMN_TYPE.REAL){
-                    if( dp.hasReal(ref) ){
-                        val = dp.getReal(ref,-999);
+                    if( rtvals.hasReal(ref) ){
+                        val = rtvals.getReal(ref,-999);
                     }else{
                         if( col.hasDefault) {
                             Logger.debug(id + " -> Didn't find real with id " + ref);
@@ -595,7 +595,7 @@ public class SqlTable {
                     if( !server )
                         val = val.toString();
                 }else if( col.type == COLUMN_TYPE.DATETIME){
-                    val = TimeTools.parseDateTime(dp.getText(ref,""),"yyyy-MM-dd HH:mm:ss.SSS");
+                    val = TimeTools.parseDateTime(rtvals.getText(ref,""),"yyyy-MM-dd HH:mm:ss.SSS");
                     if( !server )
                         val = val.toString();
                 }

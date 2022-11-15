@@ -1,6 +1,6 @@
 package io.forward;
 
-import util.data.DataProviding;
+import util.data.RealtimeValues;
 import io.Writable;
 import io.netty.channel.EventLoopGroup;
 import io.telnet.TelnetCodes;
@@ -32,13 +32,13 @@ public class ForwardPool implements Commandable {
 
     private final BlockingQueue<Datagram> dQueue;
     private final Path settingsPath;
-    private final DataProviding dataProviding;
+    private final RealtimeValues rtvals;
     private final EventLoopGroup nettyGroup;
 
-    public ForwardPool(BlockingQueue<Datagram> dQueue, Path settingsPath, DataProviding dataProviding,EventLoopGroup group){
+    public ForwardPool(BlockingQueue<Datagram> dQueue, Path settingsPath, RealtimeValues rtvals,EventLoopGroup group){
         this.dQueue=dQueue;
         this.settingsPath=settingsPath;
-        this.dataProviding=dataProviding;
+        this.rtvals=rtvals;
         nettyGroup=group;
         readSettingsFromXML();
     }
@@ -125,7 +125,7 @@ public class ForwardPool implements Commandable {
 
     /*    ------------------------ Math ---------------------------------    */
     public MathForward addMath(String id, String source ){
-        var mf = new MathForward( id, source, dQueue,dataProviding);
+        var mf = new MathForward( id, source, dQueue,rtvals);
         maths.put( id, mf);
         return mf;
     }
@@ -134,7 +134,7 @@ public class ForwardPool implements Commandable {
     }
     public void readMathsFromXML( List<Element> mathsEles ){
         for( Element ele : mathsEles ){
-            MathForward mf = new MathForward( ele,dQueue,dataProviding );
+            MathForward mf = new MathForward( ele,dQueue,rtvals );
             String id = mf.getID();
             maths.put(id.replace("math:", ""), mf);
         }
@@ -272,7 +272,7 @@ public class ForwardPool implements Commandable {
                                         m ->{
                                             m.readFromXML(ee);
                                             altered.add(id);
-                                        }, ()->maths.put(id,MathForward.fromXML(ee,dQueue,dataProviding)));
+                                        }, ()->maths.put(id,MathForward.fromXML(ee,dQueue,rtvals)));
                             }
                     );
                     // Remove the ones that no longer exist
@@ -330,7 +330,7 @@ public class ForwardPool implements Commandable {
     }
     /*    ------------------------ Editor ---------------------------------    */
     public EditorForward addEditor(String id, String source ){
-        var tf = new EditorForward( id, source, dQueue,dataProviding);
+        var tf = new EditorForward( id, source, dQueue,rtvals);
         editors.put( id, tf);
         return tf;
     }
@@ -340,7 +340,7 @@ public class ForwardPool implements Commandable {
     public void readEditorsFromXML( List<Element> editorsEle ){
         Logger.info("Reading TextForwards from xml");
         for( Element ele : editorsEle ){
-            var tf = new EditorForward( ele,dQueue,dataProviding );
+            var tf = new EditorForward( ele,dQueue,rtvals );
             editors.put(tf.getID().replace("editor:", ""), tf);
         }
     }
@@ -425,7 +425,7 @@ public class ForwardPool implements Commandable {
                                     fOp.get().readFromXML(ee);
                                     altered.add(id);
                                 }else{ //if doesn't exist yet
-                                    editors.put(id,EditorForward.readXML(ee,dQueue,dataProviding));
+                                    editors.put(id,EditorForward.readXML(ee,dQueue,rtvals));
                                 }
                             }
                     );
@@ -977,7 +977,7 @@ public class ForwardPool implements Commandable {
                     if( !cmds[2].contains(":")){
                         return "No valid source  given, need to contain a :";
                     }
-                    PathForward path = new PathForward(dataProviding,dQueue,nettyGroup);
+                    PathForward path = new PathForward(rtvals,dQueue,nettyGroup);
                     path.setWorkPath(settingsPath.getParent());
                     if( cmds[2].startsWith("file:")) {
                         fab = XMLfab.withRoot(settingsPath, "dcafs", "paths")
@@ -1115,7 +1115,7 @@ public class ForwardPool implements Commandable {
     public void readPathsFromXML(){
         XMLfab.getRootChildren(settingsPath,"dcafs","paths","path").forEach(
                 pathEle -> {
-                    PathForward path = new PathForward(dataProviding,dQueue,nettyGroup);
+                    PathForward path = new PathForward(rtvals,dQueue,nettyGroup);
                     path.readFromXML(pathEle,settingsPath.getParent().toString());
                     path.setWorkPath(settingsPath.getParent());
                     var p = paths.get(path.getID());

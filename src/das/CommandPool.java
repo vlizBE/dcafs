@@ -150,10 +150,10 @@ public class CommandPool {
 		if (remember) // If to store commands in the raw log (to have a full simulation when debugging)
 			Logger.tag("RAW").info("1\tsystem\t" + question);
 
-		int dp = question.indexOf(":");
+		int rtvals = question.indexOf(":");
 
 		String[] split = new String[]{"",""};
-		if( dp != -1){
+		if( rtvals != -1){
 			split[0]=question.substring(0, question.indexOf(":"));
 			split[1]=question.substring(question.indexOf(":")+1);
 		}else{

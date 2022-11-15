@@ -1,11 +1,11 @@
 package io.forward;
 
 import org.apache.commons.lang3.math.NumberUtils;
-import util.data.DataProviding;
 import io.Writable;
 import io.netty.channel.EventLoopGroup;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.data.RealtimeValues;
 import util.database.SQLiteDB;
 import util.tools.FileTools;
 import util.tools.TimeTools;
@@ -30,7 +30,7 @@ public class PathForward {
     private final ArrayList<Writable> targets = new ArrayList<>();
     private final ArrayList<CustomSrc> customs=new ArrayList<>();
 
-    DataProviding dataProviding;
+    RealtimeValues rtvals;
     BlockingQueue<Datagram> dQueue;
     EventLoopGroup nettyGroup;
 
@@ -41,8 +41,8 @@ public class PathForward {
     static int READ_BUFFER_SIZE=2500;
     static long SKIPLINES = 0;
 
-    public PathForward(DataProviding dataProviding, BlockingQueue<Datagram> dQueue, EventLoopGroup nettyGroup ){
-        this.dataProviding = dataProviding;
+    public PathForward(RealtimeValues rtvals, BlockingQueue<Datagram> dQueue, EventLoopGroup nettyGroup ){
+        this.rtvals = rtvals;
         this.dQueue=dQueue;
         this.nettyGroup=nettyGroup;
     }
@@ -90,7 +90,7 @@ public class PathForward {
 
                 // Check for rtvals
                 var rtvals = XMLfab.getRootChildren(importPath,"dcafs","rtvals").findFirst();
-                rtvals.ifPresent( rtEle -> dataProviding.readFromXML(rtEle) );
+                rtvals.ifPresent( rtEle -> rtvals.readFromXML(rtEle) );
             }else{
                 Logger.error("No valid path script found: "+importPath);
                 return false;
@@ -177,7 +177,7 @@ public class PathForward {
                     stepsForward.add(ff);
                 }
                 case "math" -> {
-                    MathForward mf = new MathForward(step, dQueue, dataProviding);
+                    MathForward mf = new MathForward(step, dQueue, rtvals);
                     mf.removeSources();
                     if( lastff!=null && lastGenMap)
                         lastff.addReverseTarget(mf);
@@ -185,7 +185,7 @@ public class PathForward {
                     stepsForward.add(mf);
                 }
                 case "editor" -> {
-                    var ef = new EditorForward(step, dQueue, dataProviding);
+                    var ef = new EditorForward(step, dQueue, rtvals);
                     if( !ef.readOk)
                         return false;
                     if( lastff!=null && lastGenMap) {
@@ -428,7 +428,7 @@ public class PathForward {
                 case CMD:
                     targets.forEach(t->dQueue.add( Datagram.build(pathOrData).label("system").writable(t).toggleSilent())); break;
                 case RTVALS:
-                    var write = dataProviding.parseRTline(pathOrData,"-999");
+                    var write = rtvals.parseRTline(pathOrData,"-999");
                     targets.forEach( x -> x.writeLine(write));
                     break;
                 default:

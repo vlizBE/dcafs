@@ -1,6 +1,6 @@
 package io.forward;
 
-import util.data.DataProviding;
+import util.data.RealtimeValues;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
@@ -26,11 +26,11 @@ public class EditorForward extends AbstractForward{
     ArrayList<Function<String,String>> edits = new ArrayList<>(); // for the scale type
     String delimiter = ",";
 
-    public EditorForward(String id, String source, BlockingQueue<Datagram> dQueue, DataProviding dataProviding ){
-        super(id,source,dQueue,dataProviding);
+    public EditorForward(String id, String source, BlockingQueue<Datagram> dQueue, RealtimeValues rtvals ){
+        super(id,source,dQueue,rtvals);
     }
-    public EditorForward(Element ele, BlockingQueue<Datagram> dQueue, DataProviding dataProviding  ){
-        super(dQueue,dataProviding);
+    public EditorForward(Element ele, BlockingQueue<Datagram> dQueue, RealtimeValues rtvals  ){
+        super(dQueue,rtvals);
         readOk = readFromXML(ele);
     }
     /**
@@ -38,8 +38,8 @@ public class EditorForward extends AbstractForward{
      * @param ele The element containing the editor info
      * @return The EditorForward created based on the xml element
      */
-    public static EditorForward readXML(Element ele, BlockingQueue<Datagram> dQueue, DataProviding dataProviding ){
-        return new EditorForward( ele,dQueue, dataProviding );
+    public static EditorForward readXML(Element ele, BlockingQueue<Datagram> dQueue, RealtimeValues rtvals ){
+        return new EditorForward( ele,dQueue, rtvals );
     }
 
     /**
@@ -445,12 +445,12 @@ public class EditorForward extends AbstractForward{
         {
             String[] inputEles = input.split(deli); // Get the source data
 
-            StringJoiner join = new StringJoiner("",filler.length==0?"":dataProviding.parseRTline(filler[0],error),"");
+            StringJoiner join = new StringJoiner("",filler.length==0?"":rtvals.parseRTline(filler[0],error),"");
             for( int a=0;a<indexes.length;a++){
                 try {
                     join.add(inputEles[indexes[a]]);
                     if( filler.length>a+1)
-                        join.add( dataProviding.parseRTline(filler[a+1],error));
+                        join.add( rtvals.parseRTline(filler[a+1],error));
                     inputEles[indexes[a]] = null;
                 }catch( IndexOutOfBoundsException e){
                     Logger.error("Out of bounds when processing: "+input);

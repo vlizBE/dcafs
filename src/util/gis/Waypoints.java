@@ -2,11 +2,11 @@ package util.gis;
 
 import das.Commandable;
 import io.telnet.TelnetCodes;
-import util.data.DataProviding;
 import util.data.RealVal;
 import io.Writable;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.data.RealtimeValues;
 import util.gis.Waypoint.Travel;
 import util.tools.Tools;
 import util.xml.XMLfab;
@@ -41,7 +41,7 @@ public class Waypoints implements Commandable {
     ScheduledFuture<?> checkTravel;
 
     /* *************************** C O N S T R U C T O R *********************************/
-    public Waypoints(Path settingsPath, ScheduledExecutorService scheduler, DataProviding rtvals, BlockingQueue<Datagram> dQueue){
+    public Waypoints(Path settingsPath, ScheduledExecutorService scheduler, RealtimeValues rtvals, BlockingQueue<Datagram> dQueue){
         this.settingsPath=settingsPath;
         this.scheduler=scheduler;
         this.dQueue=dQueue;
@@ -67,10 +67,10 @@ public class Waypoints implements Commandable {
     public Collection<Waypoint> items(){
         return wps.values();
     }
-    public boolean readFromXML(DataProviding rtvals){
+    public boolean readFromXML(RealtimeValues rtvals){
         return readFromXML(rtvals,true);
     }
-    public boolean readFromXML( DataProviding rtvals, boolean clear ){
+    public boolean readFromXML( RealtimeValues rtvals, boolean clear ){
         
         if( settingsPath == null){
             Logger.warn("Reading Waypoints failed because invalid XML.");
@@ -88,7 +88,7 @@ public class Waypoints implements Commandable {
 
         var wpts = wptsOpt.get();
 
-        if( rtvals!=null) { // if DataProviding exist
+        if( rtvals!=null) { // if RealtimeValues exist
             Logger.info("Looking for lat, lon, sog");
             var latOpt = rtvals.getRealVal( XMLtools.getStringAttribute(wpts, "latval", "") );
             var longOpt = rtvals.getRealVal( XMLtools.getStringAttribute(wpts, "lonval", "") );
@@ -103,7 +103,7 @@ public class Waypoints implements Commandable {
             longitude = longOpt.get();
             sog = sogOpt.get();
         }else{
-            Logger.error("Couldn't process waypoints because of missing dataproviding");
+            Logger.error("Couldn't process waypoints because of missing rtvals");
             return false;
         }
 

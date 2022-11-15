@@ -4,7 +4,6 @@ import das.Commandable;
 import io.telnet.TelnetCodes;
 import org.apache.commons.lang3.ArrayUtils;
 import org.w3c.dom.Element;
-import util.data.DataProviding;
 import io.Readable;
 import io.Writable;
 import das.CommandPool;
@@ -12,6 +11,7 @@ import io.mqtt.MqttWriting;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import util.data.RealVal;
+import util.data.RealtimeValues;
 import util.database.QueryWriting;
 import util.tools.TimeTools;
 import util.xml.XMLfab;
@@ -42,7 +42,7 @@ public class LabelWorker implements Runnable, Commandable {
 	private final ArrayList<DatagramProcessing> dgProc = new ArrayList<>();
 
 	private BlockingQueue<Datagram> dQueue;      // The queue holding raw data for processing
-	private final DataProviding dp;
+	private final RealtimeValues rtvals;
 	private final QueryWriting queryWriting;
 	private MqttWriting mqtt;
 	private final Path settingsPath;
@@ -75,10 +75,10 @@ public class LabelWorker implements Runnable, Commandable {
 	 *
 	 * @param dQueue The queue to use
 	 */
-	public LabelWorker(Path settingsPath, BlockingQueue<Datagram> dQueue, DataProviding dp, QueryWriting queryWriting) {
+	public LabelWorker(Path settingsPath, BlockingQueue<Datagram> dQueue, RealtimeValues rtvals, QueryWriting queryWriting) {
 		this.settingsPath=settingsPath;
 		this.dQueue = dQueue;
-		this.dp=dp;
+		this.rtvals=rtvals;
 		this.queryWriting=queryWriting;
 
 		Logger.info("Using " + Math.min(3, Runtime.getRuntime().availableProcessors()) + " threads");
@@ -305,10 +305,10 @@ public class LabelWorker implements Runnable, Commandable {
 			}
 
 			if( !Double.isNaN(val) ){
-				if( dp.hasReal(id)){
-					dp.updateReal(id,val);
+				if( rtvals.hasReal(id)){
+					rtvals.updateReal(id,val);
 				}else{
-					dp.addRealVal( RealVal.newVal(group,name).value(val),true);
+					rtvals.addRealVal( RealVal.newVal(group,name).value(val),true);
 				}
 			}else{
 				Logger.warn("Tried to convert "+data+" from "+origin+" to a double, but got NaN");
@@ -407,7 +407,7 @@ public class LabelWorker implements Runnable, Commandable {
 						case "generic": executor.execute( () -> processGeneric(d)); break;
 						case "double": case "real":  executor.execute(() -> storeInRealVal(readID,d.getData(),d.getOriginID())); break;
 						case "valmap":  executor.execute( () -> processValmap(d)); break;
-						case "text":    executor.execute( () -> dp.setText(readID, d.data)); break;
+						case "text":    executor.execute( () -> rtvals.setText(readID, d.data)); break;
 						case "read":    executor.execute( ()-> checkRead(d.getOriginID(),d.getWritable(),readID) );break;
 						case "telnet":  executor.execute( ()-> checkTelnet(d)); break;
 						case "log":
@@ -498,7 +498,7 @@ public class LabelWorker implements Runnable, Commandable {
 			for (String valmapID : valMapIDs.split(",")) {
 				var map = mappers.get(valmapID);
 				if (map != null) {
-					map.apply(mes, dp);
+					map.apply(mes, rtvals);
 				}else{
 					Logger.error("ValMap requested but unknown id: " + valmapID + " -> Message: " + d.getData());
 				}
@@ -531,14 +531,14 @@ public class LabelWorker implements Runnable, Commandable {
 				generics.stream().forEach(
 						gen -> {
 							if ( mes.startsWith(gen.getStartsWith()) ) {
-								Object[] data = gen.apply( mes, doubles, dp, queryWriting,mqtt );
+								Object[] data = gen.apply( mes, doubles, rtvals, queryWriting,mqtt );
 								if (!gen.getTable().isEmpty() && gen.writesInDB()) {
 									if (gen.isTableMatch()) {
 										for( String id : gen.getDBID() )
 											queryWriting.addDirectInsert( id, gen.getTable(), data);
 									} else {
 										for( String id : gen.getDBID() ){
-											if (!queryWriting.buildInsert(id, gen.getTable(), dp, gen.macro)) {
+											if (!queryWriting.buildInsert(id, gen.getTable(), gen.macro)) {
 												Logger.error("Failed to write record for " + gen.getTable()+ " in "+id);
 											}
 										}
@@ -683,8 +683,8 @@ public class LabelWorker implements Runnable, Commandable {
 									if( !cmds[i+2].equalsIgnoreCase(".")) {
 										var gr = f.getAttribute("group");
 										gr=(gr.isEmpty()?"":gr+"_");
-										if( !dp.hasReal(gr+cmds[i + 2])){
-											dp.renameReal( gr+f.getTextContent(),gr+cmds[i + 2],false );
+										if( !rtvals.hasReal(gr+cmds[i + 2])){
+											rtvals.renameReal( gr+f.getTextContent(),gr+cmds[i + 2],false );
 											f.setTextContent(cmds[i + 2]);
 										}else{
 											return "Failed to rename to already existing one";
@@ -694,7 +694,7 @@ public class LabelWorker implements Runnable, Commandable {
 								i++;
 							}
 							fab.get().build();
-							dp.storeValsInXml(true);
+							rtvals.storeValsInXml(true);
 							loadGenerics();
 							return "Names set, generics reloaded";
 						case "delim":

@@ -6,7 +6,7 @@ import io.Writable;
 import das.CommandPool;
 import das.Commandable;
 import io.telnet.TelnetCodes;
-import util.data.DataProviding;
+import util.data.RealtimeValues;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.xml.XMLfab;
@@ -25,16 +25,16 @@ public class TaskManagerPool implements Commandable {
 
     private final String workPath;
     HashMap<String, TaskManager> tasklists = new HashMap<>();
-    DataProviding dp;
+    RealtimeValues rtvals;
     CommandPool cmdReq;
     StreamManager streamManager;
     EmailSending emailSender;
 
     static final String UNKNOWN_CMD = "unknown command";
 
-    public TaskManagerPool(String workpath, DataProviding dp, CommandPool cmdReq){
+    public TaskManagerPool(String workpath, RealtimeValues rtvals, CommandPool cmdReq){
         this.workPath=workpath;
-        this.dp=dp;
+        this.rtvals=rtvals;
         this.cmdReq=cmdReq;
 
     }
@@ -69,7 +69,7 @@ public class TaskManagerPool implements Commandable {
         return tl;
     }
     public TaskManager addTaskList( String id, Path scriptPath){
-        var tm = new TaskManager(id,dp,cmdReq);
+        var tm = new TaskManager(id,rtvals,cmdReq);
         tm.setScriptPath(scriptPath);
         return addTaskList(id,tm);
     }

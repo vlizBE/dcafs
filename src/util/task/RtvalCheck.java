@@ -1,8 +1,9 @@
 package util.task;
 
-import util.data.DataProviding;
+import util.data.RealtimeValues;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
+import util.data.RealtimeValues;
 import util.math.MathUtils;
 
 import java.util.ArrayList;
@@ -125,7 +126,7 @@ public class RtvalCheck {
         }
         return MathUtils.decodeDoublesOp(parts.get(0),parts.get(2),parts.get(1),0);
     }
-    public boolean test(DataProviding dp){
+    public boolean test(RealtimeValues rtvals){
         if( type==CHECKTYPE.NONE ) {
             Logger.error("Trying to run an invalid RtvalCheck:"+ ori);
             return false;
@@ -133,11 +134,11 @@ public class RtvalCheck {
         Double[] vals = new Double[is.size()];
         for(int a=0;a< vals.length;a++){
             if( is.get(a).startsWith("flag:")){
-                vals[a] = dp.isFlagUp(is.get(a).substring(5))?1.0:0;
+                vals[a] = rtvals.isFlagUp(is.get(a).substring(5))?1.0:0;
             }else if( is.get(a).startsWith("issue:")){
-                vals[a] = dp.getActiveIssues().contains(is.get(a).substring(5))?1.0:0;
+                vals[a] = rtvals.getActiveIssues().contains(is.get(a).substring(5))?1.0:0;
             }else{
-                vals[a] = dp.getReal(is.get(a),-999);
+                vals[a] = rtvals.getReal(is.get(a),-999);
             }
         }
         for( var comp : comparisons ){
@@ -155,17 +156,17 @@ public class RtvalCheck {
     public String toString(){
         return ori;
     }
-    public String toString(DataProviding dp){
+    public String toString(RealtimeValues rtvals){
         String rep = ori;
         for( String i : is){
             if( i.startsWith("flag:")){
-                rep=rep.replace(i,dp.isFlagUp(i.substring(5))?"true":"false");
+                rep=rep.replace(i,rtvals.isFlagUp(i.substring(5))?"true":"false");
             }else if( i.startsWith("issue:")){
-                rep=rep.replace(i,dp.getActiveIssues().contains(i.substring(5))?"true":"false");
+                rep=rep.replace(i,rtvals.getActiveIssues().contains(i.substring(5))?"true":"false");
             }else{
-                rep=rep.replace(i,""+dp.getReal(i,-999));
+                rep=rep.replace(i,""+rtvals.getReal(i,-999));
             }
         }
-        return ori +" -> "+rep + "=> "+test(dp);
+        return ori +" -> "+rep + "=> "+test(rtvals);
     }
 }
