@@ -251,6 +251,7 @@ public class ValTools {
                     case "utc" -> line.replace("{utc}", TimeTools.formatLongUTCNow());
                     case "utclong" -> line.replace("{utclong}", TimeTools.formatLongUTCNow());
                     case "utcshort"-> line.replace("{utcshort}", TimeTools.formatShortUTCNow());
+                    default ->line;
                 };
             }
         }
