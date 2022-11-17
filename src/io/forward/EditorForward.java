@@ -88,7 +88,9 @@ public class EditorForward extends AbstractForward{
                 .add("rexkeep -> Only retain the result of the regex given as value")
                 .add("    fe. <edit type='rexkeep' >\\d*</edit>  --> 162512")
                 .add("millisdate -> Convert epoch millis to a timestamp with given format")
-                .add("    fe. <edit type='millisdate'>yyyy-MM-dd HH:mm:ss.SSS</edit> ");
+                .add("    fe. <edit type='millisdate'>yyyy-MM-dd HH:mm:ss.SSS</edit> ")
+                .add("listreplace -> Replace the element at a certain index with the one in that position in a list")
+                .add("    fe. <edit type='listreplace' index='1' first='0'>cat,dog,canary</edit> --> if a 0 is at index 1, that will become cat");
 
         return join.toString();
     }
@@ -159,7 +161,7 @@ public class EditorForward extends AbstractForward{
         String leftover = XMLtools.getStringAttribute(edit,"leftover","append");
 
         int index = XMLtools.getIntAttribute(edit,"index",-1);
-        int position = XMLtools.getIntAttribute(edit,"index",-1);
+
 
         if( content == null ){
             Logger.error(id+" -> Missing content in an edit.");
@@ -228,7 +230,7 @@ public class EditorForward extends AbstractForward{
                 Logger.info(id+" -> Added append of "+content);
                 break;
             case "insert":
-                addInsert(position,content);
+                addInsert( XMLtools.getIntAttribute(edit,"index",-1),content);
                 Logger.info(id+" -> Added insert of "+content);
                 break;
             case "cutstart":
@@ -255,11 +257,41 @@ public class EditorForward extends AbstractForward{
                 addMillisToDate(content,index,deli);
                 Logger.info( getID() +" -> Added millis conversion to "+content);
                 break;
+            case "listreplace":
+                int first = XMLtools.getIntAttribute(edit,"first",0);
+
+                addListReplace( content, deli, index, first);
+                Logger.info(id + "(ef) -> Added listreplace of " + content + " of index "+index);
             default:
                 Logger.error(id+" -> Unknown type used : '"+edit.getAttribute("type")+"'");
                 return false;
         }
         return true;
+    }
+    public void addListReplace( String content, String deli, int index, int first){
+        rulesString.add( new String[]{"","listreplace","At "+index+" convert to "+content} );
+        String[] opts = content.split(",");
+        Function<String,String> edit = input ->
+        {
+            String[] items = input.split(deli);
+            if( index > items.length ){
+                Logger.error( id +"(ef) -> (ListReplace) Not enough elements after split of "+input);
+                return input;
+            }
+            int pos = NumberUtils.toInt(items[index],Integer.MAX_VALUE);
+            if( pos == Integer.MAX_VALUE){
+                Logger.error(id+" (ef) -> (ListReplace) Parsing to int failed for "+items[index]);
+                return input;
+            }
+            pos = pos-first;
+            if( pos <0 || pos > opts.length){
+                Logger.error( id+" (ef) -> (ListReplace) Invalid index for the list ("+pos+")");
+                return input;
+            }
+            items[index]=opts[pos];
+            return String.join(deli,items);
+        };
+        edits.add(edit);
     }
     public void addCharSplit( String deli, String positions){
         rulesString.add( new String[]{"","charsplit","At "+positions+" to "+deli} );
@@ -279,7 +311,7 @@ public class EditorForward extends AbstractForward{
         Function<String,String> edit = input ->
         {
             if(indexes.get(indexes.size()-1) > input.length()){
-                Logger.error("Can't split "+input+" if nothing exits at "+indexes.get(indexes.size()-1));
+                Logger.error(id+ "(ef) Can't split "+input+" if nothing is at "+indexes.get(indexes.size()-1));
                 return input;
             }
             try {
@@ -292,7 +324,7 @@ public class EditorForward extends AbstractForward{
                     result.add(leftover);
                 return result.toString();
             }catch( ArrayIndexOutOfBoundsException e){
-                Logger.error("Failed to apply charsplit on "+input);
+                Logger.error(id+ "(ef) Failed to apply charsplit on "+input);
             }
             return input;
         };
