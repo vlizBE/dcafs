@@ -832,9 +832,11 @@ public class RealtimeValues implements Commandable {
 	 */
 	public String getRTValsGroupList(String group, boolean showReals, boolean showFlags, boolean showTexts, boolean showInts, boolean html) {
 		String eol = html ? "<br>" : "\r\n";
-		String title = html ? "<b>Group: " + group + "</b>" : TelnetCodes.TEXT_CYAN + "Group: " + group + TelnetCodes.TEXT_YELLOW;
+		String title;
 		if( group.isEmpty()){
 			title = html ? "<b>Ungrouped</b>" : TelnetCodes.TEXT_CYAN + "Ungrouped" + TelnetCodes.TEXT_YELLOW;
+		}else{
+			title = html ? "<b>Group: " + group + "</b>" : TelnetCodes.TEXT_CYAN + "Group: " + group + TelnetCodes.TEXT_YELLOW;
 		}
 
 		StringJoiner join = new StringJoiner(eol, title + eol, "");

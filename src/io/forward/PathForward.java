@@ -47,7 +47,7 @@ public class PathForward {
         this.dQueue=dQueue;
         this.nettyGroup=nettyGroup;
     }
-    public void setWorkPath( Path wp){
+    public void setWorkPath( Path wp ){
         workPath=wp;
     }
     public String getID(){
