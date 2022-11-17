@@ -347,6 +347,9 @@ public class IntegerVal extends AbstractVal implements NumericVal{
         history.forEach( x -> decs.add((double)x));
         return MathUtils.calcStandardDeviation( decs,3);
     }
+    public String asValueString(){
+        return value+unit;
+    }
     public String toString(){
         String line = value+unit;
         if( keepMinMax && max!=Integer.MIN_VALUE )

@@ -454,6 +454,11 @@ public class IssuePool implements Commandable{
         }
 
         @Override
+        public String asValueString() {
+            return ""+isActive();
+        }
+
+        @Override
         public BigDecimal toBigDecimal() {
             return active?BigDecimal.ONE:BigDecimal.ZERO;
         }

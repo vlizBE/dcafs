@@ -6,6 +6,7 @@ import io.netty.channel.EventLoopGroup;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.data.RealtimeValues;
+import util.data.ValTools;
 import util.database.SQLiteDB;
 import util.tools.FileTools;
 import util.tools.TimeTools;
@@ -428,7 +429,7 @@ public class PathForward {
                 case CMD:
                     targets.forEach(t->dQueue.add( Datagram.build(pathOrData).label("system").writable(t).toggleSilent())); break;
                 case RTVALS:
-                    var write = rtvals.parseRTline(pathOrData,"-999");
+                    var write = ValTools.parseRTline(pathOrData,"-999",rtvals);
                     targets.forEach( x -> x.writeLine(write));
                     break;
                 default:

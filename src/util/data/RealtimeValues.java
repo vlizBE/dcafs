@@ -7,7 +7,6 @@ import io.telnet.TelnetCodes;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
-import util.math.MathUtils;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLdigger;
@@ -19,13 +18,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.regex.MatchResult;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
  * A storage class
- *
  */
 public class RealtimeValues implements Commandable {
 
@@ -43,13 +39,8 @@ public class RealtimeValues implements Commandable {
 	/* General settings */
 	private final Path settingsPath;
 
-	/* Patterns */
-	private final Pattern words = Pattern.compile("[a-zA-Z]+[_:\\d]*[a-zA-Z\\d]+\\d*"); // find references to *val
-
 	/* Other */
 	private final BlockingQueue<Datagram> dQueue; // Used to issue triggered cmd's
-
-	boolean readingXML=false;
 
 	public RealtimeValues( Path settingsPath,BlockingQueue<Datagram> dQueue ){
 		this.settingsPath=settingsPath;
@@ -70,7 +61,6 @@ public class RealtimeValues implements Commandable {
 		boolean defFlag = XMLtools.getBooleanAttribute(rtvalsEle,"flagdefault",false);
 		int defInteger = XMLtools.getIntAttribute(rtvalsEle,"integerdefault",-999);
 
-		readingXML=true;
 		if( XMLtools.hasChildByTag(rtvalsEle,"group") ) {
 			XMLtools.getChildElements(rtvalsEle, "group").forEach(
 					rtval -> {
@@ -88,7 +78,6 @@ public class RealtimeValues implements Commandable {
 					ele -> processRtvalElement(ele,"",defReal,defText,defFlag,defInteger)
 			);
 		}
-		readingXML=false;
 	}
 	public void readFromXML( XMLfab fab ){
 		readFromXML(fab.getCurrentElement());
@@ -149,149 +138,7 @@ public class RealtimeValues implements Commandable {
 			case "text" -> setText(id, XMLtools.getStringAttribute(rtval, "default", defText));
 		}
 	}
-	/* ************************************* P A R S I N G ********************************************************* */
-	/**
-	 * Simple version of the parse realtime line, just checks all the words to see if any matches the hashmaps.
-	 * If anything goes wrong, the 'error' will be returned. If this is set to ignore if something is not found it
-	 * will be replaced according to the type: real-> NaN, int -> Integer.MAX
-	 * @param line The line to parse
-	 * @param error The line to return on an error or 'ignore' if errors should be ignored
-	 * @return The (possibly) altered line
-	 */
-	public String simpleParseRT( String line,String error ){
-
-		var found = words.matcher(line).results().map(MatchResult::group).toList();
-		for( var word : found ){
-			String replacement;
-			if( word.contains(":")){ // Check if the word contains a : with means it's {d:id} etc
-				var id = word.split(":")[1];
-
-				replacement = switch (word.charAt(0) ){
-					case 'd','r' -> {
-						if( !hasReal(id) ){
-							Logger.error("No such real "+id+", extracted from "+line); // notify
-							if( !error.equalsIgnoreCase("ignore")) // if errors should be ignored
-								yield error;
-						}
-						yield ""+getReal(id,Double.NaN);
-					}
-					case 'i' -> {
-						if( !hasInteger(id) ) { // ID found
-							Logger.error("No such integer "+id+", extracted from "+line); // notify
-							if( !error.equalsIgnoreCase("ignore")) // if errors should be ignored
-								yield error;
-						}
-						yield "" + getInteger(id,Integer.MAX_VALUE);
-					}
-					case 'f'-> {
-						if (!hasFlag(id)) {
-							Logger.error("No such flag " + id + ", extracted from " + line);
-							if (!error.equalsIgnoreCase("ignore"))
-								yield error;
-						}
-						yield getFlagState(id) ? "1" : "0";
-					}
-					case 't', 'T' -> {
-						var te = texts.get(id);
-						if (te == null && word.charAt(0) == 'T') {
-							texts.put(id, "");
-							te = "";
-						}
-						if (te == null) {
-							Logger.error("No such text " + id + ", extracted from " + line);
-							if (!error.equalsIgnoreCase("ignore"))
-								yield error;
-						}
-						yield te;
-					}
-					default -> {
-						Logger.error("No such type: "+word.charAt(0));
-						yield error;
-					}
-				};
-			}else { // If it doesn't contain : it could be anything...
-				if (hasReal(word)) { //first check for real
-					replacement = "" + getReal(word,Double.NaN);
- 				} else { // if not
-					if( hasInteger(word)){
-						replacement = ""  + getInteger(word,-999);
-					}else {
-						if (hasText(word)) { //next, try text
-							replacement = getText(word,"");
-						} else if (hasFlag(word)) { // if it isn't a text, check if it's a flag
-							replacement = getFlagState(word) ? "1" : "0";
-						} else{
-							Logger.error("Couldn't process " + word + " found in " + line); // log it and abort
-							return error;
-						}
-					}
-				}
-			}
-			assert replacement != null;
-			if( replacement.equalsIgnoreCase(error))
-				return error;
-			if( !replacement.isEmpty() )
-				line = line.replace(word,replacement);
-		}
-		return line;
-	}
-
-	/**
-	 * Stricter version to parse a realtime line, must contain the references within { }
-	 * Options are:
-	 * - RealVal: {d:id} and {real:id}
-	 * - FlagVal: {f:id} or {b:id} and {flag:id}
-	 * This also checks for {utc}/{utclong},{utcshort} to insert current timestamp
-	 * @param line The original line to parse/alter
-	 * @param error Value to put if the reference isn't found
-	 * @return The (possibly) altered line
-	 */
-	public String parseRTline( String line, String error ){
-
-		if( !line.contains("{"))
-			return line;
-
-		var pairs = Tools.parseKeyValue(line,true);
-		for( var p : pairs ){
-			if(p.length==2) {
-				switch (p[0]) {
-					case "d", "r", "double", "real" -> {
-						var d = getReal(p[1], Double.NaN);
-						if (!Double.isNaN(d) || !error.isEmpty())
-							line = line.replace("{" + p[0] + ":" + p[1] + "}", Double.isNaN(d) ? error : "" + d);
-					}
-					case "i", "int", "integer" -> {
-						var i = getInteger(p[1], Integer.MAX_VALUE);
-						if (i != Integer.MAX_VALUE)
-							line = line.replace("{" + p[0] + ":" + p[1] + "}", "" + i);
-					}
-					case "t", "text" -> {
-						String t = getText(p[1], error);
-						if (!t.isEmpty())
-							line = line.replace("{" + p[0] + ":" + p[1] + "}", t);
-					}
-					case "f", "b", "flag" -> {
-						var d = getFlagVal(p[1]);
-						var r = d.map(FlagVal::toString).orElse(error);
-						if (!r.isEmpty())
-							line = line.replace("{" + p[0] + ":" + p[1] + "}", r);
-					}
-				}
-			}else{
-				switch(p[0]){
-					case "utc": line = line.replace("{utc}", TimeTools.formatLongUTCNow());break;
-					case "utclong": line = line.replace("{utclong}", TimeTools.formatLongUTCNow());
-					case "utcshort": line = line.replace("{utcshort}", TimeTools.formatShortUTCNow());
-				}
-			}
-		}
-		if( line.toLowerCase().matches(".*[{][drfi]:.*") && !pairs.isEmpty()){
-			Logger.warn("Found a {*:*}, might mean parsing a section of "+line+" failed");
-		}
-		return line;
-	}
 	/* ************************************ R E A L V A L ***************************************************** */
-
 	/**
 	 * Add a RealVal to the collection if it doesn't exist yet, optionally writing it to xml
 	 * @param rv The RealVal to add
@@ -315,7 +162,7 @@ public class RealtimeValues implements Commandable {
 	}
 	public boolean hasReal(String id){
 		if( id.isEmpty()) {
-			Logger.error("Realval -> Empty id given");
+			Logger.error("RealVal -> Empty id given");
 			return false;
 		}
 		return realVals.containsKey(id);
@@ -344,6 +191,11 @@ public class RealtimeValues implements Commandable {
 	public boolean updateReal(String id, double value) {
 		return getRealVal(id).map( r -> {r.updateValue(value);return true;}).orElse(false);
 	}
+	public boolean updateReal(String id, String value) {
+		if( NumberUtils.isCreatable(value))
+			return getRealVal(id).map( r -> {r.updateValue(NumberUtils.toDouble(value));return true;}).orElse(false);
+		return false;
+	}
 	/**
 	 * Alter all the values of the reals in the given group
 	 * @param group The group to alter
@@ -371,6 +223,9 @@ public class RealtimeValues implements Commandable {
 		}
 		return dOpt.get().value(star==-1?"":id.substring(star+1));
 	}
+	public String realValueString(String id){
+		return getRealVal(id).map( rv -> rv.asValueString()).orElse("?"+id+"?");
+	}
 	/* ************************************ I N T E G E R V A L ***************************************************** */
 
 	/**
@@ -380,7 +235,7 @@ public class RealtimeValues implements Commandable {
 	 */
 	public Optional<IntegerVal> getIntegerVal( String id ){
 		if( integerVals.get(id)==null)
-			Logger.error( "Tried to retrieve non existing integerval "+id);
+			Logger.error( "Tried to retrieve non existing IntegerVal "+id);
 		return Optional.ofNullable(integerVals.get(id));
 	}
 	public boolean hasInteger( String id ){
@@ -445,6 +300,9 @@ public class RealtimeValues implements Commandable {
 		}
 		return i.intValue( star==-1?"":id.substring(star+1) );
 	}
+	public String intValueString(String id){
+		return getRealVal(id).map( rv -> rv.asValueString()).orElse("?"+id+"?");
+	}
 	/* *********************************** T E X T S  ************************************************************* */
 	public boolean hasText(String id){
 		return texts.containsKey(id);
@@ -468,24 +326,22 @@ public class RealtimeValues implements Commandable {
 
 	/**
 	 * Set the value of a textval and create it if it doesn't exist yet
-	 * @param parameter The name/id of the val
+	 * @param id The name/id of the val
 	 * @param value The new content
 	 * @return True if it was created
 	 */
-	public boolean setText(String parameter, String value) {
+	public boolean setText(String id, String value) {
 
-		if( parameter.isEmpty()) {
-			Logger.error("Empty param given");
+		if( id.isEmpty()) {
+			Logger.error("Empty id given");
 			return false;
 		}
-		Logger.debug("Setting "+parameter+" to "+value);
-
-		boolean created = texts.put(parameter, value)==null;
+		boolean created = texts.put(id, value)==null;
 
 		if( !textRequest.isEmpty()){
-			var res = textRequest.get(parameter);
+			var res = textRequest.get(id);
 			if( res != null)
-				res.forEach( wr -> wr.writeLine(parameter + " : " + value));
+				res.forEach( wr -> wr.writeLine(id + " : " + value));
 		}
 		return created;
 	}
@@ -885,7 +741,7 @@ public class RealtimeValues implements Commandable {
 			case "update":
 				if( !hasReal(cmds[1]) )
 					return "No such id "+cmds[1];
-				result = processExpression(cmds[2]);
+				result = ValTools.processExpression(cmds[2],this);
 				if( Double.isNaN(result) )
 					return "Unknown id(s) in the expression "+cmds[2];
 				updateReal(cmds[1],result);
@@ -918,33 +774,7 @@ public class RealtimeValues implements Commandable {
 				return "unknown command: "+request[0]+":"+request[1];
 		}
 	}
-	private double processExpression( String expr ){
-		double result=Double.NaN;
 
-		expr = parseRTline(expr,"");
-		expr = expr.replace("true","1");
-		expr = expr.replace("false","0");
-
-		expr = simpleParseRT(expr,""); // Replace all references with actual numbers if possible
-
-		if( expr.isEmpty()) // If any part of the conversion failed
-			return result;
-
-		var parts = MathUtils.extractParts(expr);
-		if( parts.size()==1 ){
-			result = NumberUtils.createDouble(expr);
-		}else if (parts.size()==3){
-			result = Objects.requireNonNull(MathUtils.decodeDoublesOp(parts.get(0), parts.get(2), parts.get(1), 0)).apply(new Double[]{});
-		}else{
-			try {
-				result = MathUtils.simpleCalculation(expr, Double.NaN, false);
-			}catch(IndexOutOfBoundsException e){
-				Logger.error("Index out of bounds while processing "+expr);
-				return Double.NaN;
-			}
-		}
-		return result;
-	}
 	public String replyToRtvalsCmd( String[] request, boolean html ){
 
 		if( request[1].isEmpty())
@@ -1027,8 +857,8 @@ public class RealtimeValues implements Commandable {
 					})
 					.map(nv -> {
 						if( nv instanceof RealVal)
-							return "  " + nv.name() + " : "+ nv.value()+ nv.unit();
-						return "  " + nv.name() + " : "+ nv.intValue() + nv.unit();
+							return "  " + nv.name() + " : "+ nv.asValueString();
+						return "  " + nv.name() + " : "+ nv.asValueString();
 					} ) // change it to strings
 					.forEach(join::add);
 		}
@@ -1135,7 +965,6 @@ public class RealtimeValues implements Commandable {
 		return groups.stream().distinct().sorted().toList();
 	}
 	/* ******************************** I S S U E P O O L ********************************************************** */
-
 	/**
 	 * Get a list of the id's of the active issues
 	 * @return A list of the active issues id's

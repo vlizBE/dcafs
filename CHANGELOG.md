@@ -24,6 +24,16 @@ be more logical...
 - Improved the feedback given by `pf:list` a lot
 - If no (empty) group is given to a generic/store inside a path, the id of the path is used
 
+### EditorForward
+- Added listreplace to allow to replace a digit at a certain position with another value.
+````xml
+<editor type="listreplace" index="1" delimiter="," first="1">cat,dog,horse</editor>
+<!-- index is the position of the value in the input after split on delimiter
+     first means that the first element of the list corresponds to that number, default is 0
+     So if the input was 'cow,chicken,3,goat' this will become 'cow,chicken,horse,goat' because horst is
+ --> 
+````
+
 ### Generics
 - Added flags/bool
 - Removed filters

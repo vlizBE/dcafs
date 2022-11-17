@@ -11,6 +11,7 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import util.data.ValTools;
 import util.task.Task.*;
 import util.taskblocks.CheckBlock;
 import util.tools.FileTools;
@@ -774,7 +775,7 @@ public class TaskManager implements CollectorFuture {
 						}
 						break;
 					case TELNET:
-						var send = rtvals.parseRTline(task.value,"");
+						var send = ValTools.parseRTline(task.value,"",rtvals);
 						commandPool.createResponse(Datagram.build("telnet:broadcast,"+task.outputRef+","+send),false);
 						break;
 					case MANAGER:
@@ -1017,7 +1018,7 @@ public class TaskManager implements CollectorFuture {
 			to = Tools.getMAC( line.substring(i+5,i+end) );
 			line = line.replace(line.substring(i,i+end+1),to);
 		}
-		line = rtvals.parseRTline(line,"");
+		line = ValTools.parseRTline(line,"",rtvals);
     	line = line.replace("[EOL]", "\r\n");
     	return line;
     }

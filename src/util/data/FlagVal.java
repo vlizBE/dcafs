@@ -201,7 +201,9 @@ public class FlagVal extends AbstractVal implements NumericVal{
     public int intValue() {
         return state?1:0;
     }
-
+    public String asValueString(){
+        return toString();
+    }
     public String toString(){
         return ""+state;
     }

@@ -409,6 +409,9 @@ public class RealVal extends AbstractVal implements NumericVal{
     public boolean equals( double d){
         return Double.compare(value,d)==0;
     }
+    public String asValueString(){
+        return value+unit;
+    }
     public String toString(){
         String line = value+unit;
         if( keepMinMax && max!=Double.MIN_VALUE )

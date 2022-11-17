@@ -4,6 +4,7 @@ import util.data.RealtimeValues;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.data.ValTools;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
@@ -259,9 +260,9 @@ public class EditorForward extends AbstractForward{
                 break;
             case "listreplace":
                 int first = XMLtools.getIntAttribute(edit,"first",0);
-
                 addListReplace( content, deli, index, first);
                 Logger.info(id + "(ef) -> Added listreplace of " + content + " of index "+index);
+                break;
             default:
                 Logger.error(id+" -> Unknown type used : '"+edit.getAttribute("type")+"'");
                 return false;
@@ -477,12 +478,12 @@ public class EditorForward extends AbstractForward{
         {
             String[] inputEles = input.split(deli); // Get the source data
 
-            StringJoiner join = new StringJoiner("",filler.length==0?"":rtvals.parseRTline(filler[0],error),"");
+            StringJoiner join = new StringJoiner("",filler.length==0?"": ValTools.parseRTline(filler[0],error,rtvals),"");
             for( int a=0;a<indexes.length;a++){
                 try {
                     join.add(inputEles[indexes[a]]);
                     if( filler.length>a+1)
-                        join.add( rtvals.parseRTline(filler[a+1],error));
+                        join.add( ValTools.parseRTline(filler[a+1],error,rtvals));
                     inputEles[indexes[a]] = null;
                 }catch( IndexOutOfBoundsException e){
                     Logger.error("Out of bounds when processing: "+input);
