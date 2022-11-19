@@ -137,14 +137,14 @@ public class EditorForward extends AbstractForward{
     }
 
     @Override
-    public boolean writeToXML(XMLfab fab) {
+    public void writeToXML(XMLfab fab) {
         fab.digRoot("editors");
         fab.selectOrAddChildAsParent("editor","id",id);
 
         /* Attributes and nodes that are the same for all forwards fe.label and src */
         writeBasicsToXML(fab);
 
-        return fab.build();
+        fab.build();
     }
 
     @Override

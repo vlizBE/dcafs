@@ -5,7 +5,6 @@ import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 import util.tools.Tools;
 
-import javax.swing.text.html.Option;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -28,6 +27,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 public class XMLtools {
@@ -76,7 +76,7 @@ public class XMLtools {
 			Logger.error("Error occurred while reading " + path, true);
 			Logger.error(e);
 		}
-		return Optional.of(doc);
+		return Optional.ofNullable(doc);
 	}
 	/**
 	 * Create an empty xml file and return the Document to fill in
@@ -106,14 +106,13 @@ public class XMLtools {
 
 	/**
 	 * Write the content of a Document to an xml file
-	 * 
+	 *
 	 * @param xmlFile The file to write to
 	 * @param xmlDoc  The content to write in the file
-	 * @return True if nothing weird happened
 	 */
-	public static boolean writeXML(Path xmlFile, Document xmlDoc) {
+	public static void writeXML(Path xmlFile, Document xmlDoc) {
 		if( xmlDoc == null )
-			return false;
+			return;
 
 		try ( var fos = new FileOutputStream(xmlFile.toFile());
 			  var writer = new OutputStreamWriter(fos, StandardCharsets.UTF_8)
@@ -135,18 +134,17 @@ public class XMLtools {
 		} catch (Exception e) {
 			Logger.error("Failed writing XML: "+xmlFile.toString());
 			Logger.error(e);
-			return false;
+			return;
 		}
 		Logger.debug("Written XML: "+ xmlFile);
-		return true;
 	}
 	/**
 	 * Write the xmldoc to the file it was read from
+	 *
 	 * @param xmlDoc The updated document
-	 * @return True if succesful
 	 */
-	public static boolean updateXML( Document xmlDoc ){
-		return XMLtools.writeXML( getDocPath(xmlDoc), xmlDoc );//overwrite the file
+	public static void updateXML(Document xmlDoc ){
+		XMLtools.writeXML(getDocPath(xmlDoc), xmlDoc);
 	}
 	/**
 	 * Reload the given xmlDoc based on the internal URI
@@ -158,20 +156,20 @@ public class XMLtools {
 			Logger.error("The give xmldoc doesn't contain a valid uri");
 			return null;
 		}
-		return XMLtools.readXML(getDocPath(xmlDoc));
+		return XMLtools.readXML(Objects.requireNonNull(getDocPath(xmlDoc)));
 	}
 
 	/**
 	 * Get the parent path of this xml document
-	 * @param xmlDoc
-	 * @return
+	 * @param xmlDoc The document
+	 * @return The path of the document
 	 */
 	public static Path getXMLparent(Document xmlDoc){
 		if( xmlDoc.getDocumentURI() == null) {
 			Logger.error("The give xmldoc doesn't contain a valid uri");
 			return Path.of("");
 		}
-		return getDocPath(xmlDoc).getParent();
+		return Objects.requireNonNull(getDocPath(xmlDoc)).getParent();
 	}
 	public static Path getDocPath(Document xmlDoc){
 		try {
@@ -205,7 +203,7 @@ public class XMLtools {
 			if (nNode == null)
 				return Optional.empty();
 			if (nNode.getNodeType() == Node.ELEMENT_NODE) {
-				return Optional.ofNullable((Element) nNode);
+				return Optional.of((Element) nNode);
 			}
 		}
 		Logger.debug("No such tag? " + tag);
@@ -533,28 +531,25 @@ public class XMLtools {
 	/* ********************************* W R I T I N G **************************************/
 	/**
 	 * Remove all children of a node
+	 *
 	 * @param node The node to remove the children off
-	 * @return The amound of nodes removed or -1 if invalid node was given
 	 */
-	public static int removeAllChildren(Node node) {
+	public static void removeAllChildren(Node node) {
 
 		if( node ==null){
 			Logger.error("Given node is null");
-			return -1;
+			return;
 		}
-		int count=0;
 		while (node.hasChildNodes()){
 			node.removeChild(node.getFirstChild());
-			count++;
 		}
-		return count;
 	}
 	/**
 	 * Do a clean of the xml document according to xpathfactory
+	 *
 	 * @param xmlDoc The document to clean
-	 * @return The element if no errors occurred or null if so
 	 */
-	public static boolean cleanXML(Document xmlDoc) {
+	public static void cleanXML(Document xmlDoc) {
 		XPathFactory xpathFactory = XPathFactory.newInstance();
 		// XPath to find empty text nodes.
 		XPathExpression xpathExp;
@@ -569,9 +564,7 @@ public class XMLtools {
 			}
 		} catch (XPathExpressionException e) {
 			Logger.error(e);
-			return false;
 		}
-		return true;
 	}
 	/**
 	 * Create an empty child node in the given parent

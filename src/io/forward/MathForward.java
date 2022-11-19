@@ -167,11 +167,11 @@ public class MathForward extends AbstractForward {
     }
     /**
      * Store this object's setup to the xml referred to with the given fab
+     *
      * @param fab The XMLfab pointing to where the parent xml should be
-     * @return True if writing was successful
      */
     @Override
-    public boolean writeToXML(XMLfab fab) {
+    public void writeToXML(XMLfab fab) {
         xml = fab.getXMLPath();
         xmlOk=true;
 
@@ -212,7 +212,7 @@ public class MathForward extends AbstractForward {
                     fab.attr("type",rule[0]);
             } );
         }
-        return fab.build();
+        fab.build();
     }
     /**
      * Give data to this forward for processing

@@ -120,10 +120,10 @@ public class FilterForward extends AbstractForward {
     }
     /**
      * Write this object to the given Xmlfab
+     *
      * @param fab The Xmlfab to which this should be written, pointing to the das root
-     * @return True if writing was a success
      */
-    public boolean writeToXML( XMLfab fab ){
+    public void writeToXML(XMLfab fab ){
         xml = fab.getXMLPath();
         xmlOk=true;
 
@@ -135,8 +135,10 @@ public class FilterForward extends AbstractForward {
 
         writeBasicsToXML(fab);
 
-        if( rules.isEmpty() )
-            return fab.build();
+        if( rules.isEmpty() ) {
+            fab.build();
+            return;
+        }
 
         if( rules.size()==1 && sources.size()==1){
             fab.attr("type",rulesString.get(0)[1]).content(rulesString.get(0)[2]);
@@ -153,7 +155,7 @@ public class FilterForward extends AbstractForward {
                     fab.attr("delimiter",rule[3]);
             } );
         }
-        return fab.build();
+        fab.build();
     }
 
     /**

@@ -301,7 +301,7 @@ public class RealtimeValues implements Commandable {
 		return i.intValue( star==-1?"":id.substring(star+1) );
 	}
 	public String intValueString(String id){
-		return getRealVal(id).map( rv -> rv.asValueString()).orElse("?"+id+"?");
+		return getRealVal(id).map(RealVal::asValueString).orElse("?"+id+"?");
 	}
 	/* *********************************** T E X T S  ************************************************************* */
 	public boolean hasText(String id){
@@ -434,21 +434,19 @@ public class RealtimeValues implements Commandable {
 		}
 		return cnt;
 	}
-	public boolean setFlagState( String id, String state){
+	public void setFlagState(String id, String state){
 		if(!hasFlag(id)) {
 			Logger.error("No such flagVal "+id);
-			return false;
+			return;
 		}
 		getFlagVal(id).map( fv->fv.setState(state));
-		return true;
 	}
-	public boolean setFlagState( String id, boolean state){
+	public void setFlagState(String id, boolean state){
 		if(!hasFlag(id)) {
 			Logger.error("No such flagVal "+id);
-			return false;
+			return;
 		}
 		getFlagVal(id).map( fv->fv.setState(state));
-		return true;
 	}
 	/* ******************************************************************************************************/
 

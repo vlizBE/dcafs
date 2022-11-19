@@ -33,9 +33,6 @@ public abstract class AbstractForward implements Writable {
     protected Path xml;                        // Path to the xml file containing the info
     protected String label="";                 // With this the forward can use the dataQueue as a target
     protected int badDataCount=0;               // Keep track of the amount of bad data received
-    protected int skipsCount=0;                 // Keep track of the amount of skips done
-    static final protected int MAX_BAD_COUNT=10;
-    static final protected int SKIP_COUNT=300;
     protected boolean log = false;
     protected final RealtimeValues rtvals;
     protected boolean readOk=false;
@@ -219,10 +216,10 @@ public abstract class AbstractForward implements Writable {
     protected abstract boolean addData( String data );
     /**
      * Write all the settings for this to the given xml file
+     *
      * @param fab The XMLfab pointing to where the parent xml should be
-     * @return True if written
      */
-    public abstract boolean writeToXML( XMLfab fab );
+    public abstract void writeToXML(XMLfab fab );
 
     /**
      * Read all the settings for this from the given xml element
