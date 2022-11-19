@@ -168,6 +168,7 @@ public class LabelWorker implements Runnable, Commandable {
 		}else {
 			generics.put(gen.getID(), gen);
 			Logger.info("Added generic " + gen.getID());
+			gen.createRtvals(rtvals);
 		}
 	}
 	public String getGenericInfo() {
