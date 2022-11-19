@@ -7,6 +7,7 @@ import org.tinylog.Logger;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
@@ -18,6 +19,7 @@ public class MathFab {
     int resultIndex=-1;
     int requiredInputs=0;
     boolean debug = false;
+    boolean showError=true;
     String ori="";
     boolean valid;
 
@@ -35,6 +37,9 @@ public class MathFab {
      */
     public void setDebug( boolean debug ){
         this.debug=debug;
+    }
+    public void setShowError(boolean error){
+        this.showError=error;
     }
     public String getOri(){
         return ori;
@@ -179,24 +184,24 @@ public class MathFab {
         var bds = new BigDecimal[val.length];
         for(int a=0;a<val.length;a++)
             bds[a]=BigDecimal.valueOf(val[a]);
-        var bd = solve(bds);
+        var bdOpt = solve(bds);
 
-        return bd.doubleValue();
+        return bdOpt.map(bd ->bd.doubleValue()).orElse(Double.NaN);
     }
     /**
      * Solve the build equation using the given bigdecimals
      * @param data The bigDecimals used in the operation
-     * @return Result of the operation
+     * @return Result of the operation as an optional
      * @throws ArrayIndexOutOfBoundsException Indicating lack of elements
      */
-    public BigDecimal solve( BigDecimal[] data ) throws ArrayIndexOutOfBoundsException{
+    public Optional<BigDecimal> solve(BigDecimal[] data ) throws ArrayIndexOutOfBoundsException{
         if( resultIndex == -1 ){
             Logger.error("No valid formula present");
-            return null;
+            return Optional.empty();
         }
         if( data == null ){
             Logger.error("Source data is null");
-            return null;
+            return Optional.empty();
         }
         if( requiredInputs > data.length ){
             throw new ArrayIndexOutOfBoundsException("Not enough elements given, need at least "+requiredInputs+" but got "+data.length);
@@ -213,28 +218,34 @@ public class MathFab {
                 if( debug )
                     Logger.info(i +" : "+total[i]); // As extra debug information, put the result in the log
                 i++;// increment the counter
-            }catch (IndexOutOfBoundsException | NullPointerException e){
-                Logger.error("Bad things when it was processed, array size "+data.length+" versus "+requiredInputs +" with step null?"+(f==null));
-                Logger.error("Original formula: "+ori);
-
-                for( int a=0;a<data.length;a++){
-                    if( data[a]!=null) {
-                        Logger.error(a+" -> array: " + data[a]);
-                    }else{
-                        Logger.error(a+" -> array: null");
+            }catch (IndexOutOfBoundsException e) {
+                if(showError ) {
+                    Logger.error("Bad things when it was processed, array size need " + requiredInputs + " got " + +data.length);
+                    Logger.error(" -> Original formula: " + ori);
+                }
+                return Optional.empty();
+            }catch (NullPointerException np){
+                if(showError ) {
+                    Logger.error("Original formula: " + ori);
+                    for (int a = 0; a < data.length; a++) {
+                        String error = np.getMessage();
+                        if (data[a] != null) {
+                            Logger.error(a + " -> array: " + data[a]);
+                        } else {
+                            Logger.error(a + " -> array: null" + (error.contains("[i" + a + "]") ? " -> need this" : ""));
+                        }
                     }
                 }
-                Logger.error(e.getMessage());
-                return null;
+                return Optional.empty();
             }
         }
         if( total[resultIndex] != null ) { // If the position in which the result should be isn't null
             if(debug)
                 Logger.info("Result: " + total[resultIndex].doubleValue());
-            return total[resultIndex]; // return this result
+            return Optional.ofNullable(total[resultIndex]); // return this result
         }else{
             Logger.error("Something went wrong during calculation");
-            return null;
+            return Optional.empty();
         }
     }
     public static void test(){

@@ -1069,7 +1069,16 @@ public class MathUtils {
      * @return The resulting array
      */
     public static BigDecimal[] toBigDecimals(String list, String delimiter, int maxIndex ){
-        String[] split = list.split(delimiter);
+        return toBigDecimals(list.split(delimiter),maxIndex);
+    }
+    /**
+     * Convert a delimited string to BigDecimals array where possible, fills in null if not
+     * @param split The data splitted
+     * @param maxIndex The highest required index
+     * @return The resulting array
+     */
+    public static BigDecimal[] toBigDecimals(String[] split, int maxIndex ){
+
         if( maxIndex==-1)
             maxIndex=split.length-1;
 
@@ -1090,7 +1099,6 @@ public class MathUtils {
         }
         return nulls==bds.length?null:bds;
     }
-
     /**
      * Convert a delimited string to an array of doubles, inserting null where conversion is not possible
      * @param list The delimited string

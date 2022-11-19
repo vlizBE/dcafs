@@ -40,13 +40,15 @@ public class MathForward extends AbstractForward {
 
     public MathForward(String id, String source, BlockingQueue<Datagram> dQueue, RealtimeValues rtvals){
         super(id,source,dQueue,rtvals);
+        valid = rtvals!=null;
     }
     public MathForward(Element ele, BlockingQueue<Datagram> dQueue, RealtimeValues rtvals){
         super(dQueue,rtvals);
-        readOk = readFromXML(ele);
+        valid = readFromXML(ele);
     }
     public MathForward(BlockingQueue<Datagram> dQueue, RealtimeValues rtvals){
         super(dQueue,rtvals);
+        valid = rtvals!=null;
     }
     /**
      * Read a mathForward from an element in the xml
@@ -219,54 +221,51 @@ public class MathForward extends AbstractForward {
      */
     @Override
     protected boolean addData(String data) {
+
+        // First check if the operations are actually valid
+        if( !valid ){
+            if( showError() )
+                Logger.error(id+"(mf) -> Not processing data because the operations aren't valid");
+        }
+
         String[] split = data.split(delimiter); // Split the data according to the delimiter
 
-        BigDecimal[] bds = makeBDArray(data);
+        // Then make sure there's enough items in split
+        if( split.length < highestI+1){ // Need at least one more than the highestI (because it starts at 0)
+            if( showError() ) // Report first 5 but then every 60
+                Logger.error(id +"(mf) -> Need at least "+(highestI+1)+" items after splitting: "+data+ ", got "+split.length+" (bad:"+badDataCount+")"); // If not, report
 
-        int oldBad = badDataCount;
+            return true; // Stop processing
+        }
+        // Convert the split data to bigdecimals
+        BigDecimal[] bds = makeBDArray(split);
 
+        // First do a global check, if none of the items is a number, no use to keep trying
         if( bds == null ){
-            badDataCount++;
-            Logger.error(id+" (mf)-> No valid numbers in the data: "+data+" after split on "+delimiter+ " "+badDataCount+"/"+MAX_BAD_COUNT);
-            targets.stream().filter( wr -> wr.getID().contains("telnet"))
-                    .forEach( wr -> wr.writeLine(id+"'mf) No valid numbers in data after split on '"+delimiter+"'"));
-            if( badDataCount>=MAX_BAD_COUNT) {
-                Logger.error(id+"(mf)-> Too much bad data received, no longer accepting data");
-                targets.stream().filter( wr -> wr.getID().contains("telnet"))
-                        .forEach( wr -> wr.writeLine(id+"'mf) Stopped requesting data"));
-                valid=false;
-                return false;
-            }
+            if(showError() )
+                Logger.error(id+" (mf)-> No valid numbers in the data: "+data+" after split on "+delimiter+ " "+ " (bad:"+badDataCount+")");
             return true;
         }
+        // We know that the 'highest needed index' needs to actually be a number
+        if( bds[highestI]==null){
+            if( showError() )
+                Logger.error(id+" (mf)-> No valid highest I value in the data: "+data+" after split on "+delimiter+ " "+ " (bad:"+badDataCount+")");
+            return true;
+        }
+        int oldBad = badDataCount; // now it's worthwhile to compare bad data count
+        // After doing all possible initial test, do the math
         for( var op : ops ){
-            if( op!=null ) {
-                var res = op.solve(bds);
-                if (res == null) {
-                    badDataCount++;
-                    Logger.error(id + "(mf) -> Failed to process " + data + " ("+badDataCount+"/"+MAX_BAD_COUNT+")");
-                    targets.stream().filter( wr -> wr.getID().contains("telnet"))
-                            .forEach( wr -> wr.writeLine(id+"(mf) -> Failed to process "+ data));
-                    break; //don't try to continue with the ops if a step failed
-                }
-            }else{
-                badDataCount++;
-                Logger.error(id + "(mf) -> Invalid op " + data+ " ("+badDataCount+"/"+MAX_BAD_COUNT+")");
-                targets.stream().filter( wr -> wr.getID().contains("telnet"))
-                        .forEach( wr -> wr.writeLine(id+"(mf) -> Invalid op "+ data));
+            var res = op.solve(bds);
+            if (res == null) {
+                if( showError() )
+                    Logger.error(id + "(mf) -> Failed to process " + data + " (bad:"+badDataCount+")");
+                return true; //don't try to continue with the ops if a step failed
             }
-        } // Solve the operations with the converted data
-        if( oldBad == badDataCount )
-            badDataCount=0;
-
-        if( badDataCount >=MAX_BAD_COUNT) {
-            targets.stream().filter( wr -> wr.getID().contains("telnet"))
-                    .forEach( wr -> wr.writeLine(id+"(mf) -> To many fails, giving up"));
-            valid=false;
-            return false;
         }
-        if(badDataCount > 0)
-            return true;
+        // If we got to this point, processing went fine so reset badcounts
+        if( badDataCount !=0 )
+            Logger.info(id+" (mf) -> Executed properly after previous issses, resestting bad count" );
+        badDataCount=0;
 
         StringJoiner join = new StringJoiner(delimiter); // prepare a joiner to rejoin the data
         for( int a=0;a<split.length;a++){
@@ -278,18 +277,14 @@ public class MathForward extends AbstractForward {
         }
 
         // append suffix
-        String result;
-        if(!suffix.isEmpty()){
-            // Append the nmea checksum
-            if( suffix.equalsIgnoreCase("nmea")){
-                result=join+"*"+MathUtils.getNMEAchecksum(join.toString());
-            }else{
-                Logger.error(id+" (mf)-> No such suffix "+suffix);
-                result=join.toString();
-            }
-        }else{
-            result=join.toString();
-        }
+        String result = switch( suffix ){
+                            case "" -> join.toString();
+                            case "nmea" -> join+"*"+MathUtils.getNMEAchecksum(join.toString());
+                            default -> {
+                                Logger.error(id+" (mf)-> No such suffix "+suffix);
+                                yield join.toString();
+                            }
+        };
 
         if( debug ){ // extra info given if debug is active
             Logger.info(getID()+" -> Before: "+data);   // how the data looked before
@@ -308,12 +303,27 @@ public class MathForward extends AbstractForward {
 
         // If there are no target, no label and no ops that build a command, this no longer needs to be a target
         if( noTargets() && !log){
-            valid=false;
             if( deleteNoTargets )
                 dQueue.add( Datagram.system("mf:remove,"+id) );
             return false;
         }
         return true;
+    }
+    private boolean showError(){
+        return showError(true);
+    }
+    private boolean showError(boolean count){
+        if( count)
+            badDataCount++;
+        if( badDataCount==1 && !label.isEmpty())
+            dQueue.add( Datagram.build("corrupt").label(label).writable(this) );
+
+        if( badDataCount < 6)
+            return true;
+        if( badDataCount % 60 == 0 ) {
+            return badDataCount < 900 || badDataCount%600==0;
+        }
+        return false;
     }
     /* ************************************** ADDING OPERATIONS **************************************************** */
     /**
@@ -337,7 +347,7 @@ public class MathForward extends AbstractForward {
                 op.setCmd(cmd);
                 op.setScale(scale);
                 rulesString.add(new String[]{"complex",""+NumberUtils.toInt(expression.substring(1)),expression});
-                ops.add(op);
+                addOp(op);
                 return Optional.of(op);
             }else {
                 return Optional.empty();
@@ -364,8 +374,9 @@ public class MathForward extends AbstractForward {
                 var op = new Operation( expression, NumberUtils.toInt(split[1].substring(1),-1));
                 op.setCmd(cmd);
                 op.setScale(scale);
-                rulesString.add(new String[]{"complex",""+NumberUtils.toInt(split[1].substring(1)),expression});
-                ops.add(op);
+
+                if( addOp(op) )
+                    rulesString.add(new String[]{"complex",""+NumberUtils.toInt(split[1].substring(1)),expression});
                 return Optional.of(op);
             }else{
                 index = -2;
@@ -468,18 +479,30 @@ public class MathForward extends AbstractForward {
             default:
                 return;
         }
-        ops.add(op);
+        addOp(op);
 
         if( scale != -1){ // Check if there's a scale op needed
             Function<BigDecimal[],BigDecimal> proc = x -> x[NumberUtils.toInt(index)].setScale(scale, RoundingMode.HALF_UP);
-            var p = new Operation( expression, proc,NumberUtils.toInt(index));
-            p.setCmd(cmd);  // this is the operation that should get the command
-            ops.add( p );
-            rulesString.add(new String[]{type.toString().toLowerCase(),""+index,"scale("+expression+", "+scale+")"});
+            var p = new Operation( expression, proc, NumberUtils.toInt(index)).setCmd(cmd);
+            if( addOp( p ))
+                rulesString.add(new String[]{type.toString().toLowerCase(),""+index,"scale("+expression+", "+scale+")"});
         }else{
             op.setCmd(cmd);
             rulesString.add(new String[]{type.toString().toLowerCase(),""+index,expression});
         }
+    }
+    private boolean addOp( Operation op ){
+        if( op == null ) {
+            valid = false;
+            Logger.error(id+"(mf) Tried to add a null operation, mathforward is invalid");
+            return false;
+        }
+        if( op.isValid()){
+            valid=false;
+            Logger.error(id+"(mf) -> Tried to add an invalid op, mathformward is invalid");
+        }
+        ops.add(op);
+        return true;
     }
     /**
      * Convert a string version of OP_TYPE to the enum
@@ -511,7 +534,7 @@ public class MathForward extends AbstractForward {
 
         String[] split = data.split(delimiter);
 
-        BigDecimal[] bds = makeBDArray(data);
+        BigDecimal[] bds = makeBDArray(split);
 
         ops.forEach( op -> op.solve(bds) );
 
@@ -558,12 +581,12 @@ public class MathForward extends AbstractForward {
         referencedNums.add( RealVal.newVal("matrix",key).value(val) );
     }
     /**
-     * Build the BigDecimal array base on received data and the local references.
+     * Build the BigDecimal array based on received data and the local references.
      * From the received data only the part that holds used 'i's is converted (so if i1 and i5 is used, i0-i5 is taken)
      * @param data The data received, to be split
      * @return The created array
      */
-    private BigDecimal[] makeBDArray( String data ){
+    private BigDecimal[] makeBDArray( String[] data ){
 
         if( referencedNums!=null && !referencedNums.isEmpty()){
             var refBds = new BigDecimal[referencedNums.size()];
@@ -571,9 +594,9 @@ public class MathForward extends AbstractForward {
             for (int a = 0; a < referencedNums.size();a++ ){
                 refBds[a]=referencedNums.get(a).toBigDecimal();
             }
-            return ArrayUtils.addAll(MathUtils.toBigDecimals(data,delimiter,highestI==-1?0:highestI),refBds);
+            return ArrayUtils.addAll(MathUtils.toBigDecimals(data,highestI==-1?0:highestI),refBds);
         }else{
-            return MathUtils.toBigDecimals(data,delimiter,highestI==-1?0:highestI); // Split the data and convert to big decimals
+            return MathUtils.toBigDecimals(data,highestI==-1?0:highestI); // Split the data and convert to big decimals
         }
     }
     /**
@@ -676,6 +699,7 @@ public class MathForward extends AbstractForward {
     public class Operation {
         Function<BigDecimal[],BigDecimal> op=null; // for the scale type
         MathFab fab=null;    // for the complex type
+
         int index;           // index for the result
         int scale=-1;
         String ori;          // The expression before it was decoded mainly for listing purposes
@@ -728,12 +752,15 @@ public class MathForward extends AbstractForward {
             this(ori,index);
             this.directSet = NumberUtils.createBigDecimal(value);
         }
+        public boolean isValid(){
+            return op!=null && fab.isValid();
+        }
         public void setScale( int scale ){
             this.scale=scale;
         }
-        public void setCmd(String cmd){
+        public Operation setCmd(String cmd){
             if( cmd.isEmpty())
-                return;
+                return this;
             this.cmd=cmd;
             valid=true;
             doCmd = true;
@@ -746,44 +773,58 @@ public class MathForward extends AbstractForward {
                     return "";
                 } ).orElse(cmd);
             }
+            return this;
         }
         public BigDecimal solve( BigDecimal[] data){
-            BigDecimal bd=null;
+            BigDecimal bd;
             boolean changeIndex=true;
-            if( op != null ){
-                if( data.length>index) {
-                    try {
-                        bd = op.apply(data);
-                    }catch(NullPointerException e){
-                        Logger.error(getID()+"(mf) -> Null pointer when processing for "+ori);
+            if( op != null ) {
+                if (data.length <= index){
+                    if (showError(false))
+                        Logger.error(getID() + "(mf) -> Tried to do an op with to few elements in the array (data=" + data.length + " vs index=" + index);
+                    return null;
+                }
+                try {
+                    bd = op.apply(data);
+                } catch (NullPointerException e) {
+                    if (showError(false)){
+                        Logger.error(getID() + "(mf) -> Null pointer when processing for " + ori);
                         StringJoiner join = new StringJoiner(", ");
-                        Arrays.stream(data).map( d -> ""+d).forEach(join::add);
-                        Logger.error(getID()+"(mf) -> Data: "+join);
-                        return null;
+                        Arrays.stream(data).map(d -> "" + d).forEach(join::add);
+                        Logger.error(getID() + "(mf) -> Data: " + join);
                     }
-                }else{
-                    Logger.error(getID()+"(mf) -> Tried to do an op with to few elements in the array (data="+data.length+" vs index="+index);
                     return null;
                 }
             }else if(fab!=null){
                 fab.setDebug(debug);
+                fab.setShowError(showError(false));
                 try {
-                    bd = fab.solve(data);
+                    var bdOpt = fab.solve(data);
+                    if( bdOpt.isEmpty() ){
+                        if( showError(false))
+                            Logger.error(getID()+"(mf) -> Failed to solve the received data");
+                        return null;
+                    }
+                    bd=bdOpt.get();
                 }catch ( ArrayIndexOutOfBoundsException | ArithmeticException | NullPointerException e){
-                    Logger.error(id+"(mf) -> "+e.getMessage());
+                    if (showError(false))
+                        Logger.error(id+"(mf) -> "+e.getMessage());
                     return null;
                 }
             }else if( directSet!= null ){
                 bd = directSet;
             }else if(index!=-1){
+                if( data[index]==null){
+                    if( showError(false) )
+                        Logger.error(id+" (mf) -> Index "+index+" in data is null");
+                    return null;
+                }
                 bd = data[index];
                 changeIndex=false;
-            }
-
-            if( bd == null ){
-                Logger.error(getID()+"(mf) -> Failed to solve the received data");
+            }else{
                 return null;
             }
+
             if( scale != -1)
                 bd=bd.setScale(scale,RoundingMode.HALF_UP);
 
@@ -795,7 +836,6 @@ public class MathForward extends AbstractForward {
             }else if( !cmd.isEmpty()){
                 dQueue.add(Datagram.system(cmd.replace("$", bd.toString())));
             }
-
             return bd;
         }
     }
