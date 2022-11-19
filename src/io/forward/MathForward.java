@@ -254,13 +254,19 @@ public class MathForward extends AbstractForward {
         }
         int oldBad = badDataCount; // now it's worthwhile to compare bad data count
         // After doing all possible initial test, do the math
+        int cnt=0;
         for( var op : ops ){
             var res = op.solve(bds);
             if (res == null) {
-                if( showError() )
-                    Logger.error(id + "(mf) -> Failed to process " + data + " (bad:"+badDataCount+")");
-                return true; //don't try to continue with the ops if a step failed
+                cnt++;
+                if( showError(cnt==1) )
+                    Logger.error(id + "(mf) -> Failed to process " + data + " for "+op.ori);
             }
+        }
+        if( cnt > 0 ) {
+            String mes = "corrupt"+(badDataCount==1?":1":""); // only send corrupt1 once
+            targets.removeIf( t-> !t.writeLine(mes) );
+            return true;
         }
         // If we got to this point, processing went fine so reset badcounts
         if( badDataCount !=0 )
@@ -315,9 +321,9 @@ public class MathForward extends AbstractForward {
     private boolean showError(boolean count){
         if( count)
             badDataCount++;
-        if( badDataCount==1 && !label.isEmpty())
-            dQueue.add( Datagram.build("corrupt").label(label).writable(this) );
-
+        if( badDataCount==1 && !label.isEmpty() && count) { // only need to do this the first time
+            dQueue.add(Datagram.build("corrupt").label(label).writable(this));
+        }
         if( badDataCount < 6)
             return true;
         if( badDataCount % 60 == 0 ) {

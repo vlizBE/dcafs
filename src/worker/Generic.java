@@ -201,6 +201,12 @@ public class Generic {
     public Object[] apply(String line, Double[] doubles, RealtimeValues rtvals, QueryWriting queryWriting, MqttWriting mqtt){
         uses++;
 
+        if( line.equals("corrupt")){
+            Logger.error(id+"(gen) -> Received the corrupt command");
+            entries.forEach( e->e.reset(rtvals));
+            return new Object[1];
+        }
+
         String[] split;
         if( delimiter.isEmpty() ){
             split = new String[]{line};
@@ -459,6 +465,18 @@ public class Generic {
 
         return fab.build();
     }
+    public void createRtvals(RealtimeValues rt){
+        Logger.info("Creating rtvals that are defined in "+id);
+        entries.forEach( ent -> {
+            switch(ent.type){
+                case REAL -> rt.addRealVal( RealVal.newVal(ent.group,ent.name),settingsPath);
+                case INTEGER -> rt.addIntegerVal( IntegerVal.newVal(ent.group,ent.name),settingsPath);
+                case FLAG -> rt.addFlagVal( FlagVal.newVal(ent.group,ent.name),settingsPath);
+                case TEXT -> rt.addTextVal(ent.getID(),"",settingsPath);
+                case FILLER,TAG,LOCALDT,UTCDT -> {}
+            }
+        });
+    }
     /**
      * Class for entries that define a single value looked for in the raw data
      */
@@ -475,6 +493,16 @@ public class Generic {
             this.index=index;
             this.name =name;
             this.type=type;
+        }
+        public void reset(RealtimeValues rt){
+            String id = group+"_"+name;
+            switch(type){
+                case REAL -> rt.updateReal(id,defReal);
+                case INTEGER -> rt.updateInteger(id,defInt);
+                case FLAG -> rt.setFlagState(id,false);
+                case TEXT -> rt.setText(id,"");
+                case FILLER,TAG,LOCALDT,UTCDT -> {}
+            }
         }
         public void setGroup( String group ){
             this.group=group;

@@ -214,7 +214,6 @@ public class LabelWorker implements Runnable, Commandable {
 	 */
 	private void readGenericElementInPath(Element pathElement){
 		String imp = pathElement.getAttribute("import");
-		String setId="";
 
 		int a=1;
 		if( !imp.isEmpty() ){ //meaning imported
@@ -224,34 +223,23 @@ public class LabelWorker implements Runnable, Commandable {
 				importPath = settingsPath.getParent().resolve(importPath);
 				Logger.info("Altered to "+importPath);
 			}
-			var sub = XMLfab.getRootChildren(importPath, "dcafs","path").findFirst();
-			if( sub.isPresent() ){
-				setId = XMLtools.getStringAttribute(sub.get(),"id",pathElement.getAttribute("id"));
-			}else{
-				Logger.error("No such xml file: "+importPath+", aborting.");
+			var fab = XMLfab.withRoot(importPath,"dcafs");
+
+			var sub = fab.getChild("path");
+			if( sub.isEmpty() ) {
+				Logger.error("No path in the xml file: " + importPath + ", aborting.");
 				return;
 			}
-			var gens = XMLfab.getRootChildren(importPath, "dcafs", "path", "generic").toList();
-			var stores = XMLfab.getRootChildren(importPath, "dcafs", "path", "store").toList();
+			var pth = sub.get();
+			var setId = XMLtools.getStringAttribute(pth,"id",pathElement.getAttribute("id"));
 
-			for( Element gen : gens){
+			for( Element gen : XMLtools.getChildElements(pth,"generic","store")){
 				a = checkGen( gen,importPath,setId,a);
 			}
-			for( Element gen : stores){
-				a = checkGen( gen,importPath,setId,a);
+		}else{
+			for( Element gen : XMLtools.getChildElements(pathElement,"generic","store")){
+				a=checkGen( gen,settingsPath,pathElement.getAttribute("id"),a);
 			}
-		}
-		String delimiter = XMLtools.getStringAttribute(pathElement,"delimiter","");
-		for( Element gen : XMLtools.getChildElements(pathElement,"generic")){
-			if( !gen.hasAttribute("id")){ //if it hasn't got an id, give it one
-				gen.setAttribute("id",pathElement.getAttribute("id")+"_gen"+a);
-				a++;
-			}
-			if( !gen.hasAttribute("delimiter") && !delimiter.isEmpty()) //if it hasn't got an id, give it one
-				gen.setAttribute("delimiter",delimiter);
-			if( !gen.hasAttribute("group"))
-				gen.setAttribute("group",setId);
-			addGeneric( Generic.readFromXML(gen,settingsPath) );
 		}
 	}
 	private int checkGen( Element gen, Path importPath, String setId, int cnt){

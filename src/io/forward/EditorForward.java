@@ -98,6 +98,15 @@ public class EditorForward extends AbstractForward{
     @Override
     protected boolean addData(String data) {
 
+        if( data.startsWith("corrupt")){
+            if( label.startsWith("generic") && data.endsWith(":1")) {
+                dQueue.add(Datagram.build("corrupt").label(label).writable(this));
+            }
+            String d = data;
+            targets.removeIf(t-> !t.writeLine(d) );
+            return true;
+        }
+
         if( debug ) // extra info given if debug is active
             Logger.info(getID()+" -> Before: "+data); // how the data looked before
 
