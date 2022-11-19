@@ -385,26 +385,28 @@ public class XMLtools {
 	 * Get all the child-elements of an element with the given name
 	 * 
 	 * @param element The element to look in to
-	 * @param child   The name of the child-elements to look for
+	 * @param child   The named of the child-elements to look for
 	 * @return An arraylist with the child-elements or an empty one if none were found
 	 */
-	public static List<Element> getChildElements(Element element, String child) {
-		if( child.isEmpty() )
+	public static List<Element> getChildElements(Element element, String... child) {
+		if( child.length==1 && child[0].isEmpty() )
 			return getChildElements(element);
 			
 		var eles = new ArrayList<Element>();	
 		if (element == null)
 			return eles;
 
-		NodeList list = element.getElementsByTagName(child);
+		for( String ch : child ){
+			NodeList list = element.getElementsByTagName(ch);
 
-		if (list.getLength() == 0)
-			return eles;
+			if (list.getLength() == 0)
+				continue;
 
-		eles.ensureCapacity(list.getLength());	
-		for (int a = 0; a < list.getLength(); a++){
-			if (list.item(a).getNodeType() == Node.ELEMENT_NODE)
-				eles.add( (Element) list.item(a));
+			eles.ensureCapacity(list.getLength());
+			for (int a = 0; a < list.getLength(); a++){
+				if (list.item(a).getNodeType() == Node.ELEMENT_NODE)
+					eles.add( (Element) list.item(a));
+			}
 		}
 		return eles;
 	}
