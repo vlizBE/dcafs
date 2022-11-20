@@ -263,7 +263,7 @@ public class MathForward extends AbstractForward {
         }
         // If we got to this point, processing went fine so reset badcounts
         if( badDataCount !=0 )
-            Logger.info(id+" (mf) -> Executed properly after previous issses, resestting bad count" );
+            Logger.info(id+" (mf) -> Executed properly after previous issues, resetting bad count" );
         badDataCount=0;
 
         StringJoiner join = new StringJoiner(delimiter); // prepare a joiner to rejoin the data
@@ -343,9 +343,9 @@ public class MathForward extends AbstractForward {
     public Optional<Operation> addStdOperation( String expression, int scale, String cmd ){
 
         // Support ++ and --
-        expression=expression.replace("++","+=1");
-        expression=expression.replace("--","-=1");
-        expression=expression.replace(" ",""); //remove spaces
+        expression = expression.replace("++","+=1")
+                               .replace("--","-=1")
+                               .replace(" ",""); //remove spaces
 
         findReferences(expression);
 
