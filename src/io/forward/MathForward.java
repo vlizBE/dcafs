@@ -224,17 +224,15 @@ public class MathForward extends AbstractForward {
 
         // First check if the operations are actually valid
         if( !valid ){
-            if( showError() )
-                Logger.error(id+"(mf) -> Not processing data because the operations aren't valid");
+            showError("Not processing data because the operations aren't valid");
+            return true;
         }
 
         String[] split = data.split(delimiter); // Split the data according to the delimiter
 
         // Then make sure there's enough items in split
         if( split.length < highestI+1){ // Need at least one more than the highestI (because it starts at 0)
-            if( showError() ) // Report first 5 but then every 60
-                Logger.error(id +"(mf) -> Need at least "+(highestI+1)+" items after splitting: "+data+ ", got "+split.length+" (bad:"+badDataCount+")"); // If not, report
-
+            showError("Need at least "+(highestI+1)+" items after splitting: "+data+ ", got "+split.length+" (bad:"+badDataCount+")");
             return true; // Stop processing
         }
         // Convert the split data to bigdecimals
@@ -242,14 +240,12 @@ public class MathForward extends AbstractForward {
 
         // First do a global check, if none of the items is a number, no use to keep trying
         if( bds == null ){
-            if(showError() )
-                Logger.error(id+" (mf)-> No valid numbers in the data: "+data+" after split on "+delimiter+ " "+ " (bad:"+badDataCount+")");
+            showError("No valid numbers in the data: "+data+" after split on "+delimiter+ " "+ " (bad:"+badDataCount+")");
             return true;
         }
         // We know that the 'highest needed index' needs to actually be a number
         if( bds[highestI]==null){
-            if( showError() )
-                Logger.error(id+" (mf)-> No valid highest I value in the data: "+data+" after split on "+delimiter+ " "+ " (bad:"+badDataCount+")");
+            showError(" (mf)-> No valid highest I value in the data: "+data+" after split on "+delimiter+ " "+ " (bad:"+badDataCount+")");
             return true;
         }
         int oldBad = badDataCount; // now it's worthwhile to compare bad data count
@@ -259,13 +255,10 @@ public class MathForward extends AbstractForward {
             var res = op.solve(bds);
             if (res == null) {
                 cnt++;
-                if( showError(cnt==1) )
-                    Logger.error(id + "(mf) -> Failed to process " + data + " for "+op.ori);
+                showError(cnt==1,"(mf) -> Failed to process " + data + " for "+op.ori);
             }
         }
         if( cnt > 0 ) {
-            String mes = "corrupt"+(badDataCount==1?":1":""); // only send corrupt1 once
-            targets.removeIf( t-> !t.writeLine(mes) );
             return true;
         }
         // If we got to this point, processing went fine so reset badcounts
@@ -315,19 +308,28 @@ public class MathForward extends AbstractForward {
         }
         return true;
     }
-    private boolean showError(){
-        return showError(true);
+    private boolean showError(String error){
+        return showError(true,error);
     }
-    private boolean showError(boolean count){
+    private boolean showError(boolean count, String error){
         if( count)
             badDataCount++;
-        if( badDataCount==1 && !label.isEmpty() && count) { // only need to do this the first time
-            dQueue.add(Datagram.build("corrupt").label(label).writable(this));
+        if( badDataCount==1 && count) { // only need to do this the first time
+            if(label.startsWith("generic"))
+                dQueue.add(Datagram.build("corrupt").label(label).writable(this));
+            targets.stream().filter( t -> t.getID().startsWith("editor")).forEach( t -> t.writeLine("corrupt:1"));
         }
-        if( badDataCount < 6)
+        if( badDataCount < 6) {
+            if( !error.isEmpty())
+                Logger.error(id+" (mf) -> "+error);
             return true;
+        }
         if( badDataCount % 60 == 0 ) {
-            return badDataCount < 900 || badDataCount%600==0;
+            if(badDataCount < 900 || badDataCount%600==0){
+                if( !error.isEmpty())
+                    Logger.error(id+" (mf) -> "+error);
+            }
+            return true;
         }
         return false;
     }
@@ -786,15 +788,13 @@ public class MathForward extends AbstractForward {
             boolean changeIndex=true;
             if( op != null ) {
                 if (data.length <= index){
-                    if (showError(false))
-                        Logger.error(getID() + "(mf) -> Tried to do an op with to few elements in the array (data=" + data.length + " vs index=" + index);
+                    showError(false,"(mf) -> Tried to do an op with to few elements in the array (data=" + data.length + " vs index=" + index);
                     return null;
                 }
                 try {
                     bd = op.apply(data);
                 } catch (NullPointerException e) {
-                    if (showError(false)){
-                        Logger.error(getID() + "(mf) -> Null pointer when processing for " + ori);
+                    if (showError(false,"(mf) -> Null pointer when processing for " + ori)){
                         StringJoiner join = new StringJoiner(", ");
                         Arrays.stream(data).map(d -> "" + d).forEach(join::add);
                         Logger.error(getID() + "(mf) -> Data: " + join);
@@ -803,26 +803,23 @@ public class MathForward extends AbstractForward {
                 }
             }else if(fab!=null){
                 fab.setDebug(debug);
-                fab.setShowError(showError(false));
+                fab.setShowError( showError(false,""));
                 try {
                     var bdOpt = fab.solve(data);
                     if( bdOpt.isEmpty() ){
-                        if( showError(false))
-                            Logger.error(getID()+"(mf) -> Failed to solve the received data");
+                        showError(false,"(mf) -> Failed to solve the received data");
                         return null;
                     }
                     bd=bdOpt.get();
                 }catch ( ArrayIndexOutOfBoundsException | ArithmeticException | NullPointerException e){
-                    if (showError(false))
-                        Logger.error(id+"(mf) -> "+e.getMessage());
+                    showError(false,e.getMessage());
                     return null;
                 }
             }else if( directSet!= null ){
                 bd = directSet;
             }else if(index!=-1){
                 if( data[index]==null){
-                    if( showError(false) )
-                        Logger.error(id+" (mf) -> Index "+index+" in data is null");
+                    showError(false," (mf) -> Index "+index+" in data is null");
                     return null;
                 }
                 bd = data[index];
