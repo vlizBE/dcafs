@@ -23,6 +23,14 @@ is required.
 be more logical...
 - Improved the feedback given by `pf:list` a lot
 - If no (empty) group is given to a generic/store inside a path, the id of the path is used
+- Fixed: When using a custom src from a file with a relative path this failed because the workpath was set after the xml
+read.
+
+### MathForward
+- Added a couple more checks to the whole process, to catch bad data earlier
+- Before this stopped trying after receiving corrupt data for 5 consecutive times.
+Now it keeps trying but limits the error logging and reesets the content of any attached generics.
+If a target of the mathforward is an editorforward, that one will reset its generics too.
 
 ### EditorForward
 - Added listreplace to allow to replace a digit at a certain position with another value.
@@ -43,6 +51,7 @@ be more logical...
 ### Fixes
 - MathForward checks the highest used index to not convert more than needed. This 
 however didn't take the special calculations (fe. sound velocity) in account.
+
 
 ## 1.0.5 (27/10/2022)
 
