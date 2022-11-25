@@ -9,7 +9,9 @@ Note: Version numbering: x.y.z
 - integerval telnet interface?
 - Resolve #34
 
-## 1.0.6 (work in progress)
+## 1.0.7 (work in progress)
+
+## 1.0.6 (25/11/2022)
 
 ### RealtimeValues
 - RealVal, IntVal now have the 'abs' option that makes it store the absolute value instead
@@ -21,7 +23,7 @@ is required.
 - Generics inside a path will create rtvals in the file the path is in
 - Instead of the node 'generic', the node 'store' can be used inside a path. Thought that might
 be more logical...
-- Improved the feedback given by `pf:list` a lot
+- Improved the feedback given by `pf:list` *a lot*
 - If no (empty) group is given to a generic/store inside a path, the id of the path is used
 - Fixed: When using a custom src from a file with a relative path this failed because the workpath was set after the xml
 read.
@@ -31,6 +33,7 @@ read.
 - Before this stopped trying after receiving corrupt data for 5 consecutive times.
 Now it keeps trying but limits the error logging and reesets the content of any attached generics.
 If a target of the mathforward is an editorforward, that one will reset its generics too.
+- Fix: Checks the highest used index to not convert more than needed. This however didn't take the special calculations (fe. sound velocity) in account.
 
 ### EditorForward
 - Added listreplace to allow to replace a digit at a certain position with another value.
@@ -47,10 +50,6 @@ If a target of the mathforward is an editorforward, that one will reset its gene
 - Removed filters
 - Allow def attribute to set a default value incase the parsing fails (only for int/real)
 - Add rtvals to the file the generic is found in (so settings.xml or a path xml)
-
-### Fixes
-- MathForward checks the highest used index to not convert more than needed. This 
-however didn't take the special calculations (fe. sound velocity) in account.
 
 
 ## 1.0.5 (27/10/2022)
