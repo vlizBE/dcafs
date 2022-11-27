@@ -11,7 +11,7 @@ Note: Version numbering: x.y.z
 
 ## 1.0.7 (work in progress)
 ### PathForward
-*Imported path*
+**Imported path**  
 - If id, delimiter are set in both reference and import, import is used for delimiter but id from reference. If present in only one of the two, that is used.
 - Now possible to add path node to a stream node, do note, this is checked when reading paths *not* when reading streams (for now)
 ````xml
@@ -28,6 +28,17 @@ Either way, this node is altered to look like this. So id and delimiter are take
 ````xml
 <path import="paths/rtk.xml" src="raw:test"/>
 <!-- So id and delimiter are taken from the xml. But can be specified if none are in the xml -->
+````
+**Improved feedback**  
+When reading the xml failed during startup, this is now shown when logging into telnet.
+For example, a bad character somewhere in a path xml
+````
+Welcome to DCAFS!
+It is Sun Nov 27 19:06:58 CET 2022 now.
+> Common Commands: [h]elp,[st]atus, rtvals, exit...
+
+ERRORS DETECTED DURING STARTUP
+PathForward: rtk.xml: line:10:69; The content of elements must consist of well-formed character data or markup.
 ````
 
 ## 1.0.6 (25/11/2022)
