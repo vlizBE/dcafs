@@ -1113,18 +1113,18 @@ public class TaskManager implements CollectorFuture {
 		int ts=0;
     	if( Files.exists(path) ) {
     		xmlPath = path;
-			Document doc = XMLtools.readXML( path );
+			var docOpt = XMLtools.readXML( path );
 			
 			String ref = path.getFileName().toString().replace(".xml", "");
 			
-			if( doc == null ) {
+			if( docOpt.isEmpty() ) {
 				Logger.tag(TINY_TAG).error("["+ id +"] Issue trying to read the "+ref
 														+".xml file, check for typo's or fe. missing < or >");
 				return false;
 			}else{
 				Logger.tag(TINY_TAG).info("["+ id +"] Tasks File ["+ref+"] found!");
 			}
-
+			var doc = docOpt.get();
 			rtvals.readFromXML(XMLfab.withRoot(path,"tasklist","rtvals"));
 
 			var ssOpt = XMLtools.getFirstElementByTag( doc, "tasklist" );

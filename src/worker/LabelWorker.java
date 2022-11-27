@@ -116,10 +116,15 @@ public class LabelWorker implements Runnable, Commandable {
 		Logger.info("Added generic " + map.getID());
 	}
 	public void loadValMaps(boolean clear){
-		var settingsDoc = XMLtools.readXML(settingsPath);
+		var settingsDocOpt = XMLtools.readXML(settingsPath);
 		if( clear ){
 			mappers.clear();
 		}
+		if( settingsDocOpt.isEmpty()){
+			return;
+		}
+		var settingsDoc = settingsDocOpt.get();
+
 		XMLfab.getRootChildren(settingsDoc, "dcafs","valmaps","valmap")
 				.forEach( ele ->  addValMap( ValMap.readFromXML(ele) ) );
 

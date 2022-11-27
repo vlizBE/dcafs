@@ -51,7 +51,7 @@ public class TcpServer implements StreamListener, Commandable {
 		this.workerGroup = workerGroup;
 		xmlPath = xml;
 
-		active = readSettingsFromXML(XMLtools.readXML(xmlPath), false);
+		active = readSettingsFromXML( XMLtools.readXML(xmlPath).get(), false);
 	}
 	public boolean isActive(){
 		return active;
@@ -369,7 +369,7 @@ public class TcpServer implements StreamListener, Commandable {
 				defaults.forEach( (id,val) -> lines.add(id+" -> "+val.ip+" => "+String.join(",",val.commands)));
 				return lines.toString();
 			case "reload":
-				if( readSettingsFromXML(XMLtools.readXML(xmlPath),false) )
+				if( readSettingsFromXML(XMLtools.readXML(xmlPath).get(),false) )
 					return "Defaults reloaded";
 				return "Reload failed";
 			case "alter":

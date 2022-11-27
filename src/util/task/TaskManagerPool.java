@@ -45,7 +45,7 @@ public class TaskManagerPool implements Commandable {
         this.emailSender=emailSender;
     }
     public void readFromXML() {
-        var xml = XMLtools.readXML(Path.of(workPath,"settings.xml"));
+        var xml = XMLtools.readXML(Path.of(workPath,"settings.xml")).get();
         for(Element e: XMLtools.getAllElementsByTag(xml, "taskmanager") ){
             Logger.info("Found reference to TaskManager in xml.");
             var p = Path.of(e.getTextContent());

@@ -54,7 +54,7 @@ public class XMLfab {
     private XMLfab( Path path ){
         xmlPath=path;
         if( Files.exists(path) ){
-            xmlDoc = XMLtools.readXML(path);
+            xmlDoc = XMLtools.readXML(path).get();
         }else{
             Logger.warn("No such XML "+path+", so creating it.");
             xmlDoc = XMLtools.createXML(path, false);
@@ -174,7 +174,10 @@ public class XMLfab {
             Logger.error("No such xml file: "+xmlPath+", looking for "+String.join("->",roots));
             return new ArrayList<Element>().stream();
         }
-        return getRootChildren( XMLtools.readXML(xmlPath),roots);
+        var docOpt = XMLtools.readXML(xmlPath);
+        if( docOpt.isPresent())
+            return getRootChildren(docOpt.get(),roots);
+        return new ArrayList<Element>().stream();
     }
 
     /**

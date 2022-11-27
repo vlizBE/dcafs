@@ -24,6 +24,7 @@ import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,7 +42,7 @@ public class XMLtools {
 	 * @param xml The path to the file
 	 * @return The Document of the XML
 	 */
-	public static Document readXML( Path xml ) {
+	public static Optional<Document> readXML( Path xml ) {
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, ""); 
 		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
@@ -53,7 +54,21 @@ public class XMLtools {
 			Logger.error("Error occurred while reading " + xml.toAbsolutePath(), true);
 			Logger.error(e);
 		}
-		return doc;
+		return Optional.ofNullable(doc);
+	}
+	public static String checkXML( Path xml ){
+		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+		Document doc;
+		try {
+			doc = dbf.newDocumentBuilder().parse(xml.toFile());
+			doc.getDocumentElement().normalize();
+		} catch (ParserConfigurationException | SAXException | IOException | java.nio.file.InvalidPathException e) {
+			Logger.error("Error occurred while reading " + xml.toAbsolutePath(), true);
+			return e.getMessage();
+		}
+		return "";
 	}
 	public static Optional<Document> readResourceXML( Class origin,String path ){
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
@@ -156,7 +171,8 @@ public class XMLtools {
 			Logger.error("The give xmldoc doesn't contain a valid uri");
 			return null;
 		}
-		return XMLtools.readXML(Objects.requireNonNull(getDocPath(xmlDoc)));
+		var docOpt = XMLtools.readXML(Objects.requireNonNull(getDocPath(xmlDoc)));
+		return docOpt.orElse(null);
 	}
 
 	/**
@@ -210,12 +226,14 @@ public class XMLtools {
 		return Optional.empty();
 	}
 	public static Optional<Element> getFirstElementByTag(Path xmlPath, String tag) {
-		var doc = XMLtools.readXML(xmlPath);
-		if( doc == null) {
+		if(Files.notExists(xmlPath)){
 			Logger.error("No such xml file: "+xmlPath);
 			return Optional.empty();
 		}
-		return getFirstElementByTag(doc,tag);
+		var docOpt = XMLtools.readXML(xmlPath);
+		if( docOpt.isPresent())
+			return getFirstElementByTag(docOpt.get(),tag);
+		return Optional.empty();
 	}
 	/**
 	 * Check the given document if it contains a node with the given tag

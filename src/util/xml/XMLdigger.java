@@ -16,7 +16,7 @@ public class XMLdigger {
     private XMLdigger( Path xml ){
         xmlPath=xml;
         if( Files.exists(xml) ){
-            xmlDoc = XMLtools.readXML(xml);
+            xmlDoc = XMLtools.readXML(xml).get();
         }else{
            valid=false;
         }

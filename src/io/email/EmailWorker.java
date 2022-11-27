@@ -153,7 +153,7 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 	public boolean readFromXML(){
 
 		mailSession = null;
-		var emailOpt = XMLtools.getFirstElementByTag( XMLtools.readXML(settingsPath), XML_PARENT_TAG);	// Get the element containing the settings and references
+		var emailOpt = XMLtools.getFirstElementByTag( XMLtools.readXML(settingsPath).get(), XML_PARENT_TAG);	// Get the element containing the settings and references
 
 
 		if( emailOpt.isEmpty())

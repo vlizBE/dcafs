@@ -377,7 +377,11 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 	 */
 	public void readSettingsFromXML( Path settingsPath ) {
 		this.settingsPath=settingsPath;
-		var xml = XMLtools.readXML(settingsPath);
+		var xmlOpt = XMLtools.readXML(settingsPath);
+		if( xmlOpt.isEmpty()) {
+			return;
+		}
+		var xml = xmlOpt.get();
 		try {
 			settingsPath = XMLtools.getXMLparent(xml).resolve("settings.xml");
 			Logger.debug("Set XMLPath to "+ settingsPath.toAbsolutePath());

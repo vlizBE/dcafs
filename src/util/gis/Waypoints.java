@@ -81,7 +81,7 @@ public class Waypoints implements Commandable {
         }
         // Get the waypoints node
 
-        var wptsOpt = XMLtools.getFirstElementByTag( XMLtools.readXML(settingsPath), XML_TAG);
+        var wptsOpt = XMLtools.getFirstElementByTag( XMLtools.readXML(settingsPath).get(), XML_TAG);
 
         if( wptsOpt.isEmpty() ) // If no node, quit
             return false;

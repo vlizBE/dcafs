@@ -48,8 +48,12 @@ public class ForwardPool implements Commandable {
      */
     public void readSettingsFromXML() {
 
-        var xml = XMLtools.readXML(settingsPath);
-
+        var xmlOpt = XMLtools.readXML(settingsPath);
+        if( xmlOpt.isEmpty()) {
+            dQueue.add(Datagram.build("ForwardPool -> Failed to read xml at "+settingsPath).label("fail"));
+            return;
+        }
+        var xml=xmlOpt.get();
         Logger.info("Loading filters...");
         XMLtools.getFirstElementByTag(xml, "filters")
                 .ifPresent( ele -> readFiltersFromXML(XMLtools.getChildElements(ele, "filter")));
@@ -929,9 +933,8 @@ public class ForwardPool implements Commandable {
                         .getChild("path","id",cmds[1]);
                 if(ele.isEmpty())
                     return "No such path "+cmds[1];
-                if( paths.get(cmds[1]).readFromXML(ele.get(),settingsPath.getParent()) )
-                    return "Path reloaded";
-                return "Path failed to reload";
+                var result =paths.get(cmds[1]).readFromXML(ele.get(),settingsPath.getParent());
+                return result.isEmpty()?"Path reloaded":result;
             case "readfile":
 
                 return "File reading added (todo)";
@@ -1117,7 +1120,7 @@ public class ForwardPool implements Commandable {
         XMLfab.getRootChildren(settingsPath,"dcafs","paths","path").forEach(
                 pathEle -> {
                     PathForward path = new PathForward(rtvals,dQueue,nettyGroup);
-                    path.readFromXML(pathEle,settingsPath.getParent());
+                    path.readFromXML( pathEle,settingsPath.getParent() );
                     var p = paths.get(path.getID());
                     if( p!=null) {
                       //  p.lastStep().ifPresent( path::addTarget);

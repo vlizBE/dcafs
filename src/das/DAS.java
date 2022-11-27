@@ -46,8 +46,6 @@ public class DAS implements Commandable{
     private final Path settingsPath;
     private String workPath;
 
-    private final Document settingsDoc;
-
     private final LocalDateTime bootupTimestamp = LocalDateTime.now(); // Store timestamp at boot up to calculate uptime
 
     /* Workers */
@@ -101,10 +99,6 @@ public class DAS implements Commandable{
             p = p.getParent(); // get parent to get out of the classes
         }
 
-        if (p.toString().endsWith(".jar")) { //meaning from ide
-           // TinyWrapErr.install();
-           // System.setProperty("tinylog.stream","out");
-        }
         workPath = p.getParent().toString();
         if( workPath.matches(".*lib$")) { // Meaning used as a lib
             workPath = Path.of(workPath).getParent().toString();
@@ -125,113 +119,116 @@ public class DAS implements Commandable{
         }
         Logger.info("Used settingspath: "+settingsPath);
 
-        settingsDoc = XMLtools.readXML(settingsPath);
+        var docOpt = XMLtools.readXML(settingsPath);
 
-        if (settingsDoc == null) {
+        if( docOpt.isEmpty()){
             Logger.error("Issue in current settings.xml, aborting: " + settingsPath.toString());
             addTelnetServer();
-        } else {
-            XMLtools.getFirstElementByTag(settingsDoc, "settings").ifPresent( ele ->
-                    {
-                        debug = XMLtools.getChildValueByTag(ele, "mode", "normal").equals("debug");
-                        log = XMLtools.getChildValueByTag(ele, "mode", "normal").equals("log");
-                        System.setProperty("tinylog.directory", XMLtools.getChildValueByTag(ele,"tinylog",workPath) );
-            });
-
-            if (debug) {
-                Logger.info("Program booting in DEBUG mode");
-            } else {
-                Logger.info("Program booting in NORMAL mode");
-            }
-
-            /* RealtimeValues */
-            rtvals = new RealtimeValues( settingsPath, dQueue );
-            rtvals.setText("dcafs_version",version);
-
-            /* Database manager */
-            dbManager = new DatabaseManager(workPath,rtvals);
-
-            /* CommandPool */
-            commandPool = new CommandPool( workPath, dQueue );
-            addCommandable(rtvals.getIssuePool(),"issue","issues");
-            addCommandable("flags;fv;reals;real;rv;texts;tv;int;integer",rtvals);
-            addCommandable(rtvals,"rtval","rtvals");
-            addCommandable("stop",rtvals);
-            addCommandable(dbManager,"dbm","myd");
-            addCommandable(this,"st");
-
-            /* Waypoints */
-            waypoints = new Waypoints(settingsPath,nettyGroup,rtvals,dQueue);
-            addCommandable("wpts",waypoints);
-
-            /* TransServer */
-            addTransServer(-1);
-
-            /* MQTT worker */
-            addMqttPool();
-
-            /* Label Worker */
-            addLabelWorker();
-
-            /* StreamManager */
-            addStreamPool();
-
-            /* EmailWorker */
-            if (XMLtools.hasElementByTag(settingsDoc, "email") ) {
-                addEmailWorker();
-            }
-            /* DebugWorker */
-            if (DebugWorker.inXML(settingsDoc)) {
-                addDebugWorker();
-            }
-
-            /* I2C */
-            addI2CWorker();
-
-            /* Forwards */
-            ForwardPool forwardPool = new ForwardPool(dQueue, settingsPath, rtvals, nettyGroup);
-            addCommandable(forwardPool,"filter","ff","filters");
-            addCommandable(forwardPool,"math","mf","maths");
-            addCommandable(forwardPool,"editor","ef","editors");
-            addCommandable(forwardPool,"paths","path","pf","paths");
-            addCommandable(forwardPool, "");
-
-            /* Collectors */
-            collectorPool = new CollectorPool(settingsPath.getParent(),dQueue,nettyGroup,rtvals);
-            addCommandable(collectorPool,"fc");
-            addCommandable(collectorPool,"mc");
-
-            /* File monitor */
-            if( XMLfab.hasRoot(settingsPath,"dcafs","monitor") ) {
-                fileMonitor = new FileMonitor(settingsPath.getParent(), dQueue);
-                addCommandable(fileMonitor,"fm","fms");
-            }
-            /* GPIO's */
-            if( XMLfab.hasRoot(settingsPath,"dcafs","gpio") ){
-                Logger.info("Reading interrupt gpio's from settings.xml");
-                isrs = new InterruptPins(dQueue,settingsPath);
-            }else{
-                Logger.info("No gpio's defined in settings.xml");
-            }
-
-            /* Matrix */
-            if( XMLfab.hasRoot(settingsPath,"dcafs","settings","matrix") ){
-                Logger.info("Reading Matrix info from settings.xml");
-                matrixClient = new MatrixClient( dQueue, rtvals, settingsPath );
-                addCommandable("matrix",matrixClient);
-            }else{
-                Logger.info("No matrix settings");
-            }
-
-            /* TaskManagerPool */
-            addTaskManager();
-
-            bootOK = true;
-
-            /* Telnet */
-            addTelnetServer();
+            return;
         }
-        this.attachShutDownHook();
+        var settingsDoc= docOpt.get();
+
+        XMLtools.getFirstElementByTag(settingsDoc, "settings").ifPresent( ele ->
+                {
+                    debug = XMLtools.getChildValueByTag(ele, "mode", "normal").equals("debug");
+                    log = XMLtools.getChildValueByTag(ele, "mode", "normal").equals("log");
+                    System.setProperty("tinylog.directory", XMLtools.getChildValueByTag(ele,"tinylog",workPath) );
+        });
+
+        if (debug) {
+            Logger.info("Program booting in DEBUG mode");
+        } else {
+            Logger.info("Program booting in NORMAL mode");
+        }
+
+        /* RealtimeValues */
+        rtvals = new RealtimeValues( settingsPath, dQueue );
+        rtvals.setText("dcafs_version",version);
+
+        /* Database manager */
+        dbManager = new DatabaseManager(workPath,rtvals);
+
+        /* CommandPool */
+        commandPool = new CommandPool( workPath, dQueue );
+        addCommandable(rtvals.getIssuePool(),"issue","issues");
+        addCommandable("flags;fv;reals;real;rv;texts;tv;int;integer",rtvals);
+        addCommandable(rtvals,"rtval","rtvals");
+        addCommandable("stop",rtvals);
+        addCommandable(dbManager,"dbm","myd");
+        addCommandable(this,"st");
+
+        /* Waypoints */
+        waypoints = new Waypoints(settingsPath,nettyGroup,rtvals,dQueue);
+        addCommandable("wpts",waypoints);
+
+        /* TransServer */
+        addTransServer(-1);
+
+        /* MQTT worker */
+        addMqttPool();
+
+        /* Label Worker */
+        addLabelWorker();
+
+        /* StreamManager */
+        addStreamPool();
+
+        /* EmailWorker */
+        if (XMLtools.hasElementByTag(settingsDoc, "email") ) {
+            addEmailWorker();
+        }
+        /* DebugWorker */
+        if (DebugWorker.inXML(settingsDoc)) {
+            addDebugWorker();
+        }
+
+        /* I2C */
+        addI2CWorker();
+
+        /* Forwards */
+        ForwardPool forwardPool = new ForwardPool(dQueue, settingsPath, rtvals, nettyGroup);
+        addCommandable(forwardPool,"filter","ff","filters");
+        addCommandable(forwardPool,"math","mf","maths");
+        addCommandable(forwardPool,"editor","ef","editors");
+        addCommandable(forwardPool,"paths","path","pf","paths");
+        addCommandable(forwardPool, "");
+
+        /* Collectors */
+        collectorPool = new CollectorPool(settingsPath.getParent(),dQueue,nettyGroup,rtvals);
+        addCommandable(collectorPool,"fc");
+        addCommandable(collectorPool,"mc");
+
+        /* File monitor */
+        if( XMLfab.hasRoot(settingsPath,"dcafs","monitor") ) {
+            fileMonitor = new FileMonitor(settingsPath.getParent(), dQueue);
+            addCommandable(fileMonitor,"fm","fms");
+        }
+        /* GPIO's */
+        if( XMLfab.hasRoot(settingsPath,"dcafs","gpio") ){
+            Logger.info("Reading interrupt gpio's from settings.xml");
+            isrs = new InterruptPins(dQueue,settingsPath);
+        }else{
+            Logger.info("No gpio's defined in settings.xml");
+        }
+
+        /* Matrix */
+        if( XMLfab.hasRoot(settingsPath,"dcafs","settings","matrix") ){
+            Logger.info("Reading Matrix info from settings.xml");
+            matrixClient = new MatrixClient( dQueue, rtvals, settingsPath );
+            addCommandable("matrix",matrixClient);
+        }else{
+            Logger.info("No matrix settings");
+        }
+
+        /* TaskManagerPool */
+        addTaskManager();
+
+        bootOK = true;
+
+        /* Telnet */
+        addTelnetServer();
+
+        attachShutDownHook();
     }
     public String getVersion(){return version;}
     public Path getWorkPath(){
@@ -390,7 +387,7 @@ public class DAS implements Commandable{
         Logger.info("Adding DebugWorker");
         addLabelWorker();
 
-        debugWorker = new DebugWorker(labelWorker.getQueue(), dbManager, settingsDoc);
+        debugWorker = new DebugWorker(labelWorker.getQueue(), dbManager, XMLtools.readXML(settingsPath).get());
 
         if (this.inDebug() && emailWorker != null) 
             emailWorker.setSending(debugWorker.doEmails());            

@@ -41,6 +41,8 @@ public class PathForward {
     Path workPath;
     static int READ_BUFFER_SIZE=2500;
     static long SKIPLINES = 0;
+    String error="";
+    boolean valid=false;
 
     public PathForward(RealtimeValues rtvals, BlockingQueue<Datagram> dQueue, EventLoopGroup nettyGroup ){
         this.rtvals = rtvals;
@@ -60,7 +62,7 @@ public class PathForward {
     public void setSrc( String src ){
         this.src=src;
     }
-    public boolean readFromXML( Element pathEle, Path workpath ){
+    public String readFromXML( Element pathEle, Path workpath ){
 
         var oldTargets = new ArrayList<>(targets);
         targets.clear();
@@ -98,7 +100,8 @@ public class PathForward {
                 rtvalsOpt.ifPresent( rtEle -> rtvals.readFromXML(rtEle) );
             }else{
                 Logger.error("No valid path script found: "+importPath);
-                return false;
+                error="No valid path script found: "+importPath;
+                return error;
             }
         }
 
@@ -107,7 +110,8 @@ public class PathForward {
         if( steps.size() > 0) {
             stepsForward = new ArrayList<>();
         }else{
-            return false;
+            error = "No child nodes found";
+            return error;
         }
 
         FilterForward lastff=null;
@@ -191,8 +195,10 @@ public class PathForward {
                 }
                 case "editor" -> {
                     var ef = new EditorForward(step, dQueue, rtvals);
-                    if( !ef.readOk)
-                        return false;
+                    if( !ef.readOk) {
+                        error="Failed to read EditorForward";
+                        return error;
+                    }
                     if( lastff!=null && lastGenMap) {
                         lastff.addReverseTarget(ef);
                     }
@@ -220,9 +226,16 @@ public class PathForward {
             }
         }
         customs.trimToSize();
-        return true;
+        valid=true;
+        error="";
+        return "";
     }
-
+    public boolean isValid(){
+        return valid;
+    }
+    public String getLastError(){
+        return error;
+    }
     private void addAsTarget( AbstractForward f, String src ){
         addAsTarget(f,src,true);
     }

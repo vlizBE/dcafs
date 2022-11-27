@@ -37,7 +37,7 @@ public class FileMonitor implements Commandable {
      * @return True if read properly
      */
     public boolean readFromXML( ){
-        var base = XMLtools.readXML(root.resolve("settings.xml"));
+        var base = XMLtools.readXML(root.resolve("settings.xml")).get();
         var ele = XMLtools.getAllElementsByTag(base,"monitor");
         if( ele.length==0)
             return false;

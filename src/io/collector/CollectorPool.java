@@ -62,7 +62,11 @@ public class CollectorPool implements Commandable, CollectorFuture {
      */
     private void loadMathCollectors(){
         mathCollectors.clear();
-        var settingsDoc = XMLtools.readXML(workPath.resolve("settings.xml"));
+        var docOpt = XMLtools.readXML(workPath.resolve("settings.xml"));
+        if( docOpt.isEmpty()){
+            return;
+        }
+        var settingsDoc = docOpt.get();
         MathCollector.createFromXml( XMLfab.getRootChildren(settingsDoc,"dcafs","maths","*") )
                         .forEach( this::addMathCollector );
     }

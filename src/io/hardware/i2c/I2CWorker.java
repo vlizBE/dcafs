@@ -208,10 +208,11 @@ public class I2CWorker implements Commandable {
         commands.clear();
         for( Path p : xmls ){
 
-            Document doc = XMLtools.readXML(p);
-            if( doc == null ){
+            var docOpt = XMLtools.readXML(p);
+            if( docOpt.isEmpty() ){
                 return "Syntax error in "+p.getFileName().toString();
             }
+            var doc = docOpt.get();
             for( Element set : XMLtools.getAllElementsByTag(  doc , "commandset") ){
             
                 String script = XMLtools.getStringAttribute( set,"script","");
