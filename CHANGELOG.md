@@ -10,6 +10,25 @@ Note: Version numbering: x.y.z
 - Resolve #34
 
 ## 1.0.7 (work in progress)
+### PathForward
+*Imported path*
+- If id, delimiter are set in both reference and import, import is used for delimiter but id from reference. If present in only one of the two, that is used.
+- Now possible to add path node to a stream node, do note, this is checked when reading paths *not* when reading streams (for now)
+````xml
+    <stream id="test" type="tcp">
+      <eol>crlf</eol>
+      <address>localhost:4001</address>
+      <!-- Option one -->
+      <path>paths/rtk.xml</path>
+      <!-- Option two -->
+      <path import="paths/rtk.xml"/>
+    </stream>
+````
+Either way, this node is altered to look like this. So id and delimiter are taken from the xml.
+````xml
+<path import="paths/rtk.xml" src="raw:test"/>
+<!-- So id and delimiter are taken from the xml. But can be specified if none are in the xml -->
+````
 
 ## 1.0.6 (25/11/2022)
 
