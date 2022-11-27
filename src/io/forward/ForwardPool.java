@@ -1113,6 +1113,7 @@ public class ForwardPool implements Commandable {
         }
     }
     public void readPathsFromXML(){
+        // From the paths section
         XMLfab.getRootChildren(settingsPath,"dcafs","paths","path").forEach(
                 pathEle -> {
                     PathForward path = new PathForward(rtvals,dQueue,nettyGroup);
@@ -1126,5 +1127,28 @@ public class ForwardPool implements Commandable {
                     paths.put(path.getID(),path);
                 }
         );
+
+        // From the streams section
+        XMLfab.getRootChildren(settingsPath,"dcafs","streams","stream")
+                .filter( e -> XMLtools.hasChildByTag(e,"path")) // Only those with a path node
+                .map( e -> XMLtools.getFirstChildByTag(e,"path"))
+                .forEach(
+                    pathEle -> {
+                        PathForward path = new PathForward(rtvals,dQueue,nettyGroup);
+                        var parentId = XMLtools.getStringAttribute((Element) pathEle.getParentNode(), "id", "");
+                        // The functionality to import a path, relies on an attribute while this will be a content instead but may be...
+                        if( !pathEle.hasAttribute("import")) {
+                            var importPath = pathEle.getTextContent();
+                            if (importPath.isEmpty()) {
+
+                                Logger.error("Empty content in path node for " + parentId);
+                                return;
+                            }
+                            pathEle.setAttribute("import", pathEle.getTextContent());
+                            pathEle.setTextContent("");
+                        }
+                        pathEle.setAttribute("src","raw:"+parentId);
+                        path.readFromXML(pathEle,settingsPath.getParent());
+                    });
     }
 }
