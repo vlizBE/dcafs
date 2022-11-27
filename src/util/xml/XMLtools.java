@@ -52,7 +52,8 @@ public class XMLtools {
 			doc.getDocumentElement().normalize();
 		} catch (ParserConfigurationException | SAXException | IOException | java.nio.file.InvalidPathException e) {
 			Logger.error("Error occurred while reading " + xml.toAbsolutePath(), true);
-			Logger.error(e);
+			Logger.error(e.toString());
+
 		}
 		return Optional.ofNullable(doc);
 	}
@@ -65,8 +66,16 @@ public class XMLtools {
 			doc = dbf.newDocumentBuilder().parse(xml.toFile());
 			doc.getDocumentElement().normalize();
 		} catch (ParserConfigurationException | SAXException | IOException | java.nio.file.InvalidPathException e) {
-			Logger.error("Error occurred while reading " + xml.toAbsolutePath(), true);
-			return e.getMessage();
+			var error = e.toString().replace("lineNumber: ", "line:").replace("; columnNumber","");
+
+			error = error.substring(error.indexOf(":")+1).replace(": ",":").trim();
+
+			if( error.startsWith("file:")){
+				var file = error.substring(6,error.indexOf(";"));
+				file = Path.of(file).getFileName().toString();
+				error = file+":"+error.substring(error.indexOf(";")+1);
+			}
+			return error;
 		}
 		return "";
 	}

@@ -101,6 +101,8 @@ public class PathForward {
             }else{
                 Logger.error("No valid path script found: "+importPath);
                 error="No valid path script found: "+importPath;
+                String error = XMLtools.checkXML(importPath);
+                dQueue.add(Datagram.system("telnet:error,PathForward: "+error));
                 return error;
             }
         }

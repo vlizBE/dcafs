@@ -42,6 +42,8 @@ public class TelnetServer implements Commandable {
     static final String XML_PARENT_TAG = "telnet";
     ArrayList<Writable> writables = new ArrayList<>();
     private final Path settingsPath;
+    private final ArrayList<String> messages=new ArrayList<>();
+
 
     public TelnetServer( BlockingQueue<Datagram> dQueue, Path settingsPath, EventLoopGroup eventGroup ) {
         this.dQueue=dQueue;
@@ -53,7 +55,11 @@ public class TelnetServer implements Commandable {
         return this.title;
     }
 
-    public boolean readSettingsFromXML( ) {
+    public void addMessage( String message ){
+        messages.add(message);
+    }
+
+    public void readSettingsFromXML( ) {
         if( dQueue != null ) {
             XMLtools.getFirstElementByTag(settingsPath, XML_PARENT_TAG).ifPresentOrElse( ele -> {
                 port = XMLtools.getIntAttribute(ele, "port", 23);
@@ -61,7 +67,6 @@ public class TelnetServer implements Commandable {
                 ignore = XMLtools.getChildValueByTag(ele, "ignore", "");
             },()->addBlankTelnetToXML(settingsPath));
         }
-        return false;
     }
     public static void addBlankTelnetToXML(Path xmlPath ){
         XMLfab.withRoot(xmlPath, "settings")
@@ -84,8 +89,10 @@ public class TelnetServer implements Commandable {
                         // and then business logic.
                         TelnetHandler handler = new TelnetHandler( dQueue,ignore,settingsPath ) ;
                         handler.setTitle(title);
+                        messages.forEach( m -> handler.addOneTime(m));
                         writables.add(handler.getWritable());
                         pipeline.addLast( handler );
+                        messages.forEach( m -> handler.writeLine(TelnetCodes.TEXT_RED+m+TelnetCodes.TEXT_YELLOW));
                     }
                 });	// Let clients connect to the DAS interface
 
@@ -132,6 +139,13 @@ public class TelnetServer implements Commandable {
                         .add( TelnetCodes.TEXT_GREEN+"telnet:bt "+reg+"-> Get the broadcast target count")
                         .add(TelnetCodes.TEXT_GREEN+"telnet:nb or nb "+reg+"-> Disable showing broadcasts" );
                     return join.toString();
+                case "error":
+                    if( cmds.length<2)
+                        return "Not enough arguments, telnet:error,message";
+                    var error = request[1].substring(6);
+                    messages.add(error);
+                    writables.removeIf(w -> !w.writeLine(TelnetCodes.TEXT_RED+error+TelnetCodes.TEXT_YELLOW));
+                    return "";
                 case "broadcast":
                     String send;
                     if( cmds.length < 2)

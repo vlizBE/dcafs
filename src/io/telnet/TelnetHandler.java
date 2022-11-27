@@ -50,7 +50,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 	Configurator conf=null;
 
 	CommandLineInterface cli;
-
+	ArrayList<String> onetime = new ArrayList<>();
 	/* ****************************************** C O N S T R U C T O R S ******************************************* */
 	/**
 	 * Constructor that requires both the BaseWorker queue and the TransServer queue
@@ -64,7 +64,9 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 		ignoreIP.trimToSize();
 		this.settingsPath=settingsPath;
 	}
-
+	public void addOneTime(String mess){
+		onetime.add(mess);
+	}
 	/* ************************************** N E T T Y  O V E R R I D E S ********************************************/
 
     @Override
@@ -108,6 +110,13 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 			writeString(TelnetCodes.TEXT_RED + "Welcome to " + title + "!\r\n" + TelnetCodes.TEXT_RESET);
 			writeString(TelnetCodes.TEXT_GREEN + "It is " + new Date() + " now.\r\n" + TelnetCodes.TEXT_RESET);
 			writeString(TelnetCodes.TEXT_BRIGHT_BLUE + "> Common Commands: [h]elp,[st]atus, rtvals, exit...\r\n");
+			if( !onetime.isEmpty() ) {
+				writeLine(TelnetCodes.TEXT_RED);
+				writeLine("");
+				writeLine("ERRORS DETECTED DURING STARTUP");
+				onetime.forEach(m -> writeLine(m));
+				onetime.clear();
+			}
 			writeString(TelnetCodes.TEXT_BRIGHT_YELLOW + ">");
 			channel.flush();
 			if (!start.isEmpty()) {
