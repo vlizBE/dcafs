@@ -929,7 +929,7 @@ public class ForwardPool implements Commandable {
                         .getChild("path","id",cmds[1]);
                 if(ele.isEmpty())
                     return "No such path "+cmds[1];
-                if( paths.get(cmds[1]).readFromXML(ele.get(),settingsPath.getParent().toString()) )
+                if( paths.get(cmds[1]).readFromXML(ele.get(),settingsPath.getParent()) )
                     return "Path reloaded";
                 return "Path failed to reload";
             case "readfile":
@@ -984,7 +984,7 @@ public class ForwardPool implements Commandable {
                                 .selectOrAddChildAsParent("path", "id", cmds[1])
                                 .addChild("customsrc", cmds[2]).attr("type", "file").attr("interval", "1s");
                         fab.build();
-                        path.readFromXML( fab.getCurrentElement(),settingsPath.getParent().toString() );
+                        path.readFromXML( fab.getCurrentElement(),settingsPath.getParent() );
                     }else{
                         path.setSrc(cmds[2]);
                     }
@@ -1116,8 +1116,7 @@ public class ForwardPool implements Commandable {
         XMLfab.getRootChildren(settingsPath,"dcafs","paths","path").forEach(
                 pathEle -> {
                     PathForward path = new PathForward(rtvals,dQueue,nettyGroup);
-                    path.setWorkPath(settingsPath.getParent());
-                    path.readFromXML(pathEle,settingsPath.getParent().toString());
+                    path.readFromXML(pathEle,settingsPath.getParent());
                     var p = paths.get(path.getID());
                     if( p!=null) {
                       //  p.lastStep().ifPresent( path::addTarget);
