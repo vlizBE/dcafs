@@ -60,10 +60,12 @@ public class PathForward {
     public void setSrc( String src ){
         this.src=src;
     }
-    public boolean readFromXML( Element pathEle, String workpath ){
+    public boolean readFromXML( Element pathEle, Path workpath ){
 
         var oldTargets = new ArrayList<>(targets);
         targets.clear();
+
+        this.workPath=workpath;
 
         // if any future is active, stop it
         customs.forEach(CustomSrc::stop);
@@ -78,7 +80,7 @@ public class PathForward {
         String delimiter = XMLtools.getStringAttribute(pathEle,"delimiter","");
         this.src = XMLtools.getStringAttribute(pathEle,"src","");
 
-        var importPathOpt = XMLtools.getPathAttribute(pathEle,"import",Path.of(workpath));
+        var importPathOpt = XMLtools.getPathAttribute(pathEle,"import",null);
         if( importPathOpt.isPresent() ) {
             var importPath = importPathOpt.get();
             if( !importPath.isAbsolute()) // If the path isn't absolute
