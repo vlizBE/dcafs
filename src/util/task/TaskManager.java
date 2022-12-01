@@ -9,7 +9,6 @@ import io.collector.CollectorFuture;
 import das.CommandPool;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
-import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import util.data.ValTools;
 import util.task.Task.*;
@@ -44,7 +43,7 @@ public class TaskManager implements CollectorFuture {
 	private StreamManager streams; 			// Reference to the streampool, so sensors can be talked to
 	private final RealtimeValues rtvals;
 
-	private CommandPool commandPool; // Source to get the data from nexus
+	private CommandPool commandPool; // Source to get the data
 	private String id;
 
 	static final String TINY_TAG = "TASK";
@@ -110,38 +109,6 @@ public class TaskManager implements CollectorFuture {
 	}
 	public Path getXMLPath(){
 		return xmlPath;
-	}
-	
-	/* ********************************* * S T A T E S ***************************************************/
-	/*
-	 * States are an extra trigger/check for a task. fe. the 'state' of the ship,
-	 * this can be ship:dock, ship:harbour or ship:atsea For now a task can't change
-	 * a state, just check it
-	 */
-	/**
-	 * Altering an existing state
-	 * 
-	 * @param state The format needs to be identifier:state
-	 * @return True if the state was altered, false if it's a new state
-	 */
-	public boolean changeState(String state) {
-		String[] split = state.split(":");
-		boolean altered = rtvals.getText(split[0],"").equalsIgnoreCase(split[1]);
-		rtvals.setText(split[0],split[1]);
-		return altered;
-	}
-
-	/**
-	 * Check whether a state is active
-	 * 
-	 * @param id The state to check
-	 * @return True if it's active
-	 */
-	public boolean checkState(String id) {
-		if (id.isBlank() || id.equalsIgnoreCase("always"))
-			return true;
-		var state = id.split(":");
-		return rtvals.getText(state[0],"").equalsIgnoreCase(state[1]);
 	}
 
 	/* ************************ * WAYS OF RETRIEVING TASKS ************************************************/
@@ -358,41 +325,34 @@ public class TaskManager implements CollectorFuture {
 				&& task.triggerType != TRIGGERTYPE.WAITFOR)
 			return;
 
-		if (checkState(task.when)) { // Check whether the state allows for the task to run
-			if (task.future == null || task.future.isCancelled()) {
-				Logger.tag(TINY_TAG).info("[" + id + "] Scheduling task: " + task + " with delay/interval/unit:"
-						+ task.startDelay + ";" + task.interval + ";" + task.unit);
-				try {
-					long delay = task.startDelay;
-					if(task.startDelay==-1){ // Figure out the delay
-						delay = TimeTools.millisDelayToCleanTime(task.interval);
-					}
-					if( task.interval == 0){
-						Logger.error(id+" -> Bad delay calculated from "+task.interval+ "for "+task.id+", so not starting.");
-					}else {
-						task.future = scheduler.scheduleAtFixedRate(new DelayedControl(task), delay,
-								task.interval, task.unit);
-						Logger.info(id + " -> Delay set to " + TimeTools.convertPeriodtoString(delay, TimeUnit.MILLISECONDS) + " for " + task.interval +" "+ task.unit + " interval");
-					}
-				} catch (IllegalArgumentException e) {
-					Logger.tag(TINY_TAG).error("Illegal Argument: start=" + task.startDelay + " interval=" + task.interval + " unit="
-							+ task.unit);
+
+		if (task.future == null || task.future.isCancelled()) {
+			Logger.tag(TINY_TAG).info("[" + id + "] Scheduling task: " + task + " with delay/interval/unit:"
+					+ task.startDelay + ";" + task.interval + ";" + task.unit);
+			try {
+				long delay = task.startDelay;
+				if(task.startDelay==-1){ // Figure out the delay
+					delay = TimeTools.millisDelayToCleanTime(task.interval);
 				}
-			} else {
-				if (task.future != null && task.future.isCancelled()) {
-					Logger.tag(TINY_TAG).info("[" + id + "] Task future was cancelled " + task.id);
+				if( task.interval == 0){
+					Logger.error(id+" -> Bad delay calculated from "+task.interval+ "for "+task.id+", so not starting.");
+				}else {
+					task.future = scheduler.scheduleAtFixedRate(new DelayedControl(task), delay,
+							task.interval, task.unit);
+					Logger.info(id + " -> Delay set to " + TimeTools.convertPeriodtoString(delay, TimeUnit.MILLISECONDS) + " for " + task.interval +" "+ task.unit + " interval");
 				}
-				Logger.tag(TINY_TAG).info("[" + id + "] Task already running: " + task + " with delay/interval/unit:"
-						+ task.startDelay + ";" + task.interval + ";" + task.unit);
+			} catch (IllegalArgumentException e) {
+				Logger.tag(TINY_TAG).error("Illegal Argument: start=" + task.startDelay + " interval=" + task.interval + " unit="
+						+ task.unit);
 			}
-		} else { // If the check fails, cancel the running task
-			if (task.future != null) {
-				task.future.cancel(false);
-				Logger.tag(TINY_TAG).info("[" + id + "] Cancelled task already running: " + task);
-			} else {
-				Logger.tag(TINY_TAG).error("[" + id + "] NOT Scheduling (checkState failed): " + task);
+		} else {
+			if (task.future != null && task.future.isCancelled()) {
+				Logger.tag(TINY_TAG).info("[" + id + "] Task future was cancelled " + task.id);
 			}
+			Logger.tag(TINY_TAG).info("[" + id + "] Task already running: " + task + " with delay/interval/unit:"
+					+ task.startDelay + ";" + task.interval + ";" + task.unit);
 		}
+
 	}
 
 	/**
@@ -418,7 +378,7 @@ public class TaskManager implements CollectorFuture {
 		}
 		Logger.tag(TINY_TAG).debug("[" + id + "] Trying to start task of type: " + task.triggerType + "(" + task.value + ")");
 		switch (task.triggerType) {
-			case CLOCK:
+			case CLOCK -> {
 				long min = calculateSeconds(task);
 				if (min != -1) {
 					task.future = scheduler.schedule(new DelayedControl(task), min, TimeUnit.SECONDS);
@@ -427,14 +387,9 @@ public class TaskManager implements CollectorFuture {
 				} else {
 					Logger.tag(TINY_TAG).error("[" + id + "] Something went wrong with calculating minutes...");
 				}
-				break;
-			case RETRY:
-			case INTERVAL:
-			case WAITFOR:
-			case WHILE:
-				checkIntervalTask(task);
-				break;
-			case DELAY:
+			}
+			case RETRY, INTERVAL, WAITFOR, WHILE -> checkIntervalTask(task);
+			case DELAY -> {
 				if (task.when == null) {
 					Logger.tag(TINY_TAG).error("[" + id + "] WHEN IS NULL!?!?");
 				}
@@ -442,14 +397,11 @@ public class TaskManager implements CollectorFuture {
 					task.future.cancel(true);
 				}
 				Logger.tag(TINY_TAG).debug("[" + id + "] Scheduled sending '" + task.value + "' in "
-						+ TimeTools.convertPeriodtoString(task.startDelay, task.unit) + " and need "+(task.reply.isEmpty()?"no reply":("'"+task.reply+"' as reply")));
+						+ TimeTools.convertPeriodtoString(task.startDelay, task.unit) + " and need " + (task.reply.isEmpty() ? "no reply" : ("'" + task.reply + "' as reply")));
 				task.future = scheduler.schedule(new DelayedControl(task), task.startDelay, task.unit);
-				break;
-			case EXECUTE:
-				doTask(task);
-				break;
-			case KEYWORD: default:
-				break;
+			}
+			case EXECUTE -> doTask(task);
+			default -> {}
 		}
 		return true;
 	}
@@ -609,7 +561,7 @@ public class TaskManager implements CollectorFuture {
 		if (task.skipExecutions == 0 // Check if the next execution shouldn't be skipped (related to the 'link' keyword)
 				&& task.doToday // Check if the task is allowed to be executed today (related to the 'link' keyword)
 				&& verify // Check if the earlier executed pre req checked out
-				&& checkState(task.when)) { // Verify that the state is correct
+				) { // Verify that the state is correct
 
 			executed = FAILREASON.NONE; // First checks passed, so it will probably execute
 
@@ -994,7 +946,6 @@ public class TaskManager implements CollectorFuture {
     	line = line.replace("{utcstamp}", TimeTools.formatUTCNow("dd/MM/YY HH:mm:ss"));
 		line = line.replace("{utcdate}", TimeTools.formatUTCNow("yyMMdd"));
     	line = line.replace("{localstamp}", TimeTools.formatNow("dd/MM/YY HH:mm:ss"));
-		line = line.replace("{utcsync}", TimeTools.formatNow("'DT'yyMMddHHmmssu"));
 		line = line.replace("{rand6}", ""+(int)Math.rint(1+Math.random()*5));
 		line = line.replace("{rand20}", ""+(int)Math.rint(1+Math.random()*19));
 		line = line.replace("{rand100}", ""+(int)Math.rint(1+Math.random()*99));
@@ -1057,7 +1008,7 @@ public class TaskManager implements CollectorFuture {
 	 */
 	public void shutdownAndClearAll(){
 
-		// Make sure the future's are cancelled
+		// Make sure the futures are cancelled
 		for( var set : tasksets.values()){
 			for( var task : set.getTasks()){
 				if(task.future!=null)
@@ -1224,7 +1175,7 @@ public class TaskManager implements CollectorFuture {
 		String[] parts = request.split(",");
 
 		String cyan = html?"": TelnetCodes.TEXT_CYAN;
-		String green=html?"":TelnetCodes.TEXT_GREEN;
+		String green=(html?"":TelnetCodes.TEXT_GREEN)+"tm:";
 		String ora = html?"":TelnetCodes.TEXT_ORANGE;
 		String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
 
@@ -1235,7 +1186,6 @@ public class TaskManager implements CollectorFuture {
 				join.add(green+"forcereload "+reg+"-> Reloads this TaskManager while ignoring interruptable");
 				join.add(green+"listtasks/tasks "+reg+"-> Returns a listing of all the loaded tasks");
 				join.add(green+"listsets/sets "+reg+"-> Returns a listing of all the loaded sets");
-				join.add(green+"states/flags "+reg+"-> Returns a listing of all the current states & flags");
 				join.add(green+"stop "+reg+"-> Stop all running task(set)s");
 				join.add(green+"run,x "+reg+"-> Run taskset with the id x");
 				return join.toString();
@@ -1243,10 +1193,6 @@ public class TaskManager implements CollectorFuture {
 			case "forcereload": return forceReloadTasks()?"Reloaded tasks":"Reload failed";
 			case "listtasks": case "tasks": return getTaskListing(html?"<br>":"\r\n");
 			case "listsets": case "sets":  return getTaskSetListing(html?"<br>":"\r\n");
-			case "setstate":
-				if( parts.length!=2)
-					return "To few arguments, need setstate,id:state";
-				return changeState(parts[1])?"State changed":"state altered";
 			case "stop":	  return "Cancelled "+stopAll("doTaskManager")+ " futures.";
 			case "run":		
 				if( parts.length==2){

@@ -89,7 +89,7 @@ public class TelnetServer implements Commandable {
                         // and then business logic.
                         TelnetHandler handler = new TelnetHandler( dQueue,ignore,settingsPath ) ;
                         handler.setTitle(title);
-                        messages.forEach( m -> handler.addOneTime(m));
+                        messages.forEach(handler::addOneTime);
                         writables.add(handler.getWritable());
                         pipeline.addLast( handler );
                         messages.forEach( m -> handler.writeLine(TelnetCodes.TEXT_RED+m+TelnetCodes.TEXT_YELLOW));
@@ -167,7 +167,7 @@ public class TelnetServer implements Commandable {
                     writables.removeIf(w -> !w.writeLine(send+TelnetCodes.TEXT_YELLOW));
                     return "";
                 case "write":
-                    var wrs = writables.stream().filter( w -> w.getID().equalsIgnoreCase(cmds[1])).collect(Collectors.toList());
+                    var wrs = writables.stream().filter(w -> w.getID().equalsIgnoreCase(cmds[1])).toList();
                     if( wrs.isEmpty())
                         return "No such id";
                     var mes = TelnetCodes.TEXT_MAGENTA+wr.getID()+": "+request[1].substring(7+cmds[1].length())+TelnetCodes.TEXT_YELLOW;

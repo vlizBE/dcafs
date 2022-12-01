@@ -30,7 +30,7 @@ Either way, this node is altered to look like this. So id and delimiter are take
 <!-- So id and delimiter are taken from the xml. But can be specified if none are in the xml -->
 ````
 **Improved feedback**  
-When reading the xml failed during startup, this is now shown when logging into telnet.
+When reading the xml failed during startup, this is now shown when logging into telnet.  
 For example, a bad character somewhere in a path xml
 ````
 Welcome to DCAFS!

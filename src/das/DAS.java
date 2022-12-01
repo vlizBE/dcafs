@@ -21,7 +21,6 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.commons.lang3.SystemUtils;
 import org.tinylog.Logger;
 import org.tinylog.provider.ProviderRegistry;
-import org.w3c.dom.Document;
 import util.data.RealtimeValues;
 import util.database.*;
 import util.task.TaskManagerPool;
@@ -237,13 +236,6 @@ public class DAS implements Commandable{
     public Path getSettingsPath(){
         return settingsPath;
     }
-    /**
-     * Check if the boot up was successful
-     *
-     * @return True if boot went fine
-     */
-    public boolean hasBootedOk() { return bootOK; }
-
     /**
      * Check if running in debug mode
      * 

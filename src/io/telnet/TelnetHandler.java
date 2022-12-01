@@ -35,7 +35,6 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 
 	/* OTHER */
 	protected ArrayList<String> ignoreIP= new ArrayList<>();	// List of IP's to ignore, not relevant for StreamHandler, but is for the telnet implementation
-	protected boolean clean=true;	// Flag that determines if null characters etc need to be cleaned from a received message
 	protected boolean log=true;	// Flag that determines if raw data needs to be logged
 
 	private final Path settingsPath;
@@ -114,7 +113,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 				writeLine(TelnetCodes.TEXT_RED);
 				writeLine("");
 				writeLine("ERRORS DETECTED DURING STARTUP");
-				onetime.forEach(m -> writeLine(m));
+				onetime.forEach(this::writeLine);
 				onetime.clear();
 			}
 			writeString(TelnetCodes.TEXT_BRIGHT_YELLOW + ">");
