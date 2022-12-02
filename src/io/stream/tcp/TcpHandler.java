@@ -196,11 +196,13 @@ public class TcpHandler extends SimpleChannelInboundHandler<byte[]>{
 
             // Implement the use of store
             if( !rtvals.isEmpty() ){
-               var split = msg.split(delimiter);
-               if( split.length < rtvals.size()){
-                   Logger.error(id+ " -> Not enough data after split, got "+split.length+" from "+msg);
+               var split = msg.trim().split(delimiter);
+               if( split.length < rtvals.size()) {
+                   Logger.error(id + " -> Not enough data after split, got " + split.length + " from " + msg);
+               }else{
                     for( int a=0;a<rtvals.size();a++){
-                       rtvals.get(a).parseValue(split[a]);
+                        if( rtvals.get(a)!=null)
+                            rtvals.get(a).parseValue(split[a]);
                    }
                }
             }

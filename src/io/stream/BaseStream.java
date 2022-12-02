@@ -110,11 +110,18 @@ public abstract class BaseStream {
             String groupID = XMLtools.getStringAttribute(store,"group",id);
             delimiter = XMLtools.getStringAttribute(store,"delimiter",delimiter);
             var vals = XMLtools.getChildElements(storeOpt.get());
+
             for( var val : vals){
+                int i = XMLtools.getIntAttribute(val,"index",-1);
+                if( i != -1 ){
+                    while( i>rtvals.size() )
+                        rtvals.add(null);
+                }
                 switch (val.getTagName()) {
                     case "real" -> rtvals.add(RealVal.build(val, groupID, Double.NaN));
                     case "int" -> rtvals.add(IntegerVal.build(val, groupID, Integer.MAX_VALUE));
                     case "flag","bool" -> rtvals.add(FlagVal.build(val,groupID,false));
+                    case "ignore" -> rtvals.add(null);
                     default -> {}
                 }
             }

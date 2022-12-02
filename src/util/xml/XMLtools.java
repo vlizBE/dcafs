@@ -255,7 +255,7 @@ public class XMLtools {
 		return getFirstElementByTag(xml,tag).isPresent();
 	}
 	public static boolean hasChildByTag(Element parent, String tag) {
-		return getFirstChildByTag(parent, tag)!=null;
+		return getFirstChildByTag(parent, tag).isPresent();
 	}
 	/**
 	 * Get an array containing all the elements in the xml with the give tag

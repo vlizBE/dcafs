@@ -15,7 +15,40 @@ Note: Version numbering: x.y.z
 - Slowly removing the (visible) use of 'label'.
 - Added the optional node 'store' to a stream, this allows for processing inside the acquire thread.
 This is as an alternative to the real/int/text label and some of the generic uses
-
+````xml
+    <!-- Example -->
+    <!-- Before -->
+    <stream id="sbe38" type="tcp">
+      <address>localhost:4001</address>
+      <label>generic:sbe38</label>
+    </stream>
+    <rtvals>
+        <group id="sbe38">
+            <real name="temp" unit="°C"/> 
+        </group>
+    </rtvals>
+    <generics>
+      <generic id="sbe38" group="sbe38" delimiter=":">
+          <real index="1">temp</real>
+      </generic>
+    </generics>
+    <!-- Now -->
+    <stream id="sbe38" type="tcp">
+      <address>localhost:4001</address>
+      <store delimiter=":"> <!-- Take the group id from the stream id, delimiter is : -->
+        <ignore/> <!-- ignore the first element of the split, can be repeated -->
+        <real id="temp" unit="°C"/> <!-- second element is a real -->
+        <!-- don't care about any other elements -->
+      </store>
+    </stream>
+    <!-- or -->
+  <stream id="sbe38" type="tcp">
+    <address>localhost:4001</address>
+    <store delimiter=":"> <!-- Take the group id from the stream id, delimiter is : -->
+      <real index="1" id="temp" unit="°C"/> <!-- second element is a real, starts at 0 -->
+    </store>
+  </stream>
+````
 ### PathForward
 **Imported path**  
 - If id, delimiter are set in both reference and import, import is used for delimiter but id from reference. If present in only one of the two, that is used.
