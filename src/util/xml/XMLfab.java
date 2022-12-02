@@ -149,13 +149,13 @@ public class XMLfab {
      * @return This fab after going one step lower with the root
      */
     public XMLfab digRoot( String tag ){
-        Element ele = XMLtools.getFirstChildByTag(root, tag);
-        if( ele == null ){
+        var eleOpt = XMLtools.getFirstChildByTag(root, tag);
+        if( eleOpt.isEmpty() ){
             root = (Element)root.appendChild( xmlDoc.createElement(tag) );    
             Logger.debug("Creating element with tag: "+tag);
         }else{
             Logger.debug("Using found element with tag: "+tag);
-            root = ele;            
+            root = eleOpt.get();
         }
         last = root;
         parent = root;
@@ -218,12 +218,10 @@ public class XMLfab {
 
         var root=rootOpt.get();
         for( int a=1; a<roots.length;a++){
-            Element ele = XMLtools.getFirstChildByTag(root, roots[a]);
-            if( ele == null ){
+            var eleOpt = XMLtools.getFirstChildByTag(root, roots[a]);
+            if( eleOpt.isEmpty() )
                 return false;
-            }else{               
-                root = ele;
-            }
+            root = eleOpt.get();
         }
         return true;
     }
@@ -254,10 +252,10 @@ public class XMLfab {
     }
 
     /**
-     * Add a node after the the current parent
-     * @param tag
-     * @param content
-     * @return
+     * Add a node after the current parent
+     * @param tag The tag to use
+     * @param content The content to set
+     * @return This fab
      */
     public XMLfab addParentHere( String tag, String content){
         var newNode = xmlDoc.createElement(tag);
@@ -479,21 +477,13 @@ public class XMLfab {
      */
     public XMLfab alterChild( String tag ){
         alter=true;
-        last = XMLtools.getFirstChildByTag(parent, tag);
-        if( last==null){
-            last = XMLtools.createChildElement(xmlDoc, parent, tag );           
-        }
+        last = XMLtools.getFirstChildByTag(parent, tag).orElse( XMLtools.createChildElement(xmlDoc, parent, tag ) );
         return this;
     }
     public XMLfab alterChild( String tag, String attr, String val ){
         alter=true;
-        var ch = getChild(tag,attr,val);
-        if( ch.isPresent() ){
-            last = ch.get();
-        }else{
-            last = XMLtools.createChildElement(xmlDoc, parent, tag );
-            attr(attr,val);
-        }
+        last = getChild(tag,attr,val).orElse(XMLtools.createChildElement(xmlDoc, parent, tag ));
+        attr(attr,val);
         return this;
     }
     /**
@@ -504,8 +494,8 @@ public class XMLfab {
      */
     public XMLfab alterChild( String tag, String content ){
         alter=true;
-        last = XMLtools.getFirstChildByTag(parent, tag);
-        if( last!=null){
+        var lastOpt = XMLtools.getFirstChildByTag(parent, tag);
+        if( lastOpt.isPresent()){
             last.setTextContent(content);            
         }else{
             last = XMLtools.createChildTextElement(xmlDoc, parent, tag, content);

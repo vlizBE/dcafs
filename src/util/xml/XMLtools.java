@@ -1,5 +1,6 @@
 package util.xml;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
@@ -289,18 +290,18 @@ public class XMLtools {
 	 * @param tag     The name of the node in the element
 	 * @return The element if found, null if not
 	 */
-	public static Element getFirstChildByTag(Element element, String tag) {
+	public static Optional<Element> getFirstChildByTag(Element element, String tag) {
 		if( element == null ){
 			Logger.error("Element is null when looking for "+tag);
-			return null;
+			return Optional.empty();
 		}
 
 		NodeList lstNmElmntLst = element.getElementsByTagName(tag);
 
 		if (lstNmElmntLst.getLength() > 0) {
-			return (Element) lstNmElmntLst.item(0);
+			return Optional.of((Element) lstNmElmntLst.item(0));
 		}
-		return null;
+		return Optional.empty();
 	}
 
 	/**
@@ -313,13 +314,10 @@ public class XMLtools {
 	 */
 	public static String getChildValueByTag(Element element, String tag, String def) {
 		if( element == null ){
-			Logger.error("Element is null when looking for "+tag);
+			Logger.error("No such parent element when looking for the tag "+tag);
 			return def;
 		}
-		Element e = getFirstChildByTag(element, tag.toLowerCase());
-		if (e == null)
-			return def;
-		return e.getTextContent();
+		return getFirstChildByTag(element, tag.toLowerCase()).map( e -> e.getTextContent()).orElse(def);
 	}
 	/**
 	 * Get the path value of a node from the given element with the given name
@@ -334,10 +332,10 @@ public class XMLtools {
 			Logger.error("Element is null when looking for "+tag);
 			return Optional.empty();
 		}
-		Element e = getFirstChildByTag(element, tag.toLowerCase());
-		if (e == null )
+		var childOpt = getFirstChildByTag(element, tag.toLowerCase());
+		if (childOpt.isEmpty() )
 			return Optional.empty();
-		String p = e.getTextContent().replace("/", File.separator); // Make sure to use correct slashes
+		String p = childOpt.get().getTextContent().replace("/", File.separator); // Make sure to use correct slashes
 		p=p.replace("\\",File.separator);
 		if( p.isEmpty() )
 			return Optional.empty();
@@ -359,10 +357,7 @@ public class XMLtools {
 			Logger.error("Element is null when looking for "+tag);
 			return def;
 		}
-		Element e = getFirstChildByTag(element, tag);
-		if (e == null)
-			return def;
-		return Tools.parseInt(e.getTextContent(), def);
+		return getFirstChildByTag(element, tag).map(e-> NumberUtils.toInt(e.getTextContent(),def)).orElse(def);
 	}
 
 	/**
@@ -378,10 +373,7 @@ public class XMLtools {
 			Logger.error("Element is null when looking for "+tag);
 			return def;
 		}
-		Element e = getFirstChildByTag(element, tag);
-		if (e == null)
-			return def;
-		return Tools.parseDouble(e.getTextContent(), def);
+		return getFirstChildByTag(element, tag).map(e-> NumberUtils.toDouble(e.getTextContent(),def)).orElse(def);
 	}
 	/**
 	 * 
@@ -395,10 +387,10 @@ public class XMLtools {
 	 * @return The requested data or the def value if not found
 	 */
 	public static boolean getChildBooleanValueByTag( Element element, String tag, boolean def){
-		Element e = getFirstChildByTag(element, tag);
-		if (e == null)
+		var childOpt = getFirstChildByTag(element, tag);
+		if (childOpt.isEmpty())
 			return def;
-		String val = e.getTextContent().toLowerCase().trim();
+		String val = childOpt.get().getTextContent().toLowerCase().trim();
 		if( val.equals("yes")||val.equals("true")||val.equals("1"))
 			return true;
 		if( val.equals("no")||val.equals("false")||val.equals("0"))
@@ -414,12 +406,12 @@ public class XMLtools {
 	 * @return An arraylist with the child-elements or an empty one if none were found
 	 */
 	public static List<Element> getChildElements(Element element, String... child) {
-		if( child.length==1 && child[0].isEmpty() )
-			return getChildElements(element);
-			
-		var eles = new ArrayList<Element>();	
+		var eles = new ArrayList<Element>();
 		if (element == null)
 			return eles;
+
+		if( child.length==1 && child[0].isEmpty() )
+			return getChildElements(element);
 
 		for( String ch : child ){
 			NodeList list = element.getElementsByTagName(ch);
