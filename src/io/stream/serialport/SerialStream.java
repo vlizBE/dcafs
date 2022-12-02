@@ -160,19 +160,37 @@ public class SerialStream extends BaseStream implements Writable {
         }
     }
     protected void processMessageEvent(byte[] data){
-        String message = new String(data).replace(eol, "");
+        String msg = new String(data).replace(eol, "");
 
-        if( log ) {        // If the message isn't an empty string and logging is enabled, store the data with logback
-            Logger.tag("RAW").warn(priority + "\t" + label+"|"+id + "\t" + message);
+        // Log anything and everything (except empty strings)
+        if( !msg.isBlank() && log ) {        // If the message isn't an empty string and logging is enabled, store the data with logback
+            Logger.tag("RAW").warn( label+"|"+id + "\t" + msg);
+        }
+        if(debug) {
+            Logger.info(id + " -> " + msg);
+            Logger.info(Tools.fromBytesToHexString(msg.getBytes()));
         }
 
-        dQueue.add( Datagram.build(message).label(label).priority(priority).origin(id) );
-
-        if (debug) {
-            Logger.info(id + " -> " + message);
-            Logger.info(Tools.fromBytesToHexString(message.getBytes()));
+        // Implement the use of labels
+        if( !label.isEmpty() && dQueue !=null ) { // No use adding to queue without label
+            dQueue.add( Datagram.build(msg)
+                    .label(label)
+                    .priority(priority)
+                    .timestamp() );
         }
-        forwardData(message);
+
+        // Implement the use of store
+        if( !rtvals.isEmpty() ){
+            var split = msg.split(delimiter);
+            if( split.length < rtvals.size()){
+                Logger.error(id+ " -> Not enough data after split, got "+split.length+" from "+msg);
+                for( int a=0;a<rtvals.size();a++){
+                    rtvals.get(a).parseValue(split[a]);
+                }
+            }
+        }
+
+        forwardData(msg);
 
         long p = Instant.now().toEpochMilli() - timestamp; // Calculate the time between 'now' and when the previous
         // message was received

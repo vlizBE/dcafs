@@ -189,12 +189,7 @@ public class RealtimeValues implements Commandable {
 	 * @return True if it was created
 	 */
 	public boolean updateReal(String id, double value) {
-		return getRealVal(id).map( r -> {r.updateValue(value);return true;}).orElse(false);
-	}
-	public boolean updateReal(String id, String value) {
-		if( NumberUtils.isCreatable(value))
-			return getRealVal(id).map( r -> {r.updateValue(NumberUtils.toDouble(value));return true;}).orElse(false);
-		return false;
+		return getRealVal(id).map( r -> {r.value(value);return true;}).orElse(false);
 	}
 	/**
 	 * Alter all the values of the reals in the given group
@@ -204,7 +199,7 @@ public class RealtimeValues implements Commandable {
 	 */
 	public int updateRealGroup(String group, double value){
 		var set = realVals.values().stream().filter(rv -> rv.group().equalsIgnoreCase(group)).collect(Collectors.toSet());
-		set.forEach(rv->rv.updateValue(value));
+		set.forEach(rv->rv.value(value));
 		return set.size();
 	}
 	/**
@@ -218,10 +213,7 @@ public class RealtimeValues implements Commandable {
 		var star = id.indexOf("*");
 		var dOpt = getRealVal(star==-1?id:id.substring(0,star));
 
-		if (dOpt.isEmpty()) {
-			return defVal;
-		}
-		return dOpt.get().value(star==-1?"":id.substring(star+1));
+		return dOpt.map(realVal -> realVal.value(star == -1 ? "" : id.substring(star + 1))).orElse(defVal);
 	}
 	public String realValueString(String id){
 		return getRealVal(id).map( rv -> rv.asValueString()).orElse("?"+id+"?");
@@ -282,7 +274,7 @@ public class RealtimeValues implements Commandable {
 	 */
 	public int updateIntegerGroup(String group, int value){
 		var set = integerVals.values().stream().filter( iv -> iv.group().equalsIgnoreCase(group)).collect(Collectors.toSet());
-		set.forEach(iv->iv.updateValue(value));
+		set.forEach(iv->iv.value(value));
 		return set.size();
 	}
 	/**

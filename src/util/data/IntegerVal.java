@@ -163,7 +163,18 @@ public class IntegerVal extends AbstractVal implements NumericVal{
         }
         return this;
     }
-
+    @Override
+    public void updateValue( double val ) {
+        value(((Double)val).intValue());
+    }
+    public void parseValue( String val ){
+        var res = NumberUtils.toInt(val,Integer.MAX_VALUE);
+        if( res != Integer.MAX_VALUE){
+            value(res);
+        }else{
+            Logger.error(getID() + " -> Failed to parse "+val);
+        }
+    }
     /**
      * Set the default value, this will be used as initial value and after a reset
      *
@@ -307,13 +318,6 @@ public class IntegerVal extends AbstractVal implements NumericVal{
             case "max" -> max();
             default -> intValue();
         };
-    }
-    @Override
-    public void updateValue(double val) {
-        value = ((Double)val).intValue();
-    }
-    public void updateValue(int val){
-        value=val;
     }
     /**
      * Calculate the average of all the values stored in the history

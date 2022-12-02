@@ -4,6 +4,7 @@ import io.Writable;
 import io.netty.channel.EventLoopGroup;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.data.*;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
@@ -48,6 +49,9 @@ public abstract class BaseStream {
 
     protected ScheduledFuture<?> reconnectFuture=null;
     protected ArrayList<TriggerAction> triggeredActions = new ArrayList<>();
+
+    protected ArrayList<AbstractVal> rtvals = new ArrayList<>();
+    protected String delimiter = ",";
 
     private static final String XML_PRIORITY_TAG="priority";
     private static final String XML_STREAM_TAG="stream";
@@ -99,7 +103,22 @@ public abstract class BaseStream {
         if( XMLtools.getChildBooleanValueByTag(stream, "echo", false) ){
             enableEcho();
         }
-
+        // Store
+        var storeOpt = XMLtools.getFirstChildByTag(stream,"store");
+        if( storeOpt.isPresent()){
+            var store=storeOpt.get();
+            String groupID = XMLtools.getStringAttribute(store,"group",id);
+            delimiter = XMLtools.getStringAttribute(store,"delimiter",delimiter);
+            var vals = XMLtools.getChildElements(storeOpt.get());
+            for( var val : vals){
+                switch (val.getTagName()) {
+                    case "real" -> rtvals.add(RealVal.build(val, groupID, Double.NaN));
+                    case "int" -> rtvals.add(IntegerVal.build(val, groupID, Integer.MAX_VALUE));
+                    case "flag","bool" -> rtvals.add(FlagVal.build(val,groupID,false));
+                    default -> {}
+                }
+            }
+        }
         // cmds
         triggeredActions.clear();
         for( Element cmd : XMLtools.getChildElements(stream, "cmd") ){
@@ -113,6 +132,20 @@ public abstract class BaseStream {
             triggeredActions.add(new TriggerAction(when, c));
         }
         return readExtraFromXML(stream);
+    }
+    public ArrayList<AbstractVal> getAbstractVals(){
+        return rtvals;
+    }
+    public void shareRealtimeValues(RealtimeValues rtv){
+        for( var val : rtvals ){
+            if( val instanceof RealVal ){
+                rtv.addRealVal((RealVal)val,false);
+            }else if( val instanceof IntegerVal ){
+                rtv.addIntegerVal((IntegerVal) val,null);
+            }else if( val instanceof  FlagVal ){
+                rtv.addFlagVal((FlagVal)val,null);
+            }
+        }
     }
     protected abstract boolean readExtraFromXML( Element stream );
     protected abstract boolean writeExtraToXML( XMLfab fab );

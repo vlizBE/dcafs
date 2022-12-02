@@ -19,6 +19,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.commons.lang3.StringUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.data.RealtimeValues;
 import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
@@ -61,14 +62,15 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 	private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(); // scheduler for the connection attempts
 	private static final String XML_PARENT_TAG="streams";
 	private static final String XML_CHILD_TAG="stream";
-
-	public StreamManager(BlockingQueue<Datagram> dQueue, IssuePool issues, EventLoopGroup nettyGroup ) {
+	private RealtimeValues rtvals;
+	public StreamManager(BlockingQueue<Datagram> dQueue, IssuePool issues, EventLoopGroup nettyGroup, RealtimeValues rtvals ) {
 		this.dQueue = dQueue;
 		this.issues = issues;	
 		this.eventLoopGroup = nettyGroup;
+		this.rtvals=rtvals;
 	}
-	public StreamManager(BlockingQueue<Datagram> dQueue, IssuePool issues) {
-		this(dQueue,issues, new NioEventLoopGroup());	
+	public StreamManager(BlockingQueue<Datagram> dQueue, IssuePool issues, RealtimeValues rtvals) {
+		this(dQueue,issues, new NioEventLoopGroup(), rtvals);
 	}
 
 	public void enableDebug(){
@@ -149,7 +151,7 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 
 	/**
 	 * Get a list of all the StreamDescriptors available
-	 * @param html Whether or not to use html formatting
+	 * @param html Whether to use html formatting
 	 * @return A String with a line for each StreamDescriptor which looks like
 	 *         Sxx=id
 	 */
@@ -362,10 +364,11 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 			var str = baseOpt.get();
 			str.disconnect();
 			str.readFromXML(childOpt.get());
+			str.shareRealtimeValues(rtvals);
 			str.reconnectFuture = scheduler.schedule( new DoConnection( str ), 0, TimeUnit.SECONDS );
 			return "Reloaded and trying to reconnect";
 		}else{
-			addStreamFromXML(childOpt.get());
+			addStreamFromXML(childOpt.get()).shareRealtimeValues(rtvals);
 			return "Loading new stream.";
 		}
 	}
@@ -400,9 +403,8 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 
 			for( Element el : XMLtools.getChildElements( ele, XML_CHILD_TAG)){
 				BaseStream bs = addStreamFromXML(el);
-				if( bs != null ){
-					streams.put( bs.getID().toLowerCase(),bs);
-				}
+				bs.shareRealtimeValues(rtvals);
+				streams.put(bs.getID().toLowerCase(), bs);
 			}
 		});
 	}

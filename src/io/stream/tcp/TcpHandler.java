@@ -7,6 +7,7 @@ import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import org.tinylog.Logger;
+import util.data.AbstractVal;
 import worker.Datagram;
 
 import java.net.InetSocketAddress;
@@ -41,6 +42,9 @@ public class TcpHandler extends SimpleChannelInboundHandler<byte[]>{
 
     protected EventLoopGroup eventLoopGroup;
 
+    protected ArrayList<AbstractVal> rtvals;
+    protected String delimiter=",";
+
     String eol="\r\n";
     boolean udp=false;
 
@@ -56,6 +60,11 @@ public class TcpHandler extends SimpleChannelInboundHandler<byte[]>{
     }
     public void setTargets(List<Writable> targets){
         this.targets = targets;
+    }
+    public void setRTvals( ArrayList<AbstractVal> vals, String delimiter){
+        rtvals=vals;
+        if( !delimiter.isEmpty())
+            this.delimiter=delimiter;
     }
 	public String getIP(){
 		return remote.getAddress().getHostAddress();
@@ -162,40 +171,53 @@ public class TcpHandler extends SimpleChannelInboundHandler<byte[]>{
 		    listeners.forEach( l-> l.notifyActive(id));
 	   }	
        if ( !(msg.isBlank() && clean)) { //make sure that the received data is not 'null' or an empty string           
-            if( clean ){        	   
+            if( clean ){
                 msg = msg.replace("\n", "");   // Remove newline characters
                 msg = msg.replace("\r", "");   // Remove carriage return characters
                 msg = msg.replace("\0","");    // Remove null characters
                 //msg = msg.trim();
             }
 
-            var d = Datagram.build(msg)
-                                      .label(label)
-                                      .priority(priority)
-                                      .writable(writable)
-                                      .timestamp();
-
-            if( !dQueue.add(d) ){
-                Logger.error(id +" -> Failed to add data to the queue");
-            }
-
-		    if(debug)
-			    Logger.info( d.getOriginID()+" -> " + d.getData());
-				   
             // Log anything and everything (except empty strings)
             if( !msg.isBlank() && log ) {        // If the message isn't an empty string and logging is enabled, store the data with logback
-                Logger.tag("RAW").warn(priority + "\t" + label+"|"+id + "\t" + msg);
+               Logger.tag("RAW").warn(priority + "\t" + label+"|"+id + "\t" + msg);
             }
+            if(debug)
+               Logger.info( id+" -> " + msg);
+
+            // Implement the use of labels
+            if( !label.isEmpty() && dQueue !=null ) { // No use adding to queue without label
+               dQueue.add( Datagram.build(msg)
+                       .label(label)
+                       .priority(priority)
+                       .writable(writable)
+                       .timestamp() );
+            }
+
+            // Implement the use of store
+            if( !rtvals.isEmpty() ){
+               var split = msg.split(delimiter);
+               if( split.length < rtvals.size()){
+                   Logger.error(id+ " -> Not enough data after split, got "+split.length+" from "+msg);
+                    for( int a=0;a<rtvals.size();a++){
+                       rtvals.get(a).parseValue(split[a]);
+                   }
+               }
+            }
+
+            // Forward data to targets
 			if( !targets.isEmpty() ){
                 String tosend=new String(data);
                 targets.forEach( dt -> eventLoopGroup.submit(()->dt.writeLine(tosend)));
                 targets.removeIf(wr -> !wr.isConnectionValid() ); // Clear inactive
 			}
-		
+
+            // Keep track of the time between messages
             long p = Instant.now().toEpochMilli() - timeStamp;	// Calculate the time between 'now' and when the previous message was received
             if( p > 0 ){	// If this time is valid
                 passed = p; // Store it
-            }                    
+            }
+            // Keep the timestamp of the last message
             timeStamp = Instant.now().toEpochMilli();    		// Store the timestamp of the received message
         }
 	}

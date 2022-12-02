@@ -128,7 +128,14 @@ public class RealVal extends AbstractVal implements NumericVal{
         this.unit=unit;
         return this;
     }
-
+    public void parseValue( String val ){
+        var res = NumberUtils.toDouble(val,Double.NaN);
+        if(!Double.isNaN(res)){
+            value(res);
+        }else{
+            Logger.error(getID() + " -> Failed to parse "+val);
+        }
+    }
     /**
      * Update the value, this will -depending on the options set- also update related variables
      * @param val The new value
