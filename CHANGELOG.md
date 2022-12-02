@@ -10,6 +10,12 @@ Note: Version numbering: x.y.z
 - Resolve #34
 
 ## 1.0.7 (work in progress)
+
+### StreamPool
+- Slowly removing the (visible) use of 'label'.
+- Added the optional node 'store' to a stream, this allows for processing inside the acquire thread.
+This is as an alternative to the real/int/text label and some of the generic uses
+
 ### PathForward
 **Imported path**  
 - If id, delimiter are set in both reference and import, import is used for delimiter but id from reference. If present in only one of the two, that is used.
@@ -24,13 +30,13 @@ Note: Version numbering: x.y.z
       <path import="paths/rtk.xml"/>
     </stream>
 ````
-Either way, this node is altered to look like this. So id and delimiter are taken from the xml.
+Either way, this node is altered to look like this. The id and delimiter are taken from the xml if not specified.
 ````xml
 <path import="paths/rtk.xml" src="raw:test"/>
 <!-- So id and delimiter are taken from the xml. But can be specified if none are in the xml -->
 ````
 **Improved feedback**  
-When reading the xml failed during startup, this is now shown when logging into telnet.  
+When reading an xml fails during startup, this is now shown when logging into telnet.  
 For example, a bad character somewhere in a path xml
 ````
 Welcome to DCAFS!
