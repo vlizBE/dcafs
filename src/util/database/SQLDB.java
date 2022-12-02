@@ -556,11 +556,12 @@ public class SQLDB extends Database{
         if( dbe == null )
             return null;                
 
-        Element dbTag = XMLtools.getFirstChildByTag(dbe, "db");
+        var dbTagOpt = XMLtools.getFirstChildByTag(dbe, "db");
 
-        if( dbTag==null )
+        if( dbTagOpt.isEmpty() )
             return null;
 
+        var dbTag = dbTagOpt.get();
         String user = XMLtools.getStringAttribute(dbTag, "user", "");           // A username with writing rights
         String pass =  XMLtools.getStringAttribute(dbTag, "pass", "");          // The password for the earlier defined username
         String dbname = dbTag.getTextContent();				                                // The name of the database
@@ -582,8 +583,7 @@ public class SQLDB extends Database{
         db.id = dbe.getAttribute("id");
 
         /* Setup */
-        if( !db.readFlushSetup(XMLtools.getFirstChildByTag(dbe, "flush")))
-            Logger.info("No flush setup read");
+        XMLtools.getFirstChildByTag(dbe, "flush").ifPresent( e -> db.readFlushSetup(e));
         // How many seconds before the connection is considered idle (and closed)
         db.idleTime = (int)TimeTools.parsePeriodStringToSeconds(XMLtools.getChildValueByTag(dbe,"idleclose","5m"));
 

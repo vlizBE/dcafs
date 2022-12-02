@@ -118,8 +118,9 @@ public class FileCollector extends AbstractCollector{
     }
     public void readFromXML( Element fcEle, String workpath ){
         /* Flush settings */
-        Element flush = XMLtools.getFirstChildByTag(fcEle,"flush");
-        if( flush != null ){
+        var flushOpt = XMLtools.getFirstChildByTag(fcEle,"flush");
+        if( flushOpt.isPresent() ){
+            var flush = flushOpt.get();
             setBatchsize( XMLtools.getIntAttribute(flush,"batchsize",Integer.MAX_VALUE));
             if( scheduler != null ) {
                 String timeout = XMLtools.getStringAttribute(flush, "age", "-1");
@@ -148,8 +149,9 @@ public class FileCollector extends AbstractCollector{
         }
 
         /* RollOver */
-        Element roll = XMLtools.getFirstChildByTag(fcEle, "rollover");
-        if( roll != null ){
+        var rollOpt = XMLtools.getFirstChildByTag(fcEle, "rollover");
+        if( rollOpt.isEmpty() ){
+            var roll = rollOpt.get();
             int rollCount = XMLtools.getIntAttribute(roll, "count", 1);
             String unit = XMLtools.getStringAttribute(roll, "unit", "none").toLowerCase();
             boolean zip = XMLtools.getBooleanAttribute(roll,"zip",false);
@@ -166,10 +168,10 @@ public class FileCollector extends AbstractCollector{
         }
         /* Size limit */
         trigCmds.clear();
-        Element sizeEle = XMLtools.getFirstChildByTag(fcEle, "sizelimit");
-        if( sizeEle != null ){
+        var sizeEleOpt = XMLtools.getFirstChildByTag(fcEle, "sizelimit");
+        if( sizeEleOpt.isPresent() ){
             boolean zip = XMLtools.getBooleanAttribute(fcEle,"zip",false);
-            String size = sizeEle.getTextContent();
+            String size = sizeEleOpt.get().getTextContent();
             if( size!=null){
                 setMaxFileSize(size.toLowerCase(),zip);
             }

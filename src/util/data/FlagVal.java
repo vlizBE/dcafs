@@ -246,6 +246,11 @@ public class FlagVal extends AbstractVal implements NumericVal{
     }
 
     @Override
+    public void parseValue(String value) {
+        setState(value);
+    }
+
+    @Override
     public boolean storeInXml(XMLfab fab) {
         if( group.isEmpty()) {
             fab.alterChild("flag", "id",id()).build();

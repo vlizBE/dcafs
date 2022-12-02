@@ -1083,68 +1083,70 @@ public class TaskManager implements CollectorFuture {
 				Logger.error("No valid taskmanager script, need the node tasklist");
 				return false;
 			}
-			for( Element el : XMLtools.getChildElements( XMLtools.getFirstChildByTag( ssOpt.get(),"tasksets" ), "taskset" )){
-				var description = XMLtools.getStringAttribute(el,"name","");
-				if( description.isEmpty() )
-					description = XMLtools.getStringAttribute(el,"info","");
+			var tsOpt =  XMLtools.getFirstChildByTag( ssOpt.get(),"tasksets" );
+			if( tsOpt.isPresent()) {
+				for (Element el : XMLtools.getChildElements(tsOpt.get(), "taskset")) {
+					var description = XMLtools.getStringAttribute(el, "name", "");
+					if (description.isEmpty())
+						description = XMLtools.getStringAttribute(el, "info", "");
 
-				String tasksetID = el.getAttribute("id");
-				String req = XMLtools.getStringAttribute(el,"req","");
-				int reqIndex=-1;
-				if( !req.isEmpty() ){
-					for( int a=0;a<sharedChecks.size();a++ ){
-						if( sharedChecks.get(a).matchesOri(req)){
-							reqIndex=a;
+					String tasksetID = el.getAttribute("id");
+					String req = XMLtools.getStringAttribute(el, "req", "");
+					int reqIndex = -1;
+					if (!req.isEmpty()) {
+						for (int a = 0; a < sharedChecks.size(); a++) {
+							if (sharedChecks.get(a).matchesOri(req)) {
+								reqIndex = a;
+							}
+						}
+						if (reqIndex == -1) {
+							var cb = CheckBlock.prepBlock(rtvals, req);
+							if (sharedChecks.isEmpty()) {
+								cb.setSharedMem(new ArrayList<>());
+							} else {
+								cb.setSharedMem(sharedChecks.get(0).getSharedMem());
+							}
+							if (cb.build()) {
+								sharedChecks.add(cb);
+								reqIndex = sharedChecks.size() - 1;
+							} else {
+								Logger.error("Failed to parse " + req);
+							}
 						}
 					}
-					if( reqIndex==-1){
-						var cb = CheckBlock.prepBlock(rtvals,req);
-						if( sharedChecks.isEmpty()) {
-							cb.setSharedMem(new ArrayList<>());
-						}else{
-							cb.setSharedMem(sharedChecks.get(0).getSharedMem());
-						}
-						if( cb.build() ) {
-							sharedChecks.add(cb);
-							reqIndex = sharedChecks.size() - 1;
-						}else{
-							Logger.error("Failed to parse "+req);
-						}
-					}
-				}
-				String failure = el.getAttribute("failure");						
-				int repeats = XMLtools.getIntAttribute(el, "repeat", 0);
+					String failure = el.getAttribute("failure");
+					int repeats = XMLtools.getIntAttribute(el, "repeat", 0);
 
-				RUNTYPE run ;
-				switch (el.getAttribute("run")) {
-					case "step" -> run = RUNTYPE.STEP;
-					case "no", "not" -> {
-						run = RUNTYPE.NOT;
-						repeats = 0;
+					RUNTYPE run;
+					switch (el.getAttribute("run")) {
+						case "step" -> run = RUNTYPE.STEP;
+						case "no", "not" -> {
+							run = RUNTYPE.NOT;
+							repeats = 0;
+						}
+						default -> { // oneshot is the default
+							run = RUNTYPE.ONESHOT;
+							repeats = 0;
+						}
 					}
-					default -> { // oneshot is the default
-						run = RUNTYPE.ONESHOT;
-						repeats = 0;
-					}
-				}
-				TaskSet set = addTaskSet(tasksetID, description,  run, repeats, failure);
-				set.setReqIndex( reqIndex );
-				set.interruptable = XMLtools.getBooleanAttribute(el, "interruptable", true);
+					TaskSet set = addTaskSet(tasksetID, description, run, repeats, failure);
+					set.setReqIndex(reqIndex);
+					set.interruptable = XMLtools.getBooleanAttribute(el, "interruptable", true);
 
-				sets++;
-				for( Element ll : XMLtools.getChildElements( el )){
-					addTaskToSet( tasksetID, new Task(ll, rtvals, sharedChecks) );
+					sets++;
+					for (Element ll : XMLtools.getChildElements(el)) {
+						addTaskToSet(tasksetID, new Task(ll, rtvals, sharedChecks));
+					}
 				}
-			 }
-			
-			 for( Element tasksEntry : XMLtools.getChildElements( ssOpt.get(), "tasks" )){ //Can be multiple collections of tasks.
+			}
+			for( Element tasksEntry : XMLtools.getChildElements( ssOpt.get(), "tasks" )){ //Can be multiple collections of tasks.
 				for( Element ll : XMLtools.getChildElements( tasksEntry, "task" )){
 					addTask(ll);
 				 	ts++;
 				}
-			 }
-			 Logger.tag(TINY_TAG).info("["+ id +"] Loaded "+sets+ " tasksets and "+ts +" individual tasks.");
-			 return true;
+			}
+			Logger.tag(TINY_TAG).info("["+ id +"] Loaded "+sets+ " tasksets and "+ts +" individual tasks.");
+			return true;
     	}else {
 				Logger.tag(TINY_TAG).error("["+ id +"] File ["+ path +"] not found.");
     		return false;

@@ -50,11 +50,12 @@ public class InfluxDB extends Database{
         if (dbe == null)
             return null;
 
-        Element dbTag = XMLtools.getFirstChildByTag(dbe, "db");
+        var dbTagOp = XMLtools.getFirstChildByTag(dbe, "db");
 
-        if (dbTag == null)
+        if (dbTagOp.isEmpty())
             return null;
 
+        var dbTag = dbTagOp.get();
         String user = XMLtools.getStringAttribute(dbTag, "user", "");           // A username with writing rights
         String pass = XMLtools.getStringAttribute(dbTag, "pass", "");          // The password for the earlier defined username
         String dbname = dbTag.getTextContent();                                                // The name of the database
@@ -64,8 +65,7 @@ public class InfluxDB extends Database{
         }
         var db = new InfluxDB(irl,dbname,user,pass);
 
-        if( !db.readFlushSetup(XMLtools.getFirstChildByTag(dbe, "flush")))
-            Logger.info("No flush setup read");
+        XMLtools.getFirstChildByTag(dbe, "flush").ifPresent( e -> db.readFlushSetup(e));
         db.connect(false);
         return db;
     }

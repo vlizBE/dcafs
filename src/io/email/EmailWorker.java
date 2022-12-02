@@ -162,12 +162,14 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 		var email = emailOpt.get();
 
 		// Sending
-		Element outboxElement = XMLtools.getFirstChildByTag(email, "outbox");
-		if( outboxElement != null ){
-			Element server = XMLtools.getFirstChildByTag(outboxElement, "server");
-			if( server == null){
+		var outboxOpt = XMLtools.getFirstChildByTag(email, "outbox");
+		if( outboxOpt.isPresent() ){
+			var outboxElement=outboxOpt.get();
+			var serverOpt = XMLtools.getFirstChildByTag(outboxElement, "server");
+			if( serverOpt.isEmpty()){
 				Logger.error("No server defined for the outbox");
 			}else{
+				var server = serverOpt.get();
 				outbox.setServer( server.getTextContent(), XMLtools.getIntAttribute(server,"port",25) );			// The SMTP server
 				outbox.setLogin( XMLtools.getStringAttribute(server, "user", ""), XMLtools.getStringAttribute( server, "pass", "" ));
 				outbox.hasSSL = XMLtools.getBooleanAttribute( server, "ssl",  false);
@@ -179,12 +181,13 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 			}
 		}
 		
-		Element inboxElement = XMLtools.getFirstChildByTag(email, "inbox");
-		if( inboxElement != null ){
-			Element server = XMLtools.getFirstChildByTag(inboxElement, "server");
-			if( server == null){
+		var inboxOpt = XMLtools.getFirstChildByTag(email, "inbox");
+		if( inboxOpt.isPresent() ){
+			var serverOpt = XMLtools.getFirstChildByTag(inboxOpt.get(), "server");
+			if(serverOpt.isEmpty()){
 				Logger.error("No server defined for the inbox");
 			}else {
+				var server=serverOpt.get();
 				inbox.setServer( server.getTextContent(), XMLtools.getIntAttribute(server,"port",993) );
 				inbox.setLogin( XMLtools.getStringAttribute(server, "user", ""), XMLtools.getStringAttribute(server, "pass", ""));
 				inbox.hasSSL = XMLtools.getBooleanAttribute( server, "ssl",  false);
@@ -209,8 +212,11 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 	 */
 	private void readEmailBook( Element email ){
 		emailBook.clear();  // Clear previous references
-		Element book = XMLtools.getFirstChildByTag(email, "book");
-		for( Element entry : XMLtools.getChildElements( book, "entry" ) ){
+		var bookOpt = XMLtools.getFirstChildByTag(email, "book");
+		if( bookOpt.isEmpty())
+			return;
+
+		for( Element entry : XMLtools.getChildElements( bookOpt.get(), "entry" ) ){
 			String addresses = entry.getTextContent();
 			String ref = XMLtools.getStringAttribute(entry, "ref", "");
 			if( !ref.isBlank() && !addresses.isBlank() ){
@@ -222,8 +228,11 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 	}
 	private void readPermits( Element email){
 		permits.clear(); // clear previous permits
-		Element permit = XMLtools.getFirstChildByTag(email,"permits");
-		for( var perm : XMLtools.getChildElements(permit)){
+		var permitOpt = XMLtools.getFirstChildByTag(email,"permits");
+		if( permitOpt.isEmpty())
+			return;
+
+		for( var perm : XMLtools.getChildElements(permitOpt.get())){
 			boolean denies = perm.getTagName().equals("deny");
 			String ref = XMLtools.getStringAttribute(perm,"ref","");
 			if(ref.isEmpty()){

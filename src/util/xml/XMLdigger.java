@@ -32,12 +32,12 @@ public class XMLdigger {
         if(!valid)
             return this;
         for( String tag :tags) {
-            Element ele = XMLtools.getFirstChildByTag(root, tag);
-            if (ele == null) {
+            var eleOpt = XMLtools.getFirstChildByTag(root, tag);
+            if (eleOpt.isEmpty()) {
                 valid = false;
                 return this;
             } else {
-                root = ele;
+                root = eleOpt.get();
             }
         }
         return this;

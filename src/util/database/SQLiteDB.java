@@ -243,8 +243,9 @@ public class SQLiteDB extends SQLDB{
         SQLiteDB db = SQLiteDB.createDB(id,Path.of(pa));
         
         /* RollOver */
-        Element roll = XMLtools.getFirstChildByTag(dbe, "rollover");
-        if( roll != null ){
+        var rollOpt = XMLtools.getFirstChildByTag(dbe, "rollover");
+        if( rollOpt.isPresent()){
+            var roll =rollOpt.get();
             int rollCount = XMLtools.getIntAttribute(roll, "count", 1);
             String unit = XMLtools.getStringAttribute(roll, "unit", "").toLowerCase();
             String format = roll.getTextContent();
@@ -259,8 +260,7 @@ public class SQLiteDB extends SQLDB{
             }
         }
         /* Setup */
-        if( !db.readFlushSetup(XMLtools.getFirstChildByTag(dbe, "flush")))
-            Logger.info("No flush setup read");
+        XMLtools.getFirstChildByTag(dbe, "flush").ifPresent( e->db.readFlushSetup(e));
 
         // How many seconds before the connection is considered idle (and closed)
         db.idleTime = (int)TimeTools.parsePeriodStringToSeconds(XMLtools.getChildValueByTag(dbe,"idleclose","5m"));
