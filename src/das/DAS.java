@@ -36,13 +36,12 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.*;
 
 public class DAS implements Commandable{
 
-    private static final String version = "1.0.7";
+    private static final String version = "1.0.8";
 
     private final Path settingsPath;
     private String workPath;

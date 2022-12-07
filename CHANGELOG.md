@@ -9,7 +9,9 @@ Note: Version numbering: x.y.z
 - integerval telnet interface?
 - Resolve #34
 
-## 1.0.7 (work in progress)
+## 1.0.8 ( work in progress )
+
+## 1.0.7 (07/12/22)
 
 ### SQLiteDB
 - Fix: The path to the sqlite with rollover is determined at startup and after rollover. Thus if
