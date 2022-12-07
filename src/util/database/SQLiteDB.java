@@ -42,10 +42,11 @@ public class SQLiteDB extends SQLDB{
      * Create an instance of a database with rollover
      * @param db Path to the database
      */
-    public SQLiteDB( String id, Path db ) {
+    public SQLiteDB( String id, Path dbPath ) {
 
         this.id=id;
-        this.dbPath = db;
+        var p = dbPath.toString();
+        this.dbPath = Path.of( p.endsWith(".sqlite")?p:p+".sqlite");
 
         try {
             Files.createDirectories(Path.of(getPath()).getParent());
@@ -87,10 +88,6 @@ public class SQLiteDB extends SQLDB{
         //with rollover and on a specific position
         if( path.contains("{rollover}"))
             return path.replace("{rollover}", currentForm);
-
-        // No extension, so add it
-        if( !path.contains(".sqlite"))
-            return path+currentForm+".sqlite";
 
         // with rollover but on default position
         return path.replace(".sqlite", currentForm+".sqlite");
