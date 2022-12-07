@@ -14,11 +14,9 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -26,7 +24,7 @@ public class SQLiteDB extends SQLDB{
 
     static final String GET_SQLITE_TABLES = "SELECT name FROM sqlite_master WHERE type ='table' AND name NOT LIKE 'sqlite_%';";
    
-    private Path dbPath;
+    private final Path dbPath;
 
     /* Variables related to the rollover */
     private DateTimeFormatter format = null;
@@ -40,7 +38,7 @@ public class SQLiteDB extends SQLDB{
     private String currentForm = "";
     /**
      * Create an instance of a database with rollover
-     * @param db Path to the database
+     * @param dbPath Path to the database
      */
     public SQLiteDB( String id, Path dbPath ) {
 
@@ -79,11 +77,13 @@ public class SQLiteDB extends SQLDB{
      * @return The path to the database as a string
      */
     public String getPath(){
-        String path = dbPath.toString();
 
         //without rollover
         if( currentForm.isEmpty() )
-            return path;
+            return dbPath.toString();
+
+        String path = dbPath.toString();
+        updateFileName(LocalDateTime.now(ZoneId.of("UTC")));
 
         //with rollover and on a specific position
         if( path.contains("{rollover}"))
@@ -318,6 +318,7 @@ public class SQLiteDB extends SQLDB{
         rolloverTimestamp = TimeTools.applyTimestampRollover(true,rolloverTimestamp,rollCount,rollUnit);// figure out the next rollover moment
         Logger.info(id+" -> Current rollover date: "+ rolloverTimestamp.format(TimeTools.LONGDATE_FORMATTER));
         updateFileName(rolloverTimestamp);
+
         rolloverTimestamp = TimeTools.applyTimestampRollover(false,rolloverTimestamp,rollCount,rollUnit);// figure out the next rollover moment
         Logger.info(id+" -> Next rollover date: "+ rolloverTimestamp.format(TimeTools.LONGDATE_FORMATTER));
 
@@ -381,7 +382,7 @@ public class SQLiteDB extends SQLDB{
     }
     /**
      * Update the filename of the database currently used
-     * @return True if successful or not needed (if no rollover)
+     * @return True if successful or not needed (if no rollover format available)
      */
     public boolean updateFileName(LocalDateTime ldt){
         if( format==null)
