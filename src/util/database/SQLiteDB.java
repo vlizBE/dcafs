@@ -222,22 +222,19 @@ public class SQLiteDB extends SQLDB{
     /**
      * Read the rollover and table settings from the given xml element
      * @param dbe The element with the setup info
-     * @return true if successful
+     * @return Returns an optional sqliteDB
      */
-    public static SQLiteDB readFromXML( Element dbe, String workPath ){
+    public static Optional<SQLiteDB> readFromXML( Element dbe, String workPath ){
         if( dbe == null )
-            return null;
+            return Optional.empty();
 
         String id = XMLtools.getStringAttribute(dbe,"id","");
         var path = XMLtools.getPathAttribute(dbe,"path",Path.of(workPath));
 
         if( path.isEmpty() )
-            return null;
+            return Optional.empty();
 
-        String pa = path.get().toString();
-        if( !pa.endsWith(".sqlite"))
-            pa=pa+".sqlite";
-        SQLiteDB db = SQLiteDB.createDB(id,Path.of(pa));
+        SQLiteDB db = SQLiteDB.createDB(id,path.get());
         
         /* RollOver */
         var rollOpt = XMLtools.getFirstChildByTag(dbe, "rollover");
@@ -253,7 +250,7 @@ public class SQLiteDB extends SQLDB{
                 db.setRollOver(format,rollCount,rollUnit);
             }else{
                 Logger.error(id+" -> Bad Rollover given" );
-                return null;
+                return Optional.empty();
             }
         }
         /* Setup */
@@ -275,7 +272,7 @@ public class SQLiteDB extends SQLDB{
         /* Create the content */
         db.getCurrentTables(false);
         db.lastError=db.createContent(false);
-        return db;
+        return Optional.of(db);
     }
 
     /**

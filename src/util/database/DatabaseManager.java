@@ -153,7 +153,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
     private void readFromXML() {
         XMLfab.getRootChildren(settingsPath,"dcafs","databases","sqlite")
                 .filter( db -> !db.getAttribute("id").isEmpty() )
-                .forEach( db -> addSQLiteDB(db.getAttribute("id"),SQLiteDB.readFromXML(db,workPath) ));
+                .forEach( db -> SQLiteDB.readFromXML(db,workPath).ifPresent( d -> addSQLiteDB(db.getAttribute("id"),d)) );
 
         XMLfab.getRootChildren(settingsPath,"dcafs","databases","server")
                 .filter( db -> !db.getAttribute("id").isEmpty() )
@@ -180,7 +180,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
         var fab = XMLfab.withRoot(settingsPath,"dcafs","databases");
         var sqlite = fab.getChild("sqlite","id",id);
         if( sqlite.isPresent()){
-            return Optional.ofNullable(addSQLiteDB(id,SQLiteDB.readFromXML( sqlite.get(),workPath)));
+            return SQLiteDB.readFromXML( sqlite.get(),workPath).map(sqLiteDB -> addSQLiteDB(id, sqLiteDB));
         }else{
             var sqldb= fab.getChild("server","id",id);
             if( sqldb.isPresent())
