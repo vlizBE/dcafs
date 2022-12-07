@@ -34,7 +34,9 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -79,6 +81,8 @@ public class DAS implements Commandable{
 
     private MatrixClient matrixClient;
     private FileMonitor fileMonitor;
+
+    private Instant lastCheck;
 
     /* Threading */
     private final EventLoopGroup nettyGroup = new NioEventLoopGroup(); // Single group so telnet,trans and streampool can share it
@@ -221,7 +225,7 @@ public class DAS implements Commandable{
 
         /* TaskManagerPool */
         addTaskManager();
-
+        nettyGroup.schedule(this::checkClock,1,TimeUnit.MINUTES);
         bootOK = true;
 
         /* Telnet */
@@ -249,7 +253,19 @@ public class DAS implements Commandable{
         return TimeTools.convertPeriodtoString(Duration.between(bootupTimestamp, LocalDateTime.now()).getSeconds(),
                 TimeUnit.SECONDS);
     }
-
+    /**
+     Compares the stored timestamp with the current one
+     */
+    private void checkClock(){
+        if( Duration.between(lastCheck, Instant.now()).toSeconds() > 65) { // Checks every minute, so shouldn't be much more than that
+            var error = "System time change detected, last check (max 60s ago) " + TimeTools.LONGDATE_FORMATTER.format(lastCheck) + " is now " + TimeTools.formatLongUTCNow();
+            Logger.error(error);
+            if( emailWorker !=null )
+                emailWorker.sendEmail( Email.toAdminAbout("System clock").subject("System clock suddenly changed!").content(error));
+            dbManager.recheckRollOver();// The rollover is affected by sudden changes
+        }
+        lastCheck = Instant.now();
+    }
     /* ************************************  X M L *****************************************************/
     private void createXML() {
        XMLfab.withRoot(settingsPath, "dcafs")

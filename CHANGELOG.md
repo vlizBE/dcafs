@@ -11,6 +11,11 @@ Note: Version numbering: x.y.z
 
 ## 1.0.7 (work in progress)
 
+### SQLiteDB
+- Fix: The path to the sqlite with rollover is determined at startup and after rollover. Thus if
+the system clock suddenly changes (significantly) this wasn't applied to the sqlite file name.
+  - Now the current clock is check every minute and filename altered if an unexpected change occurred
+  
 ### StreamPool
 - Slowly removing the (visible) use of 'label'.
 - Added the optional node 'store' to a stream, this allows for processing inside the acquire thread.
@@ -43,7 +48,9 @@ This is as an alternative to the real/int/text label and some of the generic use
     </stream>
     <!-- or -->
   <stream id="sbe38" type="tcp">
-    <address>localhost:4001</address>
+    <setup>
+        <address>localhost:4001</address>  
+    </setup>
     <store delimiter=":"> <!-- Take the group id from the stream id, delimiter is : -->
       <real index="1" id="temp" unit="°C"/> <!-- second element is a real, starts at 0 -->
     </store>

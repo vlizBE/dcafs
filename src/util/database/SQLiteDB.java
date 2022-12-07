@@ -6,7 +6,6 @@ import util.tools.TimeTools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,6 +35,8 @@ public class SQLiteDB extends SQLDB{
     private LocalDateTime rolloverTimestamp;
 
     private String currentForm = "";
+    private Instant lastCheck;
+    private ScheduledFuture<?> timeCheckFuture;
     /**
      * Create an instance of a database with rollover
      * @param dbPath Path to the database
@@ -185,19 +186,19 @@ public class SQLiteDB extends SQLDB{
                     try {                                        
                         while (rs.next()) {                        
                            String column = rs.getString(rs.findColumn("name"));
-                           String type = rs.getString(rs.findColumn("type"));                                                    
+                           String type = rs.getString(rs.findColumn("type"));
 
-                            switch( type.toLowerCase() ){
-                                case "integer": table.addInteger(column); break;
-                                case "real":    table.addReal(column); break;
-                                case "text": 
-                                    if( column.equalsIgnoreCase("timestamp")){
+                            switch (type.toLowerCase()) {
+                                case "integer" -> table.addInteger(column);
+                                case "real" -> table.addReal(column);
+                                case "text" -> {
+                                    if (column.equalsIgnoreCase("timestamp")) {
                                         table.addTimestamp(column);
-                                    }else{
+                                    } else {
                                         table.addText(column);
                                     }
-                                    break;
-                                default: Logger.warn("Unknown type: "+type);break;
+                                }
+                                default -> Logger.warn("Unknown type: " + type);
                             }
                             try{
                                 table.setNotNull( rs.getBoolean(rs.findColumn("notnull")) );
@@ -254,7 +255,7 @@ public class SQLiteDB extends SQLDB{
             }
         }
         /* Setup */
-        XMLtools.getFirstChildByTag(dbe, "flush").ifPresent( e->db.readFlushSetup(e));
+        XMLtools.getFirstChildByTag(dbe, "flush").ifPresent(db::readFlushSetup);
 
         // How many seconds before the connection is considered idle (and closed)
         db.idleTime = (int)TimeTools.parsePeriodStringToSeconds(XMLtools.getChildValueByTag(dbe,"idleclose","5m"));
@@ -267,7 +268,7 @@ public class SQLiteDB extends SQLDB{
         }
 
         /* Tables */
-        XMLtools.getChildElements(dbe,"table").stream().forEach( x -> SqlTable.readFromXml(x).ifPresent(table -> db.tables.put(table.name,table)));
+        XMLtools.getChildElements(dbe,"table").forEach(x -> SqlTable.readFromXml(x).ifPresent(table -> db.tables.put(table.name,table)));
 
         /* Create the content */
         db.getCurrentTables(false);
@@ -382,21 +383,19 @@ public class SQLiteDB extends SQLDB{
     }
     /**
      * Update the filename of the database currently used
-     * @return True if successful or not needed (if no rollover format available)
      */
-    public boolean updateFileName(LocalDateTime ldt){
+    public void updateFileName(LocalDateTime ldt){
         if( format==null)
-            return true;
+            return;
         try{
             if( ldt!=null ){
                 currentForm = ldt.format(format);
             }
         }catch( java.time.temporal.UnsupportedTemporalTypeException f ){
             Logger.error( getID() + " -> Format given is unsupported! Database creation cancelled.");
-            return false;
+            return;
         }
         Logger.info("Updated filename after rollover to "+getPath());
-        return true;
     }
     /**
      * Check if this SQLite uses rollover

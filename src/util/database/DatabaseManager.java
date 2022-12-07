@@ -16,6 +16,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -188,7 +190,9 @@ public class DatabaseManager implements QueryWriting, Commandable {
         }
         return Optional.empty();
     }
-
+    public void recheckRollOver(){
+        lites.values().forEach( lite -> lite.updateFileName(LocalDateTime.now(ZoneId.of("UTC"))));
+    }
     /* ***************************************************************************************************************/
     /**
      * Run the queries of all the managed databases, mainly run before shutdown
