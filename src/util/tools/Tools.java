@@ -120,11 +120,13 @@ public class Tools {
         }
     }
     public static boolean parseBool( String value, boolean error){
-        value=value.toLowerCase();
+        value=value.toLowerCase().trim();
         if( value.equals("yes")||value.equals("true")||value.equals("1"))
             return true;
         if( value.equals("no")||value.equals("false")||value.equals("0"))
             return false;
+        if( !value.isEmpty())
+            Logger.warn("No valid value received to convert to bool: "+value);
         return error;
     }
     public static int toUnsigned(byte b) {
