@@ -7,7 +7,6 @@ import org.xml.sax.SAXException;
 import util.tools.Tools;
 
 import javax.xml.XMLConstants;
-import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
@@ -37,7 +36,7 @@ public class XMLtools {
 		throw new IllegalStateException("Utility class");
 	}
 	/**
-	 * Read and parse an XML file to a Document
+	 * Read and parse an XML file to a Document, returning an empty optional on error
 	 * 
 	 * @param xml The path to the file
 	 * @return The Document of the XML
@@ -58,7 +57,7 @@ public class XMLtools {
 			doc.getDocumentElement().normalize();
 			return Optional.of(doc);
 		} catch (ParserConfigurationException | SAXException | IOException | java.nio.file.InvalidPathException e) {
-			Logger.error("Error occurred while reading " + xml.toAbsolutePath(), true);
+			Logger.error("Error occurred while reading " + xml, true);
 			Logger.error(e.toString());
 			return Optional.empty();
 		}
@@ -89,9 +88,9 @@ public class XMLtools {
 		}
 	}
 	/**
-	 *
-	 * @param xml
-	 * @return
+	 * Does the same as readXML except it returns the error that occurred
+	 * @param xml Path to the xml
+	 * @return The error message or empty string if none
 	 */
 	public static String checkXML( Path xml ){
 
@@ -153,8 +152,6 @@ public class XMLtools {
 			return Optional.empty();
 		}
 	}
-
-
 	/**
 	 * Write the content of a Document to an xml file
 	 *
@@ -202,10 +199,10 @@ public class XMLtools {
 	 */
 	public static Optional<Document> reloadXML( Document xmlDoc ){
 		if( xmlDoc.getDocumentURI() == null) {
-			Logger.error("The give xmldoc doesn't contain a valid uri");
+			Logger.error("The given document doesn't contain a valid URI");
 			return Optional.empty();
 		}
-		return getDocPath(xmlDoc).map( p -> XMLtools.readXML(p)).orElse(Optional.empty());
+		return getDocPath(xmlDoc).flatMap( p -> XMLtools.readXML(p));
 	}
 
 	/**
@@ -238,22 +235,20 @@ public class XMLtools {
 	/**
 	 * Convenience method to a node based on a tag
 	 * 
-	 * @param xml The Document to check the node for
+	 * @param xmlDoc The Document to check the node for
 	 * @param tag The name of the element
 	 * @return An optional containing the element if found, empty if not
 	 */
-	public static Optional<Element> getFirstElementByTag(Document xml, String tag) {
+	public static Optional<Element> getFirstElementByTag(Document xmlDoc, String tag) {
 
-		if (xml == null) {
-			Logger.error("No valid XML provided");
+		if (xmlDoc == null) {
+			Logger.error("No valid XML provided, looking for "+tag);
 			return Optional.empty();
 		}
 
-		NodeList list = xml.getElementsByTagName(tag);
-		if (list == null || list.getLength()==0 || list.item(0)==null ||list.item(0).getNodeType() != Node.ELEMENT_NODE) {
-			Logger.error( "No element found with the tag "+tag+" in "+xml);
+		NodeList list = xmlDoc.getElementsByTagName(tag);
+		if (list == null || list.getLength()==0 || list.item(0)==null ||list.item(0).getNodeType() != Node.ELEMENT_NODE)
 			return Optional.empty();
-		}
 
 		return Optional.of( (Element)list.item(0));
 	}
@@ -265,8 +260,7 @@ public class XMLtools {
 	 * @return The optional element
 	 */
 	public static Optional<Element> getFirstElementByTag(Path xmlPath, String tag) {
-		var docOpt = XMLtools.readXML(xmlPath);
-		return docOpt.flatMap(d -> getFirstElementByTag(d, tag));
+		return XMLtools.readXML(xmlPath).flatMap(d -> getFirstElementByTag(d, tag));
 	}
 	/**
 	 * Check the given document if it contains a node with the given tag
@@ -277,25 +271,29 @@ public class XMLtools {
 	public static boolean hasElementByTag(Document xml, String tag) {
 		return getFirstElementByTag(xml,tag).isPresent();
 	}
+
+	/**
+	 * Check the given element for a child node with a specific tag
+	 * @param parent The element to look into
+	 * @param tag The tag to look for or * for 'any'
+	 * @return True if found
+	 */
 	public static boolean hasChildByTag(Element parent, String tag) {
 		return getFirstChildByTag(parent, tag).isPresent();
 	}
 	/**
 	 * Get an array containing all the elements in the xml with the give tag
-	 * @param xml The document to look into
+	 * @param xmlDoc The document to look into
 	 * @param tag The tag to look for
 	 * @return An array with the result or an empty array
 	 */
-	public static Element[] getAllElementsByTag(Document xml, String tag) {
-		if (xml == null) {
-			Logger.error("No valid XML provided");
+	public static Element[] getAllElementsByTag(Document xmlDoc, String tag) {
+		if (xmlDoc == null) {
+			Logger.error("No valid XML provided while looking for "+tag);
 			return new Element[0];
 		}
-		NodeList list = xml.getElementsByTagName(tag);
+		NodeList list = xmlDoc.getElementsByTagName(tag); // Get a list of all the nodes with that tag
 
-		if (list == null)
-			return new Element[0];
-		
 		var eles = new ArrayList<Element>();
 		for( int a=0;a<list.getLength();a++ ){
 			Node node = list.item(a);
@@ -323,7 +321,7 @@ public class XMLtools {
 	}
 
 	/**
-	 * Get the string value of a node from the given element with the given name
+	 * Get the string value of a node from the given element with the given tag, returning a default value if none found
 	 * 
 	 * @param element The element to look in
 	 * @param tag     The name of the node
@@ -334,14 +332,14 @@ public class XMLtools {
 		return getFirstChildByTag(element, tag.toLowerCase()).map(Node::getTextContent).orElse(def);
 	}
 	/**
-	 * Get the path value of a node from the given element with the given name
+	 * Get the path value of a node from the given element with the given tag, returning a default value if none found
 	 *
 	 * @param element The element to look in
 	 * @param tag     The name of the node
-	 * @param workPath The value to return if the node wasn't found
+	 * @param defPath The value to return if the node wasn't found
 	 * @return The requested path or an empty optional is something went wrong
 	 */
-	public static Optional<Path> getChildPathValueByTag(Element element, String tag, String workPath ) {
+	public static Optional<Path> getChildPathValueByTag(Element element, String tag, String defPath ) {
 		var childOpt = getFirstChildByTag(element, tag.toLowerCase());
 		if (childOpt.isEmpty() )
 			return Optional.empty();
@@ -352,10 +350,10 @@ public class XMLtools {
 			return Optional.empty();
 
 		var path = Path.of(p);
-		if( path.isAbsolute() || workPath.isEmpty())
+		if( path.isAbsolute() || defPath.isEmpty())
 			return Optional.of(path);
 
-		return Optional.of( Path.of(workPath).resolve(path) );
+		return Optional.of( Path.of(defPath).resolve(path) );
 	}
 	/**
 	 * Get the integer value of a node from the given element with the given name
@@ -392,16 +390,8 @@ public class XMLtools {
 	 * @return The requested data or the def value if not found
 	 */
 	public static boolean getChildBooleanValueByTag( Element element, String tag, boolean def){
-		var childOpt = getFirstChildByTag(element, tag);
-		if (childOpt.isEmpty())
-			return def;
-		String val = childOpt.get().getTextContent().toLowerCase().trim();
-		if( val.equals("yes")||val.equals("true")||val.equals("1"))
-			return true;
-		if( val.equals("no")||val.equals("false")||val.equals("0"))
-			return false;
-		Logger.error("Invalid text content to convert to boolean: "+val);	
-		return def;	
+		// Get the first child with the tag, if found convert the content if any otherwise return def
+		return getFirstChildByTag(element, tag).map( child -> Tools.parseBool(child.getTextContent(),def)).orElse(def);
 	}
 	/**
 	 * Get all the child-elements of an element with the given name
@@ -411,25 +401,23 @@ public class XMLtools {
 	 * @return An arraylist with the child-elements or an empty one if none were found
 	 */
 	public static List<Element> getChildElements(Element element, String... child) {
-		var eles = new ArrayList<Element>();
-		if (element == null)
-			return eles;
 
-		if( child.length==1 && child[0].isEmpty() )
+		if (element == null)
+			return new ArrayList<>();
+
+		if( child.length==1 && (child[0].isEmpty()||child[0].equals("*")) )
 			return getChildElements(element);
 
+		var eles = new ArrayList<Element>();
 		for( String ch : child ){
 			NodeList list = element.getElementsByTagName(ch);
 
-			if (list.getLength() == 0)
-				continue;
-
-			eles.ensureCapacity(list.getLength());
 			for (int a = 0; a < list.getLength(); a++){
 				if (list.item(a).getNodeType() == Node.ELEMENT_NODE)
 					eles.add( (Element) list.item(a));
 			}
 		}
+		eles.trimToSize();
 		return eles;
 	}
 	/**
@@ -438,16 +426,18 @@ public class XMLtools {
 	 * @return An array containing the child elements
 	 */
 	public static List<Element> getChildElements(Element element) {
-		var eles = new ArrayList<Element>();
+
 		if (element == null)
-			return eles;
+			return new ArrayList<>();
 
 		NodeList list = element.getChildNodes();
-		eles.ensureCapacity(list.getLength());
+
+		var eles = new ArrayList<Element>();
 		for (int a = 0; a < list.getLength(); a++){
 			if (list.item(a).getNodeType() == Node.ELEMENT_NODE)
 				eles.add( (Element) list.item(a) );
 		}
+		eles.trimToSize();
 		return eles;
 	}
 	/* ******************************  E L E M E N T   A T T R I B U T E S *********************************/
@@ -463,13 +453,15 @@ public class XMLtools {
 			Logger.error("Given parent is null while looking for "+attribute);
 			return def;
 		}
-		if( parent.hasAttribute(attribute)) {
-			var val = parent.getAttribute(attribute);
-			if( val.isBlank() && !val.isEmpty())
-				return parent.getAttribute(attribute);
-			return parent.getAttribute(attribute).trim();
-		}
-		return def;
+		// If the parent doesn't have the attribute, return the default
+		if( !parent.hasAttribute(attribute))
+			return def;
+
+		var val = parent.getAttribute(attribute);
+		if( val.isBlank() && !val.isEmpty()) // If the value is whitespace but not empty return it
+			return val;
+		return val.trim(); //trim spaces around the val
+
 	}
 	/**
 	 * Get the optional path value of a node from the given element with the given name
@@ -510,7 +502,7 @@ public class XMLtools {
 			return def;
 		}
 		if( parent.hasAttribute(attribute))
-			return Tools.parseInt(parent.getAttribute(attribute), def);
+			return NumberUtils.toInt(parent.getAttribute(attribute), def);
 		return def;
 	}
 	/**
@@ -527,7 +519,7 @@ public class XMLtools {
 		}
 
 		if( parent.hasAttribute(attribute))
-			return Tools.parseDouble(parent.getAttribute(attribute), def);
+			return NumberUtils.toDouble(parent.getAttribute(attribute), def);
 		return def;
 	}
 	/**
@@ -543,13 +535,7 @@ public class XMLtools {
 			Logger.error("Given parent is null while looking for "+attribute);
 			return false;
 		}
-		String at = parent.getAttribute(attribute).toLowerCase().trim();
-		
-		if( at.equals("yes")||at.equals("true")||at.equals("1"))
-			return true;
-		if( at.equals("no")||at.equals("false")||at.equals("0"))
-			return false;
-		return def;
+		return Tools.parseBool(parent.getAttribute(attribute),def);
 	}
 	/* **************************** E L E M E N T   V A L U E S ***************************/
 	/* ********************************* W R I T I N G **************************************/
@@ -595,7 +581,7 @@ public class XMLtools {
 	 * @param xmlDoc The document which the parent belongs to
 	 * @param parent The parent node
 	 * @param node The name of the child node
-	 * @return The created element if succesfull or null if failed
+	 * @return The created element if successful or null if failed
 	 */
 	public static Optional<Element> createChildElement( Document xmlDoc, Element parent, String node ){
 		
@@ -652,5 +638,4 @@ public class XMLtools {
 			return Optional.empty();
 		}		
 	}
-
 }
