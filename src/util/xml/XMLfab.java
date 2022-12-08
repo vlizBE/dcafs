@@ -41,7 +41,10 @@ public class XMLfab {
             return;
         }
         if( reload ){
-            xmlDoc = XMLtools.reloadXML(doc); // make sure we use latest version
+            var docOpt= XMLtools.reloadXML(doc); // make sure we use latest version
+            if( docOpt.isPresent()) {
+                xmlDoc = docOpt.get();
+            }
         }else{
             xmlDoc = doc;
         }        
@@ -57,7 +60,9 @@ public class XMLfab {
             xmlDoc = XMLtools.readXML(path).get();
         }else{
             Logger.warn("No such XML "+path+", so creating it.");
-            xmlDoc = XMLtools.createXML(path, false);
+            var docOpt = XMLtools.createXML(path, false);
+            if( docOpt.isPresent())
+                xmlDoc=docOpt.get();
         }
     }
     /**
@@ -233,8 +238,11 @@ public class XMLfab {
      * @return The fab after adding the node
      */
     public XMLfab addParentToRoot(String tag ){
-        last = XMLtools.createChildElement(xmlDoc, root, tag);   
-        parent = last;     
+        var lastOpt= XMLtools.createChildElement(xmlDoc, root, tag);
+        if( lastOpt.isPresent()) {
+            last=lastOpt.get();
+            parent = last;
+        }
         return this;
     }
 
@@ -246,8 +254,7 @@ public class XMLfab {
      */
     public XMLfab addParentToRoot(String tag, String comment ){
         root.appendChild(xmlDoc.createComment(" "+comment+" "));
-        last = XMLtools.createChildElement(xmlDoc, root, tag);           
-        this.parent = last;     
+        addParentToRoot(tag);
         return this;
     }
 
@@ -278,7 +285,7 @@ public class XMLfab {
      */
     public XMLfab addChild( String tag ){
         alter=false;
-        last = XMLtools.createChildElement(xmlDoc, parent, tag);
+        last = XMLtools.createChildElement(xmlDoc, parent, tag).orElse(last);
         return this;
     }
 
@@ -290,7 +297,7 @@ public class XMLfab {
      */
     public XMLfab addChild( String tag, String content ){
         alter=false;
-        last = XMLtools.createChildTextElement(xmlDoc, parent, tag, content);
+        last = XMLtools.createChildTextElement(xmlDoc, parent, tag, content).orElse(last);
         return this;
     }
 
@@ -477,12 +484,12 @@ public class XMLfab {
      */
     public XMLfab alterChild( String tag ){
         alter=true;
-        last = XMLtools.getFirstChildByTag(parent, tag).orElse( XMLtools.createChildElement(xmlDoc, parent, tag ) );
+        last = XMLtools.getFirstChildByTag(parent, tag).orElse( XMLtools.createChildElement(xmlDoc, parent, tag ).orElse(last) );
         return this;
     }
     public XMLfab alterChild( String tag, String attr, String val ){
         alter=true;
-        last = getChild(tag,attr,val).orElse(XMLtools.createChildElement(xmlDoc, parent, tag ));
+        last = getChild(tag,attr,val).orElse(XMLtools.createChildElement(xmlDoc, parent, tag ).orElse(last));
         attr(attr,val);
         return this;
     }
@@ -498,7 +505,7 @@ public class XMLfab {
         if( lastOpt.isPresent()){
             last.setTextContent(content);            
         }else{
-            last = XMLtools.createChildTextElement(xmlDoc, parent, tag, content);
+            last = XMLtools.createChildTextElement(xmlDoc, parent, tag, content).orElse(last);
         }
         return this;
     }

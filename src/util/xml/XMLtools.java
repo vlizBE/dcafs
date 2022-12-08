@@ -29,7 +29,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 public class XMLtools {
@@ -44,27 +43,69 @@ public class XMLtools {
 	 * @return The Document of the XML
 	 */
 	public static Optional<Document> readXML( Path xml ) {
-		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, ""); 
-		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
-		Document doc=null;
-		try {
-			doc = dbf.newDocumentBuilder().parse(xml.toFile());
-			doc.getDocumentElement().normalize();
-		} catch (ParserConfigurationException | SAXException | IOException | java.nio.file.InvalidPathException e) {
-			Logger.error("Error occurred while reading " + xml.toAbsolutePath(), true);
-			Logger.error(e.toString());
 
+		if(Files.notExists(xml)){
+			Logger.error("No such file: "+xml);
+			return Optional.empty();
 		}
-		return Optional.ofNullable(doc);
-	}
-	public static String checkXML( Path xml ){
+
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
 		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
-		Document doc;
+
 		try {
-			doc = dbf.newDocumentBuilder().parse(xml.toFile());
+			Document doc = dbf.newDocumentBuilder().parse(xml.toFile());
+			doc.getDocumentElement().normalize();
+			return Optional.of(doc);
+		} catch (ParserConfigurationException | SAXException | IOException | java.nio.file.InvalidPathException e) {
+			Logger.error("Error occurred while reading " + xml.toAbsolutePath(), true);
+			Logger.error(e.toString());
+			return Optional.empty();
+		}
+	}
+	/**
+	 * Create an empty xml file and return the Document to fill in
+	 *
+	 * @param xmlFile The path to the file to create
+	 * @param write True if the actual file needs to be created already
+	 * @return The document
+	 */
+	public static Optional<Document> createXML(Path xmlFile, boolean write) {
+
+		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+
+		try {
+			Document doc = dbf.newDocumentBuilder().newDocument();
+			doc.getDocumentElement().normalize();
+			if (write) {
+				writeXML(xmlFile, doc);
+			}
+			return Optional.of(doc);
+		} catch (ParserConfigurationException | java.nio.file.InvalidPathException e){
+			Logger.error("Error occurred while creating XML" + xmlFile.getFileName().toString(),true);
+			return Optional.empty();
+		}
+	}
+	/**
+	 *
+	 * @param xml
+	 * @return
+	 */
+	public static String checkXML( Path xml ){
+
+		if(Files.notExists(xml)){
+			Logger.error("No such file: "+xml);
+			return "No such file: "+xml;
+		}
+
+		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+
+		try {
+			Document doc = dbf.newDocumentBuilder().parse(xml.toFile());
 			doc.getDocumentElement().normalize();
 		} catch (ParserConfigurationException | SAXException | IOException | java.nio.file.InvalidPathException e) {
 			var error = e.toString().replace("lineNumber: ", "line:").replace("; columnNumber","");
@@ -80,11 +121,14 @@ public class XMLtools {
 		}
 		return "";
 	}
+
+	/**
+	 * Get the xml Document from a resource inside a jar
+	 * @param origin The class origin to pinpoint the jar
+	 * @param path The path inside the jar
+	 * @return The document if found or empty optional is not
+	 */
 	public static Optional<Document> readResourceXML( Class origin,String path ){
-		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
-		Document doc=null;
 
 		if( !path.startsWith("/"))
 			path = "/"+path;
@@ -94,40 +138,22 @@ public class XMLtools {
 			Logger.error("File not found "+path);
 			return Optional.empty();
 		}
+
+		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+
 		try {
-			doc = dbf.newDocumentBuilder().parse(is);
+			Document doc = dbf.newDocumentBuilder().parse(is);
 			doc.getDocumentElement().normalize();
+			return Optional.of(doc);
 		} catch (ParserConfigurationException | SAXException | IOException | java.nio.file.InvalidPathException e) {
 			Logger.error("Error occurred while reading " + path, true);
 			Logger.error(e);
+			return Optional.empty();
 		}
-		return Optional.ofNullable(doc);
 	}
-	/**
-	 * Create an empty xml file and return the Document to fill in
-	 * 
-	 * @param xmlFile The path to the file to create
-	 * @param write    True if the actual file needs to be created already
-	 * @return The document
-	 */
-	public static Document createXML(Path xmlFile, boolean write) {
-		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();		
-		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, ""); 
-		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, ""); 
 
-		DocumentBuilder dxml;
-		try {
-			dxml = dbf.newDocumentBuilder();
-			Document doc = dxml.newDocument();
-			if (write) {
-				writeXML(xmlFile, doc);
-			}
-			return doc;
-		} catch (ParserConfigurationException e) {
-			Logger.error("Error occured while creating XML" + xmlFile.getFileName().toString(),true);
-			return null;
-		}
-	}
 
 	/**
 	 * Write the content of a Document to an xml file
@@ -159,9 +185,7 @@ public class XMLtools {
 		} catch (Exception e) {
 			Logger.error("Failed writing XML: "+xmlFile.toString());
 			Logger.error(e);
-			return;
 		}
-		Logger.debug("Written XML: "+ xmlFile);
 	}
 	/**
 	 * Write the xmldoc to the file it was read from
@@ -169,20 +193,19 @@ public class XMLtools {
 	 * @param xmlDoc The updated document
 	 */
 	public static void updateXML(Document xmlDoc ){
-		XMLtools.writeXML(getDocPath(xmlDoc), xmlDoc);
+		getDocPath(xmlDoc).ifPresent( d -> XMLtools.writeXML(d,xmlDoc));
 	}
 	/**
 	 * Reload the given xmlDoc based on the internal URI
 	 * @param xmlDoc The doc to reload
 	 * @return The reloaded document
 	 */
-	public static Document reloadXML( Document xmlDoc ){
+	public static Optional<Document> reloadXML( Document xmlDoc ){
 		if( xmlDoc.getDocumentURI() == null) {
 			Logger.error("The give xmldoc doesn't contain a valid uri");
-			return null;
+			return Optional.empty();
 		}
-		var docOpt = XMLtools.readXML(Objects.requireNonNull(getDocPath(xmlDoc)));
-		return docOpt.orElse(null);
+		return getDocPath(xmlDoc).map( p -> XMLtools.readXML(p)).orElse(Optional.empty());
 	}
 
 	/**
@@ -190,20 +213,26 @@ public class XMLtools {
 	 * @param xmlDoc The document
 	 * @return The path of the document
 	 */
-	public static Path getXMLparent(Document xmlDoc){
+	public static Optional<Path> getXMLparent(Document xmlDoc){
 		if( xmlDoc.getDocumentURI() == null) {
-			Logger.error("The give xmldoc doesn't contain a valid uri");
-			return Path.of("");
+			Logger.error("The given xmldoc doesn't contain a valid uri");
+			return Optional.empty();
 		}
-		return Objects.requireNonNull(getDocPath(xmlDoc)).getParent();
+		return getDocPath(xmlDoc).map(Path::getParent);
 	}
-	public static Path getDocPath(Document xmlDoc){
+
+	/**
+	 * Get the path to the given doc
+	 * @param xmlDoc The doc to get the path from
+	 * @return An optional of the path
+	 */
+	public static Optional<Path> getDocPath(Document xmlDoc){
 		try {
-			return Path.of(new URL(xmlDoc.getDocumentURI()).toURI());
+			return Optional.of(Path.of(new URL(xmlDoc.getDocumentURI()).toURI()));
 		} catch (URISyntaxException | MalformedURLException e) {
 			Logger.error(e);
+			return Optional.empty();
 		}
-		return null;
 	}
 	/* *********************************  S E A R C H I N G *******************************************************/
 	/**
@@ -219,31 +248,25 @@ public class XMLtools {
 			Logger.error("No valid XML provided");
 			return Optional.empty();
 		}
+
 		NodeList list = xml.getElementsByTagName(tag);
-
-		if (list == null)
+		if (list == null || list.getLength()==0 || list.item(0)==null ||list.item(0).getNodeType() != Node.ELEMENT_NODE) {
+			Logger.error( "No element found with the tag "+tag+" in "+xml);
 			return Optional.empty();
-
-		if (list.getLength() > 0) {
-			Node nNode = xml.getElementsByTagName(tag).item(0);
-			if (nNode == null)
-				return Optional.empty();
-			if (nNode.getNodeType() == Node.ELEMENT_NODE) {
-				return Optional.of((Element) nNode);
-			}
 		}
-		Logger.debug("No such tag? " + tag);
-		return Optional.empty();
+
+		return Optional.of( (Element)list.item(0));
 	}
+
+	/**
+	 * Retrieve the first element in a xml doc based on the tag
+	 * @param xmlPath The path to the xml
+	 * @param tag The tag to log for
+	 * @return The optional element
+	 */
 	public static Optional<Element> getFirstElementByTag(Path xmlPath, String tag) {
-		if(Files.notExists(xmlPath)){
-			Logger.error("No such xml file: "+xmlPath);
-			return Optional.empty();
-		}
 		var docOpt = XMLtools.readXML(xmlPath);
-		if( docOpt.isPresent())
-			return getFirstElementByTag(docOpt.get(),tag);
-		return Optional.empty();
+		return docOpt.flatMap(d -> getFirstElementByTag(d, tag));
 	}
 	/**
 	 * Check the given document if it contains a node with the given tag
@@ -276,10 +299,9 @@ public class XMLtools {
 		var eles = new ArrayList<Element>();
 		for( int a=0;a<list.getLength();a++ ){
 			Node node = list.item(a);
-			if(node==null)
-				continue;
-			if (list.item(a).getNodeType() == Node.ELEMENT_NODE)
+			if(node!=null && node.getNodeType() == Node.ELEMENT_NODE){
 				eles.add((Element)node);
+			}
 		}
 		return eles.toArray(new Element[0]);
 	}
@@ -297,11 +319,7 @@ public class XMLtools {
 		}
 
 		NodeList lstNmElmntLst = element.getElementsByTagName(tag);
-
-		if (lstNmElmntLst.getLength() > 0) {
-			return Optional.of((Element) lstNmElmntLst.item(0));
-		}
-		return Optional.empty();
+	    return lstNmElmntLst.getLength() > 0?Optional.of((Element) lstNmElmntLst.item(0)):Optional.empty();
 	}
 
 	/**
@@ -313,11 +331,7 @@ public class XMLtools {
 	 * @return The requested data or the def value if not found
 	 */
 	public static String getChildValueByTag(Element element, String tag, String def) {
-		if( element == null ){
-			Logger.error("No such parent element when looking for the tag "+tag);
-			return def;
-		}
-		return getFirstChildByTag(element, tag.toLowerCase()).map( e -> e.getTextContent()).orElse(def);
+		return getFirstChildByTag(element, tag.toLowerCase()).map(Node::getTextContent).orElse(def);
 	}
 	/**
 	 * Get the path value of a node from the given element with the given name
@@ -328,20 +342,19 @@ public class XMLtools {
 	 * @return The requested path or an empty optional is something went wrong
 	 */
 	public static Optional<Path> getChildPathValueByTag(Element element, String tag, String workPath ) {
-		if( element == null ){
-			Logger.error("Element is null when looking for "+tag);
-			return Optional.empty();
-		}
 		var childOpt = getFirstChildByTag(element, tag.toLowerCase());
 		if (childOpt.isEmpty() )
 			return Optional.empty();
+
 		String p = childOpt.get().getTextContent().replace("/", File.separator); // Make sure to use correct slashes
 		p=p.replace("\\",File.separator);
 		if( p.isEmpty() )
 			return Optional.empty();
+
 		var path = Path.of(p);
 		if( path.isAbsolute() || workPath.isEmpty())
 			return Optional.of(path);
+
 		return Optional.of( Path.of(workPath).resolve(path) );
 	}
 	/**
@@ -353,10 +366,6 @@ public class XMLtools {
 	 * @return The requested data or the def value if not found
 	 */
 	public static int getChildIntValueByTag(Element element, String tag, int def) {
-		if( element == null ){
-			Logger.error("Element is null when looking for "+tag);
-			return def;
-		}
 		return getFirstChildByTag(element, tag).map(e-> NumberUtils.toInt(e.getTextContent(),def)).orElse(def);
 	}
 
@@ -369,10 +378,6 @@ public class XMLtools {
 	 * @return The requested data or the def value if not found
 	 */
 	public static double getChildDoubleValueByTag(Element element, String tag, double def) {
-		if( element == null ){
-			Logger.error("Element is null when looking for "+tag);
-			return def;
-		}
 		return getFirstChildByTag(element, tag).map(e-> NumberUtils.toDouble(e.getTextContent(),def)).orElse(def);
 	}
 	/**
@@ -592,18 +597,18 @@ public class XMLtools {
 	 * @param node The name of the child node
 	 * @return The created element if succesfull or null if failed
 	 */
-	public static Element createChildElement( Document xmlDoc, Element parent, String node ){
+	public static Optional<Element> createChildElement( Document xmlDoc, Element parent, String node ){
 		
 		if( xmlDoc==null || parent == null){
 			Logger.error("Given parent or doc is null while looking for "+node);
-			return null;
+			return Optional.empty();
 		}
 
 		try{
-			return (Element) parent.appendChild( xmlDoc.createElement(node) );
+			return Optional.of((Element) parent.appendChild( xmlDoc.createElement(node) ));
 		}catch( DOMException e){
 			Logger.error(e);
-			return null;
+			return Optional.empty();
 		}
 	}
 
@@ -614,37 +619,37 @@ public class XMLtools {
 	 * @param node The name of the child node
 	 * @return The created node if succesfull or null if failed
 	 */
-	public static Element createChildTextElement( Document xmlDoc, Element parent, String node, String content ){
+	public static Optional<Element> createChildTextElement( Document xmlDoc, Element parent, String node, String content ){
 		
 		if( xmlDoc==null || parent == null){
 			Logger.error("Given parent or doc is null while looking for "+node);
-			return null;
+			return Optional.empty();
 		}
 
 		try{			
 			Element ele = xmlDoc.createElement(node);
 			ele.appendChild( xmlDoc.createTextNode(content) );
 			parent.appendChild(ele);
-			return ele;
+			return Optional.of(ele);
 		}catch( DOMException e){
 			Logger.error(e);
-			return null;
+			return Optional.empty();
 		}		
 	}
-	public static Element createTextElement( Document xmlDoc, String node, String content ){
+	public static Optional<Element> createTextElement( Document xmlDoc, String node, String content ){
 		
 		if( xmlDoc==null ){
 			Logger.error("Given doc is null while looking for "+node);
-			return null;
+			return Optional.empty();
 		}
 
 		try{
 			Element ele = xmlDoc.createElement(node);
 			ele.appendChild( xmlDoc.createTextNode(content) );			
-			return ele;
+			return Optional.of(ele);
 		}catch( DOMException e){
 			Logger.error(e);
-			return null;
+			return Optional.empty();
 		}		
 	}
 

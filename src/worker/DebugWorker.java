@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.concurrent.*;
 
@@ -133,7 +134,10 @@ public class DebugWorker implements Readable {
 			return;
 
 		var dbg=dbgOpt.get();
-		this.filesPath = XMLtools.getXMLparent(xml).resolve(XMLtools.getChildValueByTag(dbg, "inputfile", "")); // Raw files folder
+		var pathOpt = XMLtools.getXMLparent(xml);
+		if( pathOpt.isEmpty())
+			return;
+		this.filesPath = pathOpt.get().resolve(XMLtools.getChildValueByTag(dbg, "inputfile", "")); // Raw files folder
 		this.logRaw = XMLtools.getChildValueByTag(dbg, "rawlog", "no").equals("yes"); // Send WS messages or not
 		Logger.info("Path to search:" + filesPath.toString());
 		this.sleep = XMLtools.getChildValueByTag(dbg, "realtime", "no").equals("yes"); // Work at realtime or as fast as

@@ -380,13 +380,15 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 	 */
 	public void readSettingsFromXML( Path settingsPath ) {
 		this.settingsPath=settingsPath;
-		var xmlOpt = XMLtools.readXML(settingsPath);
+
+		var xmlOpt = XMLtools.readXML(settingsPath).map( xml-> XMLtools.getXMLparent(xml)).orElse(Optional.empty());
+
 		if( xmlOpt.isEmpty()) {
 			return;
 		}
-		var xml = xmlOpt.get();
+		var xmlPath = xmlOpt.get();
 		try {
-			settingsPath = XMLtools.getXMLparent(xml).resolve("settings.xml");
+			settingsPath = xmlPath.resolve("settings.xml");
 			Logger.debug("Set XMLPath to "+ settingsPath.toAbsolutePath());
 		} catch ( InvalidPathException | NullPointerException e) {
 			Logger.error(e);
@@ -397,7 +399,7 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 		}
 		streams.clear(); // Clear out before the reread
 
-		XMLtools.getFirstElementByTag( xml, "streams").ifPresent( ele -> {
+		XMLtools.getFirstElementByTag( xmlPath, "streams").ifPresent( ele -> {
 			retryDelayIncrement = XMLtools.getChildIntValueByTag(ele, "retrydelayincrement", 5);
 			retryDelayMax = XMLtools.getChildIntValueByTag(ele, "retrydelaymax", 60);
 
