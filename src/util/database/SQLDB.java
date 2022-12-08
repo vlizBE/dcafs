@@ -565,7 +565,7 @@ public class SQLDB extends Database{
         String user = XMLtools.getStringAttribute(dbTag, "user", "");           // A username with writing rights
         String pass =  XMLtools.getStringAttribute(dbTag, "pass", "");          // The password for the earlier defined username
         String dbname = dbTag.getTextContent();				                                // The name of the database
-        String address = XMLtools.getChildValueByTag( dbe, "address", "");			// Set the address of the server on which the DB runs (either hostname or IP)
+        String address = XMLtools.getChildStringValueByTag( dbe, "address", "");			// Set the address of the server on which the DB runs (either hostname or IP)
 
         SQLDB db;
         String type = dbe.getAttribute("type");								    	// Set the database type:mssql,mysql or mariadb
@@ -585,7 +585,7 @@ public class SQLDB extends Database{
         /* Setup */
         XMLtools.getFirstChildByTag(dbe, "flush").ifPresent( e -> db.readFlushSetup(e));
         // How many seconds before the connection is considered idle (and closed)
-        db.idleTime = (int)TimeTools.parsePeriodStringToSeconds(XMLtools.getChildValueByTag(dbe,"idleclose","5m"));
+        db.idleTime = (int)TimeTools.parsePeriodStringToSeconds(XMLtools.getChildStringValueByTag(dbe,"idleclose","5m"));
 
         /* Tables */
         XMLtools.getChildElements(dbe,"table").forEach(x -> SqlTable.readFromXml(x).ifPresent(table ->

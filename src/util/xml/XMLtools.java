@@ -252,35 +252,6 @@ public class XMLtools {
 
 		return Optional.of( (Element)list.item(0));
 	}
-
-	/**
-	 * Retrieve the first element in a xml doc based on the tag
-	 * @param xmlPath The path to the xml
-	 * @param tag The tag to log for
-	 * @return The optional element
-	 */
-	public static Optional<Element> getFirstElementByTag(Path xmlPath, String tag) {
-		return XMLtools.readXML(xmlPath).flatMap(d -> getFirstElementByTag(d, tag));
-	}
-	/**
-	 * Check the given document if it contains a node with the given tag
-	 * @param xml The xml doc
-	 * @param tag The node tag to look for
-	 * @return True if found
-	 */
-	public static boolean hasElementByTag(Document xml, String tag) {
-		return getFirstElementByTag(xml,tag).isPresent();
-	}
-
-	/**
-	 * Check the given element for a child node with a specific tag
-	 * @param parent The element to look into
-	 * @param tag The tag to look for or * for 'any'
-	 * @return True if found
-	 */
-	public static boolean hasChildByTag(Element parent, String tag) {
-		return getFirstChildByTag(parent, tag).isPresent();
-	}
 	/**
 	 * Get an array containing all the elements in the xml with the give tag
 	 * @param xmlDoc The document to look into
@@ -304,8 +275,27 @@ public class XMLtools {
 		return eles.toArray(new Element[0]);
 	}
 	/**
+	 * Retrieve the first element in a xml doc based on the tag
+	 * @param xmlPath The path to the xml
+	 * @param tag The tag to log for
+	 * @return The optional element
+	 */
+	public static Optional<Element> getFirstElementByTag(Path xmlPath, String tag) {
+		return XMLtools.readXML(xmlPath).flatMap(d -> getFirstElementByTag(d, tag));
+	}
+	/**
+	 * Check the given document if it contains a node with the given tag
+	 * @param xml The xml doc
+	 * @param tag The node tag to look for
+	 * @return True if found
+	 */
+	public static boolean hasElementByTag(Document xml, String tag) {
+		return getFirstElementByTag(xml,tag).isPresent();
+	}
+	/* ************************************** Child ******************************************************* */
+	/**
 	 * Retrieve the first child from an element with a specific tag
-	 * 
+	 *
 	 * @param element The Element to check
 	 * @param tag     The name of the node in the element
 	 * @return The element if found, null if not
@@ -317,47 +307,31 @@ public class XMLtools {
 		}
 
 		NodeList lstNmElmntLst = element.getElementsByTagName(tag);
-	    return lstNmElmntLst.getLength() > 0?Optional.of((Element) lstNmElmntLst.item(0)):Optional.empty();
+		return lstNmElmntLst.getLength() > 0?Optional.of((Element) lstNmElmntLst.item(0)):Optional.empty();
 	}
-
+	/**
+	 * Check the given element for a child node with a specific tag
+	 * @param parent The element to look into
+	 * @param tag The tag to look for or * for 'any'
+	 * @return True if found
+	 */
+	public static boolean hasChildByTag(Element parent, String tag) {
+		return getFirstChildByTag(parent, tag).isPresent();
+	}
 	/**
 	 * Get the string value of a node from the given element with the given tag, returning a default value if none found
-	 * 
+	 *
 	 * @param element The element to look in
 	 * @param tag     The name of the node
 	 * @param def     The value to return if the node wasn't found
 	 * @return The requested data or the def value if not found
 	 */
-	public static String getChildValueByTag(Element element, String tag, String def) {
+	public static String getChildStringValueByTag(Element element, String tag, String def) {
 		return getFirstChildByTag(element, tag.toLowerCase()).map(Node::getTextContent).orElse(def);
 	}
 	/**
-	 * Get the path value of a node from the given element with the given tag, returning a default value if none found
-	 *
-	 * @param element The element to look in
-	 * @param tag     The name of the node
-	 * @param defPath The value to return if the node wasn't found
-	 * @return The requested path or an empty optional is something went wrong
-	 */
-	public static Optional<Path> getChildPathValueByTag(Element element, String tag, String defPath ) {
-		var childOpt = getFirstChildByTag(element, tag.toLowerCase());
-		if (childOpt.isEmpty() )
-			return Optional.empty();
-
-		String p = childOpt.get().getTextContent().replace("/", File.separator); // Make sure to use correct slashes
-		p=p.replace("\\",File.separator);
-		if( p.isEmpty() )
-			return Optional.empty();
-
-		var path = Path.of(p);
-		if( path.isAbsolute() || defPath.isEmpty())
-			return Optional.of(path);
-
-		return Optional.of( Path.of(defPath).resolve(path) );
-	}
-	/**
 	 * Get the integer value of a node from the given element with the given name
-	 * 
+	 *
 	 * @param element The element to look in
 	 * @param tag     The name of the node
 	 * @param def     The value to return if the node wasn't found
@@ -394,6 +368,30 @@ public class XMLtools {
 		return getFirstChildByTag(element, tag).map( child -> Tools.parseBool(child.getTextContent(),def)).orElse(def);
 	}
 	/**
+	 * Get the path value of a node from the given element with the given tag, returning a default value if none found
+	 *
+	 * @param element The element to look in
+	 * @param tag     The name of the node
+	 * @param defPath The value to return if the node wasn't found
+	 * @return The requested path or an empty optional is something went wrong
+	 */
+	public static Optional<Path> getChildPathValueByTag(Element element, String tag, String defPath ) {
+		var childOpt = getFirstChildByTag(element, tag.toLowerCase());
+		if (childOpt.isEmpty() )
+			return Optional.empty();
+
+		String p = childOpt.get().getTextContent().replace("/", File.separator); // Make sure to use correct slashes
+		p=p.replace("\\",File.separator);
+		if( p.isEmpty() )
+			return Optional.empty();
+
+		var path = Path.of(p);
+		if( path.isAbsolute() || defPath.isEmpty())
+			return Optional.of(path);
+
+		return Optional.of( Path.of(defPath).resolve(path) );
+	}
+	/**
 	 * Get all the child-elements of an element with the given name
 	 * 
 	 * @param element The element to look in to
@@ -405,8 +403,8 @@ public class XMLtools {
 		if (element == null)
 			return new ArrayList<>();
 
-		if( child.length==1 && (child[0].isEmpty()||child[0].equals("*")) )
-			return getChildElements(element);
+		if( child.length==1 && (child[0].isEmpty()) )
+			child[0]="*";
 
 		var eles = new ArrayList<Element>();
 		for( String ch : child ){
@@ -426,38 +424,26 @@ public class XMLtools {
 	 * @return An array containing the child elements
 	 */
 	public static List<Element> getChildElements(Element element) {
-
-		if (element == null)
-			return new ArrayList<>();
-
-		NodeList list = element.getChildNodes();
-
-		var eles = new ArrayList<Element>();
-		for (int a = 0; a < list.getLength(); a++){
-			if (list.item(a).getNodeType() == Node.ELEMENT_NODE)
-				eles.add( (Element) list.item(a) );
-		}
-		eles.trimToSize();
-		return eles;
+		return getChildElements(element,"*");
 	}
 	/* ******************************  E L E M E N T   A T T R I B U T E S *********************************/
 	/**
 	 * Get the attributes of an element and cast to string, return def if failed
-	 * @param parent The element that holds the attribute
+	 * @param element The element that might hold the attribute
 	 * @param attribute The tag of the attribute
 	 * @param def The value to return if cast/parse fails
 	 * @return The content if ok or def if failed
 	 */
-	public static String getStringAttribute(Element parent, String attribute, String def) {
-		if( parent==null){
+	public static String getStringAttribute(Element element, String attribute, String def) {
+		if( element==null){
 			Logger.error("Given parent is null while looking for "+attribute);
 			return def;
 		}
 		// If the parent doesn't have the attribute, return the default
-		if( !parent.hasAttribute(attribute))
+		if( !element.hasAttribute(attribute))
 			return def;
 
-		var val = parent.getAttribute(attribute);
+		var val = element.getAttribute(attribute);
 		if( val.isBlank() && !val.isEmpty()) // If the value is whitespace but not empty return it
 			return val;
 		return val.trim(); //trim spaces around the val
@@ -466,20 +452,20 @@ public class XMLtools {
 	/**
 	 * Get the optional path value of a node from the given element with the given name
 	 *
-	 * @param parent The element to look in
-	 * @param attribute     The name of the attribute
+	 * @param element The element to look in
+	 * @param attribute The name of the attribute
 	 * @param workPath The value to return if the node wasn't found
 	 * @return The requested path or an empty optional is something went wrong
 	 */
-	public static Optional<Path> getPathAttribute(Element parent, String attribute, Path workPath ) {
-		if( parent == null ){
+	public static Optional<Path> getPathAttribute(Element element, String attribute, Path workPath ) {
+		if( element == null ){
 			Logger.error("Parent is null when looking for "+attribute);
 			return Optional.empty();
 		}
-		if( !parent.hasAttribute(attribute))
+		if( !element.hasAttribute(attribute))
 			return Optional.empty();
 
-		String p = parent.getAttribute(attribute).trim().replace("/", File.separator); // Make sure to use correct slashes
+		String p = element.getAttribute(attribute).trim().replace("/", File.separator); // Make sure to use correct slashes
 		p = p .replace("\\",File.separator);
 		if( p.isEmpty() )
 			return Optional.empty();
@@ -491,18 +477,18 @@ public class XMLtools {
 	}
 	/**
 	 * Get the attributes of an element and cast to integer, return def if failed
-	 * @param parent The element that holds the attribute, cant be null
+	 * @param element The element that holds the attribute, cant be null
 	 * @param attribute The tag of the attribute
 	 * @param def The value to return if cast/parse fails
 	 * @return The content if ok or def if failed
 	 */
-	public static int getIntAttribute(Element parent, String attribute, int def) {
-		if( parent==null){
+	public static int getIntAttribute(Element element, String attribute, int def) {
+		if( element==null){
 			Logger.error("Given parent is null while looking for "+attribute);
 			return def;
 		}
-		if( parent.hasAttribute(attribute))
-			return NumberUtils.toInt(parent.getAttribute(attribute), def);
+		if( element.hasAttribute(attribute))
+			return NumberUtils.toInt(element.getAttribute(attribute), def);
 		return def;
 	}
 	/**
@@ -536,6 +522,23 @@ public class XMLtools {
 			return false;
 		}
 		return Tools.parseBool(parent.getAttribute(attribute),def);
+	}
+
+	/**
+	 * Get a list of all the attributes in the given element
+	 * @param ele The element to look into
+	 * @return A list of arrays containing nodename,value pairs
+	 */
+	public static ArrayList<String[]> getAttributes(Element ele){
+		ArrayList<String[]> list = new ArrayList<>();
+
+		var attrs = ele.getAttributes();
+		for( int a=0;a<attrs.getLength();a++){
+			String val = attrs.item(a).getNodeValue();
+			String att = attrs.item(a).getNodeName();
+			list.add(new String[]{att,val});
+		}
+		return list;
 	}
 	/* **************************** E L E M E N T   V A L U E S ***************************/
 	/* ********************************* W R I T I N G **************************************/

@@ -63,6 +63,7 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 	private static final String XML_PARENT_TAG="streams";
 	private static final String XML_CHILD_TAG="stream";
 	private RealtimeValues rtvals;
+
 	public StreamManager(BlockingQueue<Datagram> dQueue, IssuePool issues, EventLoopGroup nettyGroup, RealtimeValues rtvals ) {
 		this.dQueue = dQueue;
 		this.issues = issues;	
@@ -379,27 +380,18 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 	 * @param settingsPath The path to the settings.xml
 	 */
 	public void readSettingsFromXML( Path settingsPath ) {
-		this.settingsPath=settingsPath;
 
-		var xmlOpt = XMLtools.readXML(settingsPath).map( xml-> XMLtools.getXMLparent(xml)).orElse(Optional.empty());
-
-		if( xmlOpt.isEmpty()) {
+		if( XMLtools.readXML(settingsPath).isEmpty())
 			return;
-		}
-		var xmlPath = xmlOpt.get();
-		try {
-			settingsPath = xmlPath.resolve("settings.xml");
-			Logger.debug("Set XMLPath to "+ settingsPath.toAbsolutePath());
-		} catch ( InvalidPathException | NullPointerException e) {
-			Logger.error(e);
-		}
+
+		this.settingsPath=settingsPath;
 
 		if( !streams.isEmpty()){
 			streams.values().forEach(BaseStream::disconnect);
 		}
 		streams.clear(); // Clear out before the reread
 
-		XMLtools.getFirstElementByTag( xmlPath, "streams").ifPresent( ele -> {
+		XMLtools.getFirstElementByTag( settingsPath, "streams").ifPresent( ele -> {
 			retryDelayIncrement = XMLtools.getChildIntValueByTag(ele, "retrydelayincrement", 5);
 			retryDelayMax = XMLtools.getChildIntValueByTag(ele, "retrydelaymax", 60);
 

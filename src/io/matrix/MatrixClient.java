@@ -112,10 +112,10 @@ public class MatrixClient implements Writable, Commandable {
 
         for( var rm : XMLtools.getChildElements(matrixEle,"room") ){
             var rs = RoomSetup.withID( rm.getAttribute("id") )
-                    .url( XMLtools.getChildValueByTag(rm,"url",""))
-                    .entering(XMLtools.getChildValueByTag(rm,"entering",""))
-                    .leaving(XMLtools.getChildValueByTag(rm,"leaving",""))
-                    .welcome(XMLtools.getChildValueByTag(rm,"greet",""));
+                    .url( XMLtools.getChildStringValueByTag(rm,"url",""))
+                    .entering(XMLtools.getChildStringValueByTag(rm,"entering",""))
+                    .leaving(XMLtools.getChildStringValueByTag(rm,"leaving",""))
+                    .welcome(XMLtools.getChildStringValueByTag(rm,"greet",""));
             roomSetups.put(rs.id(),rs);
         }
     }

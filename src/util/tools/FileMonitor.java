@@ -6,7 +6,6 @@ import org.tinylog.Logger;
 import util.xml.XMLtools;
 import worker.Datagram;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.*;
@@ -47,7 +46,7 @@ public class FileMonitor implements Commandable {
             var p = XMLtools.getPathAttribute(file,"path",root);
             if( p.isEmpty())
                 continue;
-            String val = XMLtools.getChildValueByTag(file,"onmodify","");
+            String val = XMLtools.getChildStringValueByTag(file,"onmodify","");
             boolean read = XMLtools.getBooleanAttribute(file,"read",true);
 
             var mon = new ReactionInfo(id,p.get(), val);

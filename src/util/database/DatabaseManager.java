@@ -153,11 +153,11 @@ public class DatabaseManager implements QueryWriting, Commandable {
      * Read the databases' setup from the settings.xml
      */
     private void readFromXML() {
-        XMLfab.getRootChildren(settingsPath,"dcafs","databases","sqlite")
+        XMLfab.getRootChildren(settingsPath,"dcafs","databases","sqlite").stream()
                 .filter( db -> !db.getAttribute("id").isEmpty() )
                 .forEach( db -> SQLiteDB.readFromXML(db,workPath).ifPresent( d -> addSQLiteDB(db.getAttribute("id"),d)) );
 
-        XMLfab.getRootChildren(settingsPath,"dcafs","databases","server")
+        XMLfab.getRootChildren(settingsPath,"dcafs","databases","server").stream()
                 .filter( db -> !db.getAttribute("id").isEmpty() )
                 .forEach( db -> {
                                     switch(db.getAttribute("type")){

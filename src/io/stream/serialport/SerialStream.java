@@ -395,10 +395,10 @@ public class SerialStream extends BaseStream implements Writable {
 
     @Override
     protected boolean readExtraFromXML(Element stream) {
-        if (!setPort(XMLtools.getChildValueByTag(stream, "port", ""))) {
+        if (!setPort(XMLtools.getChildStringValueByTag(stream, "port", ""))) {
             return false;
         }
-        alterSerialSettings(XMLtools.getChildValueByTag(stream, "serialsettings", "19200,8,1,none"));
+        alterSerialSettings(XMLtools.getChildStringValueByTag(stream, "serialsettings", "19200,8,1,none"));
         return true;
     }
     @Override

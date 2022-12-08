@@ -132,9 +132,9 @@ public class DAS implements Commandable{
 
         XMLtools.getFirstElementByTag(settingsDoc, "settings").ifPresent( ele ->
                 {
-                    debug = XMLtools.getChildValueByTag(ele, "mode", "normal").equals("debug");
-                    log = XMLtools.getChildValueByTag(ele, "mode", "normal").equals("log");
-                    System.setProperty("tinylog.directory", XMLtools.getChildValueByTag(ele,"tinylog",workPath) );
+                    debug = XMLtools.getChildStringValueByTag(ele, "mode", "normal").equals("debug");
+                    log = XMLtools.getChildStringValueByTag(ele, "mode", "normal").equals("log");
+                    System.setProperty("tinylog.directory", XMLtools.getChildStringValueByTag(ele,"tinylog",workPath) );
         });
 
         if (debug) {

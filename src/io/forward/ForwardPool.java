@@ -1132,7 +1132,7 @@ public class ForwardPool implements Commandable {
         );
 
         // From the streams section
-        XMLfab.getRootChildren(settingsPath,"dcafs","streams","stream")
+        XMLfab.getRootChildren(settingsPath,"dcafs","streams","stream").stream()
                 .filter( e -> XMLtools.hasChildByTag(e,"path")) // Only those with a path node
                 .map( e -> XMLtools.getFirstChildByTag(e,"path").get())
                 .forEach(

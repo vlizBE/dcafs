@@ -69,10 +69,10 @@ public class MathCollector extends AbstractCollector{
         mc.moving=true;
         return mc;
     }
-    public static List<MathCollector> createFromXml( Stream<Element> maths ){
+    public static List<MathCollector> createFromXml( List<Element> maths ){
         var mcs = new ArrayList<MathCollector>();
 
-        for( Element mc : maths.toList()){
+        for( Element mc : maths ){
             String id = XMLtools.getStringAttribute(mc,"id","");
             int count = XMLtools.getIntAttribute(mc,"count",-1);
             int index = XMLtools.getIntAttribute(mc,"index",0);

@@ -154,7 +154,7 @@ public class Configurator {
                     if(ref.getChildren(match).size()>=1){
                         ref.getChildren(match).forEach(
                                 child -> {
-                                    for( var pair : XMLfab.getAttributes(child) ){
+                                    for( var pair : XMLtools.getAttributes(child) ){
                                         boolean found =false;
                                         for (String[] strings : attr) {
                                             if (strings[0].equalsIgnoreCase(pair[0])) {
@@ -340,7 +340,7 @@ public class Configurator {
         ArrayList<String[]> at=new ArrayList<>();
         ref.getChildren(from).forEach(
                 child -> {
-                    for( var pair : XMLfab.getAttributes(child) ){
+                    for( var pair : XMLtools.getAttributes(child) ){
                         boolean found =false;
                         for (String[] strings : at) {
                             if (strings[0].equalsIgnoreCase(pair[0])) {

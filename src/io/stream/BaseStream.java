@@ -82,19 +82,19 @@ public abstract class BaseStream {
         }
         
         id = XMLtools.getStringAttribute( stream, "id", ""); 
-        label = XMLtools.getChildValueByTag( stream, "label", "void");    // The label associated fe. nmea,sbe38 etc
+        label = XMLtools.getChildStringValueByTag( stream, "label", "void");    // The label associated fe. nmea,sbe38 etc
         priority = XMLtools.getChildIntValueByTag( stream, XML_PRIORITY_TAG, 1);	 // Determine priority of the sensor
         
-        log = XMLtools.getChildValueByTag(stream, "log", "yes").equals("yes");
+        log = XMLtools.getChildStringValueByTag(stream, "log", "yes").equals("yes");
 
         // delimiter
-        String deli = XMLtools.getChildValueByTag( stream, "eol", "\r\n");
+        String deli = XMLtools.getChildStringValueByTag( stream, "eol", "\r\n");
         if( deli.equalsIgnoreCase("\\0"))
             deli="";// Delimiter used, default carriage return + line feed
         eol = Tools.getDelimiterString(deli);
 
         // ttl
-		String ttlString = XMLtools.getChildValueByTag( stream, "ttl", "-1");
+		String ttlString = XMLtools.getChildStringValueByTag( stream, "ttl", "-1");
         if( !ttlString.equals("-1") ){
 			if( Tools.parseInt(ttlString, -999) != -999) // Meaning no time unit was added, use the default s
                 ttlString += "s";

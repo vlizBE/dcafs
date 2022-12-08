@@ -99,13 +99,13 @@ public class FileCollector extends AbstractCollector{
      * @param workpath The current workpath
      * @return A list of the found filecollectors
      */
-    public static List<FileCollector> createFromXml(Stream<Element> fcEles, ScheduledExecutorService scheduler, BlockingQueue<Datagram> dQueue, String workpath ) {
+    public static List<FileCollector> createFromXml(List<Element> fcEles, ScheduledExecutorService scheduler, BlockingQueue<Datagram> dQueue, String workpath ) {
         var fcs = new ArrayList<FileCollector>();
         if( scheduler==null){
             Logger.error("Need a valid scheduler to use FileCollectors");
             return fcs;
         }
-        for( Element fcEle : fcEles.toList()) {
+        for( Element fcEle : fcEles ) {
             String id = XMLtools.getStringAttribute(fcEle, "id", "");
             if( id.isEmpty() )
                 continue;

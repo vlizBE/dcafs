@@ -128,7 +128,7 @@ public class ValMap {
             if( value != null ) {
                 if (XMLtools.hasChildByTag(pair, "rttext")) {
                     map.addTextMapping(key, value);
-                    map.setRtVal(key, XMLtools.getChildValueByTag(pair,"rtval",""));
+                    map.setRtVal(key, XMLtools.getChildStringValueByTag(pair,"rtval",""));
 
                     for (var rtt : XMLtools.getChildElements(pair, "rttext")) {
                         String rttext = XMLtools.getStringAttribute(rtt, "ref", "");

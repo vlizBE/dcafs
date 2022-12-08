@@ -87,22 +87,24 @@ public class PathForward {
             var importPath = importPathOpt.get();
             if( !importPath.isAbsolute()) // If the path isn't absolute
                 importPath = workPath.resolve(importPath); // Make it so
-            var p = XMLfab.getRootChildren(importPath,"dcafs","path").findFirst();
-            if(p.isPresent()) {
-                pathEle = p.get();
+            var p = XMLfab.getRootChildren(importPath,"dcafs","path");
+            if(!p.isEmpty()) {
+                pathEle = p.get(0);
                 if( id.isEmpty())
                     id = XMLtools.getStringAttribute(pathEle,"id",id);
                 delimiter = XMLtools.getStringAttribute(pathEle,"delimiter",delimiter);
                 Logger.info("Valid path script found at "+importPath);
 
                 // Check for rtvals
-                var rtvalsOpt = XMLfab.getRootChildren(importPath,"dcafs","rtvals").findFirst();
-                rtvalsOpt.ifPresent( rtEle -> rtvals.readFromXML(rtEle) );
+                var l = XMLfab.getRootChildren(importPath,"dcafs","rtvals");
+                if( !l.isEmpty())
+                    rtvals.readFromXML(l.get(0));
             }else{
                 Logger.error("No valid path script found: "+importPath);
                 error="No valid path script found: "+importPath;
                 String error = XMLtools.checkXML(importPath);
-                dQueue.add(Datagram.system("telnet:error,PathForward: "+error));
+                if( !error.isEmpty())
+                    dQueue.add(Datagram.system("telnet:error,PathForward: "+error));
                 return error;
             }
         }

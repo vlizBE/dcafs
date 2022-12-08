@@ -125,7 +125,7 @@ public class UdpStream extends BaseStream implements Writable {
     @Override
     protected boolean readExtraFromXML(Element stream) {
         // Process the address
-        String address = XMLtools.getChildValueByTag( stream, "address", "");
+        String address = XMLtools.getChildStringValueByTag( stream, "address", "");
 
         if( !address.contains(":") ){
             Logger.error("Not proper ip:port for "+id+" -> "+address);

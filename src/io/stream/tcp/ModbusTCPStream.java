@@ -1,8 +1,6 @@
 package io.stream.tcp;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -36,7 +34,7 @@ public class ModbusTCPStream extends TcpStream{
     @Override
     public boolean readExtraFromXML(Element stream) {
         // Address
-        String address = XMLtools.getChildValueByTag( stream, "address", "");
+        String address = XMLtools.getChildStringValueByTag( stream, "address", "");
         if( !address.contains(":") ){
             address+=":502";
         }

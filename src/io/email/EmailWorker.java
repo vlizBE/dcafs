@@ -173,7 +173,7 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 				outbox.setServer( server.getTextContent(), XMLtools.getIntAttribute(server,"port",25) );			// The SMTP server
 				outbox.setLogin( XMLtools.getStringAttribute(server, "user", ""), XMLtools.getStringAttribute( server, "pass", "" ));
 				outbox.hasSSL = XMLtools.getBooleanAttribute( server, "ssl",  false);
-				outbox.from = XMLtools.getChildValueByTag( outboxElement, "from", "das@email.com" );	// From emailaddress
+				outbox.from = XMLtools.getChildStringValueByTag( outboxElement, "from", "das@email.com" );	// From emailaddress
 
 				doZipFromSizeMB = XMLtools.getChildDoubleValueByTag( outboxElement, "zip_from_size_mb", 10);		// Max unzipped filesize
 				deleteReceivedZip = XMLtools.getChildBooleanValueByTag( outboxElement, "delete_rec_zip", true);	// Delete received zip files after unzipping
@@ -192,9 +192,9 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 				inbox.setLogin( XMLtools.getStringAttribute(server, "user", ""), XMLtools.getStringAttribute(server, "pass", ""));
 				inbox.hasSSL = XMLtools.getBooleanAttribute( server, "ssl",  false);
 
-				String interval = XMLtools.getChildValueByTag(email, "checkinterval", "5m");    // Interval to check for new emails (in minutes)
+				String interval = XMLtools.getChildStringValueByTag(email, "checkinterval", "5m");    // Interval to check for new emails (in minutes)
 				checkIntervalSeconds = (int)TimeTools.parsePeriodStringToSeconds(interval);
-				allowedDomain = XMLtools.getChildValueByTag(email, "allowed", "");
+				allowedDomain = XMLtools.getChildStringValueByTag(email, "allowed", "");
 			}
 		}			
 		

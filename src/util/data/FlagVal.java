@@ -47,7 +47,7 @@ public class FlagVal extends AbstractVal implements NumericVal{
     public FlagVal alter( Element rtval, boolean defFlag){
         reset(); // reset is needed if this is called because of reload
         name(name)
-                .group(XMLtools.getChildValueByTag(rtval, "group", group()))
+                .group(XMLtools.getChildStringValueByTag(rtval, "group", group()))
                 .defState(XMLtools.getBooleanAttribute(rtval, "default", defFlag));
         if (XMLtools.getBooleanAttribute(rtval, "keeptime", false))
             keepTime();

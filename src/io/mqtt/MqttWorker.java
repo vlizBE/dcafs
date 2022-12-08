@@ -147,9 +147,9 @@ public class MqttWorker implements MqttCallbackExtended {
 	 * @param mqtt The element containing the info
 	 */
 	public void readSettings(Element mqtt) {
-		this.brokerAddress = XMLtools.getChildValueByTag(mqtt, "address", "");
-		this.clientId = XMLtools.getChildValueByTag(mqtt, "clientid", "");
-		this.defTopic = XMLtools.getChildValueByTag(mqtt, "defaulttopic", "");
+		this.brokerAddress = XMLtools.getChildStringValueByTag(mqtt, "address", "");
+		this.clientId = XMLtools.getChildStringValueByTag(mqtt, "clientid", "");
+		this.defTopic = XMLtools.getChildStringValueByTag(mqtt, "defaulttopic", "");
 		this.id = XMLtools.getStringAttribute(mqtt, "id", "general");
 
 		if (brokerAddress.contains("ubidots")) {

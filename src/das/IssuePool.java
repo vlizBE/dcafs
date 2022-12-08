@@ -45,12 +45,12 @@ public class IssuePool implements Commandable{
                 {
                     String id = XMLtools.getStringAttribute(issueEle,"id","");
                     String message = XMLtools.getStringAttribute(issueEle,"message","");
-                    message = XMLtools.getChildValueByTag(issueEle,"message",message);
+                    message = XMLtools.getChildStringValueByTag(issueEle,"message",message);
                     var issue = new Issue(id,message);
 
-                    String start = XMLtools.getChildValueByTag(issueEle,"test","");
-                    start = XMLtools.getChildValueByTag(issueEle,"startif",start);
-                    String stop = XMLtools.getChildValueByTag(issueEle,"stopif","");
+                    String start = XMLtools.getChildStringValueByTag(issueEle,"test","");
+                    start = XMLtools.getChildStringValueByTag(issueEle,"startif",start);
+                    String stop = XMLtools.getChildStringValueByTag(issueEle,"stopif","");
                     issue.setTests( start,stop );
 
                     for( Element cmdEle : XMLtools.getChildElements(issueEle,"cmd")){

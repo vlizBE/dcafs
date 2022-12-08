@@ -8,7 +8,6 @@ import org.influxdb.dto.Point;
 import org.influxdb.dto.Query;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
-import util.data.RealtimeValues;
 import util.tools.TimeTools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
@@ -59,7 +58,7 @@ public class InfluxDB extends Database{
         String user = XMLtools.getStringAttribute(dbTag, "user", "");           // A username with writing rights
         String pass = XMLtools.getStringAttribute(dbTag, "pass", "");          // The password for the earlier defined username
         String dbname = dbTag.getTextContent();                                                // The name of the database
-        String irl = XMLtools.getChildValueByTag(dbe, "address", "");            // Set the address of the server on which the DB runs (either hostname or IP)
+        String irl = XMLtools.getChildStringValueByTag(dbe, "address", "");            // Set the address of the server on which the DB runs (either hostname or IP)
         if(StringUtils.countMatches(irl,":")==0){
             irl += ":8086";
         }

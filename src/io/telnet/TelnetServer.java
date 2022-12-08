@@ -22,7 +22,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
-import java.util.stream.Collectors;
 
 /**
  * Simplistic telnet server.
@@ -64,7 +63,7 @@ public class TelnetServer implements Commandable {
             XMLtools.getFirstElementByTag(settingsPath, XML_PARENT_TAG).ifPresentOrElse( ele -> {
                 port = XMLtools.getIntAttribute(ele, "port", 23);
                 title = XMLtools.getStringAttribute(ele, "title", "DCAFS");
-                ignore = XMLtools.getChildValueByTag(ele, "ignore", "");
+                ignore = XMLtools.getChildStringValueByTag(ele, "ignore", "");
             },()->addBlankTelnetToXML(settingsPath));
         }
     }

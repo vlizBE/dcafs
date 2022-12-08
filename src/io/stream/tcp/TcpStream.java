@@ -166,7 +166,7 @@ public class TcpStream extends BaseStream implements Writable {
     @Override
     public boolean readExtraFromXML(Element stream) {
         // Address
-        String address = XMLtools.getChildValueByTag( stream, "address", "");
+        String address = XMLtools.getChildStringValueByTag( stream, "address", "");
         if( !address.contains(":") ){
             Logger.error("Not proper ip:port for "+id+" -> "+address);
             return false;

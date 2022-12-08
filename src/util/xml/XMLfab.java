@@ -14,12 +14,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class XMLfab {
-    Element root;           // The highest element to which parents are added
-    Element last;           // The last created/added element
-    Element parent;         // The element to which child nodes are added
-    Document xmlDoc;        // The xml document
-    Path xmlPath;           // The path to the xml document
-    boolean alter=false;    // Set the flag that the next operations are altering
+    private Element root;           // The highest element to which parents are added
+    private Element last;           // The last created/added element
+    private Element parent;         // The element to which child nodes are added
+    private Document xmlDoc;        // The xml document
+    private Path xmlPath;           // The path to the xml document
 
     /**
      * Create a fab based on the given doc and start from the given root
@@ -57,13 +56,13 @@ public class XMLfab {
     private XMLfab( Path path ){
         xmlPath=path;
         if( Files.exists(path) ){
-            xmlDoc = XMLtools.readXML(path).get();
+            xmlDoc = XMLtools.readXML(path).orElse(null);
         }else{
             Logger.warn("No such XML "+path+", so creating it.");
-            var docOpt = XMLtools.createXML(path, false);
-            if( docOpt.isPresent())
-                xmlDoc=docOpt.get();
+            xmlDoc = XMLtools.createXML(path, false).orElse(null);
         }
+        if( xmlDoc==null )
+            Logger.error("Failed to create XMLfab for "+path);
     }
     /**
      * Create a fab from the given document and root tag
@@ -84,7 +83,9 @@ public class XMLfab {
         this(xmlPath);
         getRoot(rootTag);
     }
-
+    public boolean isInvalid(){
+        return xmlDoc!=null;
+    }
     /**
      * Get the path of the xml document
      * @return The path of the document
@@ -93,20 +94,27 @@ public class XMLfab {
         return xmlPath;
     }
 
-    private void getRoot(String parentTag){
-        var rootOpt= XMLtools.getFirstElementByTag(xmlDoc, parentTag );
+    /**
+     * Pick the node with the given tag to become the root
+     * @param tag The tag to look for
+     */
+    private void getRoot(String tag){
+        if( isInvalid())
+            return;
+
+        var rootOpt= XMLtools.getFirstElementByTag(xmlDoc, tag );
         if( rootOpt.isEmpty() ){
-            Logger.warn("No such root "+parentTag+ " in "+xmlPath.getFileName()+", so creating it.");
-            root = xmlDoc.createElement(parentTag);
+            Logger.warn("No such root "+tag+ " in "+xmlPath.getFileName()+", so creating it.");
+            root = xmlDoc.createElement(tag);
             try {
                 xmlDoc.appendChild(root);
             }catch( DOMException e ){
-                Logger.error( "Issue while trying to add "+parentTag+" to "+xmlDoc.toString()+":"+e.getMessage());
+                Logger.error( "Issue while trying to add "+tag+" to "+xmlDoc.toString()+":"+e.getMessage());
             }
         }else{
             root = rootOpt.get();
         }
-        this.last=root;
+        last=root;
     }
 
     /**
@@ -125,29 +133,31 @@ public class XMLfab {
      * @return The fab found
      */
     public static XMLfab withRoot( Document xmlDoc, String... roots){
-        XMLfab fab = new XMLfab(xmlDoc,roots[0]);
-        for( int a=1; a<roots.length;a++)
-            fab.digRoot(roots[a]);          
-        fab.last=fab.root; 
-        fab.parent=fab.root;
-        return fab;
+        return digging( new XMLfab(xmlDoc,roots[0]),roots );
     }
-
     /**
      * Start a XMLfab based on the xml found at the path and after traversing the given roots/branches
      * @param xmlPath The path on which to find the xml file
      * @param roots The roots to look for
      * @return The fab found
      */
-    public static XMLfab withRoot( Path xmlPath, String... roots){        
-        XMLfab fab = new XMLfab(xmlPath,roots[0]);
+    public static XMLfab withRoot( Path xmlPath, String... roots){
+        return digging( new XMLfab(xmlPath,roots[0]),roots );
+    }
+
+    /**
+     * Goes through the root tags given, either selecting or creating
+     * @param fab The fab to work with
+     * @param roots The root structure to create
+     * @return The fab with the root
+     */
+    private static XMLfab digging( XMLfab fab, String... roots){
         for( int a=1; a<roots.length;a++)
-            fab.digRoot(roots[a]);          
+            fab.digRoot(roots[a]);
         fab.last=fab.root;
         fab.parent=fab.root;
         return fab;
     }
-
     /**
      * Go one step further in the tree by selected a tag or create it if not found
      * @param tag The tag to look for
@@ -174,15 +184,12 @@ public class XMLfab {
      * @param roots The roots to look for
      * @return The elements found at the end of the root
      */
-    public static Stream<Element> getRootChildren( Path xmlPath, String... roots){
+    public static List<Element> getRootChildren( Path xmlPath, String... roots){
         if( Files.notExists(xmlPath) ){
             Logger.error("No such xml file: "+xmlPath+", looking for "+String.join("->",roots));
-            return new ArrayList<Element>().stream();
+            return new ArrayList<>();
         }
-        var docOpt = XMLtools.readXML(xmlPath);
-        if( docOpt.isPresent())
-            return getRootChildren(docOpt.get(),roots);
-        return new ArrayList<Element>().stream();
+        return XMLtools.readXML(xmlPath).map( xml -> getRootChildren(xml,roots)).orElse(new ArrayList<>());
     }
 
     /**
@@ -193,22 +200,23 @@ public class XMLfab {
      * @param roots The roots to look for
      * @return The elements found at the end of the root
      */
-    public static Stream<Element> getRootChildren( Document xml, String... roots){
+    public static List<Element> getRootChildren( Document xml, String... roots){
         XMLfab fab = new XMLfab(xml,false);
 
         var rootOpt= XMLtools.getFirstElementByTag(fab.xmlDoc, roots[0]);
-        if( rootOpt.isPresent()) {
-            fab.root = rootOpt.get();
-            if (fab.hasRoots(roots)) {
-                if (fab.root.getParentNode() != null && fab.root.getParentNode() instanceof Element) {
-                    fab.last = (Element) fab.root.getParentNode();
-                } else {
-                    fab.last = fab.root;
-                }
-                return fab.getChildren(roots[roots.length - 1]).stream();
+        if( rootOpt.isEmpty())
+            return new ArrayList<>();
+
+        fab.root = rootOpt.get();
+        if (fab.hasRoots(roots)) {
+            if (fab.root.getParentNode() != null && fab.root.getParentNode() instanceof Element) {
+                fab.last = (Element) fab.root.getParentNode();
+            } else {
+                fab.last = fab.root;
             }
+            return fab.getChildren(roots[roots.length - 1]);
         }
-        return new ArrayList<Element>().stream();
+        return new ArrayList<>();
     }
 
     /**
@@ -217,6 +225,9 @@ public class XMLfab {
      * @return True if found
      */
     private boolean hasRoots( String... roots ){
+        if( isInvalid())
+            return false;
+
         var rootOpt = XMLtools.getFirstElementByTag(xmlDoc, roots[0]);
         if(rootOpt.isEmpty())
             return false;
@@ -257,34 +268,12 @@ public class XMLfab {
         addParentToRoot(tag);
         return this;
     }
-
-    /**
-     * Add a node after the current parent
-     * @param tag The tag to use
-     * @param content The content to set
-     * @return This fab
-     */
-    public XMLfab addParentHere( String tag, String content){
-        var newNode = xmlDoc.createElement(tag);
-        newNode.setTextContent(content);
-
-        parent = (Element) parent.insertBefore(newNode,parent.getNextSibling());
-        return this;
-    }
-    public XMLfab addParentAtEnd( String tag, String content){
-        var newNode = xmlDoc.createElement(tag);
-        newNode.setTextContent(content);
-
-        parent = (Element) parent.insertBefore(xmlDoc.createElement(tag),null);
-        return this;
-    }
     /**
      * Add a child node to the current parent
-     * @param tag The tag of the childnode to add
+     * @param tag The tag of the child to add
      * @return The fab after adding the child node
      */
     public XMLfab addChild( String tag ){
-        alter=false;
         last = XMLtools.createChildElement(xmlDoc, parent, tag).orElse(last);
         return this;
     }
@@ -296,7 +285,6 @@ public class XMLfab {
      * @return The fab after adding the child node
      */
     public XMLfab addChild( String tag, String content ){
-        alter=false;
         last = XMLtools.createChildTextElement(xmlDoc, parent, tag, content).orElse(last);
         return this;
     }
@@ -331,17 +319,12 @@ public class XMLfab {
      * @return This fab
      */
     public XMLfab removeChild( String tag ){
-        var child = getChild(tag);
-        if( child.isPresent() ) {
-            parent.removeChild(child.get());
-        }else{
-            Logger.warn("Tried to remove a none-existing childnode "+tag);
-        }
+        getChild(tag).ifPresent( ch -> parent.removeChild(ch));
         return this;
     }
     /**
      * Remove a single child node from the current parent node
-     * @param tag The tag of the childnode to remove
+     * @param tag The tag of the child to remove
      * @return This fab
      */
     public boolean removeChild( String tag, String attr, String value ){
@@ -351,7 +334,7 @@ public class XMLfab {
             build();
             return true;
         }else{
-            Logger.warn("Tried to remove a none-existing childnode "+tag);
+            Logger.warn("Tried to remove a none-existing child "+tag);
             return false;
         }
     }
@@ -483,12 +466,10 @@ public class XMLfab {
      * @return The fab with the new/selected child node
      */
     public XMLfab alterChild( String tag ){
-        alter=true;
         last = XMLtools.getFirstChildByTag(parent, tag).orElse( XMLtools.createChildElement(xmlDoc, parent, tag ).orElse(last) );
         return this;
     }
     public XMLfab alterChild( String tag, String attr, String val ){
-        alter=true;
         last = getChild(tag,attr,val).orElse(XMLtools.createChildElement(xmlDoc, parent, tag ).orElse(last));
         attr(attr,val);
         return this;
@@ -500,7 +481,6 @@ public class XMLfab {
      * @return The fab after altering/selecting
      */
     public XMLfab alterChild( String tag, String content ){
-        alter=true;
         var lastOpt = XMLtools.getFirstChildByTag(parent, tag);
         if( lastOpt.isPresent()){
             last.setTextContent(content);            
@@ -529,6 +509,11 @@ public class XMLfab {
         last.getParentNode().insertBefore( xmlDoc.createComment(" "+comment+" "),last );
         return this;
     }
+
+    /**
+     * Clear the content of the current parent node
+     * @return This XMLfab after removing the content
+     */
     public XMLfab clearParentTextContent(){
         if(parent.getFirstChild()==null ){
             parent.setTextContent("");
@@ -661,59 +646,12 @@ public class XMLfab {
             return XMLtools.getChildElements(last);
         return XMLtools.getChildElements(last, tag);
     }
-    /**
-     * Get a list of all the children with the given tag
-     * @param tag The tag to look for
-     * @return A list of all the child elements found or empty list if none
-     */
-    public List<Element> getDistinctChildren( String tag ){
-        if( tag.equals("*") )
-            return XMLtools.getChildElements(last);
-        var l= XMLtools.getChildElements(last, tag);
-        return l.stream().distinct().collect( Collectors.toList());
-    }
-    /**
-     * Get a list of all the children with the given tag and attribute value combination
-     * @param tag The tag to look for
-     * @param attr The attribute to compare
-     * @param value The value the attribute should be
-     * @return The list of found child nodes or an empty list if none
-     */
-    public List<Element> getChildren( String tag, String attr, String value ){
-        if( tag.equals("*") )
-            return XMLtools.getChildElements(last).stream()
-                    .filter( e->e.getAttribute(attr).equalsIgnoreCase(value))
-                    .collect(Collectors.toList());
-        return XMLtools.getChildElements(last, tag).stream()
-                            .filter( e->e.getAttribute(attr).equalsIgnoreCase(value))
-                            .collect(Collectors.toList());
-    }
+
     public Element getCurrentElement(){
         return last;
     }
     public String getAttribute( String attr ){
         return last.getAttribute(attr);
     }
-    public ArrayList<String[]> getAttributes(){
-        ArrayList<String[]> hash = new ArrayList<>();
 
-        var map = last.getAttributes();
-        for( int a=0;a<map.getLength();a++){
-            String val = map.item(a).getNodeValue();
-            String att = map.item(a).getNodeName();
-            hash.add(new String[]{att,val});
-        }
-        return hash;
-    }
-    public static ArrayList<String[]> getAttributes(Element ele){
-        ArrayList<String[]> hash = new ArrayList<>();
-
-        var map = ele.getAttributes();
-        for( int a=0;a<map.getLength();a++){
-            String val = map.item(a).getNodeValue();
-            String att = map.item(a).getNodeName();
-            hash.add(new String[]{att,val});
-        }
-        return hash;
-    }
 }

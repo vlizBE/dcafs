@@ -3,7 +3,6 @@ package worker;
 import io.Writable;
 import org.tinylog.Logger;
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import util.database.DatabaseManager;
 import util.tools.TimeTools;
 import util.xml.XMLfab;
@@ -20,7 +19,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.concurrent.*;
 
@@ -137,14 +135,14 @@ public class DebugWorker implements Readable {
 		var pathOpt = XMLtools.getXMLparent(xml);
 		if( pathOpt.isEmpty())
 			return;
-		this.filesPath = pathOpt.get().resolve(XMLtools.getChildValueByTag(dbg, "inputfile", "")); // Raw files folder
-		this.logRaw = XMLtools.getChildValueByTag(dbg, "rawlog", "no").equals("yes"); // Send WS messages or not
+		this.filesPath = pathOpt.get().resolve(XMLtools.getChildStringValueByTag(dbg, "inputfile", "")); // Raw files folder
+		this.logRaw = XMLtools.getChildStringValueByTag(dbg, "rawlog", "no").equals("yes"); // Send WS messages or not
 		Logger.info("Path to search:" + filesPath.toString());
-		this.sleep = XMLtools.getChildValueByTag(dbg, "realtime", "no").equals("yes"); // Work at realtime or as fast as
+		this.sleep = XMLtools.getChildStringValueByTag(dbg, "realtime", "no").equals("yes"); // Work at realtime or as fast as
 																						// possible
 		Logger.info("DebugWorker working"
 				+ (sleep ? " in realtime" : " as fast as possible"));
-		switch (XMLtools.getChildValueByTag(dbg, "sourcetype", "raw")) { // Which kind of raw files, das or nmea
+		switch (XMLtools.getChildStringValueByTag(dbg, "sourcetype", "raw")) { // Which kind of raw files, das or nmea
 		case "nmea":
 			srcType = SourceType.NMEA;
 			break;
@@ -154,7 +152,7 @@ public class DebugWorker implements Readable {
 			break;
 		case "filter":
 			srcType = SourceType.FILTER;
-			label = XMLtools.getChildValueByTag(dbg,"label","");
+			label = XMLtools.getChildStringValueByTag(dbg,"label","");
 			break;
 		case "raw":
 			srcType = SourceType.RAW;
@@ -163,11 +161,11 @@ public class DebugWorker implements Readable {
 			srcType = SourceType.RANDOM;
 			break;
 		}
-		debugDB = XMLtools.getChildValueByTag(dbg, "dbwrite", "no").equals("yes"); // Write to DB or not
-		debugWS = XMLtools.getChildValueByTag(dbg, "wswrite", "no").equals("yes"); // Send WS messages or not
-		debugEmails = XMLtools.getChildValueByTag(dbg, "emails", "no").equals("yes"); // Send emails or not
+		debugDB = XMLtools.getChildStringValueByTag(dbg, "dbwrite", "no").equals("yes"); // Write to DB or not
+		debugWS = XMLtools.getChildStringValueByTag(dbg, "wswrite", "no").equals("yes"); // Send WS messages or not
+		debugEmails = XMLtools.getChildStringValueByTag(dbg, "emails", "no").equals("yes"); // Send emails or not
 		loop = XMLtools.getChildIntValueByTag(dbg,"loop",1);
-		interval = TimeTools.parsePeriodStringToMillis(XMLtools.getChildValueByTag(dbg,"interval","0s"));
+		interval = TimeTools.parsePeriodStringToMillis(XMLtools.getChildStringValueByTag(dbg,"interval","0s"));
 		steps = XMLtools.getChildIntValueByTag(dbg,"step",1);
 		Logger.info("Debug sourcetype " + srcType);
 	}

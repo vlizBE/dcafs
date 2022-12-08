@@ -258,7 +258,7 @@ public class SQLiteDB extends SQLDB{
         XMLtools.getFirstChildByTag(dbe, "flush").ifPresent(db::readFlushSetup);
 
         // How many seconds before the connection is considered idle (and closed)
-        db.idleTime = (int)TimeTools.parsePeriodStringToSeconds(XMLtools.getChildValueByTag(dbe,"idleclose","5m"));
+        db.idleTime = (int)TimeTools.parsePeriodStringToSeconds(XMLtools.getChildStringValueByTag(dbe,"idleclose","5m"));
 
         /* Views */
         for( Element view : XMLtools.getChildElements(dbe, "view")){
