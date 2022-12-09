@@ -26,7 +26,6 @@ public class CollectorPool implements Commandable, CollectorFuture {
     static final String UNKNOWN_CMD = "unknown command";
 
     private final Map<String, FileCollector> fileCollectors = new HashMap<>();
-    private final HashMap<String, MathCollector> mathCollectors = new HashMap<>(); // Math collectors
 
     private final Path workPath;
     private final BlockingQueue<Datagram> dQueue;
@@ -40,7 +39,6 @@ public class CollectorPool implements Commandable, CollectorFuture {
         this.rtvals=rtvals;
 
         // Load the collectors
-        loadMathCollectors();
         loadFileCollectors();
     }
 
@@ -55,32 +53,7 @@ public class CollectorPool implements Commandable, CollectorFuture {
     public void flushAll(){
         fileCollectors.values().forEach(FileCollector::flushNow);
     }
-    /* **************************** MATH COLLECTOR ********************************************** */
 
-    /**
-     * Check the settings.xml for math collectors and load them
-     */
-    private void loadMathCollectors(){
-        mathCollectors.clear();
-        var docOpt = XMLtools.readXML(workPath.resolve("settings.xml"));
-        if( docOpt.isEmpty()){
-            return;
-        }
-        var settingsDoc = docOpt.get();
-        MathCollector.createFromXml( XMLfab.getRootChildren(settingsDoc,"dcafs","maths","*") )
-                        .forEach( this::addMathCollector );
-    }
-
-    /**
-     * Add a mathcollector to the pool, add the listener and request data for it
-     * @param mc The mathcollector to add
-     */
-    private void addMathCollector( MathCollector mc ){
-        mc.addListener(this);
-        mathCollectors.put( mc.getID(),mc);
-        if( mc.getWritable()!=null)
-            dQueue.add( Datagram.system(mc.getSource()).writable(mc) ); // request the data
-    }
     @Override
     public void collectorFinished(String id, String message, Object result) {
         String[] ids = id.split(":");
