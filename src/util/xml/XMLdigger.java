@@ -137,6 +137,7 @@ public class XMLdigger {
      * @return Optional sibling
      */
     public boolean hasNext(){
+        peeked=false;
         return validated(!siblings.isEmpty());
     }
     public boolean iterate(){
