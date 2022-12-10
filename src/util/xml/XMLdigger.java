@@ -7,6 +7,7 @@ import util.tools.Tools;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -26,6 +27,15 @@ public class XMLdigger {
         xmlPath=xml;
         XMLtools.readXML(xml).ifPresentOrElse( d -> xmlDoc=d,()->invalidate());
     }
+    private XMLdigger( Element cur ){
+        if( cur == null){
+            valid=false;
+        }else {
+            last = cur;
+            root = (Element) cur.getParentNode();
+            root = root == null ? last : root;
+        }
+    }
     /**
      * Start the XML digging with selecting the first node with the given name
      * @param xml The path to the xml file
@@ -35,12 +45,16 @@ public class XMLdigger {
     public static XMLdigger goIn(Path xml, String rootNode ){
         var digger = new XMLdigger(xml);
         if( digger.valid )
-            XMLtools.getFirstElementByTag(digger.xmlDoc, rootNode ).ifPresentOrElse( d -> digger.root=d,()->digger.invalidate());
+            XMLtools.getFirstElementByTag(digger.xmlDoc, rootNode ).ifPresentOrElse( d -> digger.stepDown(d),()->digger.invalidate());
         return digger;
+    }
+    public static XMLdigger goIn( Element ele){
+        return new XMLdigger(ele);
     }
     public XMLdigger goDown( String... tags ){
         if(!valid)
             return this;
+
         if( tags.length!=1){
             for( int a=0;a<tags.length-1;a++) {
                 XMLtools.getFirstChildByTag(root, tags[a]).ifPresentOrElse(ele->stepDown(ele),()->invalidate());
@@ -53,7 +67,7 @@ public class XMLdigger {
         if (siblings.isEmpty()) {
             invalidate();
         } else {
-            stepDown(siblings.remove(0));
+            stepDown(siblings.get(0));
         }
         return this;
     }
@@ -69,17 +83,25 @@ public class XMLdigger {
     }
     public XMLdigger goUp(){
         last = root;
-        root = (Element)root.getParentNode();
+        var parent = (Element) root.getParentNode();
+        if(  validated(parent!=null) ) {
+            root = (Element)root.getParentNode();
+        }
         return this;
     }
 
-    private void invalidate(){
+    private boolean invalidate(){
         valid=false;
+        return false;
+    }
+    private boolean validated(boolean check){
+        valid = valid && check;
+        return valid;
     }
     private void stepDown( Element ele ){
-        if( root==null) {
+        if( root == null) {
             root = ele;
-        }else{
+        }else if (last !=null){
             root = last;
         }
         last = ele;
@@ -90,14 +112,49 @@ public class XMLdigger {
     public Optional<Element> current(){
         return valid?Optional.of(last):Optional.empty();
     }
+    public List<Element> currentSubs(){
+        if( !valid )
+            return new ArrayList<>();
+        return XMLtools.getChildElements(last);
+    }
     /**
      * Get the next sibling if any or empty optional if all used
      * @return Optional sibling
      */
-    public Optional<Element> next(){
+    public boolean hasNext(){
+        return validated(!siblings.isEmpty());
+    }
+    public boolean iterate(){
+        if( !hasNext() )
+            return false;
+
+        last = siblings.remove(0);
+        return true;
+    }
+    /**
+     * Get all the other elements at the same 'level' as the current one, keeping them or removing them from the digger
+     * @return A (potentially empty) list of the elements
+     */
+    public XMLdigger drop(){
+        if( hasNext() )
+            last = siblings.remove(0);
+        return this;
+    }
+
+    /**
+     * Get all the elements at the current level, including the current one
+     * @param keep If the others should be kept
+     * @return The list
+     */
+    public ArrayList<Element> all(boolean keep){
+        var temp = new ArrayList<Element>();
         if( !valid )
-            return Optional.empty();
-        return siblings.isEmpty()?Optional.empty():Optional.of(siblings.remove(0));
+            return temp;
+
+        temp.addAll(siblings);
+        if( !keep )
+            siblings.clear();
+        return temp;
     }
     public Document doc(){
         return xmlDoc;
@@ -105,33 +162,33 @@ public class XMLdigger {
     /* ************* Getting content **************************************** */
     public String value( String def){
         if( valid ) {
-            var c = root.getTextContent();
+            var c = last.getTextContent();
             return c.isEmpty()?def:c;
         }
         return def;
     }
     public int value( int def ){
-        if( valid && !root.getTextContent().isEmpty()) {
+        if( valid && !last.getTextContent().isEmpty()) {
 
-            return NumberUtils.toInt(root.getTextContent(),def);
+            return NumberUtils.toInt(last.getTextContent(),def);
         }
         return def;
     }
     public double value( double def ){
-        if( valid && !root.getTextContent().isEmpty()) {
-            return NumberUtils.toDouble(root.getTextContent(),def);
+        if( valid && !last.getTextContent().isEmpty()) {
+            return NumberUtils.toDouble(last.getTextContent(),def);
         }
         return def;
     }
     public boolean value( boolean def ){
-        if( valid && !root.getTextContent().isEmpty()) {
-            return Tools.parseBool(root.getTextContent(), def);
+        if( valid && !last.getTextContent().isEmpty()) {
+            return Tools.parseBool(last.getTextContent(), def);
         }
         return def;
     }
     public Optional<Path> value( Path parent){
-        if( valid && !root.getTextContent().isEmpty()) {
-            var at = root.getTextContent();
+        if( valid && !last.getTextContent().isEmpty()) {
+            var at = last.getTextContent();
             var p = Path.of(at);
             if( p.isAbsolute() ) {
                 return Optional.of(p);
@@ -143,26 +200,26 @@ public class XMLdigger {
     }
     /*  ************ Getting attributes ************************************* */
     public String attr( String tag, String def){
-        if( valid && root.hasAttribute(tag)) {
-            return root.getAttribute(tag);
+        if( valid && last.hasAttribute(tag)) {
+            return last.getAttribute(tag);
         }
         return def;
     }
     public int attr( String tag, int def){
-        if( valid && root.hasAttribute(tag)) {
-            return NumberUtils.toInt(root.getAttribute(tag),def);
+        if( valid && last.hasAttribute(tag)) {
+            return NumberUtils.toInt(last.getAttribute(tag),def);
         }
         return def;
     }
     public double attr( String tag, double def){
-        if( valid && root.hasAttribute(tag)) {
-            return NumberUtils.toDouble(root.getAttribute(tag),def);
+        if( valid && last.hasAttribute(tag)) {
+            return NumberUtils.toDouble(last.getAttribute(tag),def);
         }
         return def;
     }
     public boolean attr( String tag, boolean def){
-        if( valid && root.hasAttribute(tag)) {
-            return Tools.parseBool(root.getAttribute(tag), def);
+        if( valid && last.hasAttribute(tag)) {
+            return Tools.parseBool(last.getAttribute(tag), def);
         }
         return def;
     }
