@@ -46,7 +46,11 @@ public class RealtimeValues implements Commandable {
 		this.settingsPath=settingsPath;
 		this.dQueue=dQueue;
 
-		readFromXML( XMLfab.withRoot(settingsPath,"dcafs", "rtvals") );
+		XMLdigger.goIn(settingsPath,"dcafs")
+					.goDown("rtvals")
+					.current()
+				    .ifPresentOrElse(x->readFromXML(x),() -> Logger.info("No rtvals in settings.xml"));
+
 		issuePool = new IssuePool(dQueue, settingsPath,this);
 	}
 
@@ -56,28 +60,25 @@ public class RealtimeValues implements Commandable {
 	 */
 	public void readFromXML( Element rtvalsEle ){
 
-		double defReal = XMLtools.getDoubleAttribute(rtvalsEle,"realdefault",Double.NaN);
-		String defText = XMLtools.getStringAttribute(rtvalsEle,"textdefault","");
-		boolean defFlag = XMLtools.getBooleanAttribute(rtvalsEle,"flagdefault",false);
-		int defInteger = XMLtools.getIntAttribute(rtvalsEle,"integerdefault",-999);
+		var xml = XMLdigger.goIn(rtvalsEle);
+		if( !xml.isValid())
+			return;
 
-		if( XMLtools.hasChildByTag(rtvalsEle,"group") ) {
-			XMLtools.getChildElements(rtvalsEle, "group").forEach(
-					rtval -> {
-						// Both id and name are valid attributes for the node name that forms the full id
-						var groupName = XMLtools.getStringAttribute(rtval, "id", ""); // get the node id
-						groupName = XMLtools.getStringAttribute(rtval, "name", groupName);
-						for (var groupie : XMLtools.getChildElements(rtval)) { // Get the nodes inside the group node
-							// First check if id is used
-							processRtvalElement(groupie, groupName, defReal, defText, defFlag, defInteger);
-						}
-					}
-			);
-		}else{ // Rtvals node without group nodes
-			XMLtools.getChildElements(rtvalsEle).forEach(
-					ele -> processRtvalElement(ele,"",defReal,defText,defFlag,defInteger)
-			);
+		Logger.info("Reading rtvals element");
+		double defReal = xml.attr("realdefault",Double.NaN);
+		String defText = xml.attr("textdefault","");
+		boolean defFlag = xml.attr("flagdefault",false);
+		int defInteger  = xml.attr("integerdefault",-999);
+
+		xml.goDown("group"); // Only interested in the group nodes, ignore non 'group' ones
+
+		while ( xml.iterate() ) { // If any found, iterate through
+			var groupName = xml.attr("id", ""); // get the node id
+			groupName = xml.attr("name", groupName);
+			for (var rtval : xml.currentSubs())
+				processRtvalElement(rtval, groupName, defReal, defText, defFlag, defInteger);
 		}
+
 	}
 	public void readFromXML( XMLfab fab ){
 		readFromXML(fab.getCurrentElement());
