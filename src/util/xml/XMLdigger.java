@@ -21,6 +21,8 @@ public class XMLdigger {
     Document xmlDoc;        // The xml document
     Element root;
     Element last;
+    Element peek;
+    boolean peeked=false;
     ArrayList<Element> siblings = new ArrayList<>();
 
     private XMLdigger( Path xml ){
@@ -81,15 +83,23 @@ public class XMLdigger {
         siblings.clear();
         return this;
     }
+    public XMLdigger peekAt( String tag ){
+        peeked=true;
+        peek = XMLtools.getFirstChildByTag(last,tag).orElse(null);
+        return this;
+    }
     public XMLdigger goUp(){
         last = root;
+        peeked=false;
         var parent = (Element) root.getParentNode();
         if(  validated(parent!=null) ) {
             root = (Element)root.getParentNode();
         }
         return this;
     }
-
+    public void makeValid(){
+        valid=true;
+    }
     private boolean invalidate(){
         valid=false;
         return false;
@@ -99,6 +109,7 @@ public class XMLdigger {
         return valid;
     }
     private void stepDown( Element ele ){
+        peeked=false;
         if( root == null) {
             root = ele;
         }else if (last !=null){
@@ -109,8 +120,12 @@ public class XMLdigger {
     public boolean isValid(){
         return valid;
     }
+    public boolean hasValidPeek(){ return peeked && peek!=null; }
     public Optional<Element> current(){
         return valid?Optional.of(last):Optional.empty();
+    }
+    public Optional<Element> currentPeek(){
+        return Optional.ofNullable(peek);
     }
     public List<Element> currentSubs(){
         if( !valid )
@@ -160,66 +175,117 @@ public class XMLdigger {
         return xmlDoc;
     }
     /* ************* Getting content **************************************** */
+
     public String value( String def){
-        if( valid ) {
-            var c = last.getTextContent();
-            return c.isEmpty()?def:c;
-        }
-        return def;
+        if( !valid )
+            return def;
+
+        if( peeked )
+            return peek==null?def:peek.getTextContent();
+
+        var c = last.getTextContent();
+        return c.isEmpty()?def:c;
+
     }
     public int value( int def ){
-        if( valid && !last.getTextContent().isEmpty()) {
+        if( !valid )
+            return def;
 
-            return NumberUtils.toInt(last.getTextContent(),def);
-        }
-        return def;
+        if( peeked )
+            return NumberUtils.toInt( peek!=null?peek.getTextContent():"",def );
+        return NumberUtils.toInt(last.getTextContent(),def);
     }
     public double value( double def ){
-        if( valid && !last.getTextContent().isEmpty()) {
-            return NumberUtils.toDouble(last.getTextContent(),def);
-        }
-        return def;
+        if( !valid )
+            return def;
+
+        if( peeked )
+            return NumberUtils.toDouble( peek!=null?peek.getTextContent():"",def );
+
+        return NumberUtils.toDouble(last.getTextContent(),def);
     }
     public boolean value( boolean def ){
-        if( valid && !last.getTextContent().isEmpty()) {
-            return Tools.parseBool(last.getTextContent(), def);
+        if( !valid )
+            return def;
+
+        if( peeked )
+            return Tools.parseBool( peek!=null?peek.getTextContent():"",def );
+        return Tools.parseBool(last.getTextContent(),def);
+    }
+    public Optional<Path> value( Path parent ){
+        if( !valid )
+            return Optional.empty();
+
+        String at = "";
+        if( peeked ) {
+            at = peek == null ? "" : peek.getTextContent();
+        }else{
+            at = last.getTextContent();
+        }
+        if( at.isEmpty() )
+            return Optional.empty();
+
+        var p = Path.of(at);
+        if( p.isAbsolute() ) {
+            return Optional.of(p);
+        }else{
+            return Optional.of(parent.resolve(at));
+        }
+    }
+    /* ****** */
+    public String tagName(String def){
+        if( !valid )
+            return def;
+        if( peeked ){
+            if( peek!=null)
+                return peek.getTagName();
+        }else{
+            return last.getTagName();
         }
         return def;
-    }
-    public Optional<Path> value( Path parent){
-        if( valid && !last.getTextContent().isEmpty()) {
-            var at = last.getTextContent();
-            var p = Path.of(at);
-            if( p.isAbsolute() ) {
-                return Optional.of(p);
-            }else{
-                return Optional.of(parent.resolve(at));
-            }
-        }
-        return Optional.empty();
     }
     /*  ************ Getting attributes ************************************* */
     public String attr( String tag, String def){
-        if( valid && last.hasAttribute(tag)) {
+        if( !valid )
+            return def;
+        if( peeked ){
+            if( peek!=null && peek.hasAttribute(tag))
+                return peek.getAttribute(tag);
+        }else if( last.hasAttribute(tag)) {
             return last.getAttribute(tag);
         }
         return def;
     }
     public int attr( String tag, int def){
-        if( valid && last.hasAttribute(tag)) {
+        if( !valid )
+            return def;
+        if( peeked ){
+            if( peek!=null && peek.hasAttribute(tag))
+                return NumberUtils.toInt(peek.getAttribute(tag),def);
+        }else if( last.hasAttribute(tag)) {
             return NumberUtils.toInt(last.getAttribute(tag),def);
         }
         return def;
     }
     public double attr( String tag, double def){
-        if( valid && last.hasAttribute(tag)) {
+        if( !valid )
+            return def;
+        if( peeked ){
+            if( peek!=null && peek.hasAttribute(tag))
+                return NumberUtils.toDouble(peek.getAttribute(tag),def);
+        }else if( last.hasAttribute(tag)) {
             return NumberUtils.toDouble(last.getAttribute(tag),def);
         }
         return def;
     }
     public boolean attr( String tag, boolean def){
-        if( valid && last.hasAttribute(tag)) {
-            return Tools.parseBool(last.getAttribute(tag), def);
+        if( !valid )
+            return def;
+        if( peeked ){
+            if( peek!=null && peek.hasAttribute(tag))
+                return Tools.parseBool(peek.getAttribute(tag),def);
+        }else if( last.hasAttribute(tag)) {
+            return Tools.parseBool(last.getAttribute(tag),def);
         }
         return def;
     }

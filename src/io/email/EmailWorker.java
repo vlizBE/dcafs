@@ -10,6 +10,7 @@ import org.w3c.dom.Element;
 import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.tools.Tools;
+import util.xml.XMLdigger;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
@@ -153,56 +154,50 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 	public boolean readFromXML(){
 
 		mailSession = null;
-		var emailOpt = XMLtools.getFirstElementByTag( XMLtools.readXML(settingsPath).get(), XML_PARENT_TAG);	// Get the element containing the settings and references
 
+		XMLdigger xml = XMLdigger.goIn(settingsPath,"dcafs").goDown("settings").goDown("email");
 
-		if( emailOpt.isEmpty())
+		if( !xml.isValid() )
 			return false;
 
-		var email = emailOpt.get();
-
 		// Sending
-		var outboxOpt = XMLtools.getFirstChildByTag(email, "outbox");
-		if( outboxOpt.isPresent() ){
-			var outboxElement=outboxOpt.get();
-			var serverOpt = XMLtools.getFirstChildByTag(outboxElement, "server");
-			if( serverOpt.isEmpty()){
-				Logger.error("No server defined for the outbox");
+		if( xml.goDown("outbox").isValid() ){ // outbox
+			if( xml.peekAt("server").hasValidPeek()) {
+				outbox.setServer( xml.value(""), xml.attr("port", 25));            // The SMTP server
+				outbox.setLogin(xml.attr("user", ""), xml.attr("pass", ""));
+				outbox.hasSSL = xml.attr("ssl", false);
 			}else{
-				var server = serverOpt.get();
-				outbox.setServer( server.getTextContent(), XMLtools.getIntAttribute(server,"port",25) );			// The SMTP server
-				outbox.setLogin( XMLtools.getStringAttribute(server, "user", ""), XMLtools.getStringAttribute( server, "pass", "" ));
-				outbox.hasSSL = XMLtools.getBooleanAttribute( server, "ssl",  false);
-				outbox.from = XMLtools.getChildStringValueByTag( outboxElement, "from", "das@email.com" );	// From emailaddress
-
-				doZipFromSizeMB = XMLtools.getChildDoubleValueByTag( outboxElement, "zip_from_size_mb", 10);		// Max unzipped filesize
-				deleteReceivedZip = XMLtools.getChildBooleanValueByTag( outboxElement, "delete_rec_zip", true);	// Delete received zip files after unzipping
-				maxSizeMB = XMLtools.getChildDoubleValueByTag( outboxElement, "max_size_mb", 15.0);				// Max zipped filesize to send
+				Logger.error("No server defined for the outbox");
 			}
+			outbox.from = xml.peekAt("from").value("dcafs@email.com");// From emailaddress
+			doZipFromSizeMB = xml.peekAt("zip_from_size_mb").value(10);// Max unzipped filesize
+			deleteReceivedZip = xml.peekAt("delete_rec_zip").value(true);
+			maxSizeMB = xml.peekAt("max_size_mb").value(15.0);
+			xml.goUp();
+		}else{
+			xml.makeValid();
 		}
-		
-		var inboxOpt = XMLtools.getFirstChildByTag(email, "inbox");
-		if( inboxOpt.isPresent() ){
-			var serverOpt = XMLtools.getFirstChildByTag(inboxOpt.get(), "server");
-			if(serverOpt.isEmpty()){
+		// Receiving
+		if( xml.goDown("inbox").isValid() ) { // outbox
+			if (xml.peekAt("server").hasValidPeek()) {
+				inbox.setServer(xml.value(""), xml.attr("port", 25));            // The SMTP server
+				inbox.setLogin(xml.attr("user", ""), xml.attr("pass", ""));
+				inbox.hasSSL = xml.attr("ssl", false);
+			}else{
 				Logger.error("No server defined for the inbox");
-			}else {
-				var server=serverOpt.get();
-				inbox.setServer( server.getTextContent(), XMLtools.getIntAttribute(server,"port",993) );
-				inbox.setLogin( XMLtools.getStringAttribute(server, "user", ""), XMLtools.getStringAttribute(server, "pass", ""));
-				inbox.hasSSL = XMLtools.getBooleanAttribute( server, "ssl",  false);
-
-				String interval = XMLtools.getChildStringValueByTag(email, "checkinterval", "5m");    // Interval to check for new emails (in minutes)
-				checkIntervalSeconds = (int)TimeTools.parsePeriodStringToSeconds(interval);
-				allowedDomain = XMLtools.getChildStringValueByTag(email, "allowed", "");
 			}
-		}			
-		
-		/*
-		*  Now figure out the various references used, linking keywords to e-mail addresses
-		**/
-		readEmailBook(email);
-		readPermits(email);
+			String interval = xml.peekAt("checkinterval").value( "5m");
+			checkIntervalSeconds = (int)TimeTools.parsePeriodStringToSeconds(interval);
+			allowedDomain = xml.peekAt("allowed").value( "");
+			/*
+			 *  Now figure out the various references used, linking keywords to e-mail addresses
+			 **/
+			xml.goUp();
+		}else{
+			xml.makeValid();
+		}
+		xml.peekAt("book").currentPeek().ifPresent( book -> readEmailBook(book));
+		xml.peekAt("permits").currentPeek().ifPresent( permits -> readPermits(permits));
 		return true;
 	}
 
@@ -212,41 +207,33 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 	 */
 	private void readEmailBook( Element email ){
 		emailBook.clear();  // Clear previous references
-		var bookOpt = XMLtools.getFirstChildByTag(email, "book");
-		if( bookOpt.isEmpty())
-			return;
+		XMLdigger xml = XMLdigger.goIn(email).goDown("entry"); // dig to entries
 
-		for( Element entry : XMLtools.getChildElements( bookOpt.get(), "entry" ) ){
-			String addresses = entry.getTextContent();
-			String ref = XMLtools.getStringAttribute(entry, "ref", "");
+		while( xml.iterate() ){
+			String addresses = xml.value("");
+			String ref = xml.attr( "ref", "");
 			if( !ref.isBlank() && !addresses.isBlank() ){
 				addTo(ref, addresses);
 			}else{
 				Logger.warn("email book entry has empty ref or address");
-			}			
+			}
 		}
 	}
-	private void readPermits( Element email){
+	private void readPermits( Element perms){
 		permits.clear(); // clear previous permits
-		var permitOpt = XMLtools.getFirstChildByTag(email,"permits");
-		if( permitOpt.isEmpty())
-			return;
+		XMLdigger xml = XMLdigger.goIn(perms).goDown("*");
 
-		for( var perm : XMLtools.getChildElements(permitOpt.get())){
-			boolean denies = perm.getTagName().equals("deny");
-			String ref = XMLtools.getStringAttribute(perm,"ref","");
-			if(ref.isEmpty()){
-				Logger.warn("Empty permit ref!");
+		while( xml.iterate() ){ // Go through the denies
+			boolean denies = xml.tagName("").equals("denies");;
+			var ref = xml.attr("ref","");
+			String val = xml.value("");
+
+			if(ref.isEmpty() || val.isEmpty()){
+				Logger.warn("Empty permit ref/val!");
 				continue;
 			}
-			String val = perm.getTextContent();
-			if( val.isEmpty() ){
-				Logger.warn("Empty permit value!");
-				continue;
-			}
-
-			boolean regex = XMLtools.getBooleanAttribute(perm,"regex",false);
-			this.permits.add(new Permit(denies, ref, val, regex));
+			boolean regex = xml.attr("regex",false);
+			permits.add(new Permit(denies, ref, val, regex));
 		}
 	}
 	/**
