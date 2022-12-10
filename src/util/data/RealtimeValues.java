@@ -708,9 +708,9 @@ public class RealtimeValues implements Commandable {
 				if( rvOpt.isEmpty())
 					return "No such real yet.";
 				var realVal = rvOpt.get();
-				var digger = XMLdigger.digRoot(settingsPath,"dcafs")
+				var digger = XMLdigger.goIn(settingsPath,"dcafs")
 						.goDown("settings","rtvals")
-						.goDown("group","name",realVal.group())
+						.goDown("group","id",realVal.group())
 						.goDown("real","name",realVal.name());
 				if( digger.isValid() ){
 					switch( vals[0]){
@@ -723,7 +723,7 @@ public class RealtimeValues implements Commandable {
 						default:
 							return "unknown parameter: "+vals[0];
 					}
-					digger.alterAttrAndBuild(vals[0],vals[1]);
+					XMLfab.alterDigger(digger).ifPresent( fab -> fab.attr(vals[0],vals[1]));
 					return "Altered "+vals[0]+ " to "+ vals[1];
 				}else{
 					return "No valid nodes found";
