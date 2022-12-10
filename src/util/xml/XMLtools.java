@@ -413,8 +413,11 @@ public class XMLtools {
 			NodeList list = element.getElementsByTagName(ch);
 
 			for (int a = 0; a < list.getLength(); a++){
-				if (list.item(a).getNodeType() == Node.ELEMENT_NODE)
-					eles.add( (Element) list.item(a));
+				if (list.item(a).getNodeType() == Node.ELEMENT_NODE ) {
+				 	Element add = (Element)list.item(a);
+					 if( add.getParentNode() == element)
+						eles.add((Element) list.item(a));
+				}
 			}
 		}
 		eles.trimToSize();
