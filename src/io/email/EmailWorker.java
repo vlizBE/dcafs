@@ -161,43 +161,39 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 			return false;
 
 		// Sending
-		if( xml.goDown("outbox").isValid() ){ // outbox
-			if( xml.peekAt("server").hasValidPeek()) {
-				outbox.setServer( xml.value(""), xml.attr("port", 25));            // The SMTP server
-				outbox.setLogin(xml.attr("user", ""), xml.attr("pass", ""));
-				outbox.hasSSL = xml.attr("ssl", false);
-			}else{
-				Logger.error("No server defined for the outbox");
+		xml.goDown("*");
+		while( xml.iterate()){
+			switch( xml.tagName("" ) ){
+				case "outbox":
+					if( xml.peekAt("server").hasValidPeek()) {
+						outbox.setServer( xml.value(""), xml.attr("port", 25));            // The SMTP server
+						outbox.setLogin(xml.attr("user", ""), xml.attr("pass", ""));
+						outbox.hasSSL = xml.attr("ssl", false);
+					}else{
+						Logger.error("No server defined for the outbox");
+					}
+					outbox.from = xml.peekAt("from").value("dcafs@email.com");// From emailaddress
+					doZipFromSizeMB = xml.peekAt("zip_from_size_mb").value(10);// Max unzipped filesize
+					deleteReceivedZip = xml.peekAt("delete_rec_zip").value(true);
+					maxSizeMB = xml.peekAt("max_size_mb").value(15.0);
+					break;
+				case "inbox":
+					if (xml.peekAt("server").hasValidPeek()) {
+						inbox.setServer(xml.value(""), xml.attr("port", 25));            // The SMTP server
+						inbox.setLogin(xml.attr("user", ""), xml.attr("pass", ""));
+						inbox.hasSSL = xml.attr("ssl", false);
+					}else{
+						Logger.error("No server defined for the inbox");
+					}
+					String interval = xml.peekAt("checkinterval").value( "5m");
+					checkIntervalSeconds = (int)TimeTools.parsePeriodStringToSeconds(interval);
+					allowedDomain = xml.peekAt("allowed").value( "");
+					break;
+				case "book": xml.current().ifPresent( x -> readEmailBook(x)); break;
+				case "permits": xml.current().ifPresent( x -> readPermits(x)); break;
+				default: Logger.error("Unknown node in email: "+xml.tagName("" )); break;
 			}
-			outbox.from = xml.peekAt("from").value("dcafs@email.com");// From emailaddress
-			doZipFromSizeMB = xml.peekAt("zip_from_size_mb").value(10);// Max unzipped filesize
-			deleteReceivedZip = xml.peekAt("delete_rec_zip").value(true);
-			maxSizeMB = xml.peekAt("max_size_mb").value(15.0);
-			xml.goUp();
-		}else{
-			xml.makeValid();
 		}
-		// Receiving
-		if( xml.goDown("inbox").isValid() ) { // outbox
-			if (xml.peekAt("server").hasValidPeek()) {
-				inbox.setServer(xml.value(""), xml.attr("port", 25));            // The SMTP server
-				inbox.setLogin(xml.attr("user", ""), xml.attr("pass", ""));
-				inbox.hasSSL = xml.attr("ssl", false);
-			}else{
-				Logger.error("No server defined for the inbox");
-			}
-			String interval = xml.peekAt("checkinterval").value( "5m");
-			checkIntervalSeconds = (int)TimeTools.parsePeriodStringToSeconds(interval);
-			allowedDomain = xml.peekAt("allowed").value( "");
-			/*
-			 *  Now figure out the various references used, linking keywords to e-mail addresses
-			 **/
-			xml.goUp();
-		}else{
-			xml.makeValid();
-		}
-		xml.peekAt("book").currentPeek().ifPresent( book -> readEmailBook(book));
-		xml.peekAt("permits").currentPeek().ifPresent( permits -> readPermits(permits));
 		return true;
 	}
 
