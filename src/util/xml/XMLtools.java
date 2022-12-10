@@ -158,9 +158,9 @@ public class XMLtools {
 	 * @param xmlFile The file to write to
 	 * @param xmlDoc  The content to write in the file
 	 */
-	public static void writeXML(Path xmlFile, Document xmlDoc) {
+	public static boolean writeXML(Path xmlFile, Document xmlDoc) {
 		if( xmlDoc == null )
-			return;
+			return false;
 
 		try ( var fos = new FileOutputStream(xmlFile.toFile());
 			  var writer = new OutputStreamWriter(fos, StandardCharsets.UTF_8)
@@ -179,9 +179,11 @@ public class XMLtools {
 			xformer.setOutputProperty(OutputKeys.INDENT, "yes");
 			xformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
 			xformer.transform(source, result);
+			return true;
 		} catch (Exception e) {
 			Logger.error("Failed writing XML: "+xmlFile.toString());
 			Logger.error(e);
+			return false;
 		}
 	}
 	/**
