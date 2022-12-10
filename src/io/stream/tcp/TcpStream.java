@@ -81,12 +81,12 @@ public class TcpStream extends BaseStream implements Writable {
     @Override
     public boolean connect() {
         ChannelFuture f;
-        Logger.info("Trying to connect to tcp stream");
 
         if( eventLoopGroup==null){
-            Logger.error("Event loop group still null");
+            Logger.error("Event loop group still null, can't connect to "+id);
             return false;
         }
+        Logger.info("Trying to connect to tcp: "+id);
 		if( bootstrap == null ){
 			bootstrap = new Bootstrap();
 			bootstrap.group(eventLoopGroup).channel(NioSocketChannel.class)

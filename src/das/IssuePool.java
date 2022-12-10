@@ -7,6 +7,7 @@ import util.data.NumericVal;
 import util.data.RealtimeValues;
 import util.task.RtvalCheck;
 import util.tools.TimeTools;
+import util.xml.XMLdigger;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
