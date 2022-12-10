@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class XMLfab {
     private Element root;           // The highest element to which parents are added
@@ -28,7 +27,11 @@ public class XMLfab {
     private XMLfab( Document xml, String rootTag ){
        this(xml,rootTag,true);
     }
-
+    private XMLfab( Document ori, Element work ){
+        xmlDoc=ori;
+        last=work;
+        parent=last;
+    }
     /**
      * Create a fab based on the given document, reload the document first if requested
      * @param doc The xml document
@@ -82,6 +85,9 @@ public class XMLfab {
     private XMLfab( Path xmlPath, String rootTag ){
         this(xmlPath);
         getRoot(rootTag);
+    }
+    public static Optional<XMLfab> alterDigger( XMLdigger dig ){
+        return dig.current().map( d -> new XMLfab(dig.doc(),d));
     }
     public boolean isInvalid(){
         return xmlDoc!=null;
