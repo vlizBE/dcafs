@@ -26,6 +26,7 @@ import util.database.*;
 import util.task.TaskManagerPool;
 import util.tools.TimeTools;
 import util.tools.Tools;
+import util.xml.XMLdigger;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.*;
@@ -201,12 +202,12 @@ public class DAS implements Commandable{
         addCommandable(collectorPool,"mc");
 
         /* File monitor */
-        if( XMLfab.hasRoot(settingsPath,"dcafs","monitor") ) {
+        if( XMLdigger.goIn(settingsPath,"dcafs").goDown("monitor").isValid() ) {
             fileMonitor = new FileMonitor(settingsPath.getParent(), dQueue);
             addCommandable(fileMonitor,"fm","fms");
         }
         /* GPIO's */
-        if( XMLfab.hasRoot(settingsPath,"dcafs","gpio") ){
+        if( XMLdigger.goIn(settingsPath,"dcafs").goDown("gpio").isValid() ){
             Logger.info("Reading interrupt gpio's from settings.xml");
             isrs = new InterruptPins(dQueue,settingsPath);
         }else{
@@ -214,7 +215,7 @@ public class DAS implements Commandable{
         }
 
         /* Matrix */
-        if( XMLfab.hasRoot(settingsPath,"dcafs","settings","matrix") ){
+        if( XMLdigger.goIn(settingsPath,"dcafs").goDown("matrix").isValid() ){
             Logger.info("Reading Matrix info from settings.xml");
             matrixClient = new MatrixClient( dQueue, rtvals, settingsPath );
             addCommandable("matrix",matrixClient);
@@ -422,12 +423,11 @@ public class DAS implements Commandable{
         if( i2cWorker!=null)
             return;
 
-        Logger.info("Adding I2CWorker.");
         if (SystemUtils.IS_OS_WINDOWS) {
-            Logger.warn("No native I2C busses on windows... ignoring I2C");
+            Logger.info("No native I2C busses on windows... ignoring I2C");
             return;
         }
-
+        Logger.info("Adding I2CWorker.");
         i2cWorker = new I2CWorker(settingsPath, dQueue);
         addCommandable("i2c",i2cWorker);
     }
