@@ -240,8 +240,7 @@ public class RealVal extends AbstractVal implements NumericVal{
      *                'always' to trigger on every update or 'changed' to trigger only on a changed value
      */
     public boolean addTriggeredCmd(String trigger,String cmd ){
-        if( dQueue==null)
-            Logger.error(id() + "(dv)-> Tried to add cmd "+cmd+" but dQueue still null");
+
         if( triggered==null)
             triggered = new ArrayList<>();
 

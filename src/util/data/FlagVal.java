@@ -227,8 +227,7 @@ public class FlagVal extends AbstractVal implements NumericVal{
      * @param cmd The cmd to trigger, $ will be replaced with the current value
      */
     public boolean addTriggeredCmd(String trigger, String cmd){
-        if( dQueue==null)
-            Logger.error("Tried to add cmd "+cmd+" but dQueue still null");
+
         switch( trigger ){
             case "raised": case "up": case "set": // State goes from false to true
                 raisedList.add(cmd);
