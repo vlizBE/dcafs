@@ -90,7 +90,7 @@ public class XMLfab {
         return dig.current().map( d -> new XMLfab(dig.doc(),d));
     }
     public boolean isInvalid(){
-        return xmlDoc!=null;
+        return xmlDoc==null;
     }
     /**
      * Get the path of the xml document
@@ -105,9 +105,10 @@ public class XMLfab {
      * @param tag The tag to look for
      */
     private void getRoot(String tag){
-        if( isInvalid())
+        if( isInvalid()) {
+            Logger.error( "No valid xml, so can't find root");
             return;
-
+        }
         var rootOpt= XMLtools.getFirstElementByTag(xmlDoc, tag );
         if( rootOpt.isEmpty() ){
             Logger.warn("No such root "+tag+ " in "+xmlPath.getFileName()+", so creating it.");
