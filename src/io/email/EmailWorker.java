@@ -161,7 +161,7 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 			return false;
 
 		// Sending
-		xml.goDown("*");
+		xml.goDown("*"); // Get all child nodes of 'email'
 		while( xml.iterate()){
 			switch( xml.tagName("" ) ){
 				case "outbox":
@@ -233,7 +233,7 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 		}
 	}
 	/**
-	 * This creates the barebones settings in the xml
+	 * This creates the bare settings in the xml
 	 * 
 	 * @param fab An XMLfab to build upon
 	 * @param sendEmails Whether to include sending emails
