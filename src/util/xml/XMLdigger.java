@@ -76,7 +76,7 @@ public class XMLdigger {
     public XMLdigger goDown( String tag, String attr, String value ){
         if(!valid)
             return this;
-        var eleOpt = XMLtools.getChildElements(root, tag).stream().filter(x ->
+        var eleOpt = XMLtools.getChildElements(last==null?root:last, tag).stream().filter(x ->
                 x.getAttribute(attr).equalsIgnoreCase(value)).findFirst();
 
         eleOpt.ifPresentOrElse( ele -> stepDown(ele),()->invalidate());
