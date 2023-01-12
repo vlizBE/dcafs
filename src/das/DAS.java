@@ -160,10 +160,6 @@ public class DAS implements Commandable{
         addCommandable(dbManager,"dbm","myd");
         addCommandable(this,"st");
 
-        /* Waypoints */
-        waypoints = new Waypoints(settingsPath,nettyGroup,rtvals,dQueue);
-        addCommandable("wpts",waypoints);
-
         /* TransServer */
         addTransServer(-1);
 
@@ -195,6 +191,10 @@ public class DAS implements Commandable{
         addCommandable(forwardPool,"editor","ef","editors");
         addCommandable(forwardPool,"paths","path","pf","paths");
         addCommandable(forwardPool, "");
+
+        /* Waypoints */
+        waypoints = new Waypoints(settingsPath,nettyGroup,rtvals,dQueue);
+        addCommandable("wpts",waypoints);
 
         /* Collectors */
         collectorPool = new CollectorPool(settingsPath.getParent(),dQueue,nettyGroup,rtvals);
