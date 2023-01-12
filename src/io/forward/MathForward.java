@@ -761,7 +761,7 @@ public class MathForward extends AbstractForward {
             this.directSet = NumberUtils.createBigDecimal(value);
         }
         public boolean isValid(){
-            return op!=null && fab.isValid();
+            return op!=null || fab!=null;
         }
         public void setScale( int scale ){
             this.scale=scale;
