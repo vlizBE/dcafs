@@ -395,7 +395,7 @@ public class SQLiteDB extends SQLDB{
             Logger.error( getID() + " -> Format given is unsupported! Database creation cancelled.");
             return;
         }
-        Logger.info("Updated filename after rollover to "+getPath());
+        Logger.info("Updated filename after rollover to "+dbPath.toString());
     }
     /**
      * Check if this SQLite uses rollover
