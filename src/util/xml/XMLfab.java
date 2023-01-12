@@ -214,16 +214,15 @@ public class XMLfab {
         if( rootOpt.isEmpty())
             return new ArrayList<>();
 
-        fab.root = rootOpt.get();
-        if (fab.hasRoots(roots)) {
-            if (fab.root.getParentNode() != null && fab.root.getParentNode() instanceof Element) {
-                fab.last = (Element) fab.root.getParentNode();
-            } else {
-                fab.last = fab.root;
-            }
-            return fab.getChildren(roots[roots.length - 1]);
+        fab.last = rootOpt.get();
+
+        for( int a=1; a<roots.length-1;a++){
+            var eleOpt = XMLtools.getFirstChildByTag(fab.last, roots[a]);
+            if( eleOpt.isEmpty() )
+                return new ArrayList<>();
+            fab.last = eleOpt.get();
         }
-        return new ArrayList<>();
+        return fab.getChildren(roots[roots.length - 1]);
     }
 
     /**
