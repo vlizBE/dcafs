@@ -155,7 +155,7 @@ public class RealtimeValues implements Commandable {
 			return false;
 
 		if(xmlPath!=null&& Files.exists(xmlPath))
-			rv.storeInXml(XMLfab.withRoot(xmlPath,"dcafs","rtvals"));
+			rv.storeInXml(XMLdigger.goIn(xmlPath,"dcafs").goDown("rtvals"));
 		return realVals.put(rv.getID(),rv)==null;
 	}
 	public boolean addRealVal(RealVal rv, boolean storeInXML) {
@@ -249,7 +249,7 @@ public class RealtimeValues implements Commandable {
 		if( !integerVals.containsKey(iv.getID())){
 			integerVals.put(iv.getID(),iv);
 			if(xmlPath!=null && Files.exists(xmlPath)) {
-				iv.storeInXml(XMLfab.withRoot(xmlPath, "dcafs", "rtvals"));
+				iv.storeInXml( XMLdigger.goIn(xmlPath,"dcafs").goDown("rtvals"));
 			}else if( xmlPath!=null){
 				Logger.error("No such file found: "+xmlPath);
 			}
@@ -372,9 +372,9 @@ public class RealtimeValues implements Commandable {
 		if( !hasFlag(fv.id())){
 			flagVals.put(fv.id(),fv);
 			if(xmlPath!=null && Files.exists(xmlPath)) {
-				fv.storeInXml(XMLfab.withRoot(xmlPath, "dcafs", "rtvals"));
+				fv.storeInXml(XMLdigger.goIn(xmlPath, "dcafs").goDown("rtvals"));
 			}else if( xmlPath==null){
-				fv.storeInXml(XMLfab.withRoot(settingsPath, "dcafs", "rtvals"));
+				fv.storeInXml(XMLdigger.goIn(settingsPath, "dcafs").goDown("rtvals"));
 			}
 			return fv;
 		}

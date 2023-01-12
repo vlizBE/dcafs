@@ -6,6 +6,7 @@ import org.w3c.dom.Element;
 import util.math.MathUtils;
 import util.tools.TimeTools;
 import util.tools.Tools;
+import util.xml.XMLdigger;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
@@ -245,7 +246,28 @@ public class IntegerVal extends AbstractVal implements NumericVal{
         }
     }
     /* ***************************************** U S I N G ********************************************************** */
-
+    public boolean storeInXml(XMLdigger digger){
+        if( digger.isValid() ){ // meaning there's a rtvals node
+            digger.goDown("group","id",group); // Try to go into the group node
+            if( digger.isValid() ){ // Group exists
+                digger.goDown("int","name",name); // Check for the int node
+                if( digger.isInvalid() && digger.goDown("integer","name",name).isInvalid()){
+                    XMLfab.alterDigger(digger).ifPresent( x-> x.addChild("int")
+                            .attr("name",name)
+                            .attr("unit",unit).build());
+                }
+            }else{ // No such group
+                var digFabOpt = XMLfab.alterDigger(digger);
+                if(digFabOpt.isPresent() ){
+                    var digFab = digFabOpt.get();
+                    digFab.selectOrAddChildAsParent("group","id",group);
+                    digFab.addChild("int").attr("name",name).attr("unit","");
+                    digFab.build();
+                }
+            }
+        }
+        return true;
+    }
     /**
      * Store the setup of this val in the settings.xml
      * @param fab The fab to work with, with the rtvals node as parent
@@ -255,6 +277,15 @@ public class IntegerVal extends AbstractVal implements NumericVal{
 
         fab.alterChild("group","id",group)
                     .down(); // Go down in the group
+
+        fab.hasChild("integer","id",name).ifPresent( x -> {
+            x.removeAttr("id");
+            x.attr("name",name);
+        });
+        fab.hasChild("int","id",name).ifPresent( x -> {
+            x.removeAttr("id");
+            x.attr("name",name);
+        });
 
         if( fab.hasChild("integer","name",name).isEmpty()
                 && fab.hasChild("int","name",name).isEmpty()) { // If this one isn't present

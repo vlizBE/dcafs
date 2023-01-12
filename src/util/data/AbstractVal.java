@@ -1,6 +1,7 @@
 package util.data;
 
 import io.Writable;
+import util.xml.XMLdigger;
 import util.xml.XMLfab;
 import worker.Datagram;
 
@@ -53,6 +54,9 @@ public abstract class AbstractVal {
             return false;
         keepHistory=count;
         return true;
+    }
+    public void disableHistory(){
+        keepHistory=0;
     }
     /**
      * Set the order in which this item should be listed in the group list, the higher the order the higher in the list.
@@ -130,5 +134,5 @@ public abstract class AbstractVal {
         targets.forEach( wr -> join.add(wr.getID()));
         return join.toString();
     }
-    abstract boolean storeInXml(XMLfab fab);
+    abstract boolean storeInXml(XMLdigger digger);
 }

@@ -1,7 +1,9 @@
 package util.data;
 
+import org.json.XML;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.xml.XMLdigger;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
@@ -250,20 +252,25 @@ public class FlagVal extends AbstractVal implements NumericVal{
     }
 
     @Override
-    public boolean storeInXml(XMLfab fab) {
-        if( group.isEmpty()) {
-            fab.alterChild("flag", "id",id()).build();
-        }else{
-            fab.alterChild("group","id",group )
-                    .down().addChild("flag").attr("name",name);
+    public boolean storeInXml(XMLdigger digger) {
+        if( digger.isValid() ){ // meaning there's a rtvals node
+            digger.goDown("group","id",group); // Try to go into the group node
+            if( digger.isValid() ){ // Group exists
+                digger.goDown("flag","name",name); // Check for the int node
+                if( digger.isInvalid() ){
+                    XMLfab.alterDigger(digger).ifPresent( x-> x.addChild("flag")
+                            .attr("name",name).build());
+                }
+            }else{ // No such group
+                var digFabOpt = XMLfab.alterDigger(digger);
+                if(digFabOpt.isPresent() ){
+                    var digFab = digFabOpt.get();
+                    digFab.selectOrAddChildAsParent("group","id",group);
+                    digFab.addChild("flag").attr("name",name);
+                    digFab.build();
+                }
+            }
         }
-        var opts = getOptions();
-        if( !opts.isEmpty())
-            fab.attr("options",opts);
-        storeTriggeredCmds(fab.down());
-        fab.up();
-        if( !group.isEmpty())
-            fab.up(); // Go back up to rtvals
         return true;
     }
     private void storeTriggeredCmds(XMLfab fab){

@@ -6,6 +6,7 @@ import org.w3c.dom.Element;
 import util.math.MathUtils;
 import util.tools.TimeTools;
 import util.tools.Tools;
+import util.xml.XMLdigger;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
@@ -64,7 +65,7 @@ public class RealVal extends AbstractVal implements NumericVal{
         name = XMLtools.getStringAttribute(rtval,"id",name);
 
         if( name.isEmpty()){
-            Logger.error("Tried to create a RealVal without id/name");
+            Logger.error("Tried to create a RealVal without id/name, group "+group);
             return null;
         }
         return RealVal.newVal(group,name).alter(rtval,defReal);
@@ -230,6 +231,16 @@ public class RealVal extends AbstractVal implements NumericVal{
             history=new ArrayList<>();
         return super.enableHistory(count);
     }
+    @Override
+    public void disableHistory(){
+        keepHistory=0;
+        clearHistory();
+    }
+    public void clearHistory(){
+        if( history!=null)
+            history.clear();
+    }
+
     public void enableAbs(){
         abs=true;
     }
@@ -275,30 +286,30 @@ public class RealVal extends AbstractVal implements NumericVal{
 
     /**
      * Store the setup of this val in the settings.xml
-     * @param fab The fab to work with, with the rtvals node as parent
+     * @param digger The digger to work with, with the rtvals node as root/parent
      * @return True when
      */
-    public boolean storeInXml( XMLfab fab ){
+    public boolean storeInXml( XMLdigger digger ){
 
-        fab.alterChild("group","id",group)
-                .down(); // Go down in the group
-
-        if( fab.hasChild("real","name",name).isEmpty() ) { // If this one isn't present
-            fab.addChild("real").attr("name", name);
-        }else {
-            fab.alterChild("real", "name", name);
+        if( digger.isValid() ){ // meaning there's a rtvals node
+            digger.goDown("group","id",group); // Try to go into the group node
+            if( digger.isValid() ){ // Group exists
+                digger.goDown("real","name",name); // Check for the int node
+                if( digger.isInvalid() ){
+                    XMLfab.alterDigger(digger).ifPresent( x-> x.addChild("real")
+                            .attr("name",name)
+                            .attr("unit",unit).build());
+                }
+            }else{ // No such group
+                var digFabOpt = XMLfab.alterDigger(digger);
+                if(digFabOpt.isPresent() ){
+                    var digFab = digFabOpt.get();
+                    digFab.selectOrAddChildAsParent("group","id",group);
+                    digFab.addChild("real").attr("name",name).attr("unit","");
+                    digFab.build();
+                }
+            }
         }
-        fab.attr("unit",unit);
-        if( digits !=-1)
-            fab.attr("scale",digits);
-        var opts = getOptions();
-        if( !opts.isEmpty())
-            fab.attr("options",opts);
-        storeTriggeredCmds(fab.down());
-        fab.up();
-        if( !group.isEmpty())
-            fab.up(); // Go back up to rtvals
-        fab.build();
         return true;
     }
 
@@ -389,15 +400,19 @@ public class RealVal extends AbstractVal implements NumericVal{
      * @return The calculated standard deviation or NaN if either no history is kept or the history hasn't reached
      * the full size yet.
      */
-    public double getStdev(){
+    public double getStdev(int scale){
         if( history==null) {
             Logger.error(id()+" (dv)-> Can't calculate standard deviation without history");
             return Double.NaN;
         }else if( history.size() != keepHistory){
             return Double.NaN;
         }
-        return MathUtils.calcStandardDeviation(history,digits==-1?5:digits+2);
+        return MathUtils.calcStandardDeviation(history,scale==-1?5:scale+2);
     }
+    public double getStdev(){
+        return getStdev(digits);
+    }
+
     /**
      * Compare two RealVal's based on their values
      * @param dv The RealVal to compare to
