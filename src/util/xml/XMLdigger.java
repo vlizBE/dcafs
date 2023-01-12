@@ -120,6 +120,9 @@ public class XMLdigger {
     public boolean isValid(){
         return valid;
     }
+    public boolean isInvalid(){
+        return valid;
+    }
     public boolean hasValidPeek(){ return peeked && peek!=null; }
     public Optional<Element> current(){
         return valid?Optional.of(last):Optional.empty();
