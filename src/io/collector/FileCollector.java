@@ -150,7 +150,7 @@ public class FileCollector extends AbstractCollector{
 
         /* RollOver */
         var rollOpt = XMLtools.getFirstChildByTag(fcEle, "rollover");
-        if( rollOpt.isEmpty() ){
+        if( rollOpt.isPresent() ){
             var roll = rollOpt.get();
             int rollCount = XMLtools.getIntAttribute(roll, "count", 1);
             String unit = XMLtools.getStringAttribute(roll, "unit", "none").toLowerCase();
