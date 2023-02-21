@@ -143,6 +143,11 @@ public class CommandLineInterface {
      */
     private void insertByte( byte b ){
 
+
+        if( buffer.writerIndex() > 2 && b==0 ){
+            if( buffer.getByte(buffer.writerIndex()-1)==0)
+                return;
+        }
         byte old = buffer.getByte(buffer.writerIndex());
         buffer.writeByte(b);
         writeByte(b);
