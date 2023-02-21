@@ -11,6 +11,18 @@ Note: Version numbering: x.y.z
 
 ## 1.0.8 ( work in progress )
 
+### Telnet interface
+- Use `CTRL+s` to send something with eol (mainly used for Sx:y cmd)
+- Use `\e` to send `\x1B` or 'escape', combine with `CTRL+s` to only send that
+
+### Paths
+- pf:reloadall now exists
+
+### Other
+- Fixed workpath on linux
+- Added XML 'digger' to check contents of XML file (instead of abusing fab)
+- Fixed wrong optional check that made FileCollector fail
+
 ## 1.0.7 (07/12/22)
 
 ### SQLiteDB
