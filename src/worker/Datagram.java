@@ -59,7 +59,7 @@ public class Datagram {
         return new Datagram(message);
     }
     public static Datagram build(byte[] message){
-        var d = new Datagram( new String(message).trim());
+        var d = new Datagram( new String(message));
         d.raw=message;
         return d;
     }

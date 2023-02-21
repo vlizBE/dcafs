@@ -140,7 +140,7 @@ public class CommandPool {
 			html=true;
 		}
 		String result;
-		question=question.trim();
+		//question=question.trim();
 
 		if (!html) // if html is false, verify that the command doesn't imply the opposite
 			html = question.endsWith("html") ;
