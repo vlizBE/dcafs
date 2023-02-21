@@ -298,8 +298,12 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 						txt = Tools.fromEscapedStringToBytes(txt);
 					}
 					boolean written;
-					if( txt.endsWith("\\0")){
-						written=((Writable)stream).writeString(StringUtils.removeEnd(txt,"\\0"));
+					boolean nullEnded = Tools.isNullEnded(txt);
+					if( txt.endsWith("\\0") || nullEnded){
+						if( nullEnded )
+							txt = txt.substring(0,txt.length()-1);
+						txt=StringUtils.removeEnd(txt,"\\0");
+						written=((Writable)stream).writeString(txt);
 					}else{
 						written=((Writable)stream).writeLine(txt);
 					}
@@ -1042,7 +1046,7 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 						written = writeToStream(stream, request[1], "" );
 					}
 					if( !written.isEmpty() )
-						yield "Sending '"+request[1]+"' to "+stream;
+						yield "Sending '"+written+"' to "+stream;
 					yield "Failed to send "+request[1]+" to "+stream;
 
 				}else{
