@@ -45,7 +45,7 @@ public class TaskManager implements CollectorFuture {
 
 	private CommandPool commandPool; // Source to get the data
 	private String id;
-
+	private String lastError="";
 	static final String TINY_TAG = "TASK";
 
 	enum RUNTYPE {
@@ -76,7 +76,9 @@ public class TaskManager implements CollectorFuture {
 	public void setId(String id) {
 		this.id = id;
 	}
-
+	public String getId() {
+		return id;
+	}
 	public void setWorkPath(String path) {
 		this.workPath = path;
 	}
@@ -133,13 +135,16 @@ public class TaskManager implements CollectorFuture {
 	 * 
 	 * @param tsk The Element that contains the task info
 	 */
-	public void addTask(Element tsk) {
+	public String addTask(Element tsk) {
 		Task task = new Task(tsk, rtvals, sharedChecks);
 
 		if (startOnLoad && task.getTriggerType()!=TRIGGERTYPE.EXECUTE && task.isEnableOnStart()) {
 			startTask(task);
 		}
-		tasks.add(task);
+		var error=task.getBuildError();
+		if( error.isEmpty())
+			tasks.add(task);
+		return error;
 	}
 
 	/**
@@ -254,8 +259,8 @@ public class TaskManager implements CollectorFuture {
 		TaskSet ts = tasksets.get(id);
 		if (ts != null) {
 			if (ts.getTaskCount() != 0) {
-				switch( runCheck(ts.getReqIndex()) ){
-					case 1:
+				switch (runCheck(ts.getReqIndex())) {
+					case 1 -> {
 						Logger.tag(TINY_TAG).debug("[" + this.id + "] Taskset started " + id);
 						if (ts.getRunType() == RUNTYPE.ONESHOT) {
 							startTasks(ts.getTasks());
@@ -266,13 +271,16 @@ public class TaskManager implements CollectorFuture {
 						} else {
 							return "Didn't start anything...! Runtype=" + ts.getRunType();
 						}
-					case 0:
-						Logger.warn("Check failed for "+ts.getID()+" : "+ts.getReqIndex() );
-						return "Check failed for "+ts.getID()+" : "+ts.getReqIndex();
-					default:
-					case -1:
-						Logger.error("Error during check for "+ts.getID()+" : "+ts.getReqIndex() );
-						return "Check not run for "+ts.getID()+" : "+ts.getReqIndex();
+					}
+					case 0 -> {
+						Logger.warn("Check failed for " + ts.getID() + " : " + ts.getReqIndex());
+						return "Check failed for " + ts.getID() + " : " + ts.getReqIndex();
+					}
+					case -1 -> {
+						Logger.error("Error during check for " + ts.getID() + " : " + ts.getReqIndex());
+						return "Check not run for " + ts.getID() + " : " + ts.getReqIndex();
+					}
+					default -> {return "Invalid value";}
 				}
 			} else {
 				Logger.tag(TINY_TAG).info("[" + this.id + "] TaskSet " + ts.getDescription() + " is empty!");
@@ -1053,6 +1061,7 @@ public class TaskManager implements CollectorFuture {
 			for( TaskSet set : tasksets.values() ){
 				if( set.isActive() && !set.isInterruptable() ){
 					Logger.tag("TASKS").info("Tried to reload sets while an interruptable was active. Reload denied.");
+					lastError="Interruptable active, reload denied";
 					return false;
 				}
 			}
@@ -1069,8 +1078,7 @@ public class TaskManager implements CollectorFuture {
 			String ref = path.getFileName().toString().replace(".xml", "");
 			
 			if( docOpt.isEmpty() ) {
-				Logger.tag(TINY_TAG).error("["+ id +"] Issue trying to read the "+ref
-														+".xml file, check for typo's or fe. missing < or >");
+				lastError = XMLtools.checkXML( path );
 				return false;
 			}else{
 				Logger.tag(TINY_TAG).info("["+ id +"] Tasks File ["+ref+"] found!");
@@ -1080,7 +1088,8 @@ public class TaskManager implements CollectorFuture {
 
 			var ssOpt = XMLtools.getFirstElementByTag( doc, "tasklist" );
 			if(ssOpt.isEmpty()) {
-				Logger.error("No valid taskmanager script, need the node tasklist");
+				lastError ="No valid taskmanager script, need the node tasklist";
+				Logger.error(lastError);
 				return false;
 			}
 			var tsOpt =  XMLtools.getFirstChildByTag( ssOpt.get(),"tasksets" );
@@ -1141,7 +1150,11 @@ public class TaskManager implements CollectorFuture {
 			}
 			for( Element tasksEntry : XMLtools.getChildElements( ssOpt.get(), "tasks" )){ //Can be multiple collections of tasks.
 				for( Element ll : XMLtools.getChildElements( tasksEntry, "task" )){
-					addTask(ll);
+					var error = addTask(ll);
+					if( !error.isEmpty()){
+						lastError=error;
+						return false;
+					}
 				 	ts++;
 				}
 			}
@@ -1176,40 +1189,55 @@ public class TaskManager implements CollectorFuture {
 	public String replyToCommand(String request, boolean html ){
 		String[] parts = request.split(",");
 
-		String cyan = html?"": TelnetCodes.TEXT_CYAN;
 		String green=(html?"":TelnetCodes.TEXT_GREEN)+"tm:";
-		String ora = html?"":TelnetCodes.TEXT_ORANGE;
 		String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
 
-		switch( parts[0] ){
-			case "?":
+		switch (parts[0]) {
+			case "?" -> {
 				StringJoiner join = new StringJoiner("\r\n");
-				join.add(green+"reload"+reg+" -> Reloads this TaskManager");
-				join.add(green+"forcereload "+reg+"-> Reloads this TaskManager while ignoring interruptable");
-				join.add(green+"listtasks/tasks "+reg+"-> Returns a listing of all the loaded tasks");
-				join.add(green+"listsets/sets "+reg+"-> Returns a listing of all the loaded sets");
-				join.add(green+"stop "+reg+"-> Stop all running task(set)s");
-				join.add(green+"run,x "+reg+"-> Run taskset with the id x");
+				join.add(green + "reload" + reg + " -> Reloads this TaskManager");
+				join.add(green + "forcereload " + reg + "-> Reloads this TaskManager while ignoring interruptable");
+				join.add(green + "listtasks/tasks " + reg + "-> Returns a listing of all the loaded tasks");
+				join.add(green + "listsets/sets " + reg + "-> Returns a listing of all the loaded sets");
+				join.add(green + "stop " + reg + "-> Stop all running task(set)s");
+				join.add(green + "run,x " + reg + "-> Run taskset with the id x");
 				return join.toString();
-			case "reload":      return reloadTasks()?"Reloaded tasks...":"Reload Failed";
-			case "forcereload": return forceReloadTasks()?"Reloaded tasks":"Reload failed";
-			case "listtasks": case "tasks": return getTaskListing(html?"<br>":"\r\n");
-			case "listsets": case "sets":  return getTaskSetListing(html?"<br>":"\r\n");
-			case "stop":	  return "Cancelled "+stopAll("doTaskManager")+ " futures.";
-			case "run":		
-				if( parts.length==2){
-					if( parts[1].startsWith("task:")){
-						return startTask(parts[1].substring(5))?"Task started":"Failed to start task";
-					}else{
+			}
+			case "reload" -> {
+				return reloadTasks() ? "Reloaded tasks..." : "Reload Failed";
+			}
+			case "forcereload" -> {
+				return forceReloadTasks() ? "Reloaded tasks" : "Reload failed";
+			}
+			case "listtasks", "tasks" -> {
+				return getTaskListing(html ? "<br>" : "\r\n");
+			}
+			case "listsets", "sets" -> {
+				return getTaskSetListing(html ? "<br>" : "\r\n");
+			}
+			case "stop" -> {
+				return "Cancelled " + stopAll("doTaskManager") + " futures.";
+			}
+			case "run" -> {
+				if (parts.length == 2) {
+					if (parts[1].startsWith("task:")) {
+						return startTask(parts[1].substring(5)) ? "Task started" : "Failed to start task";
+					} else {
 						return startTaskset(parts[1]);
 					}
 
-				}else{
+				} else {
 					return "not enough parameters";
 				}
-			default:
-				return "unknown command: "+request;
-		} 
+			}
+			default -> {
+				return "unknown command: " + request;
+			}
+		}
+	}
+	/* ******************************************************************************************************* */
+	public String getLastError(){
+		return lastError;
 	}
 	/* ******************************************************************************************************* */
 	public class ChannelRestoreChecker implements Runnable{

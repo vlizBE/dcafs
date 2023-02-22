@@ -71,8 +71,10 @@ public class CommandLineInterface {
                 }
             }else if( b == '\n'){ //LF
                 writeByte(b); // echo LF
-            }else if( b == '\r') { // CR
-                writeByte(b); // echo CR
+            }else if( b == '\r' || b==19 ) { // CR
+                writeByte((byte)13); // echo CR
+                if(b==19)
+                    insertByte((byte)0);
                 int wi = buffer.writerIndex();
                 while( buffer.getByte(wi) != 0)
                     wi++;
@@ -141,6 +143,11 @@ public class CommandLineInterface {
      */
     private void insertByte( byte b ){
 
+
+        if( buffer.writerIndex() > 2 && b==0 ){
+            if( buffer.getByte(buffer.writerIndex()-1)==0)
+                return;
+        }
         byte old = buffer.getByte(buffer.writerIndex());
         buffer.writeByte(b);
         writeByte(b);

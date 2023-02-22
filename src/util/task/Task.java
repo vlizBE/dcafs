@@ -16,6 +16,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.StringJoiner;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -86,13 +87,14 @@ public class Task implements Comparable<Task>{
 	private String taskset="";			// The taskset this task is part of
 	private int tasksetIndex=-1;		// The index the task has in the taskset it's part of
 	private boolean stopOnFail=true;	// Whether this task should stop the taskset on failure
+	private StringJoiner buildError;
 	/* *************************************  C O N S T R U C T O R S ***********************************************/
 	/**
 	 * Constructor that parses an Element to get all the info
 	 * @param tsk The element for a task
 	 */
 	public Task(Element tsk, RealtimeValues rtvals, ArrayList<CheckBlock> sharedChecks){
-
+		buildError=new StringJoiner("\r\n");
 		when  = XMLtools.getStringAttribute( tsk, "state", "always"); //The state that determines if it's done or not
 
 		if( tsk.getTagName().equalsIgnoreCase("while")||tsk.getTagName().equalsIgnoreCase("waitfor")){
@@ -123,8 +125,10 @@ public class Task implements Comparable<Task>{
 					}else{
 						cb.setSharedMem(sharedChecks.get(0).getSharedMem());
 					}
-					if( !cb.build() )
-						Logger.error("Failed to parse "+check+" adding it anyway but with default false result" );
+					if( !cb.build() ) {
+						buildError.add("Failed to parse " + check );
+						Logger.error(buildError);
+					}
 					sharedChecks.add(cb);
 					reqIndex = sharedChecks.size()-1;
 				}
@@ -147,6 +151,9 @@ public class Task implements Comparable<Task>{
 			if( !req.isEmpty() ){
 				for( int a=0;a<sharedChecks.size();a++ ){
 					if( sharedChecks.get(a).matchesOri(req)){
+						if( !sharedChecks.get(a).isValid()) {
+							buildError.add( "Failed to parse req: " + req);
+						}
 						reqIndex=a;
 						break;
 					}
@@ -158,10 +165,13 @@ public class Task implements Comparable<Task>{
 					}else{
 						cb.setSharedMem(sharedChecks.get(0).getSharedMem());
 					}
-					if( !cb.build() )
-						Logger.error("Failed to parse "+req+" adding it anyway but with default false result" );
-					sharedChecks.add(cb);
-					reqIndex = sharedChecks.size() - 1;
+					if( !cb.build() ) {
+						buildError.add("Failed to parse " + req);
+						Logger.error(buildError);
+					}else {
+						sharedChecks.add(cb);
+						reqIndex = sharedChecks.size() - 1;
+					}
 				}
 			}
 			String check = XMLtools.getStringAttribute( tsk, "check", "");
@@ -179,8 +189,10 @@ public class Task implements Comparable<Task>{
 					}else{
 						cb.setSharedMem(sharedChecks.get(0).getSharedMem());
 					}
-					if( !cb.build() )
-						Logger.error("Failed to parse "+check+" adding it anyway but with default false result" );
+					if( !cb.build() ){
+						buildError.add("Failed to parse " + check);
+						Logger.error(buildError);
+					}
 					sharedChecks.add(cb);
 					checkIndex = sharedChecks.size()-1;
 				}
@@ -217,6 +229,9 @@ public class Task implements Comparable<Task>{
 				link = linking[1];
 			}
 		}
+	}
+	public String getBuildError(){
+		return buildError.toString();
 	}
 	public int getReqIndex( ){
 		return reqIndex;

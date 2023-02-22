@@ -48,7 +48,7 @@ public class CheckBlock extends AbstractBlock{
     @Override
     public boolean start(TaskBlock starter) {
         if( !valid) {
-            Logger.error("Checkblock failed because invalid");
+            Logger.error("Checkblock failed because invalid: "+ori);
             return false;
         }
         Double[] work= new Double[steps.size()+sharedMem.size()];
@@ -105,6 +105,8 @@ public class CheckBlock extends AbstractBlock{
             exp = ValTools.buildNumericalMem(rtvals,exp, sharedMem, 0);
             if( sharedMem.isEmpty()) // Remove the reference if it remained empty
                 sharedMem=null;
+            if( exp.matches("i0"))
+                exp += "==1";
         }else{
             Logger.warn("No rtvals, skipping numerical mem");
         }
@@ -184,7 +186,8 @@ public class CheckBlock extends AbstractBlock{
         if( exp.length()!=2)
             subFormulas.add(exp);
         resultIndex=subFormulas.size()-1;
-
+        if(resultIndex==-1)
+            return false;
         // Convert the sub formulas to functions
         subFormulas.forEach( x -> {
             x=x.startsWith("!")?x.substring(1)+"==0":x;

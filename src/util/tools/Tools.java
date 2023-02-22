@@ -158,6 +158,12 @@ public class Tools {
                     .replace("\t","tab");
 
     }
+    public static boolean isNullEnded( String txt ){
+        var bytes = txt.getBytes();
+        if( bytes.length==0)
+            return false;
+        return bytes[bytes.length-1]==0;
+    }
    /**
 	 * Convert the descriptive name of the delimiter to the actual findable string
 	 * @param delimiter The descriptive name
@@ -363,7 +369,8 @@ public class Tools {
         txt = txt.replace("\\t","\t")
                     .replace("\\r","\r")
                     .replace("\\n","\n")
-                    .replace("\\0","\0");
+                    .replace("\\0","\0")
+                    .replace("\\e","\\x1B");
 
         // First extract all the hexes
         var hexes = Pattern.compile("[\\\\][x]([0-9]|[A-F]){1,2}")

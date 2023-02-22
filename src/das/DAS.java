@@ -538,9 +538,12 @@ public class DAS implements Commandable{
         }
 
         // TaskManager
-        if (taskManagerPool != null)
-            taskManagerPool.reloadAll();
-
+        if (taskManagerPool != null) {
+            String errors = taskManagerPool.reloadAll();
+            if( !errors.isEmpty()){
+                telnet.addMessage("Errors during TaskManager parsing:\r\n"+errors);
+            }
+        }
         // Matrix
         if( matrixClient != null ){
             Logger.info("Trying to login to matrix");
