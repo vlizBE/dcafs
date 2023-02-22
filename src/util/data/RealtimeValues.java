@@ -799,13 +799,14 @@ public class RealtimeValues implements Commandable {
 					readFromXML(XMLfab.withRoot(settingsPath, "dcafs", "settings", "rtvals"));
 					return "Reloaded rtvals";
 				}
+				case "groups" -> {
+					String groups = String.join(html ? "<br>" : "\r\n", getGroups());
+					return groups.isEmpty() ? "No groups yet" : groups;
+				}
 			}
 		}else if(cmds.length==2){
 			switch(cmds[0]){
 				case "group":  return getRTValsGroupList(cmds[1],true,true,true,true,html);
-				case "groups":
-					String groups = String.join(html?"<br>":"\r\n",getGroups());
-					return groups.isEmpty()?"No groups yet":groups;
 				case "name"	:  return getAllIDsList(cmds[1],html);
 				case "resetgroup":
 					int a = updateIntegerGroup(cmds[1],-999);
