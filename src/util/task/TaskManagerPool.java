@@ -214,13 +214,22 @@ public class TaskManagerPool implements Commandable {
                     var tm = tasklists.get(cmd[1]);
                     if (tm == null)
                         return "No such TaskManager: " + cmd[1];
-                    if( tm.reloadTasks() )
-                        return "\r\nTasks reloaded";
+                    var res = tm.reloadTasks();
+                    if( !res )
+                        return "!! -> "+tm.getLastError();
+                    return "\r\nTasks reloaded";
                 }
             case "reloadall":
-                for(TaskManager tam : tasklists.values() )
-                    tam.reloadTasks();
-                return "Reloaded all TaskManagers.";
+                StringJoiner join = new StringJoiner("\r\n");
+                for(TaskManager tam : tasklists.values() ) {
+                    var res = tam.reloadTasks();
+                    if( !res ){
+                        join.add( tam.getId()+" -> "+tam.getLastError());
+                    }else{
+                        join.add(tam.getId()+" -> Reloaded ok");
+                    }
+                }
+                return join.toString();
             case "stopall":
                 for(TaskManager tam : tasklists.values() )
                     tam.stopAll("baseReqManager");

@@ -45,7 +45,7 @@ public class TaskManager implements CollectorFuture {
 
 	private CommandPool commandPool; // Source to get the data
 	private String id;
-
+	private String lastError="";
 	static final String TINY_TAG = "TASK";
 
 	enum RUNTYPE {
@@ -76,7 +76,9 @@ public class TaskManager implements CollectorFuture {
 	public void setId(String id) {
 		this.id = id;
 	}
-
+	public String getId() {
+		return id;
+	}
 	public void setWorkPath(String path) {
 		this.workPath = path;
 	}
@@ -1053,6 +1055,7 @@ public class TaskManager implements CollectorFuture {
 			for( TaskSet set : tasksets.values() ){
 				if( set.isActive() && !set.isInterruptable() ){
 					Logger.tag("TASKS").info("Tried to reload sets while an interruptable was active. Reload denied.");
+					lastError="Interruptable active, reload denied";
 					return false;
 				}
 			}
@@ -1069,8 +1072,7 @@ public class TaskManager implements CollectorFuture {
 			String ref = path.getFileName().toString().replace(".xml", "");
 			
 			if( docOpt.isEmpty() ) {
-				Logger.tag(TINY_TAG).error("["+ id +"] Issue trying to read the "+ref
-														+".xml file, check for typo's or fe. missing < or >");
+				lastError = XMLtools.checkXML( path );
 				return false;
 			}else{
 				Logger.tag(TINY_TAG).info("["+ id +"] Tasks File ["+ref+"] found!");
@@ -1080,7 +1082,8 @@ public class TaskManager implements CollectorFuture {
 
 			var ssOpt = XMLtools.getFirstElementByTag( doc, "tasklist" );
 			if(ssOpt.isEmpty()) {
-				Logger.error("No valid taskmanager script, need the node tasklist");
+				lastError ="No valid taskmanager script, need the node tasklist";
+				Logger.error(lastError);
 				return false;
 			}
 			var tsOpt =  XMLtools.getFirstChildByTag( ssOpt.get(),"tasksets" );
@@ -1210,6 +1213,10 @@ public class TaskManager implements CollectorFuture {
 			default:
 				return "unknown command: "+request;
 		} 
+	}
+	/* ******************************************************************************************************* */
+	public String getLastError(){
+		return lastError;
 	}
 	/* ******************************************************************************************************* */
 	public class ChannelRestoreChecker implements Runnable{
