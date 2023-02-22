@@ -6,6 +6,7 @@ import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 import util.tools.Tools;
 
+import javax.swing.text.html.Option;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -77,13 +78,16 @@ public class XMLtools {
 
 		try {
 			Document doc = dbf.newDocumentBuilder().newDocument();
-			doc.getDocumentElement().normalize();
+
 			if (write) {
 				writeXML(xmlFile, doc);
 			}
 			return Optional.of(doc);
 		} catch (ParserConfigurationException | java.nio.file.InvalidPathException e){
 			Logger.error("Error occurred while creating XML" + xmlFile.getFileName().toString(),true);
+			return Optional.empty();
+		} catch (NullPointerException e){
+			Logger.error(e);
 			return Optional.empty();
 		}
 	}
