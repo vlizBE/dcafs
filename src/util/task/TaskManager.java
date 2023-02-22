@@ -259,8 +259,8 @@ public class TaskManager implements CollectorFuture {
 		TaskSet ts = tasksets.get(id);
 		if (ts != null) {
 			if (ts.getTaskCount() != 0) {
-				switch( runCheck(ts.getReqIndex()) ){
-					case 1:
+				switch (runCheck(ts.getReqIndex())) {
+					case 1 -> {
 						Logger.tag(TINY_TAG).debug("[" + this.id + "] Taskset started " + id);
 						if (ts.getRunType() == RUNTYPE.ONESHOT) {
 							startTasks(ts.getTasks());
@@ -271,13 +271,16 @@ public class TaskManager implements CollectorFuture {
 						} else {
 							return "Didn't start anything...! Runtype=" + ts.getRunType();
 						}
-					case 0:
-						Logger.warn("Check failed for "+ts.getID()+" : "+ts.getReqIndex() );
-						return "Check failed for "+ts.getID()+" : "+ts.getReqIndex();
-					default:
-					case -1:
-						Logger.error("Error during check for "+ts.getID()+" : "+ts.getReqIndex() );
-						return "Check not run for "+ts.getID()+" : "+ts.getReqIndex();
+					}
+					case 0 -> {
+						Logger.warn("Check failed for " + ts.getID() + " : " + ts.getReqIndex());
+						return "Check failed for " + ts.getID() + " : " + ts.getReqIndex();
+					}
+					case -1 -> {
+						Logger.error("Error during check for " + ts.getID() + " : " + ts.getReqIndex());
+						return "Check not run for " + ts.getID() + " : " + ts.getReqIndex();
+					}
+					default -> {return "Invalid value";}
 				}
 			} else {
 				Logger.tag(TINY_TAG).info("[" + this.id + "] TaskSet " + ts.getDescription() + " is empty!");
@@ -1186,40 +1189,51 @@ public class TaskManager implements CollectorFuture {
 	public String replyToCommand(String request, boolean html ){
 		String[] parts = request.split(",");
 
-		String cyan = html?"": TelnetCodes.TEXT_CYAN;
 		String green=(html?"":TelnetCodes.TEXT_GREEN)+"tm:";
-		String ora = html?"":TelnetCodes.TEXT_ORANGE;
 		String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
 
-		switch( parts[0] ){
-			case "?":
+		switch (parts[0]) {
+			case "?" -> {
 				StringJoiner join = new StringJoiner("\r\n");
-				join.add(green+"reload"+reg+" -> Reloads this TaskManager");
-				join.add(green+"forcereload "+reg+"-> Reloads this TaskManager while ignoring interruptable");
-				join.add(green+"listtasks/tasks "+reg+"-> Returns a listing of all the loaded tasks");
-				join.add(green+"listsets/sets "+reg+"-> Returns a listing of all the loaded sets");
-				join.add(green+"stop "+reg+"-> Stop all running task(set)s");
-				join.add(green+"run,x "+reg+"-> Run taskset with the id x");
+				join.add(green + "reload" + reg + " -> Reloads this TaskManager");
+				join.add(green + "forcereload " + reg + "-> Reloads this TaskManager while ignoring interruptable");
+				join.add(green + "listtasks/tasks " + reg + "-> Returns a listing of all the loaded tasks");
+				join.add(green + "listsets/sets " + reg + "-> Returns a listing of all the loaded sets");
+				join.add(green + "stop " + reg + "-> Stop all running task(set)s");
+				join.add(green + "run,x " + reg + "-> Run taskset with the id x");
 				return join.toString();
-			case "reload":      return reloadTasks()?"Reloaded tasks...":"Reload Failed";
-			case "forcereload": return forceReloadTasks()?"Reloaded tasks":"Reload failed";
-			case "listtasks": case "tasks": return getTaskListing(html?"<br>":"\r\n");
-			case "listsets": case "sets":  return getTaskSetListing(html?"<br>":"\r\n");
-			case "stop":	  return "Cancelled "+stopAll("doTaskManager")+ " futures.";
-			case "run":		
-				if( parts.length==2){
-					if( parts[1].startsWith("task:")){
-						return startTask(parts[1].substring(5))?"Task started":"Failed to start task";
-					}else{
+			}
+			case "reload" -> {
+				return reloadTasks() ? "Reloaded tasks..." : "Reload Failed";
+			}
+			case "forcereload" -> {
+				return forceReloadTasks() ? "Reloaded tasks" : "Reload failed";
+			}
+			case "listtasks", "tasks" -> {
+				return getTaskListing(html ? "<br>" : "\r\n");
+			}
+			case "listsets", "sets" -> {
+				return getTaskSetListing(html ? "<br>" : "\r\n");
+			}
+			case "stop" -> {
+				return "Cancelled " + stopAll("doTaskManager") + " futures.";
+			}
+			case "run" -> {
+				if (parts.length == 2) {
+					if (parts[1].startsWith("task:")) {
+						return startTask(parts[1].substring(5)) ? "Task started" : "Failed to start task";
+					} else {
 						return startTaskset(parts[1]);
 					}
 
-				}else{
+				} else {
 					return "not enough parameters";
 				}
-			default:
-				return "unknown command: "+request;
-		} 
+			}
+			default -> {
+				return "unknown command: " + request;
+			}
+		}
 	}
 	/* ******************************************************************************************************* */
 	public String getLastError(){
