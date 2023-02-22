@@ -924,7 +924,8 @@ public class ForwardPool implements Commandable {
                 .add(green+" pf:debug,id,stepnr/stepid "+reg+"-> Request the data from a single step in the path (nr:0=first; -1=custom src)");
                 return help.toString();
             case "reload":
-                if( cmds.length==1) {
+            case "reloadall":
+                if( cmds.length==1 && cmds[0].endsWith("all")) {
                     dQueue.add( Datagram.system("gens:reload") );
                     readPathsFromXML();
                     return "All paths reloaded.";
