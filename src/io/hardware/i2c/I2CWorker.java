@@ -594,7 +594,11 @@ public class I2CWorker implements Commandable {
                         }
                     }
                     if( wr!=null && wr.getID().equalsIgnoreCase("telnet") ){
-                        addTarget(cmd[0],wr);
+                        if( cmd[0].isEmpty() ){
+                            removeWritable(wr);
+                        }else {
+                            addTarget(cmd[0], wr);
+                        }
                     }
                     if( addWork(cmd[0], cmd[1]) ){
                         return "Command added to the queue.";

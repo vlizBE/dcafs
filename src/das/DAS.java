@@ -431,6 +431,7 @@ public class DAS implements Commandable{
         Logger.info("Adding I2CWorker.");
         i2cWorker = new I2CWorker(settingsPath, dQueue);
         addCommandable("i2c",i2cWorker);
+        addCommandable("stop",i2cWorker);
     }
     /* ******************************** R E A L T I M E  D A T A  ******************************************* */
     // Note: these are used when dcafs is used as a library
