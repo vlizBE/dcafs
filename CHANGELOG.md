@@ -12,7 +12,7 @@ Note: Version numbering: x.y.z
 ## 1.0.8 ( work in progress )
 
 ### Telnet interface
-- Use `CTRL+s` to send something with eol (mainly used for Sx:y cmd)
+- Use `CTRL+s` to send something without eol (mainly used for Sx:y cmd)
 - Use `\e` to send `\x1B` or 'escape', combine with `CTRL+s` to only send that
 
 ### Paths
@@ -24,11 +24,12 @@ Note: Version numbering: x.y.z
 - If parsing fails during startup, this is added to the 'welcome' message of the telnet interface
 
 ### Other
-- Fixed workpath on linux
+- Fixed workpath on linux (windows adds a / to many, linux doesn't)
 - Added XML 'digger' to check contents of XML file (instead of abusing fab)
 - Fixed wrong optional check that made FileCollector fail
 - Fixed rtvals:group, check was wrong
-- Fixed tm:add,tmid for some reason this years old code suddenly stopped working
+- Fixed tm:add,tmid for some reason this year's old code suddenly stopped working
+- Fixed i2c raw streaming not stopping on a global clear request 
 
 ## 1.0.7 (07/12/22)
 
