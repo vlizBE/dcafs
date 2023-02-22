@@ -186,7 +186,8 @@ public class CheckBlock extends AbstractBlock{
         if( exp.length()!=2)
             subFormulas.add(exp);
         resultIndex=subFormulas.size()-1;
-
+        if(resultIndex==-1)
+            return false;
         // Convert the sub formulas to functions
         subFormulas.forEach( x -> {
             x=x.startsWith("!")?x.substring(1)+"==0":x;
