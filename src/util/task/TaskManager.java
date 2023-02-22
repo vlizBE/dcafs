@@ -135,13 +135,16 @@ public class TaskManager implements CollectorFuture {
 	 * 
 	 * @param tsk The Element that contains the task info
 	 */
-	public void addTask(Element tsk) {
+	public String addTask(Element tsk) {
 		Task task = new Task(tsk, rtvals, sharedChecks);
 
 		if (startOnLoad && task.getTriggerType()!=TRIGGERTYPE.EXECUTE && task.isEnableOnStart()) {
 			startTask(task);
 		}
-		tasks.add(task);
+		var error=task.getBuildError();
+		if( error.isEmpty())
+			tasks.add(task);
+		return error;
 	}
 
 	/**
@@ -1144,7 +1147,11 @@ public class TaskManager implements CollectorFuture {
 			}
 			for( Element tasksEntry : XMLtools.getChildElements( ssOpt.get(), "tasks" )){ //Can be multiple collections of tasks.
 				for( Element ll : XMLtools.getChildElements( tasksEntry, "task" )){
-					addTask(ll);
+					var error = addTask(ll);
+					if( !error.isEmpty()){
+						lastError=error;
+						return false;
+					}
 				 	ts++;
 				}
 			}

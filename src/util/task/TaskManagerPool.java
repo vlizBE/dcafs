@@ -93,9 +93,13 @@ public class TaskManagerPool implements Commandable {
     /**
      * Reload all the tasklists
      */
-    public void reloadAll(){
-        for (TaskManager tl : tasklists.values())
-            tl.reloadTasks();
+    public String reloadAll(){
+        StringJoiner errors = new StringJoiner("\r\n");
+        for (TaskManager tl : tasklists.values()) {
+            if( !tl.reloadTasks())
+                errors.add(tl.getId()+" -> "+tl.getLastError());
+        }
+        return errors.toString();
     }
 
     public void recheckAllIntervalTasks(){
