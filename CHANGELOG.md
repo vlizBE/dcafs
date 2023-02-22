@@ -18,10 +18,17 @@ Note: Version numbering: x.y.z
 ### Paths
 - pf:reloadall now exists
 
+### TaskManagers
+- Fixed: tmid:? failed if no tasksets were present
+- tm:reload/tm:reloadall now return an error if parsing failed
+- If parsing fails during startup, this is added to the 'welcome' message of the telnet interface
+
 ### Other
 - Fixed workpath on linux
 - Added XML 'digger' to check contents of XML file (instead of abusing fab)
 - Fixed wrong optional check that made FileCollector fail
+- Fixed rtvals:group, check was wrong
+- Fixed tm:add,tmid for some reason this years old code suddenly stopped working
 
 ## 1.0.7 (07/12/22)
 
