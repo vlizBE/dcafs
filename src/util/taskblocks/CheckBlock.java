@@ -48,7 +48,7 @@ public class CheckBlock extends AbstractBlock{
     @Override
     public boolean start(TaskBlock starter) {
         if( !valid) {
-            Logger.error("Checkblock failed because invalid");
+            Logger.error("Checkblock failed because invalid: "+ori);
             return false;
         }
         Double[] work= new Double[steps.size()+sharedMem.size()];
