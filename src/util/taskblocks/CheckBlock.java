@@ -105,6 +105,8 @@ public class CheckBlock extends AbstractBlock{
             exp = ValTools.buildNumericalMem(rtvals,exp, sharedMem, 0);
             if( sharedMem.isEmpty()) // Remove the reference if it remained empty
                 sharedMem=null;
+            if( exp.matches("i0"))
+                exp += "==1";
         }else{
             Logger.warn("No rtvals, skipping numerical mem");
         }
