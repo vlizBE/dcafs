@@ -252,7 +252,14 @@ public class Generic {
                                 }else if( split[entry.index].isEmpty()){
                                     Logger.error(id +" -> Got an empty value at "+ entry.index+" instead of integer for "+ ref);
                                 }else{
-                                    Logger.error(id +" -> Failed to convert "+split[entry.index]+" to integer for "+ ref);
+                                    if( split[entry.index].startsWith("0")){// If starting with leading 0
+                                        int res = Tools.parseInt(split[entry.index],Integer.MAX_VALUE);
+                                        if( res != Integer.MAX_VALUE){
+                                            val = res;
+                                        }
+                                    }else{
+                                        Logger.error(id +" -> Failed to convert "+split[entry.index]+" to integer for "+ ref);
+                                    }
                                 }
                             }
                             data[a] = val;
