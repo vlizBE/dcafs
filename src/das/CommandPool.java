@@ -212,7 +212,7 @@ public class CommandPool {
 				} else {
 					res = doCmd("tm", "run," + split[0] + ":" + split[1], wr);
 				}
-				if (!res.startsWith("No ") && !res.startsWith("Not "))
+				if (!res.startsWith("No such") && !res.startsWith("Not "))
 					result = res;
 				if( result.startsWith(UNKNOWN_CMD) ) {
 					Logger.warn("Not defined:" + question + " because no method named " + find + ".");
