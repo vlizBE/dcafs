@@ -311,8 +311,8 @@ public class RealtimeValues implements Commandable {
 
 			if( fab.hasChild("text","id",name).isEmpty()) { // If this one isn't present
 				fab.addChild("text").attr("id", name);
+				fab.build();
 			}
-			fab.build();
 		}
 
 	}

@@ -229,6 +229,7 @@ public class LabelWorker implements Runnable, Commandable {
 				Logger.info("Altered to "+importPath);
 			}
 			var fab = XMLfab.withRoot(importPath,"dcafs");
+			fab.getChild("rtvals").ifPresent( x -> rtvals.readFromXML(x)); // First read the rtvals
 
 			var sub = fab.getChild("path");
 			if( sub.isEmpty() ) {
