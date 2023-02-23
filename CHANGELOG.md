@@ -9,7 +9,11 @@ Note: Version numbering: x.y.z
 - integerval telnet interface?
 - Resolve #34
 
-## 1.0.8 ( work in progress )
+## 1.0.9 (work in progress)
+
+## 1.0.8 ( 23/02/2023 )
+Main addition is probably that you now get feedback on loading of taskmanager scripts. 
+Either when logging into telnet (issues during startup) or after reloading (as response to the command.
 
 ### Telnet interface
 - Use `CTRL+s` to send something without eol (mainly used for Sx:y cmd)
@@ -24,6 +28,7 @@ Note: Version numbering: x.y.z
 - If parsing fails during startup, this is added to the 'welcome' message of the telnet interface
 
 ### Other
+- Updated to last minor release of dependencies
 - Fixed workpath on linux (windows adds a / to many, linux doesn't)
 - Added XML 'digger' to check contents of XML file (instead of abusing fab)
 - Fixed wrong optional check that made FileCollector fail
