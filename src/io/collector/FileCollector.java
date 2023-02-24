@@ -13,6 +13,7 @@ import worker.Datagram;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -404,10 +405,12 @@ public class FileCollector extends AbstractCollector{
             return;
         }
         boolean isNewFile = false;
-        if( Files.notExists(dest) ){
+        if( Files.notExists(dest) && Files.notExists(dest.toAbsolutePath().getParent() )){
             isNewFile=true;
             try { // So first create the dir structure
                 Files.createDirectories(dest.toAbsolutePath().getParent());
+            }catch(FileAlreadyExistsException fee){
+                Logger.debug("Tried to make a directory that already exists... -> "+dest.toAbsolutePath().getParent());
             } catch (IOException e) {
                 Logger.error(e);
                 return;
