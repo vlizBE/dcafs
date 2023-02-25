@@ -79,11 +79,10 @@ public class Generic {
         influxID=spl[0];
         influxMeasurement=spl[1];
     }
-    public Generic setMacro( int index, String value ){
+    public void setMacro(int index, String value ){
         maxIndex = Math.max(maxIndex, index);
         macroIndex=index;
         macroRef=value;
-        return this;
     }
     public Optional<Entry> getLastEntry(){
         if( entries.isEmpty())
@@ -239,93 +238,93 @@ public class Generic {
             
             try{
                 double val=-999;
-                switch( entry.type ){
-                    case INTEGER:
-                            if( doubles!=null && doubles.length>entry.index && doubles[entry.index]!=null){
-                                val = doubles[entry.index].intValue();
-                            }else if( NumberUtils.isCreatable(split[entry.index].trim())) {
-                                val=NumberUtils.toInt(split[entry.index].trim(),Integer.MAX_VALUE);
-                            }else{
-                                val = Double.NaN;
-                                if( entry.defInt!=Integer.MAX_VALUE) {
-                                    val = entry.defInt;
-                                }else if( split[entry.index].isEmpty()){
-                                    Logger.error(id +" -> Got an empty value at "+ entry.index+" instead of integer for "+ ref);
-                                }else{
-                                    if( split[entry.index].startsWith("0")){// If starting with leading 0
-                                        int res = Tools.parseInt(split[entry.index],Integer.MAX_VALUE);
-                                        if( res != Integer.MAX_VALUE){
-                                            val = res;
-                                        }
-                                    }else{
-                                        Logger.error(id +" -> Failed to convert "+split[entry.index]+" to integer for "+ ref);
+                switch (entry.type) {
+                    case INTEGER -> {
+                        if (doubles != null && doubles.length > entry.index && doubles[entry.index] != null) {
+                            val = doubles[entry.index].intValue();
+                        } else if (NumberUtils.isCreatable(split[entry.index].trim())) {
+                            val = NumberUtils.toInt(split[entry.index].trim(), Integer.MAX_VALUE);
+                        } else {
+                            val = Double.NaN;
+                            if (entry.defInt != Integer.MAX_VALUE) {
+                                val = entry.defInt;
+                            } else if (split[entry.index].isEmpty()) {
+                                Logger.error(id + " -> Got an empty value at " + entry.index + " instead of integer for " + ref);
+                            } else {
+                                if (split[entry.index].startsWith("0")) {// If starting with leading 0
+                                    int res = Tools.parseInt(split[entry.index], Integer.MAX_VALUE);
+                                    if (res != Integer.MAX_VALUE) {
+                                        val = res;
                                     }
+                                } else {
+                                    Logger.error(id + " -> Failed to convert " + split[entry.index] + " to integer for " + ref);
                                 }
                             }
-                            data[a] = val;
-                            if( rtvals.hasInteger(ref) ){
-                                rtvals.updateInteger(ref,(int)val);
-                            }else{
-                                var iv = IntegerVal.newVal(entry.group, entry.name).value((int)val);
-                                rtvals.addIntegerVal( iv, settingsPath );
+                        }
+                        data[a] = val;
+                        if (rtvals.hasInteger(ref)) {
+                            rtvals.updateInteger(ref, (int) val);
+                        } else {
+                            var iv = IntegerVal.newVal(entry.group, entry.name).value((int) val);
+                            rtvals.addIntegerVal(iv, settingsPath);
+                        }
+                    }
+                    case REAL -> {
+                        if (doubles != null && doubles.length > entry.index && doubles[entry.index] != null) {
+                            val = doubles[entry.index];
+                        } else if (NumberUtils.isCreatable(split[entry.index].trim())) {
+                            val = NumberUtils.toDouble(split[entry.index].trim(), val);
+                        } else {
+                            val = Double.NaN;
+                            if (!Double.isNaN(entry.defReal)) {
+                                val = entry.defReal;
+                            } else if (split[entry.index].isEmpty()) {
+                                Logger.error(id + " -> Got an empty value at " + entry.index + " instead of real for " + ref);
+                            } else {
+                                Logger.error(id + " -> Failed to convert " + split[entry.index] + " to real for " + ref);
                             }
-                            break;
-                    case REAL:
-                            if( doubles!=null && doubles.length>entry.index && doubles[entry.index]!=null){
-                                val=doubles[entry.index];
-                            }else if( NumberUtils.isCreatable(split[entry.index].trim())) {
-                                val = NumberUtils.toDouble(split[entry.index].trim(), val);
-                            }else{
-                                val = Double.NaN;
-                                if( entry.defReal!=Double.NaN) {
-                                    val = entry.defReal;
-                                }else if( split[entry.index].isEmpty()){
-                                    Logger.error(id +" -> Got an empty value at "+ entry.index+" instead of real for "+ ref);
-                                }else{
-                                    Logger.error(id +" -> Failed to convert "+split[entry.index]+" to real for "+ ref);
-                                }
-                            }
-                            data[a] = val;
-                            if( rtvals.hasReal(ref) ){
-                                rtvals.updateReal(ref,val);
-                            }else{
-                                rtvals.addRealVal(RealVal.newVal(entry.group, entry.name).value(val),settingsPath);
-                            }
-                            break;                
-                    case TEXT: case TAG:
-                            data[a]=split[entry.index];
-                            rtvals.addTextVal(ref,split[entry.index],settingsPath);
-                            break;
-                    case FLAG:
-                            data[a] = val;
-                            if( rtvals.hasFlag(ref) ){
-                                rtvals.setFlagState(ref,split[entry.index]);
-                            }else{
-                                rtvals.addFlagVal(FlagVal.newVal(entry.group, entry.name).setState(split[entry.index]),settingsPath);
-                            }
-                        break;
-                    case FILLER:
-                            if( ref.endsWith("timestamp") ){
-                                data[a]=TimeTools.formatLongUTCNow();
-                            }else if(ref.endsWith("epoch") ) {
-                                data[a] = Instant.now().toEpochMilli();
-                            }else if( ref.endsWith("localdt") ){
-                                data[a] = OffsetDateTime.now();
-                            }else if( ref.endsWith("utcdt") ){
-                                data[a] = OffsetDateTime.now(ZoneOffset.UTC);
-                            }else{
-                                data[a] = ref;
-                            }
-                            break;
-                    case LOCALDT:
-                        data[a]=OffsetDateTime.parse( split[entry.index], TimeTools.LONGDATE_FORMATTER );
-                        rtvals.setText( ref, split[entry.index]);
-                        break;
-                    case UTCDT:
-                        var ldt = LocalDateTime.parse( split[entry.index], TimeTools.LONGDATE_FORMATTER_UTC );
-                        data[a]=OffsetDateTime.of(ldt,ZoneOffset.UTC);
-                        rtvals.setText( ref, split[entry.index]);
-                        break;
+                        }
+                        data[a] = val;
+                        if (rtvals.hasReal(ref)) {
+                            rtvals.updateReal(ref, val);
+                        } else {
+                            rtvals.addRealVal(RealVal.newVal(entry.group, entry.name).value(val), settingsPath);
+                        }
+                    }
+                    case TEXT, TAG -> {
+                        data[a] = split[entry.index];
+                        rtvals.addTextVal(ref, split[entry.index], settingsPath);
+                    }
+                    case FLAG -> {
+                        data[a] = val;
+                        if (rtvals.hasFlag(ref)) {
+                            rtvals.setFlagState(ref, split[entry.index]);
+                        } else {
+                            rtvals.addFlagVal(FlagVal.newVal(entry.group, entry.name).setState(split[entry.index]), settingsPath);
+                        }
+                    }
+                    case FILLER -> {
+                        if (ref.endsWith("timestamp")) {
+                            data[a] = TimeTools.formatLongUTCNow();
+                        } else if (ref.endsWith("epoch")) {
+                            data[a] = Instant.now().toEpochMilli();
+                        } else if (ref.endsWith("localdt")) {
+                            data[a] = OffsetDateTime.now();
+                        } else if (ref.endsWith("utcdt")) {
+                            data[a] = OffsetDateTime.now(ZoneOffset.UTC);
+                        } else {
+                            data[a] = ref;
+                        }
+                    }
+                    case LOCALDT -> {
+                        data[a] = OffsetDateTime.parse(split[entry.index], TimeTools.LONGDATE_FORMATTER);
+                        rtvals.setText(ref, split[entry.index]);
+                    }
+                    case UTCDT -> {
+                        var ldt = LocalDateTime.parse(split[entry.index], TimeTools.LONGDATE_FORMATTER_UTC);
+                        data[a] = OffsetDateTime.of(ldt, ZoneOffset.UTC);
+                        rtvals.setText(ref, split[entry.index]);
+                    }
                 }
                 if( !influxID.isEmpty() && pb!=null ){
                     switch (entry.type) {

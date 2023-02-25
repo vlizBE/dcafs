@@ -255,11 +255,13 @@ public class FileCollector extends AbstractCollector{
         if(cmd==null)
             return false;
 
-        switch(trigger){
-            case "rollover": addTriggerCommand(TRIGGERS.ROLLOVER,cmd);break;
-            case "idle": addTriggerCommand(TRIGGERS.IDLE,cmd);break;
-            case "maxsize": addTriggerCommand(TRIGGERS.MAXSIZE,cmd);break;
-            default:return false;
+        switch (trigger) {
+            case "rollover" -> addTriggerCommand(TRIGGERS.ROLLOVER, cmd);
+            case "idle" -> addTriggerCommand(TRIGGERS.IDLE, cmd);
+            case "maxsize" -> addTriggerCommand(TRIGGERS.MAXSIZE, cmd);
+            default -> {
+                return false;
+            }
         }
         return true;
     }

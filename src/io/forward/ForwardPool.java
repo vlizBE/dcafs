@@ -77,41 +77,64 @@ public class ForwardPool implements Commandable {
         boolean ok;
 
         // Regular ones
-        switch(request[0]){
+        switch (request[0]) {
             // Path
-            case "paths": case "pf": return replyToPathCmd(request[1],wr,html);
-            case "path":
+            case "paths", "pf" -> {
+                return replyToPathCmd(request[1], wr, html);
+            }
+            case "path" -> {
                 var p = paths.get(request[1]);
-                if( p==null)
-                    return "No such path (yet): "+request[1];
+                if (p == null)
+                    return "No such path (yet): " + request[1];
                 p.addTarget(wr);
                 return "Request received.";
+            }
             // Filter
-            case "ff": case "filters": return replyToFilterCmd(request[1],wr,html);
-            case "filter":
-                if( request[1].startsWith("!")){
-                    ok = getFilterForward(request[1].substring(1)).map(ff -> {ff.addReverseTarget(wr);return true;} ).orElse(false);
-                }else{
-                    ok = getFilterForward(request[1]).map(ff -> {ff.addTarget(wr);return true;} ).orElse(false);
+            case "ff", "filters" -> {
+                return replyToFilterCmd(request[1], wr, html);
+            }
+            case "filter" -> {
+                if (request[1].startsWith("!")) {
+                    ok = getFilterForward(request[1].substring(1)).map(ff -> {
+                        ff.addReverseTarget(wr);
+                        return true;
+                    }).orElse(false);
+                } else {
+                    ok = getFilterForward(request[1]).map(ff -> {
+                        ff.addTarget(wr);
+                        return true;
+                    }).orElse(false);
                 }
-                break;
+            }
 
             // Editor
-            case "ef": case "editors": return replyToEditorCmd(request[1],html);
-            case "editor": ok = getEditorForward(request[1]).map(tf -> { tf.addTarget(wr); return true;} ).orElse(false); break;
+            case "ef", "editors" -> {
+                return replyToEditorCmd(request[1], html);
+            }
+            case "editor" -> ok = getEditorForward(request[1]).map(tf -> {
+                tf.addTarget(wr);
+                return true;
+            }).orElse(false);
+
 
             // Math
-            case "mf": case "maths": return replyToMathCmd(request[1],html);
-            case "math": ok = getMathForward(request[1]).map(mf -> { mf.addTarget(wr); return true;} ).orElse(false); break;
-            case "":
-                maths.forEach( (k,m) -> m.removeTarget(wr));
-                editors.forEach( (k,e) -> e.removeTarget(wr));
-                filters.forEach( (k,m) -> m.removeTarget(wr));
-                paths.forEach( (k,m) -> m.removeTarget(wr));
+            case "mf", "maths" -> {
+                return replyToMathCmd(request[1], html);
+            }
+            case "math" -> ok = getMathForward(request[1]).map(mf -> {
+                mf.addTarget(wr);
+                return true;
+            }).orElse(false);
+            case "" -> {
+                maths.forEach((k, m) -> m.removeTarget(wr));
+                editors.forEach((k, e) -> e.removeTarget(wr));
+                filters.forEach((k, m) -> m.removeTarget(wr));
+                paths.forEach((k, m) -> m.removeTarget(wr));
                 return "Cleared requests";
-            default:
-                return "unknown command: "+request[0]+":"+request[1];
-
+            }
+            default -> {
+                return "unknown command: " + request[0] + ":" + request[1];
+            }
         }
         if( ok )
             return "Request for "+request[0]+":"+request[1]+" ok.";
@@ -228,16 +251,20 @@ public class ForwardPool implements Commandable {
                 if( fab.selectChildAsParent("math","id",cmds[1]).isEmpty() )
                     return "No such math '"+cmds[1]+"'";
 
-                switch( param ){
-                    case "delim": case "delimiter": case "split":
+                switch (param) {
+                    case "delim", "delimiter", "split" -> {
                         mf.setDelimiter(value);
-                        fab.attr("delimiter",value);
-                        return fab.build()?"Delimiter changed":"Delimiter change failed";
-                    case "label":
+                        fab.attr("delimiter", value);
+                        return fab.build() ? "Delimiter changed" : "Delimiter change failed";
+                    }
+                    case "label" -> {
                         mf.setLabel(value);
-                        fab.attr("label",value);
-                        return fab.build()?"Label changed":"Label change failed";
-                    default:return "No valid alter target: "+param;
+                        fab.attr("label", value);
+                        return fab.build() ? "Label changed" : "Label change failed";
+                    }
+                    default -> {
+                        return "No valid alter target: " + param;
+                    }
                 }
             case "remove":
                 if( cmds.length!=2)
@@ -362,136 +389,135 @@ public class ForwardPool implements Commandable {
         EditorForward ef;
         XMLfab fab;
 
-        switch( cmds[0] ) {
-            case "?":
-                join.add(TelnetCodes.TEXT_RED+"Purpose"+reg)
+        switch (cmds[0]) {
+            case "?" -> {
+                join.add(TelnetCodes.TEXT_RED + "Purpose" + reg)
                         .add("  If a next step in the processing needs something altered to the format or layout of the data")
                         .add("  an editor can do this.");
-                join.add(TelnetCodes.TEXT_ORANGE+"Notes"+reg)
+                join.add(TelnetCodes.TEXT_ORANGE + "Notes" + reg)
                         .add("  - Editors don't do anything if it doesn't have a target (label counts as target)")
                         .add("  - Commands can start with ef: or editors:")
                         .add("  - ...");
-                join.add("").add(cyan+"Creation"+reg);
-                join.add( green+"  ef:add,id<,source> "+reg+"-> Add a blank editor with an optional source.")
-                    .add( green+"  ef:reload<,id> "+reg+"-> Reload the editor with the given id or all if no id was given.");
-                join.add("").add(cyan+"Other commands"+reg)
-                        .add(green+"  ef:list "+reg+"-> Get a list of all editors")
-                        .add(green+"  ef:remove,id "+reg+"-> Remove the given editor")
-                        .add(green+"  ef:clear "+reg+"-> Remove all editors")
-                        .add(green+"  ef:edits "+reg+"-> Get a list of all possible edit operations")
-                        .add(green+"  ef:addedit,id,type:value "+reg+"-> Add an edit of the given value, use type:? for format");
+                join.add("").add(cyan + "Creation" + reg);
+                join.add(green + "  ef:add,id<,source> " + reg + "-> Add a blank editor with an optional source.")
+                        .add(green + "  ef:reload<,id> " + reg + "-> Reload the editor with the given id or all if no id was given.");
+                join.add("").add(cyan + "Other commands" + reg)
+                        .add(green + "  ef:list " + reg + "-> Get a list of all editors")
+                        .add(green + "  ef:remove,id " + reg + "-> Remove the given editor")
+                        .add(green + "  ef:clear " + reg + "-> Remove all editors")
+                        .add(green + "  ef:edits " + reg + "-> Get a list of all possible edit operations")
+                        .add(green + "  ef:addedit,id,type:value " + reg + "-> Add an edit of the given value, use type:? for format");
                 return join.toString();
-            case "addblank": case "addeditor": case "add": case "new":
-                if( cmds.length<2)
+            }
+            case "addblank", "addeditor", "add", "new" -> {
+                if (cmds.length < 2)
                     return "Not enough arguments, needs to be ef:addeditor,id<,src,>";
-                if( getEditorForward(cmds[1]).isPresent() )
+                if (getEditorForward(cmds[1]).isPresent())
                     return "Already editor with that id";
-
                 StringJoiner src = new StringJoiner(",");
-                for( int a=2;a<cmds.length;a++){
+                for (int a = 2; a < cmds.length; a++) {
                     src.add(cmds[a]);
                 }
-                if(!src.toString().contains(":"))
+                if (!src.toString().contains(":"))
                     return "Invalid source format, needs to be type:id";
-                ef = addEditor(cmds[1].toLowerCase(),src.toString());
-                if( ef == null)
+                ef = addEditor(cmds[1].toLowerCase(), src.toString());
+                if (ef == null)
                     return "Something wrong with the command, filter not created";
-                ef.writeToXML( XMLfab.withRoot(settingsPath, "dcafs") );
-                return "Blank editor with id "+cmds[1]+ " created"+(cmds.length>2?", with source "+cmds[2]:"")+".";
-            case "remove":
-                if( cmds.length!=2)
+                ef.writeToXML(XMLfab.withRoot(settingsPath, "dcafs"));
+                return "Blank editor with id " + cmds[1] + " created" + (cmds.length > 2 ? ", with source " + cmds[2] : "") + ".";
+            }
+            case "remove" -> {
+                if (cmds.length != 2)
                     return "Missing id";
-                if( XMLfab.withRoot(settingsPath, "dcafs", "editors").removeChild("editor","id",cmds[1]) ){
+                if (XMLfab.withRoot(settingsPath, "dcafs", "editors").removeChild("editor", "id", cmds[1])) {
                     maths.remove(cmds[1]);
                     return "Editor removed";
                 }
-                return "No such editor "+cmds[1];
-            case "clear":
+                return "No such editor " + cmds[1];
+            }
+            case "clear" -> {
                 XMLfab.withRoot(settingsPath, "dcafs", "editors").clearChildren().build();
                 editors.clear();
                 return "Maths cleared";
-            case "reload":
-                if( cmds.length == 2) {
+            }
+            case "reload" -> {
+                if (cmds.length == 2) {
                     Optional<Element> x = XMLfab.withRoot(settingsPath, "dcafs", "editors").getChild("editor", "id", cmds[1]);
                     if (x.isPresent()) {
                         getEditorForward(cmds[1]).ifPresent(e -> e.readFromXML(x.get()));
                     } else {
                         return "No such editor, " + cmds[1];
                     }
-                }else{ //reload all
+                } else { //reload all
                     var eEle = XMLfab.withRoot(settingsPath, "dcafs", "editors").getChildren("editor");
-                    ArrayList<String> altered=new ArrayList<>();
+                    ArrayList<String> altered = new ArrayList<>();
                     eEle.forEach(
-                            ee ->{
+                            ee -> {
                                 var id = ee.getAttribute("id");
                                 var fOp = getEditorForward(id);
-                                if( fOp.isPresent()){ // If already exists
+                                if (fOp.isPresent()) { // If already exists
                                     fOp.get().readFromXML(ee);
                                     altered.add(id);
-                                }else{ //if doesn't exist yet
-                                    editors.put(id,EditorForward.readXML(ee,dQueue,rtvals));
+                                } else { //if doesn't exist yet
+                                    editors.put(id, EditorForward.readXML(ee, dQueue, rtvals));
                                 }
                             }
                     );
                     // Remove the ones that no longer exist
-                    if( eEle.size() != editors.size() ){ // Meaning filters has more
+                    if (eEle.size() != editors.size()) { // Meaning filters has more
                         // First mark them as invalid, so references also get deleted
-                        editors.entrySet().stream().filter(e -> !altered.contains(e.getKey()) ).forEach( e->e.getValue().setInvalid());
+                        editors.entrySet().stream().filter(e -> !altered.contains(e.getKey())).forEach(e -> e.getValue().setInvalid());
                         //then remove them safely
-                        editors.entrySet().removeIf( ee -> !ee.getValue().isConnectionValid());
+                        editors.entrySet().removeIf(ee -> !ee.getValue().isConnectionValid());
                     }
                 }
                 return "Editor(s) reloaded.";
-            case "list":
+            }
+            case "list" -> {
                 join.setEmptyValue("No editors yet");
-                editors.values().forEach( f -> join.add(f.toString()).add("") );
+                editors.values().forEach(f -> join.add(f.toString()).add(""));
                 return join.toString();
-            case "alter":
+            }
+            case "alter" -> {
                 ef = editors.get(cmds[1]);
-                if( cmds.length < 3)
+                if (cmds.length < 3)
                     return "Bad amount of arguments, should be ef:alter,id,param:value";
-                if( ef == null )
-                    return "No such editor: "+cmds[1];
-
-                if( !cmds[2].contains(":"))
+                if (ef == null)
+                    return "No such editor: " + cmds[1];
+                if (!cmds[2].contains(":"))
                     return "No proper param:value pair";
-
-                String param = cmds[2].substring(0,cmds[2].indexOf(":"));
-
-                String val = cmd.substring(cmd.indexOf(param+":")+param.length()+1);
-
-                fab = XMLfab.withRoot(settingsPath,"dcafs","editors"); // get a fab pointing to the maths node
-
-                if( fab.selectChildAsParent("editor","id",cmds[1]).isEmpty() )
-                    return "No such editor node '"+cmds[1]+"'";
-
+                String param = cmds[2].substring(0, cmds[2].indexOf(":"));
+                String val = cmd.substring(cmd.indexOf(param + ":") + param.length() + 1);
+                fab = XMLfab.withRoot(settingsPath, "dcafs", "editors"); // get a fab pointing to the maths node
+                if (fab.selectChildAsParent("editor", "id", cmds[1]).isEmpty())
+                    return "No such editor node '" + cmds[1] + "'";
                 if (param.equals("label")) {
                     ef.setLabel(val);
                     fab.attr("label", val);
                     return fab.build() ? "Label changed" : "Label change failed";
                 }
                 return "No valid alter target: " + param;
-            case "edits": return EditorForward.getHelp(html?"<br>":"\r\n");
-            case "addedit":
-                if( cmds.length < 3) // might be larger if the value contains  a ,
+            }
+            case "edits" -> {
+                return EditorForward.getHelp(html ? "<br>" : "\r\n");
+            }
+            case "addedit" -> {
+                if (cmds.length < 3) // might be larger if the value contains  a ,
                     return "Bad amount of arguments, should be ef/editors:addedit,id,type:value";
                 var eOpt = getEditorForward(cmds[1]);
-                if( eOpt.isEmpty())
+                if (eOpt.isEmpty())
                     return "No such editor";
-
                 var e = eOpt.get();
                 int x = cmd.indexOf(":");
-                if( x==-1)
+                if (x == -1)
                     return "Incorrect format, needs to be ef/editors:addedit,id,type:value(s)";
                 // The value might contain , so make sure to split properly
-                String type = cmds[2].substring(0,cmds[2].indexOf(":"));
-                String value = cmd.substring(x+1);
+                String type = cmds[2].substring(0, cmds[2].indexOf(":"));
+                String value = cmd.substring(x + 1);
                 String deli = e.delimiter;
-
                 var p = value.split(",");
-                fab = XMLfab.withRoot(settingsPath,"dcafs","editors");
-                fab.selectOrAddChildAsParent("editor","id",cmds[1]);
-
+                fab = XMLfab.withRoot(settingsPath, "dcafs", "editors");
+                fab.selectOrAddChildAsParent("editor", "id", cmds[1]);
                 switch (type) {
                     /* Splitting */
                     case "rexsplit" -> {
@@ -628,6 +654,7 @@ public class ForwardPool implements Commandable {
                     }
                 }
                 return "Edit added";
+            }
         }
         return "Unknown command: "+cmds[0];
     }
@@ -719,14 +746,23 @@ public class ForwardPool implements Commandable {
                 String rule = cmds.length==4?cmds[2]+","+cmds[3]:cmds[2]; // step might contain a ,
                 var fOpt = getFilterForward(cmds[1].toLowerCase());
                 Logger.info("Filter exists?"+fOpt.isPresent());
-                switch( fOpt.map( f -> f.addRule(rule) ).orElse(0) ){
-                    case 1:
+                switch (fOpt.map(f -> f.addRule(rule)).orElse(0)) {
+                    case 1 -> {
                         fOpt.get().writeToXML(XMLfab.withRoot(settingsPath, "dcafs"));
-                        return "Rule added to "+cmds[1];
-                    case 0:  return "Failed to add rule, no such filter called "+cmds[1];
-                    case -1: return "Unknown type in "+rule+", try ff:types for a list";
-                    case -2: return "Bad rule syntax, should be type:value";
-                    default: return "Wrong response from getFilter";
+                        return "Rule added to " + cmds[1];
+                    }
+                    case 0 -> {
+                        return "Failed to add rule, no such filter called " + cmds[1];
+                    }
+                    case -1 -> {
+                        return "Unknown type in " + rule + ", try ff:types for a list";
+                    }
+                    case -2 -> {
+                        return "Bad rule syntax, should be type:value";
+                    }
+                    default -> {
+                        return "Wrong response from getFilter";
+                    }
                 }
             case "delrule":
                 if( cmds.length < 3)
@@ -1009,49 +1045,47 @@ public class ForwardPool implements Commandable {
                 char prev='A';
                 for( var c : cmds[2+(blank?1:0)].toCharArray()){
                     int i = fab.getChildren("generic").size()+1; // get the amount of generic parentnodes
-                    switch(c) {
-                        case 'F': fab.addChild("filter",".").attr("type",""); break;
-                        case 'f':
-                            if( prev=='f'){
-                                fab.selectOrAddLastChildAsParent("filter").addChild("rule",".").attr("type","").up();
-                            }else{
-                                fab.addChild("filter").down().addChild("rule",".").attr("type","").up();
+                    switch (c) {
+                        case 'F' -> fab.addChild("filter", ".").attr("type", "");
+                        case 'f' -> {
+                            if (prev == 'f') {
+                                fab.selectOrAddLastChildAsParent("filter").addChild("rule", ".").attr("type", "").up();
+                            } else {
+                                fab.addChild("filter").down().addChild("rule", ".").attr("type", "").up();
                             }
-                            break;
-                        case 'E': fab.addChild("editor",".").attr("type",""); break;
-                        case 'e':
-                            if( prev=='e'){
-                                fab.selectOrAddLastChildAsParent("editor").addChild("edit",".").attr("type","").up();
-                            }else{
-                                fab.addChild("editor").down().addChild("edit",".").attr("type","").up();
+                        }
+                        case 'E' -> fab.addChild("editor", ".").attr("type", "");
+                        case 'e' -> {
+                            if (prev == 'e') {
+                                fab.selectOrAddLastChildAsParent("editor").addChild("edit", ".").attr("type", "").up();
+                            } else {
+                                fab.addChild("editor").down().addChild("edit", ".").attr("type", "").up();
                             }
-                            break;
-                        case 'M': fab.addChild("math","i0=i0+1"); break;
-                        case 'm':
-                            if( prev=='m'){
-                                fab.selectOrAddLastChildAsParent("math").addChild("op",".").attr("type","").up();
-                            }else{
-                                fab.addChild("math").down().addChild("op",".").attr("type","").up();
+                        }
+                        case 'M' -> fab.addChild("math", "i0=i0+1");
+                        case 'm' -> {
+                            if (prev == 'm') {
+                                fab.selectOrAddLastChildAsParent("math").addChild("op", ".").attr("type", "").up();
+                            } else {
+                                fab.addChild("math").down().addChild("op", ".").attr("type", "").up();
                             }
-                            break;
-                        case 'G':
-                            fab.addChild( "generic").attr("id",cmds[1]+"_"+i);
-                            break;
-                        case 'i':
-                            fab.selectOrAddLastChildAsParent("generic","id",cmds[1]+"_"+i);
-                            index = fab.getChildren("*").size()+1;
-                            fab.addChild("integer",cmds[1]+"_").attr("index",index).up();
-                            break;
-                        case 'r':
-                            fab.selectOrAddLastChildAsParent("generic","id",cmds[1]+"_"+i);
-                            index = fab.getChildren("*").size()+1;
-                            fab.addChild("real",cmds[1]+"_").attr("index",index).up();
-                            break;
-                        case 't':
-                            fab.selectOrAddLastChildAsParent("generic","id",cmds[1]+"_"+i);
-                            index = fab.getChildren("*").size()+1;
-                            fab.addChild("text",cmds[1]+"_").attr("index",index).up();
-                            break;
+                        }
+                        case 'G' -> fab.addChild("generic").attr("id", cmds[1] + "_" + i);
+                        case 'i' -> {
+                            fab.selectOrAddLastChildAsParent("generic", "id", cmds[1] + "_" + i);
+                            index = fab.getChildren("*").size() + 1;
+                            fab.addChild("integer", cmds[1] + "_").attr("index", index).up();
+                        }
+                        case 'r' -> {
+                            fab.selectOrAddLastChildAsParent("generic", "id", cmds[1] + "_" + i);
+                            index = fab.getChildren("*").size() + 1;
+                            fab.addChild("real", cmds[1] + "_").attr("index", index).up();
+                        }
+                        case 't' -> {
+                            fab.selectOrAddLastChildAsParent("generic", "id", cmds[1] + "_" + i);
+                            index = fab.getChildren("*").size() + 1;
+                            fab.addChild("text", cmds[1] + "_").attr("index", index).up();
+                        }
                     }
                     prev = c;
                 }

@@ -93,7 +93,6 @@ public class DAS implements Commandable{
         classPath = classPath.replace("%20"," ");
         System.out.println("Checking for workpath at : "+classPath);
 
-
         if( classPath.startsWith("/") && SystemUtils.IS_OS_WINDOWS ) // for some reason this gets prepended
             classPath=classPath.substring(1);
 

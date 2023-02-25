@@ -11,6 +11,10 @@ Note: Version numbering: x.y.z
 
 ## 1.0.9 (work in progress)
 
+### Fixes
+- FileCollector: trying to create an existing directory structure throws an exception that 
+wasn't handled properly on linux if that structure is made with a link.
+
 ## 1.0.8 ( 23/02/2023 )
 Main addition is probably that you now get feedback on loading of taskmanager scripts. 
 Either when logging into telnet (issues during startup) or after reloading (as response to the command.

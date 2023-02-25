@@ -229,7 +229,7 @@ public class LabelWorker implements Runnable, Commandable {
 				Logger.info("Altered to "+importPath);
 			}
 			var fab = XMLfab.withRoot(importPath,"dcafs");
-			fab.getChild("rtvals").ifPresent( x -> rtvals.readFromXML(x)); // First read the rtvals
+			fab.getChild("rtvals").ifPresent(rtvals::readFromXML); // First read the rtvals
 
 			var sub = fab.getChild("path");
 			if( sub.isEmpty() ) {
@@ -396,31 +396,32 @@ public class LabelWorker implements Runnable, Commandable {
 
 				if( d.label.contains(":") ){
 					String readID = label.substring(label.indexOf(":")+1);
-					switch(d.label.split(":")[0]){
-						case "generic": executor.execute( () -> processGeneric(d)); break;
-						case "double": case "real":  executor.execute(() -> storeInRealVal(readID,d.getData(),d.getOriginID())); break;
-						case "valmap":  executor.execute( () -> processValmap(d)); break;
-						case "text":    executor.execute( () -> rtvals.setText(readID, d.data)); break;
-						case "read":    executor.execute( ()-> checkRead(d.getOriginID(),d.getWritable(),readID) );break;
-						case "telnet":  executor.execute( ()-> checkTelnet(d)); break;
-						case "log":
+					switch (d.label.split(":")[0]) {
+						case "generic" -> executor.execute(() -> processGeneric(d));
+						case "double", "real" ->
+								executor.execute(() -> storeInRealVal(readID, d.getData(), d.getOriginID()));
+						case "valmap" -> executor.execute(() -> processValmap(d));
+						case "text" -> executor.execute(() -> rtvals.setText(readID, d.data));
+						case "read" -> executor.execute(() -> checkRead(d.getOriginID(), d.getWritable(), readID));
+						case "telnet" -> executor.execute(() -> checkTelnet(d));
+						case "log" -> {
 							switch (d.label.split(":")[1]) {
 								case "info" -> Logger.info(d.getData());
 								case "warn" -> Logger.warn(d.getData());
 								case "error" -> Logger.error(d.getData());
 							}
-							break;
-						default:
-							boolean processed=false;
-							for( DatagramProcessing dgp : dgProc ){
-								if( dgp.processDatagram(d)) {
-									processed=true;
+						}
+						default -> {
+							boolean processed = false;
+							for (DatagramProcessing dgp : dgProc) {
+								if (dgp.processDatagram(d)) {
+									processed = true;
 									break;
 								}
 							}
-							if( ! processed)
-								Logger.error("Unknown label: "+label);
-							break;
+							if (!processed)
+								Logger.error("Unknown label: " + label);
+						}
 					}
 				}else {
 					switch (label) {
@@ -568,136 +569,149 @@ public class LabelWorker implements Runnable, Commandable {
 		String ora = html?"":TelnetCodes.TEXT_ORANGE;
 		String reg=html?"":TelnetCodes.TEXT_YELLOW+TelnetCodes.UNDERLINE_OFF;
 
-		switch(cmds[0]){
-			case "?":
+		switch (cmds[0]) {
+			case "?" -> {
 				join.add("")
-						.add(TelnetCodes.TEXT_RED+"Purpose"+reg)
+						.add(TelnetCodes.TEXT_RED + "Purpose" + reg)
 						.add("  Generics (gens) are used to take delimited data and store it as rtvals or in a database.");
-				join.add(ora+"Notes"+reg)
+				join.add(ora + "Notes" + reg)
 						.add("  - ...");
-				join.add("").add(cyan+"Creation"+reg)
-						.add(green+"  gens:fromtable,dbid,dbtable,gen id[,delimiter] "+reg+"-> Create a generic according to a table, delim is optional, def is ','")
-						.add(green+"  gens:fromdb,dbid,delimiter "+reg+"-> Create a generic with chosen delimiter for each table if there's no such generic yet")
-						.add(green+"  gens:addgen,id,group,format,delimiter "+reg+"-> Create a blank generic with the given id, group and format")
+				join.add("").add(cyan + "Creation" + reg)
+						.add(green + "  gens:fromtable,dbid,dbtable,gen id[,delimiter] " + reg + "-> Create a generic according to a table, delim is optional, def is ','")
+						.add(green + "  gens:fromdb,dbid,delimiter " + reg + "-> Create a generic with chosen delimiter for each table if there's no such generic yet")
+						.add(green + "  gens:addgen,id,group,format,delimiter " + reg + "-> Create a blank generic with the given id, group and format")
 						.add("      The format consists of a letter, followed by a number and then a word and this is repeated with , as delimiter")
 						.add("      The letter is the type of value, the number the index in the array of received data and the word is the name/id of the value")
 						.add("      So for example: i2temp,r5offset  -> integer on index 2 with name temp, real on 5 with name offset")
 						.add("      Options for the letter:")
-						.add("       r/d = a real/double number" )
+						.add("       r/d = a real/double number")
 						.add("       i = an integer number")
 						.add("       t = a piece of text")
 						.add("       m = macro, this value can be used as part as the rtval")
 						.add("       eg. 1234,temp,19.2,hum,55 ( with 1234 = serial number")
 						.add("           -> serial number,title,temperature reading,title,humidity reading")
 						.add("           -> m0,r2temp,i4hum");
-				join.add("").add(cyan+"Other"+reg);
-				join.add(green+"  gens:? "+reg+"-> Show this info")
-						.add(green+"  gens:reload "+reg+"-> Reloads all generics")
-						.add(green+"  gens:alter,id,param:value "+reg+"-> Change a parameter of the specified generic")
-						.add(green+"  gens:list "+reg+"-> Lists all generics");
-
+				join.add("").add(cyan + "Other" + reg);
+				join.add(green + "  gens:? " + reg + "-> Show this info")
+						.add(green + "  gens:reload " + reg + "-> Reloads all generics")
+						.add(green + "  gens:alter,id,param:value " + reg + "-> Change a parameter of the specified generic")
+						.add(green + "  gens:list " + reg + "-> Lists all generics");
 				return join.toString();
-			case "reload":
+			}
+			case "reload" -> {
 				loadGenerics();
 				return getGenericInfo();
-			case "fromtable":
-				if(cmds.length < 4 )
+			}
+			case "fromtable" -> {
+				if (cmds.length < 4)
 					return "To few parameters, gens:fromtable,dbid,table,gen id,delimiter";
 				var db = queryWriting.getDatabase(cmds[1]);
-				if( db.isEmpty())
-					return "No such database found "+cmds[1];
-				if( db.get().buildGenericFromTable(XMLfab.withRoot(settingsPath, "dcafs","generics"),cmds[2],cmds[3],cmds.length>4?cmds[4]:",") ){
+				if (db.isEmpty())
+					return "No such database found " + cmds[1];
+				if (db.get().buildGenericFromTable(XMLfab.withRoot(settingsPath, "dcafs", "generics"), cmds[2], cmds[3], cmds.length > 4 ? cmds[4] : ",")) {
 					loadGenerics();
 					return "Generic written";
-				}else{
+				} else {
 					return "Failed to write to xml";
 				}
-			case "fromdb":
-				if(cmds.length < 3 )
+			}
+			case "fromdb" -> {
+				if (cmds.length < 3)
 					return "To few parameters, gens:fromdb,dbid,delimiter";
 				var dbs = queryWriting.getDatabase(cmds[1]);
-				if( dbs.isEmpty())
-					return "No such database found "+cmds[1];
-
-				if( dbs.get().buildGenericsFromTables(XMLfab.withRoot(settingsPath, "dcafs","generics"),false,cmds[2]) >0 ){
+				if (dbs.isEmpty())
+					return "No such database found " + cmds[1];
+				if (dbs.get().buildGenericsFromTables(XMLfab.withRoot(settingsPath, "dcafs", "generics"), false, cmds[2]) > 0) {
 					loadGenerics();
 					return "Generic(s) written";
-				}else{
+				} else {
 					return "No generics written";
 				}
-			case "addblank": case "addgen": case "add":
-				if( cmds.length < 4 )
-					return "Not enough arguments, must be gens:"+cmds[0]+",id,group,format,delimiter";
-
-				var delimiter=request[1].endsWith(",")?",":cmds[cmds.length-1];
-				int forms=cmds.length-1;
-				if( delimiter.length()>3) {
+			}
+			case "addblank", "addgen", "add" -> {
+				if (cmds.length < 4)
+					return "Not enough arguments, must be gens:" + cmds[0] + ",id,group,format,delimiter";
+				var delimiter = request[1].endsWith(",") ? "," : cmds[cmds.length - 1];
+				int forms = cmds.length - 1;
+				if (delimiter.length() > 3) {
 					delimiter = ",";
 					forms++;
 				}
-				if( generics.containsKey(cmds[1]))
+				if (generics.containsKey(cmds[1]))
 					return "This id is already used, try another.";
-				if( cmds[2].contains("_"))
+				if (cmds[2].contains("_"))
 					return "Group name can't contain '_' (underscore), try again?";
-
-				if( Generic.addBlankToXML(XMLfab.withRoot(settingsPath, "dcafs","generics"), cmds[1],cmds[2],
-					ArrayUtils.subarray(cmds,3,forms),delimiter)){
+				if (Generic.addBlankToXML(XMLfab.withRoot(settingsPath, "dcafs", "generics"), cmds[1], cmds[2],
+						ArrayUtils.subarray(cmds, 3, forms), delimiter)) {
 					loadGenerics();
 					var ps = cmds[2].split(":");
-					switch( ps[0]){
+					switch (ps[0]) {
 						case "raw":
-							ps[0]="stream";
-						case "filter": case "editor": case "math": case "stream": case "path":
-							dQueue.add(Datagram.system(ps[0]+"s:alter,"+ps[1]+",label:generic:"+cmds[1]).writable(wr));
+							ps[0] = "stream";
+						case "filter":
+						case "editor":
+						case "math":
+						case "stream":
+						case "path":
+							dQueue.add(Datagram.system(ps[0] + "s:alter," + ps[1] + ",label:generic:" + cmds[1]).writable(wr));
 					}
 					return "Generic added";
 				}
 				return "Failed to write generic";
-			case "alter":
-				if( cmds.length < 3 )
+			}
+			case "alter" -> {
+				if (cmds.length < 3)
 					return "Not enough arguments, must be generics:alter,id,param:value";
 				var gen = generics.get(cmds[1]);
-				if( gen == null )
-					return "No such generic "+cmds[1];
+				if (gen == null)
+					return "No such generic " + cmds[1];
 				int in = cmds[2].indexOf(":");
-				if( in==-1)
+				if (in == -1)
 					return "Missing valid param:value pair";
-				var fab = XMLfab.withRoot(settingsPath,"generics")
-						.selectChildAsParent("generic","id",cmds[1]);
-				if( fab.isPresent() ){
-					String attr = cmds[2].substring(0,in);
-					var val = cmds[2].substring(in+1);
-					switch( attr ){
+				var fab = XMLfab.withRoot(settingsPath, "generics")
+						.selectChildAsParent("generic", "id", cmds[1]);
+				if (fab.isPresent()) {
+					String attr = cmds[2].substring(0, in);
+					var val = cmds[2].substring(in + 1);
+					switch (attr) {
 						case "delim":
-							attr="delimiter";
+							attr = "delimiter";
 						case "group": // if
 						case "db":
 						case "delimiter":
 						case "id":
-							fab.get().attr(attr,val).build();
+							fab.get().attr(attr, val).build();
 							break;
 						case "src":
-							if( !val.contains(":"))
+							if (!val.contains(":"))
 								return "Bad source format, needs to be type:id";
 							var ps = val.split(":");
-							switch( ps[0]){
+							switch (ps[0]) {
 								case "raw":
-									ps[0]="stream";
-								case "filter": case "editor": case "math": case "stream": case "path":
-									dQueue.add(Datagram.system(ps[0]+"s:alter,"+ps[1]+",label:generic:"+cmds[1]).writable(wr));
+									ps[0] = "stream";
+								case "filter":
+								case "editor":
+								case "math":
+								case "stream":
+								case "path":
+									dQueue.add(Datagram.system(ps[0] + "s:alter," + ps[1] + ",label:generic:" + cmds[1]).writable(wr));
 									return "Tried to alter src";
 							}
 							break;
-						default: return "No such attr "+attr;
+						default:
+							return "No such attr " + attr;
 					}
 					loadGenerics();
 					return "Added/changed attribute and reloaded";
 				}
 				return "No such node found";
-			case "list":
+			}
+			case "list" -> {
 				return getGenericInfo();
-			default:
-				return UNKNOWN_CMD+": "+cmds[0];
+			}
+			default -> {
+				return UNKNOWN_CMD + ": " + cmds[0];
+			}
 		}
 	}
 	@Override

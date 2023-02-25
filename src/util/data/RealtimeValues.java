@@ -49,7 +49,7 @@ public class RealtimeValues implements Commandable {
 		XMLdigger.goIn(settingsPath,"dcafs")
 					.goDown("rtvals")
 					.current()
-				    .ifPresentOrElse(x->readFromXML(x),() -> Logger.info("No rtvals in settings.xml"));
+				    .ifPresentOrElse(this::readFromXML,() -> Logger.info("No rtvals in settings.xml"));
 
 		issuePool = new IssuePool(dQueue, settingsPath,this);
 	}
@@ -486,23 +486,30 @@ public class RealtimeValues implements Commandable {
 	@Override
 	public String replyToCommand(String[] request, Writable wr, boolean html) {
 
-		switch( request[0] ){
-			case "rv": case "reals":
-				return replyToRealsCmd(request,html);
-			case "texts": case "tv":
-				return replyToTextsCmd(request,html);
-			case "flags": case "fv":
-				return replyToFlagsCmd(request,html);
-			case "rtval": case "real": case "int": case "integer":
-				int s = addRequest(wr,request[0],request[1]);
-				return s!=0?"Request added to "+s+" realvals":"Request failed";
-			case "rtvals": case "rvs":
-				return replyToRtvalsCmd(request,html);
-			case "":
+		switch (request[0]) {
+			case "rv", "reals" -> {
+				return replyToRealsCmd(request, html);
+			}
+			case "texts", "tv" -> {
+				return replyToTextsCmd(request, html);
+			}
+			case "flags", "fv" -> {
+				return replyToFlagsCmd(request, html);
+			}
+			case "rtval", "real", "int", "integer" -> {
+				int s = addRequest(wr, request[0], request[1]);
+				return s != 0 ? "Request added to " + s + " realvals" : "Request failed";
+			}
+			case "rtvals", "rvs" -> {
+				return replyToRtvalsCmd(request, html);
+			}
+			case "" -> {
 				removeRequests(wr);
 				return "";
-			default:
-				return "unknown command "+request[0]+":"+request[1];
+			}
+			default -> {
+				return "unknown command " + request[0] + ":" + request[1];
+			}
 		}
 	}
 	public boolean removeWritable(Writable writable ) {
@@ -529,37 +536,43 @@ public class RealtimeValues implements Commandable {
 
 		var join = new StringJoiner(html?"<br>":"\r\n");
 		join.setEmptyValue("None yet");
-		switch( cmds[0] ){
+		switch (cmds[0]) {
 			/* Info */
-			case "?":
-				join.add(ora+"Note: both tv and texts are valid starters"+reg)
-						.add( cyan+" Create or alter"+reg)
-						.add( green+"  tv:new,id,value"+reg+" -> Create a new text (or update) with the given id/value")
-						.add( green+"  tv:update,id,value"+reg+" -> Update an existing text, do nothing if not found")
-						.add("").add( cyan+" Get info"+reg)
-						.add( green+"  tv:?"+reg+" -> Show this message")
-						.add( green+"  tv:list"+reg+" -> Get a listing of currently stored texts")
-						.add( green+"  tv:reqs"+reg+" -> Get a listing of the requests active");
+			case "?" -> {
+				join.add(ora + "Note: both tv and texts are valid starters" + reg)
+						.add(cyan + " Create or alter" + reg)
+						.add(green + "  tv:new,id,value" + reg + " -> Create a new text (or update) with the given id/value")
+						.add(green + "  tv:update,id,value" + reg + " -> Update an existing text, do nothing if not found")
+						.add("").add(cyan + " Get info" + reg)
+						.add(green + "  tv:?" + reg + " -> Show this message")
+						.add(green + "  tv:list" + reg + " -> Get a listing of currently stored texts")
+						.add(green + "  tv:reqs" + reg + " -> Get a listing of the requests active");
 				return join.toString();
-			case "list":
-				return String.join(html?"<br>":"\r\n",getRtvalsList(html,false,false,true, true));
-			case "reqs":
-				textRequest.forEach((rq, list) -> join.add(rq +" -> "+list.size()+" requesters"));
+			}
+			case "list" -> {
+				return String.join(html ? "<br>" : "\r\n", getRtvalsList(html, false, false, true, true));
+			}
+			case "reqs" -> {
+				textRequest.forEach((rq, list) -> join.add(rq + " -> " + list.size() + " requesters"));
 				return join.toString();
+			}
 			/* Create or alter */
-			case "new": case "create":
-				if( setText(cmds[1],cmds[2]) )
-					return cmds[1]+" stored with value "+cmds[2];
-				return cmds[1]+" updated with value "+cmds[2];
-			case "update":
-				if( updateText(cmds[1],cmds[2]) )
-					return cmds[1]+" updated with value "+cmds[2];
-				return "No such text found: "+cmds[1];
-			default:
-				if( updateText( cmds[0],cmds[1] ) ){
-					return cmds[0]+" updated with value "+cmds[1];
+			case "new", "create" -> {
+				if (setText(cmds[1], cmds[2]))
+					return cmds[1] + " stored with value " + cmds[2];
+				return cmds[1] + " updated with value " + cmds[2];
+			}
+			case "update" -> {
+				if (updateText(cmds[1], cmds[2]))
+					return cmds[1] + " updated with value " + cmds[2];
+				return "No such text found: " + cmds[1];
+			}
+			default -> {
+				if (updateText(cmds[0], cmds[1])) {
+					return cmds[0] + " updated with value " + cmds[1];
 				}
-				return "unknown command: "+request[0]+":"+request[1];
+				return "unknown command: " + request[0] + ":" + request[1];
+			}
 		}
 	}
 	public String replyToFlagsCmd( String[] request, boolean html ){
@@ -575,89 +588,98 @@ public class RealtimeValues implements Commandable {
 		var join = new StringJoiner(html?"<br>":"\r\n");
 		join.setEmptyValue("None yet");
 
-		switch( cmds[0] ){
-			case "?":
-				join.add(ora+"Note: both fv and flags are valid starters"+reg)
-						.add( cyan+" Create or alter"+reg)
-						.add( green+"  fv:raise,id"+reg+" or "+green+"flags:set,id"+reg+" -> Raises the flag/Sets the bit, created if new")
-						.add( green+"  fv:lower,id"+reg+" or "+green+"flags:clear,id"+reg+" -> Lowers the flag/Clears the bit, created if new")
-						.add( green+"  fv:toggle,id"+reg+" -> Toggles the flag/bit, not created if new")
-						.add( green+"  fv:match,id,refid"+reg+" -> The state of the flag becomes the same as the ref flag")
-						.add( green+"  fv:negated,id,refid"+reg+" -> The state of the flag becomes the opposite of the ref flag")
-						.add( green+"  fv:addcmd,id,when:cmd"+reg+" -> Add a cmd with the given trigger to id, current triggers:raised,lowered")
-						.add("").add( cyan+" Get info"+reg)
-						.add( green+"  fv:list"+reg+" -> Give a listing of all current flags and their state");
+		switch (cmds[0]) {
+			case "?" -> {
+				join.add(ora + "Note: both fv and flags are valid starters" + reg)
+						.add(cyan + " Create or alter" + reg)
+						.add(green + "  fv:raise,id" + reg + " or " + green + "flags:set,id" + reg + " -> Raises the flag/Sets the bit, created if new")
+						.add(green + "  fv:lower,id" + reg + " or " + green + "flags:clear,id" + reg + " -> Lowers the flag/Clears the bit, created if new")
+						.add(green + "  fv:toggle,id" + reg + " -> Toggles the flag/bit, not created if new")
+						.add(green + "  fv:match,id,refid" + reg + " -> The state of the flag becomes the same as the ref flag")
+						.add(green + "  fv:negated,id,refid" + reg + " -> The state of the flag becomes the opposite of the ref flag")
+						.add(green + "  fv:addcmd,id,when:cmd" + reg + " -> Add a cmd with the given trigger to id, current triggers:raised,lowered")
+						.add("").add(cyan + " Get info" + reg)
+						.add(green + "  fv:list" + reg + " -> Give a listing of all current flags and their state");
 				return join.toString();
-			case "list":
-				return getRtvalsList(html,false,true,false,false);
-			case "new": case "add":
-				if( cmds.length <2)
+			}
+			case "list" -> {
+				return getRtvalsList(html, false, true, false, false);
+			}
+			case "new", "add" -> {
+				if (cmds.length < 2)
 					return "Not enough arguments, need flags:new,id<,state> or fv:new,id<,state>";
-				if( hasFlag(cmds[1]))
+				if (hasFlag(cmds[1]))
 					return "Flag already exists with that name";
 				int pos = cmds[1].indexOf("_");
-				String group = pos!=-1?cmds[1].substring(0,pos):"";
-				String name = pos==-1?cmds[1]:cmds[1].substring(pos+1);
-				var flag = FlagVal.newVal(group,name).setState(Tools.parseBool( cmds.length==3?cmds[2]:"false",false));
-				addFlagVal(flag,settingsPath);
-				return "Flag created/updated "+cmds[1];
-			case "raise": case "set":
-				if( cmds.length !=2)
+				String group = pos != -1 ? cmds[1].substring(0, pos) : "";
+				String name = pos == -1 ? cmds[1] : cmds[1].substring(pos + 1);
+				var flag = FlagVal.newVal(group, name).setState(Tools.parseBool(cmds.length == 3 ? cmds[2] : "false", false));
+				addFlagVal(flag, settingsPath);
+				return "Flag created/updated " + cmds[1];
+			}
+			case "raise", "set" -> {
+				if (cmds.length != 2)
 					return "Not enough arguments, need flags:raise,id or flags:set,id";
-				return raiseFlag(cmds[1])==0?"No such flag":"Flag raised";
-			case "match":
-				if( cmds.length < 3 )
+				return raiseFlag(cmds[1]) == 0 ? "No such flag" : "Flag raised";
+			}
+			case "match" -> {
+				if (cmds.length < 3)
 					return "Not enough arguments, fv:match,id,targetflag";
-				if( !hasFlag(cmds[1]))
-					return "No such flag: "+cmds[1];
-				if( !hasFlag(cmds[2]))
-					return "No such flag: "+cmds[2];
-				getFlagVal(cmds[2]).ifPresent( to -> to.setState( getFlagVal(cmds[1]).get().isUp()));
+				if (!hasFlag(cmds[1]))
+					return "No such flag: " + cmds[1];
+				if (!hasFlag(cmds[2]))
+					return "No such flag: " + cmds[2];
+				getFlagVal(cmds[2]).ifPresent(to -> to.setState(getFlagVal(cmds[1]).get().isUp()));
 				return "Flag matched accordingly";
-			case "negated":
-				if( cmds.length < 3 )
+			}
+			case "negated" -> {
+				if (cmds.length < 3)
 					return "Not enough arguments, fv:negated,id,targetflag";
-				if( !hasFlag(cmds[1]))
-					return "No such flag: "+cmds[1];
-				if( !hasFlag(cmds[2]))
-					return "No such flag: "+cmds[2];
-				if( getFlagState(cmds[2])){
+				if (!hasFlag(cmds[1]))
+					return "No such flag: " + cmds[1];
+				if (!hasFlag(cmds[2]))
+					return "No such flag: " + cmds[2];
+				if (getFlagState(cmds[2])) {
 					lowerFlag(cmds[1]);
-				}else{
+				} else {
 					raiseFlag(cmds[1]);
 				}
 				return "Flag negated accordingly";
-			case "lower": case "clear":
-				if( cmds.length !=2)
+			}
+			case "lower", "clear" -> {
+				if (cmds.length != 2)
 					return "Not enough arguments, need flags:lower,id or flags:clear,id";
-				return lowerFlag(cmds[1])==0?"No such flag":"Flag lowered";
-			case "toggle":
-				if( cmds.length !=2)
+				return lowerFlag(cmds[1]) == 0 ? "No such flag" : "Flag lowered";
+			}
+			case "toggle" -> {
+				if (cmds.length != 2)
 					return "Not enough arguments, need flags:toggle,id";
-				if( !hasFlag(cmds[1]) )
+				if (!hasFlag(cmds[1]))
 					return "No such flag";
-				return getFlagVal(cmds[1]).map(FlagVal::toggleState).orElse(false)?"Flag raised":"Flag Lowered";
-			case "addcmd":
-				if( cmds.length < 3 )
+				return getFlagVal(cmds[1]).map(FlagVal::toggleState).orElse(false) ? "Flag raised" : "Flag Lowered";
+			}
+			case "addcmd" -> {
+				if (cmds.length < 3)
 					return "Not enough arguments, fv:addcmd,id,when:cmd";
 				var fv = flagVals.get(cmds[1]);
-				if( fv==null)
-					return "No such real: "+cmds[1];
-				String cmd = request[1].substring(request[1].indexOf(":")+1);
-				String when = cmds[2].substring(0,cmds[2].indexOf(":"));
-				if( !fv.hasTriggeredCmds())
+				if (fv == null)
+					return "No such real: " + cmds[1];
+				String cmd = request[1].substring(request[1].indexOf(":") + 1);
+				String when = cmds[2].substring(0, cmds[2].indexOf(":"));
+				if (!fv.hasTriggeredCmds())
 					fv.enableTriggeredCmds(dQueue);
 				fv.addTriggeredCmd(when, cmd);
-				XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals")
-						.selectChildAsParent("flag","id",cmds[1])
-						.ifPresent( f -> f.addChild("cmd",cmd).attr("when",when).build());
+				XMLfab.withRoot(settingsPath, "dcafs", "settings", "rtvals")
+						.selectChildAsParent("flag", "id", cmds[1])
+						.ifPresent(f -> f.addChild("cmd", cmd).attr("when", when).build());
 				return "Cmd added";
-			case "update":
-				if( cmds.length < 3)
+			}
+			case "update" -> {
+				if (cmds.length < 3)
 					return "Not enough arguments, fv:update,id,comparison";
-				if( !hasFlag(cmds[1]))
-					return "No such flag: "+cmds[1];
-
+				if (!hasFlag(cmds[1]))
+					return "No such flag: " + cmds[1];
+			}
 		}
 		return "unknown command "+request[0]+":"+request[1];
 	}
@@ -675,94 +697,100 @@ public class RealtimeValues implements Commandable {
 		RealVal rv;
 		String p0 = request[0];
 		var join = new StringJoiner(html?"<br>":"\r\n");
-		switch( cmds[0] ){
-			case "?":
-				join.add(ora+"Note: both rv and reals are valid starters"+reg)
-						.add( cyan+" Create or alter"+reg)
-						.add( green+"  "+p0+":new,group,name"+reg+" -> Create a new real with the given group & name")
-						.add( green+"  "+p0+":update,id,value"+reg+" -> Update an existing real, do nothing if not found")
-						.add( green+"  "+p0+":addcmd,id,when:cmd"+reg+" -> Add a cmd with the given trigger to id")
-						.add( green+"  "+p0+":alter,id,param:value"+reg+" -> Alter some of the params of id, currently scale and unit are possible")
-						.add( green+"  "+p0+":updategroup,groupid,value"+reg+" -> Update all RealVals that belong to the groupid with the given value")
-						.add("").add( cyan+" Get info"+reg)
-				  	    .add( green+"  "+p0+":?"+reg+" -> Show this message" )
-						.add( green+"  "+p0+":list"+reg+" -> Get a listing of currently stored texts")
-						.add( green+"  "+p0+":reqs"+reg+" -> Get a listing of all the requests currently active");
+		switch (cmds[0]) {
+			case "?" -> {
+				join.add(ora + "Note: both rv and reals are valid starters" + reg)
+						.add(cyan + " Create or alter" + reg)
+						.add(green + "  " + p0 + ":new,group,name" + reg + " -> Create a new real with the given group & name")
+						.add(green + "  " + p0 + ":update,id,value" + reg + " -> Update an existing real, do nothing if not found")
+						.add(green + "  " + p0 + ":addcmd,id,when:cmd" + reg + " -> Add a cmd with the given trigger to id")
+						.add(green + "  " + p0 + ":alter,id,param:value" + reg + " -> Alter some of the params of id, currently scale and unit are possible")
+						.add(green + "  " + p0 + ":updategroup,groupid,value" + reg + " -> Update all RealVals that belong to the groupid with the given value")
+						.add("").add(cyan + " Get info" + reg)
+						.add(green + "  " + p0 + ":?" + reg + " -> Show this message")
+						.add(green + "  " + p0 + ":list" + reg + " -> Get a listing of currently stored texts")
+						.add(green + "  " + p0 + ":reqs" + reg + " -> Get a listing of all the requests currently active");
 				return join.toString();
-			case "list": return getRtvalsList(html,true,false,false, false);
-			case "new": case "create":
-				if( cmds.length!=3 )
-					return "Not enough arguments given, "+request[0]+":new,id(,value)";
-
+			}
+			case "list" -> {
+				return getRtvalsList(html, true, false, false, false);
+			}
+			case "new", "create" -> {
+				if (cmds.length != 3)
+					return "Not enough arguments given, " + request[0] + ":new,id(,value)";
 				rv = RealVal.newVal(cmds[1], cmds[2]);
-				if( addRealVal(rv,true) ) {
+				if (addRealVal(rv, true)) {
 					return "New realVal added " + rv.getID() + ", stored in xml";
 				}
 				return "Real already exists";
-			case "alter":
-				if( cmds.length<3)
-					return "Not enough arguments: "+request[0]+":alter,id,param:value";
+			}
+			case "alter" -> {
+				if (cmds.length < 3)
+					return "Not enough arguments: " + request[0] + ":alter,id,param:value";
 				var vals = cmds[2].split(":");
-				if( vals.length==1)
-					return "Incorrect param:value pair: "+cmds[2];
+				if (vals.length == 1)
+					return "Incorrect param:value pair: " + cmds[2];
 				var rvOpt = getRealVal(cmds[1]);
-				if( rvOpt.isEmpty())
+				if (rvOpt.isEmpty())
 					return "No such real yet.";
 				var realVal = rvOpt.get();
-				var digger = XMLdigger.goIn(settingsPath,"dcafs")
-						.goDown("settings","rtvals")
-						.goDown("group","id",realVal.group())
-						.goDown("real","name",realVal.name());
-				if( digger.isValid() ){
-					switch( vals[0]){
-						case "scale":
-							realVal.scale(NumberUtils.toInt(vals[1]));
-							break;
-						case "unit":
-							realVal.unit(vals[1]);
-							break;
-						default:
-							return "unknown parameter: "+vals[0];
+				var digger = XMLdigger.goIn(settingsPath, "dcafs")
+						.goDown("settings", "rtvals")
+						.goDown("group", "id", realVal.group())
+						.goDown("real", "name", realVal.name());
+				if (digger.isValid()) {
+					switch (vals[0]) {
+						case "scale" -> realVal.scale(NumberUtils.toInt(vals[1]));
+						case "unit" -> realVal.unit(vals[1]);
+						default -> {
+							return "unknown parameter: " + vals[0];
+						}
 					}
-					XMLfab.alterDigger(digger).ifPresent( fab -> fab.attr(vals[0],vals[1]));
-					return "Altered "+vals[0]+ " to "+ vals[1];
-				}else{
+					XMLfab.alterDigger(digger).ifPresent(fab -> fab.attr(vals[0], vals[1]));
+					return "Altered " + vals[0] + " to " + vals[1];
+				} else {
 					return "No valid nodes found";
 				}
-			case "update":
-				if( !hasReal(cmds[1]) )
-					return "No such id "+cmds[1];
-				result = ValTools.processExpression(cmds[2],this);
-				if( Double.isNaN(result) )
-					return "Unknown id(s) in the expression "+cmds[2];
-				updateReal(cmds[1],result);
-				return cmds[1]+" updated to "+result;
-			case "updategroup":
+			}
+			case "update" -> {
+				if (!hasReal(cmds[1]))
+					return "No such id " + cmds[1];
+				result = ValTools.processExpression(cmds[2], this);
+				if (Double.isNaN(result))
+					return "Unknown id(s) in the expression " + cmds[2];
+				updateReal(cmds[1], result);
+				return cmds[1] + " updated to " + result;
+			}
+			case "updategroup" -> {
 				int up = updateRealGroup(cmds[1], NumberUtils.createDouble(cmds[2]));
-				if( up == 0)
+				if (up == 0)
 					return "No real's updated";
-				return "Updated "+up+" reals";
-			case "addcmd":
-				if( cmds.length < 3)
+				return "Updated " + up + " reals";
+			}
+			case "addcmd" -> {
+				if (cmds.length < 3)
 					return "Not enough arguments, rv:addcmd,id,when:cmd";
 				rv = realVals.get(cmds[1]);
-				if( rv==null)
-					return "No such real: "+cmds[1];
-				String cmd = request[1].substring(request[1].indexOf(":")+1);
-				String when = cmds[2].substring(0,cmds[2].indexOf(":"));
-				if( !rv.hasTriggeredCmds())
+				if (rv == null)
+					return "No such real: " + cmds[1];
+				String cmd = request[1].substring(request[1].indexOf(":") + 1);
+				String when = cmds[2].substring(0, cmds[2].indexOf(":"));
+				if (!rv.hasTriggeredCmds())
 					rv.enableTriggeredCmds(dQueue);
-				rv.addTriggeredCmd(when,cmd);
-				XMLfab.withRoot(settingsPath,"dcafs","settings","rtvals")
-						.selectChildAsParent("real","id",cmds[1])
-						.ifPresent( f -> f.addChild("cmd",cmd).attr("when",when).build());
+				rv.addTriggeredCmd(when, cmd);
+				XMLfab.withRoot(settingsPath, "dcafs", "settings", "rtvals")
+						.selectChildAsParent("real", "id", cmds[1])
+						.ifPresent(f -> f.addChild("cmd", cmd).attr("when", when).build());
 				return "Cmd added";
-			case "reqs":
+			}
+			case "reqs" -> {
 				join.setEmptyValue("None yet");
-				realVals.forEach((id, d) -> join.add(id +" -> "+d.getTargets()));
+				realVals.forEach((id, d) -> join.add(id + " -> " + d.getTargets()));
 				return join.toString();
-			default:
-				return "unknown command: "+request[0]+":"+request[1];
+			}
+			default -> {
+				return "unknown command: " + request[0] + ":" + request[1];
+			}
 		}
 	}
 
@@ -805,13 +833,18 @@ public class RealtimeValues implements Commandable {
 				}
 			}
 		}else if(cmds.length==2){
-			switch(cmds[0]){
-				case "group":  return getRTValsGroupList(cmds[1],true,true,true,true,html);
-				case "name"	:  return getAllIDsList(cmds[1],html);
-				case "resetgroup":
-					int a = updateIntegerGroup(cmds[1],-999);
-					a += updateRealGroup(cmds[1],Double.NaN);
-					return "Reset "+a+" vals.";
+			switch (cmds[0]) {
+				case "group" -> {
+					return getRTValsGroupList(cmds[1], true, true, true, true, html);
+				}
+				case "name" -> {
+					return getAllIDsList(cmds[1], html);
+				}
+				case "resetgroup" -> {
+					int a = updateIntegerGroup(cmds[1], -999);
+					a += updateRealGroup(cmds[1], Double.NaN);
+					return "Reset " + a + " vals.";
+				}
 			}
 		}
 		return "unknown command: "+request[0]+":"+request[1];
