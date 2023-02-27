@@ -105,6 +105,9 @@ public abstract class AbstractForward implements Writable {
     public String getSrc(){
         return sources.isEmpty()?"":sources.get(0);
     }
+    public String src(){
+        return sources.isEmpty()?"":sources.get(0);
+    }
     public boolean removeTarget( Writable target ){
         return targets.remove(target);
     }

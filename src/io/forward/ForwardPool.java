@@ -1131,7 +1131,10 @@ public class ForwardPool implements Commandable {
             case "list":
                 StringJoiner join = new StringJoiner(html?"<br>":"\r\n");
                 join.setEmptyValue("No paths yet");
-                paths.forEach((key, value) -> join.add(TelnetCodes.TEXT_GREEN+"Path: " + key+TelnetCodes.TEXT_YELLOW).add( value.toString() ).add(""));
+                paths.forEach((key, value) -> {
+                    String src=key+" src: "+value.src();
+                    join.add(TelnetCodes.TEXT_GREEN + "Path: " + src + TelnetCodes.TEXT_YELLOW).add(value.toString()).add("");
+                });
                 return join.toString();
             case "debug":
                 if( cmds.length!=3)

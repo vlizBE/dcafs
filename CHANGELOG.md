@@ -14,7 +14,9 @@ Note: Version numbering: x.y.z
 ### Fixes
 - FileCollector: trying to create an existing directory structure throws an exception that 
 wasn't handled properly on linux if that structure is made with a link.
-
+- PathForward: Generic means the end of a filterblock, but working with id's didn't circumvent
+this as it's supposed to
+- 
 ## 1.0.8 ( 23/02/2023 )
 Main addition is probably that you now get feedback on loading of taskmanager scripts. 
 Either when logging into telnet (issues during startup) or after reloading (as response to the command.

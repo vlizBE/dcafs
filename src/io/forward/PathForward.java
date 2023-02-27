@@ -62,6 +62,9 @@ public class PathForward {
     public void setSrc( String src ){
         this.src=src;
     }
+    public String src(){
+        return src;
+    }
     public String readFromXML( Element pathEle, Path workpath ){
 
         var oldTargets = new ArrayList<>(targets);
