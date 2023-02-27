@@ -99,7 +99,12 @@ public abstract class AbstractForward implements Writable {
             Logger.info(id+" -> Trying to add duplicate target "+target.getID());
         }
     }
-
+    public boolean hasSrc(){
+        return !sources.isEmpty();
+    }
+    public String getSrc(){
+        return sources.isEmpty()?"":sources.get(0);
+    }
     public boolean removeTarget( Writable target ){
         return targets.remove(target);
     }
