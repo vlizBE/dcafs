@@ -36,7 +36,8 @@ Either when logging into telnet (issues during startup) or after reloading (as r
 ### Other
 - Updated to last minor release of dependencies
 - Fixed workpath on linux (windows adds a / to many, linux doesn't)
-- Added XML 'digger' to check contents of XML file (instead of abusing fab)
+- Added XML 'digger' to check contents of XML file (instead of abusing fab). This now handles most of the
+XML reading.
 - Fixed wrong optional check that made FileCollector fail
 - Fixed rtvals:group, check was wrong
 - Fixed tm:add,tmid for some reason this year's old code suddenly stopped working
