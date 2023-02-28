@@ -62,6 +62,9 @@ public class PathForward {
     public void setSrc( String src ){
         this.src=src;
     }
+    public String src(){
+        return src;
+    }
     public String readFromXML( Element pathEle, Path workpath ){
 
         var oldTargets = new ArrayList<>(targets);
@@ -192,9 +195,13 @@ public class PathForward {
                 case "math" -> {
                     MathForward mf = new MathForward(step, dQueue, rtvals);
                     mf.removeSources();
-                    if( lastff!=null && lastGenMap)
-                        lastff.addReverseTarget(mf);
-                    addAsTarget(mf,  src,!(lastff!=null && lastGenMap));
+                    if( !mf.hasSrc() ) {
+                        if (lastff != null && lastGenMap)
+                            lastff.addReverseTarget(mf);
+                        addAsTarget(mf, src, !(lastff != null && lastGenMap));
+                    }else{
+                        addAsTarget(mf, mf.getSrc(),!(lastff!=null && lastGenMap));
+                    }
                     stepsForward.add(mf);
                 }
                 case "editor" -> {
@@ -203,11 +210,15 @@ public class PathForward {
                         error="Failed to read EditorForward";
                         return error;
                     }
-                    if( lastff!=null && lastGenMap) {
-                        lastff.addReverseTarget(ef);
+                    if( !ef.hasSrc() ) {
+                        if (lastff != null && lastGenMap) {
+                            lastff.addReverseTarget(ef);
+                        }
+                        ef.removeSources();
+                        addAsTarget(ef, src,!(lastff!=null && lastGenMap));
+                    }else{
+                        addAsTarget(ef, ef.getSrc(),!(lastff!=null && lastGenMap));
                     }
-                    ef.removeSources();
-                    addAsTarget(ef, src,!(lastff!=null && lastGenMap));
                     stepsForward.add(ef);
                 }
             }
