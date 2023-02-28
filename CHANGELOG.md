@@ -45,7 +45,7 @@ Either when logging into telnet (issues during startup) or after reloading (as r
 ### SQLiteDB
 - Fix: The path to the sqlite with rollover is determined at startup and after rollover. Thus if
 the system clock suddenly changes (significantly) this wasn't applied to the sqlite file name.
-  - Now the current clock is check every minute and filename altered if an unexpected change occurred
+  - Now the current clock is checked every minute and filename altered if an unexpected change occurred
   
 ### StreamPool
 - Slowly removing the (visible) use of 'label'.
