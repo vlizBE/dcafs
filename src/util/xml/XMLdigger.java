@@ -88,6 +88,13 @@ public class XMLdigger {
         peek = XMLtools.getFirstChildByTag(last,tag).orElse(null);
         return this;
     }
+    public XMLdigger peekAt( String tag, String attr, String value ){
+        peeked=true;
+        var eleOpt = XMLtools.getChildElements(last==null?root:last, tag).stream().filter(x ->
+                x.getAttribute(attr).equalsIgnoreCase(value)).findFirst();
+        peek=eleOpt.orElse(null);
+        return this;
+    }
     public XMLdigger goUp(){
         last = root;
         peeked=false;
