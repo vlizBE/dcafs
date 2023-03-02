@@ -139,6 +139,17 @@ public class RealtimeValues implements Commandable {
 			case "text" -> setText(id, XMLtools.getStringAttribute(rtval, "default", defText));
 		}
 	}
+	public void removeVal( AbstractVal val ){
+		if( val == null)
+			return;
+		if( val instanceof RealVal ){
+			realVals.remove(val.id());
+		}else if( val instanceof IntegerVal ){
+			integerVals.remove(val.id());
+		}else if( val instanceof  FlagVal ){
+			flagVals.remove( val.id());
+		}
+	}
 	/* ************************************ R E A L V A L ***************************************************** */
 	/**
 	 * Add a RealVal to the collection if it doesn't exist yet, optionally writing it to xml
