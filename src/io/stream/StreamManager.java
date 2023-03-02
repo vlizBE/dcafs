@@ -17,17 +17,18 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.data.RealtimeValues;
 import util.tools.TimeTools;
 import util.tools.Tools;
+import util.xml.XMLdigger;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
 import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
@@ -368,6 +369,7 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 		if( baseOpt.isPresent() ){ // meaning reloading an existing one
 			var str = baseOpt.get();
 			str.disconnect();
+			str.removeRealtimeValues(rtvals); // Remove the existing ones
 			str.readFromXML(childOpt.get());
 			str.shareRealtimeValues(rtvals);
 			str.reconnectFuture = scheduler.schedule( new DoConnection( str ), 0, TimeUnit.SECONDS );
@@ -393,6 +395,7 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 		if( !streams.isEmpty()){
 			streams.values().forEach(BaseStream::disconnect);
 		}
+		streams.values().forEach( s -> s.removeRealtimeValues(rtvals));
 		streams.clear(); // Clear out before the reread
 
 		XMLtools.getFirstElementByTag( settingsPath, "streams").ifPresent( ele -> {
@@ -580,6 +583,7 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 			case "rios" -> replyToStreamCommand("rios", html);
 			case "raw","stream" -> "Request for "+request[0]+":"+request[1]+" "+( addForwarding(request[1],wr)?"ok":"failed");
 			case "s_","h_" -> doSorH( request);
+			case "store" -> replyToStoreCommand(request,html);
 			case "","stop" -> removeWritable(wr)?"Ok.":"";
 			default -> "Unknown Command";
 		};
@@ -1059,7 +1063,79 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 			}
 		};
 	}
+	public String replyToStoreCommand(String[] request, boolean html ){
+		if( request.length == 1 )
+			return "Not enough arguments, need at least two";
 
+		var cmds= request[1].split(",");
+		String id = cmds[0];
+
+		if( id.equalsIgnoreCase("?")){
+			return "todo Help";
+		}
+
+		var bsOpt = getStream(id);
+		if( bsOpt.isEmpty()) // Check if that stream exists
+			return "No such stream: "+id;
+
+		// It does, so dig for the node
+		var dig = XMLdigger.goIn(settingsPath,"dcafs").goDown("streams");
+		if( dig.isInvalid())
+			return "No streams yet";
+
+		dig.goDown("stream","id",id);
+		if( dig.isInvalid() )
+			return "No such stream yet "+id;
+
+		// At this point, the digger is pointing to the stream node for the given id
+		var fabOpt = XMLfab.alterDigger(dig);
+		if( fabOpt.isEmpty())
+			return "No valid fab created";
+		var fab=fabOpt.get();
+
+		fab.alterChild("store");
+		dig.goDown("store");
+		if( !dig.current().get().hasAttribute("delimiter"))
+			fab.attr("delimiter",",");
+
+		// At this point 'store' certainly exists in memory and dig is pointing to it
+
+		switch (cmds[1]) {
+			case "addblank", "addb" -> { // Adds an ignore node
+				fab.down();
+				fab.addChild("ignore");
+				fab.build();
+				return "Blank added";
+			}
+			case "addreal","addr" -> {
+				if (cmds.length < 3)
+					return "Not enough arguments: store:id,addreal,name<,index>";
+				fab.down();
+				if( dig.peekAt("real","id",cmds[2]).hasValidPeek())
+					return "Already a real with that id, try something else?";
+
+				fab.addChild("real").attr("id",cmds[2]).attr("unit");
+				if( cmds.length==4 ) {
+					if(NumberUtils.isCreatable(cmds[3])) {
+						fab.attr("index", cmds[3]);
+					}else{
+						return "Not a valid index: "+cmds[3];
+					}
+				}
+				fab.build();
+				return "Real added";
+			}
+			case "delim", "delimiter" -> {
+				if (cmds.length < 3)
+					return "Not enough arguments: store:id,delim,delimiter";
+				fab.attr("delimiter", cmds.length == 4 ? "," : cmds[2]);
+				fab.build();
+				return "Set the delimiter";
+			}
+		}
+
+		return "Unknown command: "+request[0]+":"+request[1];
+	}
 	/**
 	 * Remove the given writable from the various sources
 	 * @param wr The writable to remove
