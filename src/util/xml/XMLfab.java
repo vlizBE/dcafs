@@ -472,11 +472,12 @@ public class XMLfab {
      * @return The fab with the new/selected child node
      */
     public XMLfab alterChild( String tag ){
-        last = XMLtools.getFirstChildByTag(parent, tag).orElse( XMLtools.createChildElement(xmlDoc, parent, tag ).orElse(last) );
+        var childOpt = XMLtools.getFirstChildByTag(parent, tag);
+        last = childOpt.orElseGet(() -> XMLtools.createChildElement(xmlDoc, parent, tag).get());
         return this;
     }
     public XMLfab alterChild( String tag, String attr, String val ){
-        last = getChild(tag,attr,val).orElse(XMLtools.createChildElement(xmlDoc, parent, tag ).orElse(last));
+        last = getChild(tag,attr,val).orElseGet(() -> XMLtools.createChildElement(xmlDoc, parent, tag ).get());
         attr(attr,val);
         return this;
     }
