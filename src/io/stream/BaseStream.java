@@ -80,7 +80,8 @@ public abstract class BaseStream {
             Logger.error("Not a "+getType()+" stream element.");
             return false;
         }
-        
+        rtvals.clear(); // Reset this, somehow also from general store?
+
         id = XMLtools.getStringAttribute( stream, "id", ""); 
         label = XMLtools.getChildStringValueByTag( stream, "label", "void");    // The label associated fe. nmea,sbe38 etc
         priority = XMLtools.getChildIntValueByTag( stream, XML_PRIORITY_TAG, 1);	 // Determine priority of the sensor
@@ -153,6 +154,9 @@ public abstract class BaseStream {
                 rtv.addFlagVal((FlagVal)val,null);
             }
         }
+    }
+    public void removeRealtimeValues( RealtimeValues rtv){
+        rtvals.forEach(rtv::removeVal);
     }
     protected abstract boolean readExtraFromXML( Element stream );
     protected abstract boolean writeExtraToXML( XMLfab fab );
