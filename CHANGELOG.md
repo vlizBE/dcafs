@@ -8,15 +8,22 @@ Note: Version numbering: x.y.z
 - cmd !idle not used properly when disconnected/reconnected
 - integerval telnet interface?
 - Resolve #34
+- back up path for sqlite db etc?
 
-## 1.0.9 (work in progress)
+## 1.0.10 (work in progress)
+
+## 1.0.9 (03/03/2023)
+Mainly fixes two bugs related to XML. Are part of the reason sometimes nodes get duplicated...
 
 ### Fixes
 - FileCollector: trying to create an existing directory structure throws an exception that 
 wasn't handled properly on linux if that structure is made with a link.
 - PathForward: Generic means the end of a filterblock, but working with id's didn't circumvent
 this as it's supposed to
-- 
+- XMLfab alterchild used orElse with optional that didn't work as expected (was used if the op
+optional wasn't empty). This affects pretty much all Vals writing to xml
+- XMLdigger: The isInvalid check was copy paste of isValid, without being inverted...
+
 ## 1.0.8 ( 23/02/2023 )
 Main addition is probably that you now get feedback on loading of taskmanager scripts. 
 Either when logging into telnet (issues during startup) or after reloading (as response to the command.
