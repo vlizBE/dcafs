@@ -64,7 +64,7 @@ public class Waypoint implements Comparable<Waypoint>{
 		this.range=range;
 		return this;
 	}
-	public boolean hasTracelCmd(){
+	public boolean hasTravelCmd(){
 		for( var travel: travels )
 			if( !travel.cmds.isEmpty())
 				return true;
