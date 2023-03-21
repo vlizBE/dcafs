@@ -282,7 +282,7 @@ public class Waypoint implements Comparable<Waypoint>{
 		double maxBearing=360.0,minBearing=0.0;
 		STATE direction;		
 
-		ArrayList<String> cmds;
+		ArrayList<String> cmds=new ArrayList<>();
 		boolean valid = true;
 
 		public Travel( String name, String dir, String bearing ){
