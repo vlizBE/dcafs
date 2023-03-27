@@ -34,7 +34,7 @@ public class SeasunStream extends SerialStream{
             switch (good) {
                 case 0,1 -> {
                     if (b % 2 == 1) { // H
-                        rec[good] = (byte)(b / 2);
+                        rec[good] = (byte)(b - 1);
                         good++;
                     }else{
                         good=0;
@@ -51,7 +51,7 @@ public class SeasunStream extends SerialStream{
             }
         }
         if( good==3 ){
-            int value = (rec[2]%4)*16384 + rec[1]*128 + rec[0];
+            int value = rec[0]*256 + rec[1]*2 + rec[0]%4;
             int addr = rec[2]/4;
 
             if(debug)
