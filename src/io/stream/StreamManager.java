@@ -7,6 +7,7 @@ import io.collector.CollectorFuture;
 import io.collector.ConfirmCollector;
 import io.stream.serialport.ModbusStream;
 import io.stream.serialport.MultiStream;
+import io.stream.serialport.SeasunStream;
 import io.stream.serialport.SerialStream;
 import io.stream.tcp.ModbusTCPStream;
 import io.stream.tcp.TcpStream;
@@ -461,6 +462,12 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 					modbus.reconnectFuture = scheduler.schedule( new DoConnection( modbus ), 0, TimeUnit.SECONDS );
 					return modbus;
 				}
+			case "seasun":
+				SeasunStream seasun = new SeasunStream( dQueue, stream );
+				seasun.setEventLoopGroup(eventLoopGroup);
+				seasun.addListener(this);
+				seasun.reconnectFuture = scheduler.schedule( new DoConnection( seasun ), 0, TimeUnit.SECONDS );
+				return seasun;
 			case "multiplex":
 				MultiStream mStream = new MultiStream( dQueue, stream );
 				mStream.setEventLoopGroup(eventLoopGroup);
