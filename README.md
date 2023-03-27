@@ -2,6 +2,8 @@ dcafs
 =========
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)  
 
+> **Note: Because of reduction to possible worktime allocated to this project, this has been reduced to 'maintenance' only. This means bugfixes will still be made but no major additions. There's however a [fork](https://github.com/michieltjampens/dcafs) that I work on as a hobby.**
+
 A Java tool (or can also be used as a library) that takes care of all the nitty-gritty that needs to be done when a sensor has generated data and you want to find that data in a database. Hence _data collect alter forward store_. If the device needs to be interrogated or any other sort of control, that's also possible (hidden under _forward_).   
 That is in broad terms what it is capable of.
 
