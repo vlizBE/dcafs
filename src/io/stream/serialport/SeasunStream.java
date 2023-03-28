@@ -12,7 +12,7 @@ import java.util.concurrent.BlockingQueue;
 
 public class SeasunStream extends SerialStream{
 
-    private final byte[] rec = new byte[3];
+    private final int[] rec = new int[3];
     private int good=0;
 
     public SeasunStream(BlockingQueue<Datagram> dQueue, Element stream) {
@@ -31,37 +31,46 @@ public class SeasunStream extends SerialStream{
     protected void processListenerEvent(byte[] data){
 
         for( byte b : data ){
+            int val = Tools.toUnsigned(b);
+
             switch (good) {
                 case 0,1 -> {
-                    if (b % 2 == 1) { // H
-                        rec[good] = (byte)(b - 1);
+                    if (val % 2 == 1) { // H
+                        rec[good] = (val - 1);
                         good++;
                     }else{
+                        errorHandling(rec[0],val/2);
                         good=0;
                     }
                 }
                 case 2 -> {
                     if (b % 2 == 0) { // L
-                        rec[2] = (byte)(b / 2);
+                        rec[2] = val / 2;
                         good++;
                     } else {
                         good = 0;
+                        Logger.error("Bad L: "+val);
                     }
                 }
             }
         }
         if( good==3 ){
-            int value = rec[0]*256 + rec[1]*2 + rec[0]%4;
+            good=0;
+            int value = rec[0]/2 + (rec[1]<<6)+ ((rec[2]%4)<<14);
             int addr = rec[2]/4;
 
-            if(debug)
-                Logger.debug(id+"(ss) -> "+Tools.fromBytesToHexString(rec,0,3));
             if( log )		// If the message isn't an empty string and logging is enabled, store the data with logback
-                Logger.tag("RAW").warn( priority + "\t" + label+"|"+id + "\t[hex] " + Tools.fromBytesToHexString(rec,0,3) );
+                Logger.tag("RAW").warn( priority + "\t" +id + "\t[dec] " + (rec[0]+1)+";"+(rec[1]+1)+";"+(rec[2]*2));
 
             forwardData(addr+";"+value);
         }
     }
+    public void errorHandling( int a, int b){
+        int addr= b/4;
+        int value=a/2 + (b<<6);
+        Logger.info( addr + " -> "+value);
+    }
+
     @Override
     public synchronized boolean writeBytes(byte[] data) {
         return write(data);
