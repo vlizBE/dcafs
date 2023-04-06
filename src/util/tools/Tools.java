@@ -259,7 +259,20 @@ public class Tools {
             return "";
         return fromBytesToHexString(data, 0, data.length);
     }
+    public static String fromIntsToHexString(int[] data, String delimiter) {
+        if (data == null)
+            return "";
 
+        StringJoiner join = new StringJoiner(delimiter);
+        for( int nr : data){
+            String hex = Integer.toHexString(nr).toUpperCase();
+            if (hex.length() > 2) {
+                hex = hex.substring(hex.length() - 2);
+            }
+            join.add("0x"+(hex.length() == 1 ? "0" : "") + hex);
+        }
+        return join.toString();
+    }
     /**
      * Converts a part of an array of characters to a space separated string of
      * hexadecimals (0x00 0x01), can work MSB->LSB and LSB->MSB
