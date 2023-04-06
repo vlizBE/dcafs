@@ -14,7 +14,7 @@ public class SeasunStream extends SerialStream{
 
     private final int[] rec = new int[3];
     private int good=0;
-
+    int cnt=0;
     public SeasunStream(BlockingQueue<Datagram> dQueue, Element stream) {
         super(dQueue,stream);
         eol="";
@@ -32,14 +32,14 @@ public class SeasunStream extends SerialStream{
 
         for( byte b : data ){
             int val = Tools.toUnsigned(b);
-
             switch (good) {
                 case 0,1 -> {
                     if (val % 2 == 1) { // H
                         rec[good] = (val - 1);
+
                         good++;
                     }else{
-                        errorHandling(rec[0],val/2);
+                        Logger.error("Bad sequence received");
                         good=0;
                     }
                 }
@@ -49,21 +49,22 @@ public class SeasunStream extends SerialStream{
                         good++;
                     } else {
                         good = 0;
-                        Logger.error("Bad L: "+val);
                     }
                 }
             }
-        }
-        if( good==3 ){
-            good=0;
-            int value = rec[0]/2 + (rec[1]<<6)+ ((rec[2]%4)<<14);
-            int addr = rec[2]/4;
+            if( good==3 ){
+                timestamp = Instant.now().toEpochMilli(); // Store the timestamp of the received message
+                good=0;
+                int value = rec[0]/2 + (rec[1]<<6)+ ((rec[2]%4)<<14);
+                int addr = rec[2]/4;
 
-            if( log )		// If the message isn't an empty string and logging is enabled, store the data with logback
-                Logger.tag("RAW").warn( priority + "\t" +id + "\t[dec] " + (rec[0]+1)+";"+(rec[1]+1)+";"+(rec[2]*2));
+                if( log )       // If the message isn't an empty string and logging is enabled, store the data with logback
+                    Logger.tag("RAW").warn(priority + "\t" + id + "\t[ok] " + Tools.fromIntsToHexString(rec,"\t") );
 
-            forwardData(addr+";"+value);
+                forwardData(addr+";"+value);
+            }
         }
+
     }
     public void errorHandling( int a, int b){
         int addr= b/4;
