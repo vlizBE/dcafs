@@ -10,9 +10,26 @@ Note: Version numbering: x.y.z
 - Resolve #34
 - back up path for sqlite db etc?
 
-## 1.0.10 (work in progress)
+## 1.2.2 (work in progress)
 
-## 1.0.9 (03/03/2023)
+Fixed version numbering to be more in line with semver.
+
+### StreamManager
+- Added limited support for Sea&Sun probes
+  - No telnet interface for it, need to add it to xml directly
+  ````xml
+  <stream type="seasun" id="probe">
+    <serialsettings>2400,8,1,odd</serialsettings>
+  </stream>
+  ````
+- `raw:id` will return decoded 24bits to address;value
+
+### Matrix
+- Stopped working 21/03 probably api update?
+- Fixed logging in, url changed: 'matrix-client.' is added in front of homeserver
+- Message receiving also fixed
+
+## 1.2.1 (03/03/2023)
 Mainly fixes two bugs related to XML. Are part of the reason sometimes nodes get duplicated...
 
 ### Fixes
@@ -24,7 +41,7 @@ this as it's supposed to
 optional wasn't empty). This affects pretty much all Vals writing to xml
 - XMLdigger: The isInvalid check was copy paste of isValid, without being inverted...
 
-## 1.0.8 ( 23/02/2023 )
+## 1.2.0 ( 23/02/2023 )
 Main addition is probably that you now get feedback on loading of taskmanager scripts. 
 Either when logging into telnet (issues during startup) or after reloading (as response to the command.
 
@@ -50,7 +67,7 @@ XML reading.
 - Fixed tm:add,tmid for some reason this year's old code suddenly stopped working
 - Fixed i2c raw streaming not stopping on a global clear request 
 
-## 1.0.7 (07/12/22)
+## 1.1.0 (07/12/22)
 
 ### SQLiteDB
 - Fix: The path to the sqlite with rollover is determined at startup and after rollover. Thus if

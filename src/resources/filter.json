@@ -1,10 +1,4 @@
 {
-  "account_data": {
-    "not_senders": [],
-    "not_types": [],
-    "senders": [],
-    "types": []
-  },
   "event_fields": [
     "type",
     "content",
@@ -13,50 +7,28 @@
   "event_format": "client",
   "presence": {
     "not_senders": [],
-    "not_types": [],
-    "senders": [],
     "types": [
       "m.presence"
     ]
   },
   "room": {
-    "account_data": {
-      "not_rooms": [],
-      "not_senders": [],
-      "not_types": [],
-      "rooms": [],
-      "senders": [],
-      "types": []
-    },
     "ephemeral": {
       "not_rooms": [],
       "not_senders": [],
-      "not_types": ["m.typing"],
-      "rooms": [],
-      "senders": [],
       "types": [
         "m.receipt"
       ]
     },
-    "not_rooms": [],
-    "rooms": [],
     "state": {
       "not_rooms": [],
-      "not_senders": [],
-      "not_types": [],
-      "rooms": [],
-      "senders": [],
       "types": [
         "m.room.*"
       ]
     },
     "timeline": {
-      "limit": 0,
+      "limit": 10,
       "not_rooms": [],
       "not_senders": [],
-      "not_types": [],
-      "rooms": [],
-      "senders": [],
       "types": [
         "m.room.message"
       ]
