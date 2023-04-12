@@ -5,9 +5,6 @@ Note: Version numbering: x.y.z
   -> z goes up for minor additions and bugfixes
 
 ### To do/fix
-- cmd !idle not used properly when disconnected/reconnected
-- integerval telnet interface?
-- Resolve #34
 - back up path for sqlite db etc?
 
 ## 1.2.2 (work in progress)
@@ -27,7 +24,14 @@ Fixed version numbering to be more in line with semver.
 ### Matrix
 - Stopped working 21/03 probably api update?
 - Fixed logging in, url changed: 'matrix-client.' is added in front of homeserver
+```xml
+<!-- adding this node fixes it homeserver is matrix.org -->
+<server>matrix-client.matrix.org</server>
+```
 - Message receiving also fixed
+
+### Other fixes
+- Mathforward didn't have complete implementation of int... references weren't replaced.
 
 ## 1.2.1 (03/03/2023)
 Mainly fixes two bugs related to XML. Are part of the reason sometimes nodes get duplicated...
