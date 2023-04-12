@@ -674,7 +674,7 @@ public class MathForward extends AbstractForward {
                 boolean ok=false; // will be used at the end to check if ok
                 p[0]=p[0].toLowerCase();
                 switch(p[0]){
-                    case "d","double","r","real","f","flag":
+                    case "d","double","r","real","f","flag","i","int":
                         for( int pos=0;pos<referencedNums.size();pos++ ){ // go through the known doubleVals
                             var d = referencedNums.get(pos);
                             if( d.id().equalsIgnoreCase(p[1])) { // If a match is found
