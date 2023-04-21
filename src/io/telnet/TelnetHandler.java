@@ -189,8 +189,8 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 
 	public void distributeMessage( Datagram d ){
 		d.label( LABEL+":"+repeat );
-
-		if( d.getData().endsWith("!!") ) {
+		var trim = d.getData().trim();
+		if( trim.endsWith("!!") ) {
 			if( d.getData().length()>2) {
 				repeat = d.getData().replace("!!", "");
 				writeString("Mode changed to '"+repeat+"'\r\n>");
@@ -200,13 +200,13 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 				writeString("Mode cleared!\r\n>");
 			}
 			return;
-		}else if( d.getData().startsWith(">>")) {
+		}else if( trim.startsWith(">>")) {
 			var split = new String[2];
 			if( !d.getData().contains(":")){
 				writeLine("Missing :");
 				return;
 			}
-			String cmd = d.getData().substring(2);
+			String cmd = trim.substring(2);
 			split[0] = cmd.substring( 0,cmd.indexOf(":"));
 			split[1] = cmd.substring(split[0].length()+1);
 
@@ -262,12 +262,12 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 				}
 			}
 		}else{
-			d.setData(repeat+d.getData());
+			d.setData(repeat+trim);
 		}
-		var macro = macros.get(d.getData());
+		var macro = macros.get(trim);
 		if( macro!=null)
 			d.setData(macro);
-		if ( d.getData().equalsIgnoreCase("bye")||d.getData().equalsIgnoreCase("exit")) {
+		if ( trim.equalsIgnoreCase("bye")||trim.equalsIgnoreCase("exit")) {
 			// Close the connection after sending 'Have a good day!' if the client has sent 'bye' or 'exit'.
 			ChannelFuture future = channel.writeAndFlush( "Have a good day!\r\n");   			
 			future.addListener(ChannelFutureListener.CLOSE);
