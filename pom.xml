@@ -119,27 +119,27 @@
 	  <dependency>
 		  <groupId>io.netty</groupId>
 		  <artifactId>netty-common</artifactId>
-		  <version>4.1.84.Final</version>
+		  <version>4.1.89.Final</version>
 	  </dependency>
 	  <dependency>
 		  <groupId>io.netty</groupId>
 		  <artifactId>netty-buffer</artifactId>
-		  <version>4.1.84.Final</version>
+		  <version>4.1.89.Final</version>
 	  </dependency>
 	  <dependency>
 		  <groupId>io.netty</groupId>
 		  <artifactId>netty-transport</artifactId>
-		  <version>4.1.84.Final</version>
+		  <version>4.1.89.Final</version>
 	  </dependency>
 	  <dependency>
 		  <groupId>io.netty</groupId>
 		  <artifactId>netty-handler</artifactId>
-		  <version>4.1.84.Final</version>
+		  <version>4.1.89.Final</version>
 	  </dependency>
 	  <dependency>
 		  <groupId>io.netty</groupId>
 		  <artifactId>netty-codec</artifactId>
-		  <version>4.1.84.Final</version>
+		  <version>4.1.89.Final</version>
 	  </dependency>
 	  <!-- https://mvnrepository.com/artifact/com.microsoft.sqlserver/mssql-jdbc -->
 	  <dependency>
@@ -195,7 +195,7 @@
 	  <dependency>
 		  <groupId>org.postgresql</groupId>
 		  <artifactId>postgresql</artifactId>
-		  <version>42.5.0</version>
+		  <version>42.5.1</version>
 	  </dependency>
   </dependencies>
 </project>
