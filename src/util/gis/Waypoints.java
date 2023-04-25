@@ -487,7 +487,7 @@ public class Waypoints implements Commandable {
 
                 way.addTravel(cmd[5], cmd[4], cmd[2]);
                 return "Added travel "+cmd[5]+" to "+ cmd[1];
-            case "checktread":
+            case "checkthread":
                 return checkThread()?"Thread is fine":"Thread needed restart";
             default:
                 return "Unknown command";
