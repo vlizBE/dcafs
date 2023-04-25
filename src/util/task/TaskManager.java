@@ -359,7 +359,7 @@ public class TaskManager implements CollectorFuture {
 
 		if (checkState(task.when)) { // Check whether the state allows for the task to run
 			if (task.future == null || task.future.isCancelled()) {
-				Logger.tag(TINY_TAG).info("[" + id + "] Scheduling task: " + task + " with delay/interval/unit:"
+				Logger.tag(TINY_TAG).info("[" + id+":"+task.id + "] Scheduling task: " + task + " with delay/interval/unit:"
 						+ task.startDelay + ";" + task.interval + ";" + task.unit);
 				try {
 					long delay = task.startDelay;
@@ -367,11 +367,11 @@ public class TaskManager implements CollectorFuture {
 						delay = TimeTools.millisDelayToCleanTime(task.interval);
 					}
 					if( task.interval == 0){
-						Logger.error(id+" -> Bad delay calculated from "+task.interval+ "for "+task.id+", so not starting.");
+						Logger.error(id+":"+task.id+" -> Bad delay calculated from "+task.interval+ "for "+task.id+", so not starting.");
 					}else {
 						task.future = scheduler.scheduleAtFixedRate(new DelayedControl(task), delay,
 								task.interval, task.unit);
-						Logger.info(id + " -> Delay set to " + TimeTools.convertPeriodtoString(delay, TimeUnit.MILLISECONDS) + " for " + task.interval +" "+ task.unit + " interval");
+						Logger.info(id+":"+task.id + " -> Initial delay set to " + TimeTools.convertPeriodtoString(delay, TimeUnit.MILLISECONDS) + " for " + task.interval +" "+ task.unit + " interval");
 					}
 				} catch (IllegalArgumentException e) {
 					Logger.tag(TINY_TAG).error("Illegal Argument: start=" + task.startDelay + " interval=" + task.interval + " unit="
@@ -379,17 +379,17 @@ public class TaskManager implements CollectorFuture {
 				}
 			} else {
 				if (task.future != null && task.future.isCancelled()) {
-					Logger.tag(TINY_TAG).info("[" + id + "] Task future was cancelled " + task.id);
+					Logger.tag(TINY_TAG).info("[" + id+":"+task.id + "] Task future was cancelled " + task.id);
 				}
-				Logger.tag(TINY_TAG).info("[" + id + "] Task already running: " + task + " with delay/interval/unit:"
+				Logger.tag(TINY_TAG).info("[" + id+":"+task.id + "] Task already running: " + task + " with delay/interval/unit:"
 						+ task.startDelay + ";" + task.interval + ";" + task.unit);
 			}
 		} else { // If the check fails, cancel the running task
 			if (task.future != null) {
 				task.future.cancel(false);
-				Logger.tag(TINY_TAG).info("[" + id + "] Cancelled task already running: " + task);
+				Logger.tag(TINY_TAG).info("[" + id+":"+task.id + "] Cancelled task already running: " + task);
 			} else {
-				Logger.tag(TINY_TAG).error("[" + id + "] NOT Scheduling (checkState failed): " + task);
+				Logger.tag(TINY_TAG).error("[" + id+":"+task.id + "] NOT Scheduling (checkState failed): " + task);
 			}
 		}
 	}
