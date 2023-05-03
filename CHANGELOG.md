@@ -7,7 +7,11 @@ Note: Version numbering: x.y.z
 ### To do/fix
 - back up path for sqlite db etc?
 
-## 1.2.2 (work in progress)
+## 1.2.3 (work in progress)
+- Telnet, another attempt at the trimming issue
+- Updated json dependency
+
+## 1.2.2 (12/04/23)
 
 Fixed version numbering to be more in line with semver.
 
