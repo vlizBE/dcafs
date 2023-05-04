@@ -296,7 +296,7 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 						stream.addTarget(cw);
 					confirmCollectors.put(stream.getID(),cw);
 				}else{
-					if( txt.indexOf("\\") < txt.length()-2 ){
+					if( txt.indexOf("\\") !=-1 ){
 						txt = Tools.fromEscapedStringToBytes(txt);
 					}
 					boolean written;

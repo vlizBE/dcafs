@@ -189,7 +189,8 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 
 	public void distributeMessage( Datagram d ){
 		d.label( LABEL+":"+repeat );
-		var trim = d.getData().trim();
+
+		var trim = d.getData().stripLeading();
 		if( trim.endsWith("!!") ) {
 			if( d.getData().length()>2) {
 				repeat = d.getData().replace("!!", "");
