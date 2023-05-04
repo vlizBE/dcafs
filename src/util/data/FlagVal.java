@@ -51,6 +51,7 @@ public class FlagVal extends AbstractVal implements NumericVal{
         name(name)
                 .group(XMLtools.getChildStringValueByTag(rtval, "group", group()))
                 .defState(XMLtools.getBooleanAttribute(rtval, "default", defFlag));
+        state=defState;
         if (XMLtools.getBooleanAttribute(rtval, "keeptime", false))
             keepTime();
         if (!XMLtools.getChildElements(rtval, "cmd").isEmpty())

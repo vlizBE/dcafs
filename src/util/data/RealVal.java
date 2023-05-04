@@ -82,6 +82,7 @@ public class RealVal extends AbstractVal implements NumericVal{
                 .scale(XMLtools.getIntAttribute(rtval, "scale", -1))
                 .defValue(XMLtools.getDoubleAttribute(rtval, "default", defReal))
                 .defValue(XMLtools.getDoubleAttribute(rtval, "def", defVal));
+        value = defVal;
         String options = XMLtools.getStringAttribute(rtval, "options", "");
         for (var opt : options.split(",")) {
             var arg = opt.split(":");

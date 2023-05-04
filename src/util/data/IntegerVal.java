@@ -80,6 +80,8 @@ public class IntegerVal extends AbstractVal implements NumericVal{
                 defValue( XMLtools.getIntAttribute(rtval, "default", defInt) ).
                 defValue( XMLtools.getIntAttribute(rtval, "default", defVal) );
         String options = XMLtools.getStringAttribute(rtval, "options", "");
+        value=defVal;
+
         for (var opt : options.split(",")) {
             var arg = opt.split(":");
             switch (arg[0]) {
