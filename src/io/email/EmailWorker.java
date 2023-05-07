@@ -63,7 +63,8 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 	static final String MAIL_SMTP_TIMEOUT = "mail.smtp.timeout";
 	static final String MAIL_SMTP_WRITETIMEOUT = "mail.smtp.writetimeout";
 
-	boolean busy = false; // Indicate that an email is being send to the server
+	int busy = 0; // Indicate how many emails are being send
+	int sendRequests=0; // Indicate how many email requests are given
 	java.util.concurrent.ScheduledFuture<?> retryFuture; // Future of the retry checking thread
 
 	private final BlockingQueue<Datagram> dQueue; // Used to pass commands received via email to the dataworker for
@@ -504,12 +505,24 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 		}
 		if( email.isValid()) {
 			applyBook(email);
-			scheduler.execute( ()-> sendEmail(email, false));
+			sendRequests++;
+			if( busy < 5) {
+				scheduler.schedule(() -> sendEmail(email, false),busy,TimeUnit.SECONDS); // Send the email with a second delay
+				if( busy==1 )
+					scheduler.schedule(this::clearBusy,8,TimeUnit.SECONDS);
+			}else{
+				if( sendRequests < 10 || sendRequests%20==0) {
+					Logger.error("Warning, probably spamming, tried to send more than 5 emails in 8 seconds, ignoring email. (reqs:"+sendRequests+")");
+				}
+			}
 		}else{
 			Logger.error("Tried to send an invalid email");
 		}
 	}
-
+	private void clearBusy(){
+		busy=0;
+		sendRequests=0;
+	}
 	/**
 	 * Alter the 'to' field in the email from a possible reference to an actual emailaddress
 	 * @param email The email to check and maybe alter
@@ -549,7 +562,7 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 	 * Method to send an email
 	 */
 	private void sendEmail(Email email, boolean retry) {
-
+		busy++;
 		try {
 			if (mailSession == null) {
 				if (outboxAuth) {
@@ -591,9 +604,9 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 
 			// Send the complete message parts
 			Logger.debug("Trying to send email to " + email.toRaw + " through " + outbox.server + "!");
-			busy = true;
+
 			Transport.send(message);
-			busy = false;
+
 
 			if( hasAttachment ){
 				try {

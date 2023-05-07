@@ -10,6 +10,8 @@ Note: Version numbering: x.y.z
 ## 1.2.3 (work in progress)
 - Telnet, another attempt at the trimming issue
 - Updated json dependency
+- Altered emailworker so it can't spam. First 5 emails will be send with a delay of 1 second between eachother but no
+more will we send in the 8 seconds since the first. This is to prvent accidental spam due to bugs (fe in taskmanager).
 
 ## 1.2.2 (12/04/23)
 
