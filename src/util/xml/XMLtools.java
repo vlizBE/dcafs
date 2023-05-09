@@ -356,7 +356,8 @@ public class XMLtools {
 	 * @return The requested data or the def value if not found
 	 */
 	public static double getChildDoubleValueByTag(Element element, String tag, double def) {
-		return getFirstChildByTag(element, tag).map(e-> NumberUtils.toDouble(e.getTextContent(),def)).orElse(def);
+
+		return getFirstChildByTag(element, tag).map(e-> NumberUtils.toDouble(e.getTextContent().replace(",","."),def)).orElse(def);
 	}
 	/**
 	 * 
@@ -514,7 +515,7 @@ public class XMLtools {
 		}
 
 		if( parent.hasAttribute(attribute))
-			return NumberUtils.toDouble(parent.getAttribute(attribute), def);
+			return NumberUtils.toDouble(parent.getAttribute(attribute).replace(",","."), def);
 		return def;
 	}
 	/**
