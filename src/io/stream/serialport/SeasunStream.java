@@ -36,10 +36,9 @@ public class SeasunStream extends SerialStream{
                 case 0,1 -> {
                     if (val % 2 == 1) { // H
                         rec[good] = (val - 1);
-
                         good++;
                     }else{
-                        Logger.error("Bad sequence received");
+                        Logger.error("Bad sequence received: "+((good==1)?rec[0]:"X")+":"+val);
                         good=0;
                     }
                 }
@@ -59,17 +58,12 @@ public class SeasunStream extends SerialStream{
                 int addr = rec[2]/4;
 
                 if( log )       // If the message isn't an empty string and logging is enabled, store the data with logback
-                    Logger.tag("RAW").warn(priority + "\t" + id + "\t[ok] " + Tools.fromIntsToHexString(rec,"\t") );
+                    Logger.tag("RAW").warn(priority + "\t" + id + "\t[ok] " + Tools.fromIntsToHexString(rec,"\t")+ " => "+addr+"|"+value );
 
                 forwardData(addr+";"+value);
             }
         }
 
-    }
-    public void errorHandling( int a, int b){
-        int addr= b/4;
-        int value=a/2 + (b<<6);
-        Logger.info( addr + " -> "+value);
     }
 
     @Override
