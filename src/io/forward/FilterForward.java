@@ -51,7 +51,8 @@ public class FilterForward extends AbstractForward {
         }else{
             reversed.removeIf( t-> !t.writeLine(data) );
         }
-
+        if( !cmds.isEmpty())
+            cmds.forEach( cmd->dQueue.add(Datagram.system(cmd).writable(this)));
         if( noTargets() && reversed.isEmpty() ){
             valid=false;
             if( deleteNoTargets )

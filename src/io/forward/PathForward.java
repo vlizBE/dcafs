@@ -135,7 +135,21 @@ public class PathForward {
                               XMLtools.getStringAttribute(step,"label",""));
                 continue;
             }
-
+            if(step.getTagName().equalsIgnoreCase("cmd")){
+                if( stepsForward.isEmpty() ){
+                    Logger.error(id + " -> Can't add a command before any steps");
+                    continue;
+                }
+                while( steps.size()>a && steps.get(a).getTagName().equalsIgnoreCase("cmd") ){ // Check if the index is possible
+                    stepsForward.get(stepsForward.size()-1).addAfterCmd(step.getTextContent());
+                    a++;
+                }
+                if( steps.size()>a){
+                    step = steps.get(a);
+                }else{
+                    continue;
+                }
+            }
             // Check if the next step is a generic/store, if so change the label attribute of the current step
             if( a<steps.size()-1 ){
                 var next = steps.get(a+1);

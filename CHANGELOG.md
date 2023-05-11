@@ -6,12 +6,17 @@ Note: Version numbering: x.y.z
 
 ### To do/fix
 - back up path for sqlite db etc?
+## 1.2.4 (wip)
+- When reading a double attribrute that uses , instead of . this wasn't recognized
+- More feedback for seasun
+- Cmds can be added to a path with <cmd> node
 
-## 1.2.3 (work in progress)
+## 1.2.3 (08/05/23)
 - Telnet, another attempt at the trimming issue
 - Updated json dependency
 - Altered emailworker so it can't spam. First 5 emails will be send with a delay of 1 second between eachother but no
 more will we send in the 8 seconds since the first. This is to prvent accidental spam due to bugs (fe in taskmanager).
+- RealtimeValues, vals didn't apply default on creation
 
 ## 1.2.2 (12/04/23)
 

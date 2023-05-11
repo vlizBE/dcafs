@@ -126,6 +126,8 @@ public class EditorForward extends AbstractForward{
         if( !label.isEmpty() ){ // If the object has a label associated
             dQueue.add( Datagram.build(data).label(label).writable(this) ); // add it to the queue
         }
+        if( !cmds.isEmpty())
+            cmds.forEach( cmd->dQueue.add(Datagram.system(cmd).writable(this)));
         // If there are no target, no label, this no longer needs to be a target
         if( targets.isEmpty() && label.isEmpty() && !log){
             valid=false;

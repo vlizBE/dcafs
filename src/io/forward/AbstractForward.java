@@ -21,6 +21,7 @@ import java.util.concurrent.BlockingQueue;
 public abstract class AbstractForward implements Writable {
 
     protected final BlockingQueue<Datagram> dQueue;                        // Queue to send commands
+    protected final ArrayList<String> cmds = new ArrayList<>();            // Commands to execute after processing
     protected final ArrayList<Writable> targets = new ArrayList<>();       // To where the data needs to be send
     protected final ArrayList<String[]> rulesString = new ArrayList<>();   // Readable info regarding rules
 
@@ -56,6 +57,9 @@ public abstract class AbstractForward implements Writable {
     }
     public void disableDebug(){
         debug=false;
+    }
+    public void addAfterCmd( String cmd){
+        cmds.add(cmd);
     }
     /**
      * Add a source of data for this FilterWritable can be any command
