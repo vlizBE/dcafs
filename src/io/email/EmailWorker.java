@@ -72,7 +72,7 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 
 	/* Reading emails */
 	java.util.concurrent.ScheduledFuture<?> checker; // Future of the inbox checking thread
-
+	java.util.concurrent.ScheduledFuture<?> clear;
 	int maxQuickChecks = 0; // Counter for counting down how many quick checks for incoming emails are done
 							// before slowing down again
 	int checkIntervalSeconds = 300; // Email check interval, every 5 minutes (default) the inbox is checked for new
@@ -489,6 +489,9 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 				boolean regex = cmds.length == 4 && Tools.parseBool(cmds[3], false);
 				permits.add(new Permit(cmds[0].equals("adddeny"), cmds[1], cmds[2], regex));
 				return writePermits()?"Permit added":"Failed to write to xml";
+			case "spam":
+				var cl = clear!=null?"in "+clear.getDelay(TimeUnit.SECONDS)+"s":"never";
+				return "Busy at "+busy+" and sendrequests at "+sendRequests+", clearing "+cl;
 			default	:
 				return "unknown command";
 		}
@@ -508,6 +511,7 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 			sendRequests++;
 			if( busy < 5) {
 				scheduler.schedule(() -> sendEmail(email, false),busy,TimeUnit.SECONDS); // Send the email with a second delay
+				busy++;
 				if( busy==1 )
 					scheduler.schedule(this::clearBusy,8,TimeUnit.SECONDS);
 			}else{
@@ -520,6 +524,7 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 		}
 	}
 	private void clearBusy(){
+		Logger.info( "Clearing email counters");
 		busy=0;
 		sendRequests=0;
 	}
@@ -562,7 +567,7 @@ public class EmailWorker implements CollectorFuture, EmailSending, Commandable {
 	 * Method to send an email
 	 */
 	private void sendEmail(Email email, boolean retry) {
-		busy++;
+
 		try {
 			if (mailSession == null) {
 				if (outboxAuth) {
