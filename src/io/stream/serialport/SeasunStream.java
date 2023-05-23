@@ -31,23 +31,29 @@ public class SeasunStream extends SerialStream{
     protected void processListenerEvent(byte[] data){
 
         for( byte b : data ){
-            int val = Tools.toUnsigned(b);
+            int val = Byte.toUnsignedInt(b);
+            //Logger.info( "To unsigned:"+ b +"->"+val );
             switch (good) {
                 case 0,1 -> {
                     if (val % 2 == 1) { // H
                         rec[good] = (val - 1);
+
+                        //Logger.info("Good:"+good+":"+val);
                         good++;
                     }else{
-                        Logger.error("Bad sequence received: "+((good==1)?rec[0]:"X")+":"+val);
+                        Logger.error("BAD:"+good+":"+val);
                         good=0;
                     }
                 }
                 case 2 -> {
-                    if (b % 2 == 0) { // L
+                    if (val % 2 == 0) { // L
                         rec[2] = val / 2;
+                        //Logger.info("Good:2:"+val);
                         good++;
                     } else {
+                        Logger.error("BAD:2:"+val);
                         good = 0;
+
                     }
                 }
             }
@@ -59,7 +65,7 @@ public class SeasunStream extends SerialStream{
 
                 if( log )       // If the message isn't an empty string and logging is enabled, store the data with logback
                     Logger.tag("RAW").warn(priority + "\t" + id + "\t[ok] " + Tools.fromIntsToHexString(rec,"\t")+ " => "+addr+"|"+value );
-
+               //Logger.info("Good sequence: "+Tools.fromIntsToHexString(rec,"\t"));
                 forwardData(addr+";"+value);
             }
         }
