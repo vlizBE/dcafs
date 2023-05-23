@@ -329,36 +329,40 @@ public class LabelWorker implements Runnable, Commandable {
 	public void checkTelnet(Datagram d) {
 		Writable dt = d.getWritable();
 		d.origin("telnet");
-
-		if( d.getData().equalsIgnoreCase("spy:off")||d.getData().equalsIgnoreCase("spy:stop")){
+		var data = d.getData();
+		if( data.startsWith("\0")){
+			data=data.substring(1);
+			Logger.info("Null Removed: "+data);
+		}
+		if( data.equalsIgnoreCase("spy:off")||data.equalsIgnoreCase("spy:stop")){
 			spy.writeLine("Stopped spying...");
 			spy=null;
 			return;
-		}else if( d.getData().startsWith("spy:")){
-			spyingOn =d.getData().split(":")[1];
+		}else if( data.startsWith("spy:")){
+			spyingOn =data.split(":")[1];
 			spy=d.getWritable();
 			spy.writeLine("Started spying on "+ spyingOn);
 			return;
 		}
 
-		if (!d.getData().equals("status")) {
+		if (!data.equals("status")) {
 			String from = " for ";
 
 			if (dt != null) {
 				from += dt.getID();
 			}
-			if (!d.getData().isBlank())
-				Logger.info("Executing telnet command [" + d.getData() + "]" + from);
+			if (!data.isBlank())
+				Logger.info("Executing telnet command [" + data + "]" + from);
 		}
-
+		d.setData(data);
 		String response = reqData.createResponse( d, false);
 		if( spy!=null && d.getWritable()!=spy && (d.getWritable().getID().equalsIgnoreCase(spyingOn)|| spyingOn.equalsIgnoreCase("all"))){
-			spy.writeLine(TelnetCodes.TEXT_ORANGE+"Cmd: "+d.getData()+TelnetCodes.TEXT_YELLOW);
+			spy.writeLine(TelnetCodes.TEXT_ORANGE+"Cmd: "+data+TelnetCodes.TEXT_YELLOW);
 			spy.writeLine(response);
 		}
 		String[] split = d.getLabel().split(":");
 		if (dt != null) {
-			if( d.getData().startsWith("telnet:write")){
+			if( data.startsWith("telnet:write")){
 				dt.writeString(TelnetCodes.PREV_LINE+TelnetCodes.CLEAR_LINE+response);
 			}else{
 				dt.writeLine(response);
