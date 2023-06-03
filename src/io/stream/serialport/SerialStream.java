@@ -176,6 +176,7 @@ public class SerialStream extends BaseStream implements Writable {
             dQueue.add( Datagram.build(msg)
                     .label(label)
                     .priority(priority)
+                    .writable(this)
                     .timestamp() );
         }
 
