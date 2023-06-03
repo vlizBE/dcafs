@@ -407,15 +407,17 @@ public class FileCollector extends AbstractCollector{
             return;
         }
         boolean isNewFile = false;
-        if( Files.notExists(dest) && Files.notExists(dest.toAbsolutePath().getParent() )){
+        if( Files.notExists(dest) ){
             isNewFile=true;
-            try { // So first create the dir structure
-                Files.createDirectories(dest.toAbsolutePath().getParent());
-            }catch(FileAlreadyExistsException fee){
-                Logger.debug("Tried to make a directory that already exists... -> "+dest.toAbsolutePath().getParent());
-            } catch (IOException e) {
-                Logger.error(e);
-                return;
+            if( Files.notExists(dest.toAbsolutePath().getParent()) ) {
+                try { // So first create the dir structure
+                    Files.createDirectories(dest.toAbsolutePath().getParent());
+                } catch (FileAlreadyExistsException fee) {
+                    Logger.debug("Tried to make a directory that already exists... -> " + dest.toAbsolutePath().getParent());
+                } catch (IOException e) {
+                    Logger.error(e);
+                    return;
+                }
             }
         }
 
