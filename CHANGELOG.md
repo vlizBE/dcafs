@@ -6,10 +6,12 @@ Note: Version numbering: x.y.z
 
 ### To do/fix
 - back up path for sqlite db etc?
+
 ## 1.2.4 (wip)
 - When reading a double attribrute that uses , instead of . this wasn't recognized
 - More feedback for seasun
 - Cmds can be added to a path with <cmd> node
+- Fixed, filecollector didn't add header to new file if the parent folder exists
 
 ## 1.2.3 (08/05/23)
 - Telnet, another attempt at the trimming issue
