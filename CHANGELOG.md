@@ -7,7 +7,9 @@ Note: Version numbering: x.y.z
 ### To do/fix
 - back up path for sqlite db etc?
 
-## 1.2.4 (wip)
+## 1.2.5 (wip)
+
+## 1.2.4 (04/06/23)
 - When reading a double attribrute that uses , instead of . this wasn't recognized
 - More feedback for seasun
 - Cmds can be added to a path with <cmd> node
