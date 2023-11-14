@@ -241,13 +241,18 @@ public class Generic {
                //
                 switch (entry.type) {
                     case INTEGER -> {
-                        int intVal=Integer.MAX_VALUE;
+                        int intVal;
                         if (doubles != null && doubles.length > entry.index && doubles[entry.index] != null) {
                             intVal = doubles[entry.index].intValue();
                         } else {
                             intVal = NumberUtils.toInt(split[entry.index].trim(), Integer.MAX_VALUE);
                             if( intVal == Integer.MAX_VALUE) {
-                                Logger.warn("Failed to parse "+split[entry.index]+" to integer.");
+                                try{
+                                    intVal = NumberUtils.createInteger(split[entry.index]);
+                                }catch(NumberFormatException e){
+                                    Logger.warn("Failed to parse "+split[entry.index]+" to integer.");
+                                }
+
                                 if (entry.defInt != Integer.MAX_VALUE) {
                                     intVal = entry.defInt;
                                 } else if (split[entry.index].isEmpty()) {
@@ -279,7 +284,7 @@ public class Generic {
                         } else {
                             val = NumberUtils.toDouble(split[entry.index].trim(), Double.NaN);
                             if( Double.isNaN(val)) {
-                                Logger.warn("Failed to parse "+split[entry.index]+" to double/real.");
+                                Logger.warn("Failed to parse "+split[entry.index]+" to double.");
                                 if (!Double.isNaN(entry.defReal)) {
                                     val = entry.defReal;
                                 } else if (split[entry.index].isEmpty()) {
