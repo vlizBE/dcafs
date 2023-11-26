@@ -488,9 +488,9 @@ public class XMLfab {
      * @return The fab after altering/selecting
      */
     public XMLfab alterChild( String tag, String content ){
-        var lastOpt = XMLtools.getFirstChildByTag(parent, tag);
-        if( lastOpt.isPresent()){
-            last.setTextContent(content);            
+        var alterOpt = XMLtools.getFirstChildByTag(parent, tag);
+        if( alterOpt.isPresent()){
+            alterOpt.get().setTextContent(content);
         }else{
             last = XMLtools.createChildTextElement(xmlDoc, parent, tag, content).orElse(last);
         }

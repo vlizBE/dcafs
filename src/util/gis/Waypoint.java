@@ -46,7 +46,7 @@ public class Waypoint implements Comparable<Waypoint>{
 	ArrayList<Travel> travels = new ArrayList<>();
 
 	public Waypoint( String name ){
-		this.name=name;
+		this.name=name.trim();
 	}
 
 	public static Waypoint build( String name){
@@ -326,7 +326,7 @@ public class Waypoint implements Comparable<Waypoint>{
 		}
 		public String toString(){
 			String info = name +" = "+(direction==STATE.ENTER?" coming closer than "+range+"m":" going further away than "+range+"m");
-			return info+" with a bearing from"+minBearing+ " to "+maxBearing+"°";
+			return info+" with a bearing from "+minBearing+ " to "+maxBearing+"°";
 		}
 		public String getBearingString(){
 			return (minBearing+" -> "+maxBearing).replace(".0","");

@@ -9,6 +9,9 @@ Note: Version numbering: x.y.z
 
 ## 1.2.5 (wip)
 
+- Updated dependencies: netty,json
+- Fixed, cmds that alter the content of a node actually altered the parent node instead
+
 ## 1.2.4 (04/06/23)
 - When reading a double attribrute that uses , instead of . this wasn't recognized
 - More feedback for seasun

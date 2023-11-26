@@ -235,53 +235,63 @@ public class Generic {
             
             if( ref.contains("@macro") ) // If the ref contains @macro, replace it with the macro
                 ref = ref.replace("@macro", macro);
-            
+
+
             try{
-                double val=-999;
+               //
                 switch (entry.type) {
                     case INTEGER -> {
+                        int intVal;
                         if (doubles != null && doubles.length > entry.index && doubles[entry.index] != null) {
-                            val = doubles[entry.index].intValue();
-                        } else if (NumberUtils.isCreatable(split[entry.index].trim())) {
-                            val = NumberUtils.toInt(split[entry.index].trim(), Integer.MAX_VALUE);
+                            intVal = doubles[entry.index].intValue();
                         } else {
-                            val = Double.NaN;
-                            if (entry.defInt != Integer.MAX_VALUE) {
-                                val = entry.defInt;
-                            } else if (split[entry.index].isEmpty()) {
-                                Logger.error(id + " -> Got an empty value at " + entry.index + " instead of integer for " + ref);
-                            } else {
-                                if (split[entry.index].startsWith("0")) {// If starting with leading 0
-                                    int res = Tools.parseInt(split[entry.index], Integer.MAX_VALUE);
-                                    if (res != Integer.MAX_VALUE) {
-                                        val = res;
-                                    }
+                            intVal = NumberUtils.toInt(split[entry.index].trim(), Integer.MAX_VALUE);
+                            if( intVal == Integer.MAX_VALUE) {
+                                try{
+                                    intVal = NumberUtils.createInteger(split[entry.index]);
+                                }catch(NumberFormatException e){
+                                    Logger.warn("Failed to parse "+split[entry.index]+" to integer.");
+                                }
+
+                                if (entry.defInt != Integer.MAX_VALUE) {
+                                    intVal = entry.defInt;
+                                } else if (split[entry.index].isEmpty()) {
+                                    Logger.error(id + " -> Got an empty value at " + entry.index + " instead of integer for " + ref);
                                 } else {
-                                    Logger.error(id + " -> Failed to convert " + split[entry.index] + " to integer for " + ref);
+                                    if (split[entry.index].startsWith("0")) {// If starting with leading 0
+                                        int res = Tools.parseInt(split[entry.index], Integer.MAX_VALUE);
+                                        if (res != Integer.MAX_VALUE) {
+                                            intVal = res;
+                                        }
+                                    } else {
+                                        Logger.error(id + " -> Failed to convert " + split[entry.index] + " to integer for " + ref);
+                                    }
                                 }
                             }
                         }
-                        data[a] = val;
+                        data[a] = intVal;
                         if (rtvals.hasInteger(ref)) {
-                            rtvals.updateInteger(ref, (int) val);
+                            rtvals.updateInteger(ref, intVal);
                         } else {
-                            var iv = IntegerVal.newVal(entry.group, entry.name).value((int) val);
+                            var iv = IntegerVal.newVal(entry.group, entry.name).value(intVal);
                             rtvals.addIntegerVal(iv, settingsPath);
                         }
                     }
                     case REAL -> {
+                        double val=-999;
                         if (doubles != null && doubles.length > entry.index && doubles[entry.index] != null) {
                             val = doubles[entry.index];
-                        } else if (NumberUtils.isCreatable(split[entry.index].trim())) {
-                            val = NumberUtils.toDouble(split[entry.index].trim(), val);
                         } else {
-                            val = Double.NaN;
-                            if (!Double.isNaN(entry.defReal)) {
-                                val = entry.defReal;
-                            } else if (split[entry.index].isEmpty()) {
-                                Logger.error(id + " -> Got an empty value at " + entry.index + " instead of real for " + ref);
-                            } else {
-                                Logger.error(id + " -> Failed to convert " + split[entry.index] + " to real for " + ref);
+                            val = NumberUtils.toDouble(split[entry.index].trim(), Double.NaN);
+                            if( Double.isNaN(val)) {
+                                Logger.warn("Failed to parse "+split[entry.index]+" to double.");
+                                if (!Double.isNaN(entry.defReal)) {
+                                    val = entry.defReal;
+                                } else if (split[entry.index].isEmpty()) {
+                                    Logger.error(id + " -> Got an empty value at " + entry.index + " instead of real for " + ref);
+                                } else {
+                                    Logger.error(id + " -> Failed to convert " + split[entry.index] + " to real for " + ref);
+                                }
                             }
                         }
                         data[a] = val;
@@ -296,7 +306,7 @@ public class Generic {
                         rtvals.addTextVal(ref, split[entry.index], settingsPath);
                     }
                     case FLAG -> {
-                        data[a] = val;
+                        data[a] = Double.NaN;
                         if (rtvals.hasFlag(ref)) {
                             rtvals.setFlagState(ref, split[entry.index]);
                         } else {

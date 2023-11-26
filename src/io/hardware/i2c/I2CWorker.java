@@ -601,7 +601,7 @@ public class I2CWorker implements Commandable {
                         }
                     }
                     if( addWork(cmd[0], cmd[1]) ){
-                        return "Command added to the queue.";
+                        return "Command "+cmd[0]+":"+cmd[1]+" added to the queue.";
                     }else{
                         return "Failed to add command to the queue, probably wrong device or command";
                     }
