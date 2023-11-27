@@ -3,7 +3,6 @@ package worker;
 import util.data.RealtimeValues;
 import io.mqtt.MqttWriting;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.influxdb.dto.Point;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.data.FlagVal;
@@ -35,10 +34,6 @@ public class Generic {
     private String table="";
     private String startsWith="";
     private String mqttID="";
-
-    private String influxID="";
-    private String influxMeasurement="";
-
     private boolean dbWrite = true;
     private int maxIndex=-1;
     private boolean tableMatch=false;
@@ -71,13 +66,6 @@ public class Generic {
     }
     public void setMQTTID( String mqtt ){
         this.mqttID=mqtt;
-    }
-    public void setInfluxID( String influx ){
-        if( influx==null || influx.isEmpty() )
-            return;
-        var spl = influx.split(":");
-        influxID=spl[0];
-        influxMeasurement=spl[1];
     }
     public void setMacro(int index, String value ){
         maxIndex = Math.max(maxIndex, index);
@@ -226,8 +214,6 @@ public class Generic {
         }
         Object[] data = new Object[entries.size()];
 
-        var pb = influxMeasurement.isEmpty()?null:Point.measurement(influxMeasurement);
-
         for( int a=0;a<entries.size();a++ ){
             Entry entry = entries.get(a);
 
@@ -282,7 +268,11 @@ public class Generic {
                         if (doubles != null && doubles.length > entry.index && doubles[entry.index] != null) {
                             val = doubles[entry.index];
                         } else {
-                            val = NumberUtils.toDouble(split[entry.index].trim(), Double.NaN);
+                            if( split[entry.index].isEmpty() ){
+                                val = entry.defReal;
+                            }else {
+                                val = NumberUtils.toDouble(split[entry.index].trim(), Double.NaN);
+                            }
                             if( Double.isNaN(val)) {
                                 Logger.warn("Failed to parse "+split[entry.index]+" to double.");
                                 if (!Double.isNaN(entry.defReal)) {
@@ -336,24 +326,11 @@ public class Generic {
                         rtvals.setText(ref, split[entry.index]);
                     }
                 }
-                if( !influxID.isEmpty() && pb!=null ){
-                    switch (entry.type) {
-                        case INTEGER -> pb.addField(entry.name, (int) data[a]);
-                        case REAL -> pb.addField(entry.name, (double) data[a]);
-                        case TEXT -> pb.addField(entry.name, data[a].toString());
-                        case TAG -> pb.tag(entry.name, data[a].toString());
-                    }
-                }
                 if( mqtt!=null && !mqttID.isEmpty() && !entry.mqttDevice.isEmpty() )
                     mqtt.sendToBroker(mqttID, entry.mqttDevice,ref,(double)data[a]);
             }catch( ArrayIndexOutOfBoundsException l ){
                 Logger.error("Invalid index given to process "+id+" index:"+entry.index);
             }            
-        }
-        if( !influxID.isEmpty() ) {
-            //pb.time(Instant.now().toEpochMilli(), TimeUnit.MILLISECONDS); // Set is here because unsure what happens on delayed execution...?
-            assert pb != null;
-            queryWriting.writeInfluxPoint(influxID,pb.build());
         }
         return data;
     }
@@ -373,9 +350,6 @@ public class Generic {
         if( !getCommonGroups().isEmpty())
             join.add(" for group(s) '"+getCommonGroups()+"' ");
 
-        if (!influxID.isEmpty() ){
-            join.add(" Store in InfluxDB "+influxID+":"+table+" ");
-        }
         join.add("has delimiter '"+delimiter+"'"+(startsWith.isBlank()?"":"and starts with '"+startsWith+"'") );
         if( uses == 0 ){
             join.add(", not used yet.");
@@ -402,7 +376,6 @@ public class Generic {
         generic.setDelimiter(XMLtools.getStringAttribute(gen,"delimiter",","));
         generic.setStartsWith(gen.getAttribute("startswith"));
         generic.setMQTTID(gen.getAttribute("mqtt"));
-        generic.setInfluxID(gen.getAttribute("influx"));
         generic.setTableMatch( XMLtools.getBooleanAttribute(gen, "exact", false));
         generic.settingsPath = xmlPath;
 

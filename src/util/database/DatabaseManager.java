@@ -5,7 +5,6 @@ import io.Writable;
 import io.telnet.TelnetCodes;
 import org.apache.commons.lang3.math.NumberUtils;
 import util.data.RealtimeValues;
-import org.influxdb.dto.Point;
 import org.tinylog.Logger;
 import util.tools.FileTools;
 import util.tools.TimeTools;
@@ -29,8 +28,6 @@ public class DatabaseManager implements QueryWriting, Commandable {
 
     private final Map<String, SQLiteDB> lites = new HashMap<>();        // Store the SQLite databases
     private final Map<String, SQLDB> sqls = new HashMap<>();            // Store the SQL databases
-    private final Map<String, InfluxDB> influxes = new HashMap<>();     // Store the InFLuxDB databases
-
     private static final int CHECK_INTERVAL=5;                          // How often to check the state
     private final ScheduledExecutorService scheduler;                   // Scheduler for the request data action
     private final String workPath;                                            // dcafs workpath
@@ -82,16 +79,6 @@ public class DatabaseManager implements QueryWriting, Commandable {
         sqls.put(id, db);
         return db;
     }
-
-    /**
-     * Add an influxdb to the manager
-     *
-     * @param id The id of the influxdb
-     * @param db The influxdb
-     */
-    public void addInfluxDB(String id, InfluxDB db){
-        influxes.put(id,db);
-    }
     /**
      * Check if the manager has a database with the given id
      * 
@@ -132,7 +119,7 @@ public class DatabaseManager implements QueryWriting, Commandable {
         return Optional.ofNullable(sqls.get(id));
     }
     public boolean hasDatabases() {
-        return !lites.isEmpty() || !sqls.isEmpty() || !influxes.isEmpty();
+        return !lites.isEmpty() || !sqls.isEmpty();
     }
     /* ****************************************************************************************************************/
     /**
@@ -145,7 +132,6 @@ public class DatabaseManager implements QueryWriting, Commandable {
         StringJoiner join = new StringJoiner("\r\n", "", "\r\n");
         lites.forEach((id, db) -> join.add( id + " : " + db.toString() ));
         sqls.forEach((id, db)  -> join.add( id + " : " + db.toString() + (db.isValid(1)?"":" (NC)")));
-        influxes.forEach( (id,db) -> join.add( id+ " : " + db.toString() + (db.isValid(1)?"":" (NC)")));
         return join.toString();
     }
 
@@ -160,15 +146,9 @@ public class DatabaseManager implements QueryWriting, Commandable {
         XMLfab.getRootChildren(settingsPath,"dcafs","databases","server").stream()
                 .filter( db -> !db.getAttribute("id").isEmpty() )
                 .forEach( db -> {
-                                    switch(db.getAttribute("type")){
-                                        case "influx":
-                                            addInfluxDB( db.getAttribute("id"), InfluxDB.readFromXML(db) );
-                                            break;
-                                        case "":break;
-                                        default:
-                                            addSQLDB(db.getAttribute("id"), SQLDB.readFromXML(db));
-                                            break;
-                                    }
+                            if (!db.getAttribute("type").isEmpty()) {
+                                addSQLDB(db.getAttribute("id"), SQLDB.readFromXML(db));
+                            }
                                 }
                         );
     }
@@ -283,24 +263,6 @@ public class DatabaseManager implements QueryWriting, Commandable {
         }
         return Optional.empty();
     }
-
-    /**
-     * Write a point to the given influxdb
-     * @param id The id of the influxdb
-     * @param p The point to add
-     * @return True if it was added
-     */
-    @Override
-    public boolean writeInfluxPoint( String id, Point p){
-        for( InfluxDB influxDB : influxes.values() ){
-            if( influxDB.getID().equalsIgnoreCase(id)) {
-                return influxDB.writePoint(p);
-            }
-        }
-        return false;
-    }
-
-
     /* **************************************  R U N N A B L E S ****************************************************/
     /**
      * Checks if the oldest query present in the buffer isn't older than the maximum
@@ -320,13 +282,6 @@ public class DatabaseManager implements QueryWriting, Commandable {
                 try {
                     db.checkState(CHECK_INTERVAL);
                 } catch (Exception e) {
-                    Logger.error(e);
-                }
-            }
-            for( InfluxDB db : influxes.values() ){
-                try{
-                    db.checkState(CHECK_INTERVAL);
-                }catch(Exception e){
                     Logger.error(e);
                 }
             }
@@ -571,15 +526,6 @@ public class DatabaseManager implements QueryWriting, Commandable {
                                             lite.forceRollover();
                                             return "Rollover added";
                 }).orElse( cmds[1] +" is not an SQLite");
-            case "addinfluxdb": case "addinflux":
-                var influx = new InfluxDB(address,dbName,user,pass);
-                if( influx.connect(false)){
-                    addInfluxDB(id,influx);
-                    influx.writeToXml( XMLfab.withRoot(settingsPath,"dcafs","databases") );
-                    return "Connected to InfluxDB and stored it in xml with id "+id;
-                }else{
-                    return "Failed to connect to InfluxDB";
-                }
             case "addtable":
                 if( cmds.length < 3 )
                     return "Not enough arguments, needs to be dbm:addtable,dbId,tableName<,format>";
