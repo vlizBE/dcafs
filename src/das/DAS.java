@@ -323,6 +323,10 @@ public class DAS implements Commandable{
             streampool.readSettingsFromXML(settingsPath);
         }
     }
+    public Optional<Writable> getStreamWritable( String id ){
+        var opt = streampool.getStream(id);
+        return opt.map(baseStream -> (Writable) baseStream);
+    }
     public StreamManager getStreampool(){
         return streampool;
     }
