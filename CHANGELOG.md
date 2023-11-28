@@ -11,6 +11,7 @@ Note: Version numbering: x.y.z
 
 - Updated dependencies: netty,json
 - Fixed, cmds that alter the content of a node actually altered the parent node instead
+- Fixed, isCreatable doesn't like numbers starting with 09 now this use is removed.
 
 ## 1.2.4 (04/06/23)
 - When reading a double attribrute that uses , instead of . this wasn't recognized
