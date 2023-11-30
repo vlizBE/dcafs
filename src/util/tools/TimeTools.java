@@ -77,12 +77,9 @@ public class TimeTools {
         }
         try {
             LocalTime dt = LocalTime.parse(date, DateTimeFormatter.ofPattern(inputFormat));
-            if (dt != null) {
-                return dt.format(DateTimeFormatter.ofPattern(outputFormat));
-            }
-            return "";
+            return dt.format(DateTimeFormatter.ofPattern(outputFormat));
         }catch(DateTimeParseException e){
-            Logger.error(e);
+            Logger.error("Couldn't parse "+date+" according to "+inputFormat);
         }
         return "";
     }
