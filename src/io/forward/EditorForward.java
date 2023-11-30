@@ -426,9 +426,11 @@ public class EditorForward extends AbstractForward{
         {
             String[] split = input.split(deli);
             if( split.length > index){
-                split[index] = TimeTools.reformatTime(split[index],from,to);
-                if( split[index].isEmpty())
+             split[index] = TimeTools.reformatTime(split[index], from, to);
+                if( split[index].isEmpty()) {
+                    Logger.warn("Empty input or failed to parse "+split[index]+ " for "+getID());
                     return input;
+                }
                 return String.join(delimiter,split);
             }
             Logger.error(id+" -> To few elements after split for redate");
