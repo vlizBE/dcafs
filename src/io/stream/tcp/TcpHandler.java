@@ -175,12 +175,11 @@ public class TcpHandler extends SimpleChannelInboundHandler<byte[]>{
                 msg = msg.replace("\n", "");   // Remove newline characters
                 msg = msg.replace("\r", "");   // Remove carriage return characters
                 msg = msg.replace("\0","");    // Remove null characters
-                //msg = msg.trim();
             }
 
             // Log anything and everything (except empty strings)
             if( !msg.isBlank() && log ) {        // If the message isn't an empty string and logging is enabled, store the data with logback
-               Logger.tag("RAW").warn(priority + "\t" + label+"|"+id + "\t" + msg);
+               Logger.tag("RAW").warn( label+"|"+id + "\t" + msg);
             }
             if(debug)
                Logger.info( id+" -> " + msg);
