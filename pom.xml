@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>vlizBE</groupId>
   <artifactId>dcafs</artifactId>
-  <version>1.2.5</version>
+  <version>1.2.6</version>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
@@ -113,46 +113,46 @@
 	  <dependency>
 		  <groupId>io.netty</groupId>
 		  <artifactId>netty-common</artifactId>
-		  <version>4.1.100.Final</version>
+		  <version>4.1.101.Final</version>
 	  </dependency>
 	  <dependency>
 		  <groupId>io.netty</groupId>
 		  <artifactId>netty-buffer</artifactId>
-		  <version>4.1.100.Final</version>
+		  <version>4.1.101.Final</version>
 	  </dependency>
 	  <dependency>
 		  <groupId>io.netty</groupId>
 		  <artifactId>netty-transport</artifactId>
-		  <version>4.1.100.Final</version>
+		  <version>4.1.101.Final</version>
 	  </dependency>
 	  <dependency>
 		  <groupId>io.netty</groupId>
 		  <artifactId>netty-handler</artifactId>
-		  <version>4.1.100.Final</version>
+		  <version>4.1.101.Final</version>
 	  </dependency>
 	  <dependency>
 		  <groupId>io.netty</groupId>
 		  <artifactId>netty-codec</artifactId>
-		  <version>4.1.100.Final</version>
+		  <version>4.1.101.Final</version>
 	  </dependency>
 	  <!-- https://mvnrepository.com/artifact/com.microsoft.sqlserver/mssql-jdbc -->
 	  <dependency>
 		  <groupId>com.microsoft.sqlserver</groupId>
 		  <artifactId>mssql-jdbc</artifactId>
-		  <version>11.2.3.jre17</version>
+		  <version>12.2.0.jre11</version>
 	  	<!--<version>9.5.0.jre17-preview</version>-->
   	</dependency>
 	<!-- https://mvnrepository.com/artifact/org.xerial/sqlite-jdbc -->
 	<dependency>
 		<groupId>org.xerial</groupId>
 		<artifactId>sqlite-jdbc</artifactId>
-		<version>3.41.2.2</version>
+		<version>3.43.0.0</version>
 	</dependency>
 	<!-- https://mvnrepository.com/artifact/com.fazecast/jSerialComm -->
 	<dependency>
 		<groupId>com.fazecast</groupId>
 		<artifactId>jSerialComm</artifactId>
-		<version>2.9.3</version>
+		<version>2.10.3</version>
 	</dependency>
 	  <!-- https://mvnrepository.com/artifact/com.diozero/diozero-core -->
 	  <dependency>
