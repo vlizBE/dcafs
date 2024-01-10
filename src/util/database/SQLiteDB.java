@@ -50,7 +50,7 @@ public class SQLiteDB extends SQLDB{
         try {
             Files.createDirectories(Path.of(getPath()).getParent());
         } catch (IOException e) {
-            Logger.error( getID() + " -> Issue trying to create "+dbPath.getParent().toString());
+            Logger.error( getID() + " -> Issue trying to create "+dbPath.getParent().toString()+" -> "+e.getMessage());
         } catch (NullPointerException e ){
             Logger.error( getID() + " -> Issue trying to create db, path is null");
         }
