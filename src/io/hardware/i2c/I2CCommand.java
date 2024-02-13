@@ -29,6 +29,7 @@ public class I2CCommand{
     String info=""; // Descriptive text about this command
     int bits = 8;   // How many bits are in the returned data fe. 16 means combine two bytes etc
     int lastRepeat=-1;
+    int scale=-1;
     private boolean runOnce=false; // Flag that removes this command if it has run
     private boolean msbFirst=true;
     private OUTPUT_TYPE outType=OUTPUT_TYPE.DEC;
@@ -55,6 +56,12 @@ public class I2CCommand{
             case "bin": outType=OUTPUT_TYPE.BIN; break;
             case "char": outType=OUTPUT_TYPE.CHAR; break;
         }
+    }
+    public void setScale(int scale){
+        this.scale=scale;
+    }
+    public int getScale(){
+        return scale;
     }
     public OUTPUT_TYPE getOutType(){
         return outType;

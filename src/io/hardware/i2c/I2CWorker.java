@@ -17,6 +17,7 @@ import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
 
+import javax.swing.text.Utilities;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -223,6 +224,7 @@ public class I2CWorker implements Commandable {
 
                     String cmdID = XMLtools.getStringAttribute( command, "id", "");
                     cmd.setOutType( XMLtools.getStringAttribute( command,"output",defOut) );
+                    cmd.setScale(XMLtools.getIntAttribute( command, "scale", -1));
                     cmd.setInfo( XMLtools.getStringAttribute( command, "info", "") );
                     cmd.setReadBits( XMLtools.getIntAttribute( command, "bits", 8) );
                     cmd.setMsbFirst( XMLtools.getBooleanAttribute( command, "msbfirst",true) );
@@ -427,7 +429,16 @@ public class I2CWorker implements Commandable {
                             }
                             break;
                         case MATH:
-                            result.set( cmd.index,cmd.fab.solveFor(result.toArray( new Double[0] )));
+                            var res = cmd.fab.solveFor(result.toArray( new Double[0] ));
+                            if( com.getScale()!=-1 ) {
+                                res = Tools.roundDouble(res,com.getScale());
+                            }
+                            result.set( cmd.index,res);
+                            if( com.getScale() != -1){
+                                for( int c=0;c<result.size();c++){
+
+                                }
+                            }
                             break;
                         case DISCARD:
                             while( result.size() > cmd.readCount) {
