@@ -434,11 +434,6 @@ public class I2CWorker implements Commandable {
                                 res = Tools.roundDouble(res,com.getScale());
                             }
                             result.set( cmd.index,res);
-                            if( com.getScale() != -1){
-                                for( int c=0;c<result.size();c++){
-
-                                }
-                            }
                             break;
                         case DISCARD:
                             while( result.size() > cmd.readCount) {
