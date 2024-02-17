@@ -142,8 +142,6 @@ public class CommandLineInterface {
      * @param b The byte to insert
      */
     private void insertByte( byte b ){
-
-
         if( buffer.writerIndex() > 2 && b==0 ){
             if( buffer.getByte(buffer.writerIndex()-1)==0)
                 return;
@@ -183,7 +181,7 @@ public class CommandLineInterface {
         if (cmdHistoryIndex == cmdHistory.size() ) // Shouldn't go out of bounds
             cmdHistoryIndex = cmdHistory.size() - 1;
 
-        Logger.info("Sending "+ cmdHistoryIndex);
+        Logger.debug("Sending "+ cmdHistoryIndex);
         writeString("\r>" + cmdHistory.get(cmdHistoryIndex));//Move cursor and send history
         writeString(TelnetCodes.CLEAR_LINE_END); // clear the rest of the line
         buffer.clear(); // reset the reader and writer index
