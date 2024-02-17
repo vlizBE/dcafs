@@ -371,8 +371,15 @@ public class I2CWorker implements Commandable {
                                         Logger.info( "Read: "+Tools.fromBytesToHexString(b));
                                     }
                                     rd-=b.length;
-                                    convertBytesToInt(b,cmd.bits,cmd.isMsbFirst(),cmd.isSigned()).forEach(
-                                            x -> result.add(Tools.roundDouble((double)x,0)) );
+                                    try {
+                                        convertBytesToInt(b, cmd.bits, cmd.isMsbFirst(), cmd.isSigned()).forEach(
+                                                x -> result.add(Tools.roundDouble((double) x, 0)));
+                                    }catch(Exception e){
+                                        Logger.error("Conversion failed? "+e.getMessage());
+                                    }
+                                    if( debug ){
+                                        Logger.info("Converted bytes to int");
+                                    }
                                 }
                             }catch( RuntimeIOException e ){
                                 Logger.error("Error trying to read from "+device.getAddr()+": "+e.getMessage());
@@ -381,7 +388,13 @@ public class I2CWorker implements Commandable {
 
                             break;
                         case WRITE:
-                            device.writeBytes( toWrite ) ;
+                            if(debug)
+                                Logger.info("Trying to write "+toWrite.length+" byte(s): "+ Tools.fromBytesToHexString(toWrite));
+                            if( toWrite.length==1) {
+                                device.writeByte(toWrite[0]);
+                            }else{
+                                device.writeBytes(toWrite);
+                            }
                             break;
                         case ALTER_OR: // Read the register, alter it and write it again
                             device.writeBytes(toWrite[0]);
@@ -642,9 +655,11 @@ public class I2CWorker implements Commandable {
             altRes = doCommand(device, com);
             device.updateTimestamp();
         }catch( RuntimeIOException e ){
-            Logger.error("Failed to run command for "+device.getAddr()+":"+e.getMessage());
+            Logger.error("Failed to run command for "+device.getAddr()+":\r\n"+e);
             return;
         }
+        if(debug)
+            Logger.info("Finished running command");
         // Do something with the result...
         StringJoiner output = new StringJoiner(";",device.getID()+";"+cmdID+";","");
         switch (com.getOutType()) {
@@ -669,6 +684,8 @@ public class I2CWorker implements Commandable {
         if( !device.getLabel().equalsIgnoreCase("void") ){
             dQueue.add( Datagram.build(output.toString()).label(device.getLabel()+":"+cmdID).origin(device.getID()).payload(altRes) );
         }
+        if(debug)
+            Logger.info("Output:"+output);
         try {
             device.getTargets().forEach(wr -> wr.writeLine(output.toString()));
             device.getTargets().removeIf(wr -> !wr.isConnectionValid());
