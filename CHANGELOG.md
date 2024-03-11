@@ -8,7 +8,9 @@ Note: Version numbering: x.y.z
 - back up path for sqlite db etc?
 
 ## 1.2.6 (wip)
-
+- Added scale attribute to a commandset, allows all math operations to be scaled to a given amount of digits.
+- Fixed, 'exit' cmd didn't always work when running on linux
+- i2c:reload, now also checks for devices again
 ## 1.2.5 (04/12/2023)
 
 - Updated dependencies: netty, json, mssql, sqlite 
