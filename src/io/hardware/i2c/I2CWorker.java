@@ -160,7 +160,10 @@ public class I2CWorker implements Commandable {
      * Reads the settings for the worker from the given xml file, this mainly
      * consists of devices with their commands.
      */
-    private void readFromXML() {
+    private String readFromXML() {
+        // Make sure everything is removed in case this is a reload
+        devices.clear();
+        commands.clear();
 
         var i2cOpt = XMLtools.getFirstElementByTag( settingsPath, "i2c");
         if( i2cOpt.isPresent() ){
@@ -193,13 +196,13 @@ public class I2CWorker implements Commandable {
             Logger.info("No settings found for I2C, no use reading the commandsets.");
             return;
         }                            
-        reloadSets();
+        return reloadSets();
     }
 
     private String reloadSets( ){
         List<Path> xmls;
         try (Stream<Path> files = Files.list(scriptsPath)){
-            xmls = files.filter(p -> p.toString().endsWith(".xml")).collect(Collectors.toList());
+            xmls = files.filter(p -> p.toString().endsWith(".xml")).toList();
         }catch (IOException e) {            
             Logger.error("Something went wrong trying to read the commandset files");
             return "Failed to read files in i2cscripts folder";
@@ -536,7 +539,8 @@ public class I2CWorker implements Commandable {
                                 .add(gr+"  i2c:id"+reg+" -> Request the data received from the given id (can be regex)");
                     return join.toString();
                 case "list": return getDeviceList(true);
-                case "reload": return reloadSets();
+                case "reload":
+                    return readFromXML();
                 case "listeners": return getListeners();
                 case "debug":
                     if( cmd.length == 2){
@@ -600,12 +604,12 @@ public class I2CWorker implements Commandable {
                         for( var dev : devices.entrySet()){
                             if( dev.getKey().matches(cmd[0])){
                                 dev.getValue().addTarget(wr);
-                                if(oks.length() > 0)
+                                if(!oks.isEmpty())
                                     oks.append(", ");
                                 oks.append(dev.getKey());
                             }
                         }
-                        if(oks.length() > 0) {
+                        if(!oks.isEmpty()) {
                             return "Request for i2c:"+cmd[0]+" accepted for "+oks;
                         }else{
                             Logger.error("No matches for i2c:"+cmd[0]+" requested by "+wr.getID());
