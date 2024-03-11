@@ -194,7 +194,7 @@ public class I2CWorker implements Commandable {
             }
         }else{
             Logger.info("No settings found for I2C, no use reading the commandsets.");
-            return;
+            return "No settings in xml.";
         }                            
         return reloadSets();
     }
