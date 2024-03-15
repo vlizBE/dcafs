@@ -538,6 +538,7 @@ public class I2CWorker implements Commandable {
                                 .add(gr+"  i2c:device,commandset"+reg+" -> Use the given command on the device")
                                 .add(gr+"  i2c:id"+reg+" -> Request the data received from the given id (can be regex)");
                     return join.toString();
+                case "" : return removeWritable(wr)?"Ok.":"";
                 case "list": return getDeviceList(true);
                 case "reload":
                     return readFromXML();
