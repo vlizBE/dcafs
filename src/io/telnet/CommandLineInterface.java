@@ -86,7 +86,7 @@ public class CommandLineInterface {
                 String r = new String(rec);
                 cmdHistory.remove(r);
                 cmdHistory.add(r);
-                if( cmdHistory.size()>50)
+                if( cmdHistory.size()>20)
                     cmdHistory.remove(0);
                 cmdHistoryIndex = cmdHistory.size();
 
@@ -107,7 +107,7 @@ public class CommandLineInterface {
                     buffer.setByte(buffer.writerIndex()-1,0x00);
                     buffer.setIndex( buffer.readerIndex(),buffer.writerIndex()-1);
                 }
-            }else{
+            }else if( b!=0 ){
                 insertByte(b);
             }
         }
