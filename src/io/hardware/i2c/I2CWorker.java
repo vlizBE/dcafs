@@ -162,6 +162,7 @@ public class I2CWorker implements Commandable {
      */
     private String readFromXML() {
         // Make sure everything is removed in case this is a reload
+        devices.values().forEach(I2CDevice::close); // Close first
         devices.clear();
         commands.clear();
 
