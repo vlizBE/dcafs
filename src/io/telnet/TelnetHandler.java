@@ -157,6 +157,7 @@ public class TelnetHandler extends SimpleChannelInboundHandler<byte[]> implement
 			return;
 		var rec = recOpt.get();
 
+		writeString(newLine); // Without this, the reply will overwrite the data  
 		if( dQueue==null ){
 			System.exit(0);
 		}
