@@ -114,7 +114,7 @@ public class PathForward {
 
         var steps = XMLtools.getChildElements(pathEle);
 
-        if( steps.size() > 0) {
+        if(!steps.isEmpty()) {
             stepsForward = new ArrayList<>();
         }else{
             error = "No child nodes found";

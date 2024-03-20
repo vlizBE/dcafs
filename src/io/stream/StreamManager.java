@@ -306,6 +306,7 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 							txt = txt.substring(0,txt.length()-1);
 						txt=StringUtils.removeEnd(txt,"\\0");
 						written=((Writable)stream).writeString(txt);
+						Logger.info("Writing '"+txt+"' to "+stream.id+" without eol.");
 					}else{
 						written=((Writable)stream).writeLine(txt);
 					}
