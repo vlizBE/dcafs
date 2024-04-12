@@ -463,6 +463,7 @@ public class DAS implements Commandable{
 
                 // Run shutdown tasks
                 taskManagerPool.startTaskset("shutdown");
+                taskManagerPool.stopAll();  // Make sure this is also stopped, so it doesn't interfere
 
                 // SQLite & SQLDB
                 Logger.info("Flushing database buffers");
@@ -487,6 +488,7 @@ public class DAS implements Commandable{
                 }
 
                 // disconnecting tcp ports
+                Logger.info("Two seconds passed, disconnecting stream.!");
                 if (streampool != null)
                     streampool.disconnectAll();
 

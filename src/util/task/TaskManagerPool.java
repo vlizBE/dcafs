@@ -73,6 +73,9 @@ public class TaskManagerPool implements Commandable {
         tm.setScriptPath(scriptPath);
         return addTaskList(id,tm);
     }
+    public void stopAll(){
+        tasklists.values().forEach(TaskManager::shutdownAndClearAll);
+    }
     /**
      * Check the TaskManager for tasks with the given keyword and start those
      *

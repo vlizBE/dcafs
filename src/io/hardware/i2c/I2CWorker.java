@@ -322,11 +322,41 @@ public class I2CWorker implements Commandable {
                     ints.add( signed? MathUtils.toSigned24bit(temp):temp );
                 }
             break;
+            case 32: // Concatenate four bytes
+                for( int a=0;a<bytes.length;a+=3){
+                    if( msbFirst ) {
+                        temp = intResults[a] * 16777216 + intResults[a + 1] * 65535 + intResults[a + 2] * 256 + intResults[a + 3];
+                    }else{
+                        temp = intResults[a+3] * 16777216 + intResults[a + 2] * 65535 + intResults[a + 1] * 256 + intResults[a];
+                    }
+                    ints.add( signed? MathUtils.toSigned24bit(temp):temp );
+                }
+                break;
             default:
                 Logger.error("Tried to use an undefined amount of bits "+bits);
                 break;
         }
         return ints;
+    }
+    public static List<Double> convertBytesToDouble(byte[] bytes, int bits, boolean msbFirst, boolean signed) {
+
+        int[] intResults = new int[bytes.length];
+        ArrayList<Double> doubles = new ArrayList<>();
+
+        for (int a = 0; a < bytes.length; a++) {
+            intResults[a] = bytes[a] < 0 ? bytes[a] + 256 : bytes[a];
+        }
+        var div = bits/8;
+        for( int a=0;a<bytes.length;a+=div){
+            double d=0;
+            for( int b=0;b<div;b++){
+                d += intResults[a+b];
+                if( b!=div-1)
+                    d*=256;
+            }
+            doubles.add(d);
+        }
+        return doubles;
     }
     /**
      * Executes the given commandset
@@ -337,13 +367,13 @@ public class I2CWorker implements Commandable {
     private synchronized List<Double> doCommand(ExtI2CDevice device, I2CCommand com  ) throws RuntimeIOException{
 
         var result = new ArrayList<Double>();
-        device.probeIt();
+        //device.probeIt()
         device.updateTimestamp();
         int repeat = 0;
 
         if( com != null ){
                 var coms = com.getAll();
-                for( int a=0;a<coms.size();a++){ // Run te steps, one by one (in order)
+                for( int a=0;a<coms.size();a++){ // Run the steps, one by one (in order)
                     var cmd = coms.get(a);
                     byte[] toWrite = cmd.write;
 
@@ -376,8 +406,12 @@ public class I2CWorker implements Commandable {
                                     }
                                     rd-=b.length;
                                     try {
-                                        convertBytesToInt(b, cmd.bits, cmd.isMsbFirst(), cmd.isSigned()).forEach(
-                                                x -> result.add(Tools.roundDouble((double) x, 0)));
+                                        if( cmd.bits>=32 ) {
+                                            result.addAll(convertBytesToDouble(b, cmd.bits, cmd.isMsbFirst(), cmd.isSigned()));
+                                        }else{
+                                            convertBytesToInt(b, cmd.bits, cmd.isMsbFirst(), cmd.isSigned()).forEach(
+                                                    x -> result.add(Tools.roundDouble((double) x, 0)));
+                                        }
                                     }catch(Exception e){
                                         Logger.error("Conversion failed? "+e.getMessage());
                                     }
@@ -389,7 +423,6 @@ public class I2CWorker implements Commandable {
                                 Logger.error("Error trying to read from "+device.getAddr()+": "+e.getMessage());
                                 continue;
                             }
-
                             break;
                         case WRITE:
                             if(debug)
