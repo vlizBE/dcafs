@@ -10,7 +10,7 @@ Note: Version numbering: x.y.z
 ## 1.2.7 (wip)
 - Instead of using S<number> it's now possible to use id's instead. Not that 
 you can't overlap with id's of taskmanagers.
-- Can now uses CTRL+e to send ESC
+- Can now uses ESC key to send ESC value (27)
 
 ## 1.2.6 (18/03/2024)
 - Added scale attribute to a commandset, allows all math operations to be scaled to a given amount of digits.

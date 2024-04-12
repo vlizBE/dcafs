@@ -42,7 +42,7 @@ public class CommandLineInterface {
                 join.add( TelnetCodes.toReadableIAC(data[a++]))
                         .add(TelnetCodes.toReadableIAC(data[a++]))
                         .add(TelnetCodes.toReadableIAC(data[a]));
-            }else if( b == 27){ // Escape codes
+            }else if( b == 27 && data.length>1 ){ // Escape codes
                 a++;
                 Logger.debug("Received: "+ (char)b+ " or " +Integer.toString(b)+" "+Integer.toString(data[a])+Integer.toString(data[a+1]));
                 if( data[a]==91){
@@ -71,10 +71,10 @@ public class CommandLineInterface {
                 }
             }else if( b == '\n'){ //LF
                 writeByte(b); // echo LF
-            }else if( b == '\r' || b==19|| b==5 ) { // CR
+            }else if( b == '\r' || b==19 || b==27 ) { // CR
                 writeByte((byte)13); // echo CR
-                if( b==5 )
-                    insertByte((byte)5);
+                if( b==27 )
+                    insertByte((byte)27);
                 if( b==19 )
                     insertByte((byte)0);
                 int wi = buffer.writerIndex();
