@@ -11,6 +11,8 @@ Note: Version numbering: x.y.z
 - Added scale attribute to a commandset, allows all math operations to be scaled to a given amount of digits.
 - Fixed, 'exit' cmd didn't always work when running on linux
 - i2c:reload, now also checks for devices again
+- Fixed, Valmaps in path scripts weren't detected because it looked for paths node like in settings.xml
+
 ## 1.2.5 (04/12/2023)
 
 - Updated dependencies: netty, json, mssql, sqlite 
