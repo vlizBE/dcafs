@@ -7,11 +7,18 @@ Note: Version numbering: x.y.z
 ### To do/fix
 - back up path for sqlite db etc?
 
-## 1.2.6 (wip)
+## 1.2.7 (wip)
+- Instead of using S<number> it's now possible to use id's instead. Not that 
+you can't overlap with id's of taskmanagers.
+- Can now uses CTRL+e to send ESC
+
+## 1.2.6 (18/03/2024)
 - Added scale attribute to a commandset, allows all math operations to be scaled to a given amount of digits.
 - Fixed, 'exit' cmd didn't always work when running on linux
 - i2c:reload, now also checks for devices again
 - Fixed, Valmaps in path scripts weren't detected because it looked for paths node like in settings.xml
+- Fixed, i2c requests didn't stop when asked
+- Updated dependencies of tinylog, mssql
 
 ## 1.2.5 (04/12/2023)
 
