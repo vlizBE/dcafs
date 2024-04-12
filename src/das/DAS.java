@@ -321,6 +321,7 @@ public class DAS implements Commandable{
             streampool.enableDebug();
         }else{
             streampool.readSettingsFromXML(settingsPath);
+            streampool.getStreamIDs().forEach( id->addCommandable(streampool,id));
         }
     }
     public Optional<Writable> getStreamWritable( String id ){

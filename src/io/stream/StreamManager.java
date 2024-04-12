@@ -34,6 +34,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Stream;
 
 /**
  * The class holds all the information required about a datasource to acquire
@@ -166,6 +167,9 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 			join.add( "S" + (a++) + ":" + id);
 		}
 		return join.toString();
+	}
+	public Stream<String> getStreamIDs(){
+		return streams.values().stream().map(x -> x.id);
 	}
 	/**
 	 * Get a list of all currently active labels
@@ -593,7 +597,17 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 			case "s_","h_" -> doSorH( request);
 			case "store" -> replyToStoreCommand(request,html);
 			case "","stop" -> removeWritable(wr)?"Ok.":"";
-			default -> "Unknown Command";
+			default -> {
+				int a=1;
+				for( String id : streams.keySet() ){
+					if( id.equals(find) ){
+						request[0]="S"+a;
+						yield doSorH(request);
+					}
+					a++;
+				}
+				yield "Unknown Command";
+			}
 		};
 	}
 	/**
