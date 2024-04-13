@@ -51,16 +51,18 @@ public class TimeTools {
      */
     public static String reformatDate(String date, String inputFormat, String outputFormat){
         try{
-            LocalDateTime dt = LocalDateTime.parse(date, DateTimeFormatter.ofPattern(inputFormat).withLocale(Locale.ENGLISH));
-            if (dt != null) {
-                return dt.format( DateTimeFormatter.ofPattern(outputFormat) );
+            if( inputFormat.equals("epochmillis")){
+                Instant instant = Instant.ofEpochMilli(Long.parseLong(date));
+                return DateTimeFormatter.ofPattern(outputFormat).withLocale(Locale.ENGLISH).withZone(ZoneId.of("UTC")).format(instant);
+            }else {
+                LocalDateTime dt = LocalDateTime.parse(date, DateTimeFormatter.ofPattern(inputFormat).withLocale(Locale.ENGLISH));
+                return dt.format(DateTimeFormatter.ofPattern(outputFormat));
             }
         }catch(DateTimeParseException e){
             if( e.getMessage().contains("Unable to obtain LocalDateTime from TemporalAccessor")){
                 try{
                     LocalDate dt = LocalDate.parse(date, DateTimeFormatter.ofPattern(inputFormat).withLocale(Locale.ENGLISH));
-                    if (dt != null)
-                        return dt.format( DateTimeFormatter.ofPattern(outputFormat) );
+                    return dt.format( DateTimeFormatter.ofPattern(outputFormat) );
                 }catch(DateTimeParseException f) {
                     Logger.error(f.getMessage());
                 }

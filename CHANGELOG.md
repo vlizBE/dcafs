@@ -11,6 +11,7 @@ Note: Version numbering: x.y.z
 - Instead of using S<number> it's now possible to use id's instead. Not that 
 you can't overlap with id's of taskmanagers.
 - Can now uses ESC key to send ESC value (27)
+- Editor redate now supports starting from epoch millis when using 'epochmillis' as inputformat.
 
 ## 1.2.6 (18/03/2024)
 - Added scale attribute to a commandset, allows all math operations to be scaled to a given amount of digits.
