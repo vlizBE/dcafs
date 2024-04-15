@@ -192,11 +192,23 @@ public class XMLdigger {
             return def;
 
         if( peeked )
-            return peek==null?def:peek.getTextContent();
+            return peek==null?def:replaceSpecialXML(peek.getTextContent());
 
         var c = last.getTextContent();
-        return c.isEmpty()?def:c;
+        return c.isEmpty()?def:replaceSpecialXML(c);
 
+    }
+
+    /**
+     * You can't use < or > in an xml file, so add hexadecimals
+     * @param input The string to check
+     * @return The altered string if found
+     */
+    private String replaceSpecialXML( String input ){
+        if( !input.contains("{0"))
+            return input;
+        input = input.replace("{0x3C}","<"); // Replace <
+        return input.replace("{0x3E}",">"); // Replace <
     }
     public int value( int def ){
         if( !valid )

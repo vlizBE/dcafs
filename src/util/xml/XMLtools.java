@@ -333,7 +333,19 @@ public class XMLtools {
 	 * @return The requested data or the def value if not found
 	 */
 	public static String getChildStringValueByTag(Element element, String tag, String def) {
-		return getFirstChildByTag(element, tag.toLowerCase()).map(Node::getTextContent).orElse(def);
+		var res =  getFirstChildByTag(element, tag.toLowerCase()).map(Node::getTextContent).orElse(def);
+		return replaceSpecialXML(res);
+	}
+	/**
+	 * You can't use < or > in an xml file, so add hexadecimals
+	 * @param input The string to check
+	 * @return The altered string if found
+	 */
+	public static String replaceSpecialXML( String input ){
+		if( !input.contains("{0"))
+			return input;
+		input = input.replace("{0x3C}","<"); // Replace <
+		return input.replace("{0x3E}",">"); // Replace <
 	}
 	/**
 	 * Get the integer value of a node from the given element with the given name

@@ -167,7 +167,7 @@ public class EditorForward extends AbstractForward{
 
     private boolean processNode( Element edit ){
         String deli = XMLtools.getStringAttribute(edit,"delimiter",delimiter);
-        String content = edit.getTextContent();
+        String content = XMLtools.replaceSpecialXML(edit.getTextContent());
         String from = XMLtools.getStringAttribute(edit,"from",",");
         String error = XMLtools.getStringAttribute(edit,"error","NaN");
         String find = XMLtools.getStringAttribute(edit,"find","");
