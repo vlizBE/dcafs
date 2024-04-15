@@ -51,7 +51,9 @@ public class TimeTools {
      */
     public static String reformatDate(String date, String inputFormat, String outputFormat){
         try{
-            if( inputFormat.equals("epochmillis")){
+            if( inputFormat.equals("epochsec"))
+                date += "000";
+            if( inputFormat.startsWith("epoch")){
                 Instant instant = Instant.ofEpochMilli(Long.parseLong(date));
                 return DateTimeFormatter.ofPattern(outputFormat).withLocale(Locale.ENGLISH).withZone(ZoneId.of("UTC")).format(instant);
             }else {
