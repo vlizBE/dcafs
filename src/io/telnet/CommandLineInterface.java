@@ -75,7 +75,7 @@ public class CommandLineInterface {
                 writeByte((byte)13); // echo CR
                 if( b==27 )
                     insertByte((byte)27);
-                if( b==19 )
+                if( b==19 || b==27)
                     insertByte((byte)0);
                 int wi = buffer.writerIndex();
                 while( buffer.getByte(wi) != 0)
