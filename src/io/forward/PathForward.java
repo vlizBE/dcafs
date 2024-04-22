@@ -129,7 +129,7 @@ public class PathForward {
             Element step = steps.get(a);
 
             if(step.getTagName().equalsIgnoreCase("customsrc")){
-                addCustomSrc( step.getTextContent(),
+                addCustomSrc( XMLtools.replaceSpecialXML(step.getTextContent()),
                               XMLtools.getStringAttribute(step,"interval","1s"),
                               XMLtools.getStringAttribute(step,"type","plain"),
                               XMLtools.getStringAttribute(step,"label",""));
