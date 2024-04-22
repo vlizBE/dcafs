@@ -61,15 +61,19 @@ public class TimeTools {
                 return dt.format(DateTimeFormatter.ofPattern(outputFormat));
             }
         }catch(DateTimeParseException e){
-            if( e.getMessage().contains("Unable to obtain LocalDateTime from TemporalAccessor")){
-                try{
-                    LocalDate dt = LocalDate.parse(date, DateTimeFormatter.ofPattern(inputFormat).withLocale(Locale.ENGLISH));
-                    return dt.format( DateTimeFormatter.ofPattern(outputFormat) );
-                }catch(DateTimeParseException f) {
-                    Logger.error(f.getMessage());
+            try {
+                if (e.getMessage().contains("Unable to obtain LocalDateTime from TemporalAccessor")) {
+                    try {
+                        LocalDate dt = LocalDate.parse(date, DateTimeFormatter.ofPattern(inputFormat).withLocale(Locale.ENGLISH));
+                        return dt.format(DateTimeFormatter.ofPattern(outputFormat));
+                    } catch (DateTimeParseException f) {
+                        Logger.error(f.getMessage());
+                    }
+                } else {
+                    Logger.error(e);
                 }
-            }else{
-                Logger.error(e);
+            }catch( IllegalArgumentException f ){
+                Logger.error(f);
             }
         }
         return "";
@@ -82,8 +86,8 @@ public class TimeTools {
         try {
             LocalTime dt = LocalTime.parse(date, DateTimeFormatter.ofPattern(inputFormat));
             return dt.format(DateTimeFormatter.ofPattern(outputFormat));
-        }catch(DateTimeParseException e){
-            Logger.error("Couldn't parse "+date+" according to "+inputFormat);
+        }catch(DateTimeParseException | IllegalArgumentException e){
+            Logger.error("Couldn't parse "+date+" according to "+inputFormat+ " because "+e.getMessage());
         }
         return "";
     }
