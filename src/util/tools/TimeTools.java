@@ -128,10 +128,20 @@ public class TimeTools {
      * @return If successful it returns the requested date, if not an empty string
      */
     public static String formatNow(String outputFormat) {
-        return LocalDateTime.now().format(DateTimeFormatter.ofPattern(outputFormat).withLocale(Locale.ENGLISH));
+        try{
+            return LocalDateTime.now().format(DateTimeFormatter.ofPattern(outputFormat).withLocale(Locale.ENGLISH));
+        }catch( IllegalArgumentException e){
+            Logger.error(e.getMessage());
+        }
+        return "BAD:"+outputFormat;
     }
     public static String formatUTCNow(String outputFormat) {
-        return LocalDateTime.now(ZoneId.of("UTC")).format(DateTimeFormatter.ofPattern(outputFormat).withLocale(Locale.ENGLISH));
+        try {
+            return LocalDateTime.now(ZoneId.of("UTC")).format(DateTimeFormatter.ofPattern(outputFormat).withLocale(Locale.ENGLISH));
+        }catch( IllegalArgumentException e){
+            Logger.error(e.getMessage());
+        }
+        return "BAD:"+outputFormat;
     }
     /**
      * Gets the current UTC datetime and formats it according to the standard 'long' format yyyy-MM-dd HH:mm:ss.SSS
