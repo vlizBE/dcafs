@@ -7,10 +7,12 @@ Note: Version numbering: x.y.z
 ### To do/fix
 - back up path for sqlite db etc?
 
-## 1.2.7 (wip)
+## 1.2.7 (22/04/2024)
 - Instead of using S<number> it's now possible to use id's instead. Note that you can't overlap with id's of taskmanagers.
 - Can now use ESC key to send ESC value (27)
-- Editor redate now supports starting from epoch millis when using 'epochmillis' as inputformat.
+- Editor redate now supports starting from epoch millis/seconds when using 'epochmillis' or 'epochsec' as inputformat.
+- Can use {0x3C} in xml instead of '<' because this char isn't allowed
+- Can use {0x3E} in xml instead of '<' because this char isn't allowed
 
 ## 1.2.6 (18/03/2024)
 - Added scale attribute to a commandset, allows all math operations to be scaled to a given amount of digits.
