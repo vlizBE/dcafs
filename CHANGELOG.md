@@ -7,6 +7,10 @@ Note: Version numbering: x.y.z
 ### To do/fix
 - back up path for sqlite db etc?
 
+## 1.2.8 (wip)
+- Added {utc:format} as possible fill in value for a task value. This will get replaced with the current utc time
+  according to the format (if valid).
+
 ## 1.2.7 (22/04/2024)
 - Instead of using S<number> it's now possible to use id's instead. Note that you can't overlap with id's of taskmanagers.
 - Can now use ESC key to send ESC value (27)
