@@ -155,6 +155,7 @@ public class EditorForward extends AbstractForward{
         if( !readBasicsFromXml(editor))
             return false;
         delimiter = XMLtools.getStringAttribute(editor,"delimiter",delimiter);
+        delimiter = Tools.getDelimiterBytes(delimiter);
         edits.clear();
         if( XMLtools.hasChildByTag(editor,"edit") ) { // if rules are defined as nodes
             // Process all the types except 'start'
@@ -504,7 +505,7 @@ public class EditorForward extends AbstractForward{
                 }
             }
             if( indexes.length!=inputEles.length && append){
-                StringJoiner rest = new StringJoiner(delimiter,delimiter,"");
+                StringJoiner rest = new StringJoiner(deli,deli,"");
                 for( var a : inputEles){
                     if( a!=null)
                         rest.add(a);
