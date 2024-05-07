@@ -176,6 +176,14 @@ public class Tools {
                              .replace("nextion","\\x7F\\x7F\\x7F");
         return fromEscapedStringToBytes(delimiter);
 	}
+    public static String getDelimiterBytes( String delimiter ){
+        return delimiter.replace("cr","\r")
+                        .replace("\\r","\r")
+                        .replace("lf","\n")
+                        .replace("\\n","\n")
+                        .replace("tab","\t")
+                        .replace("\\t","\t");
+    }
     /**
      * Method to remove the values from the text that aren't in the ascii range
      * 
