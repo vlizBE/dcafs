@@ -190,9 +190,11 @@ public class PathForward {
                 step.setAttribute("id",id+"_"+stepsForward.size());
 
             var src = XMLtools.getStringAttribute(step,"src","");
-            if( stepsForward.isEmpty() && !src.isEmpty())
-                step.setAttribute("src","");
-
+            if( stepsForward.isEmpty() && !src.isEmpty()) {
+                step.setAttribute("src", "");
+            }else if( !src.contains(":") && !src.isEmpty() ){
+                step.setAttribute("src", id+","+src );
+            }
             switch (step.getTagName()) {
                 case "filter" -> {
                     FilterForward ff = new FilterForward(step, dQueue);
@@ -270,7 +272,7 @@ public class PathForward {
     }
     private void addAsTarget( AbstractForward f, String src, boolean notReversed ){
         if( !src.isEmpty() ){
-            var s = getStep(src);
+            var s = getStep(src.replace(id+",","")); // Remove the id
             if( s!= null ) {
                 if( s instanceof FilterForward && src.startsWith("!")){
                     ((FilterForward) s).addReverseTarget(f);
@@ -356,6 +358,29 @@ public class PathForward {
     }
     public ArrayList<Writable> getTargets(){
         return targets;
+    }
+    public void addTarget( Writable wr, String sub ){
+        if( stepsForward == null )
+            return;
+        if( stepsForward.isEmpty() ){ // If no steps are present
+            if (!targets.contains(wr))
+                targets.add(wr);
+        }else{
+            for( var step : stepsForward ){
+                if( step.id.equalsIgnoreCase(sub) ){
+                    step.addTarget(wr);
+                    break;
+                }
+            }
+        }
+
+        if( targets.size()==1 ){
+            if( customs.isEmpty()){
+                dQueue.add( Datagram.system(src).writable(stepsForward.get(0)));
+            }else{
+                customs.forEach(CustomSrc::start);
+            }
+        }
     }
     public void addTarget(Writable wr){
         if( stepsForward == null )

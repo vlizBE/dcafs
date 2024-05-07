@@ -83,10 +83,15 @@ public class ForwardPool implements Commandable {
                 return replyToPathCmd(request[1], wr, html);
             }
             case "path" -> {
-                var p = paths.get(request[1]);
+                var ids=request[1].split(",");
+                var p = paths.get(ids[0]);
                 if (p == null)
                     return "No such path (yet): " + request[1];
-                p.addTarget(wr);
+                if(ids.length == 2){
+                    p.addTarget(wr,ids[1]);
+                }else {
+                    p.addTarget(wr);
+                }
                 return "Request received.";
             }
             // Filter

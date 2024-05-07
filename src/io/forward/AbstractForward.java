@@ -96,7 +96,13 @@ public abstract class AbstractForward implements Writable {
         if( !targets.contains(target)){
             if( !valid ){
                 valid=true;
-                sources.forEach( source -> dQueue.add( Datagram.build( source ).label("system").writable(this) ) );
+                sources.forEach( source -> {
+                    if( source.contains(":")) {
+                        dQueue.add(Datagram.build(source).label("system").writable(this));
+                    }else{
+                        dQueue.add(Datagram.build("path:"+source).label("system").writable(this));
+                    }
+                } );
             }
             targets.add(target);
         }else{
