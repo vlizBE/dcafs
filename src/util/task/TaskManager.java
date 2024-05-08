@@ -11,6 +11,7 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.data.ValTools;
+import util.math.MathUtils;
 import util.task.Task.*;
 import util.taskblocks.CheckBlock;
 import util.tools.FileTools;
@@ -977,7 +978,31 @@ public class TaskManager implements CollectorFuture {
 			to = Tools.getMAC( line.substring(i+5,i+end) );
 			line = line.replace(line.substring(i,i+end+1),to);
 		}
+		// Check for rtvals
 		line = ValTools.parseRTline(line,"",rtvals);
+
+		i = line.indexOf("{mint:");
+		if( i !=-1 ){
+			int end = line.substring(i).indexOf("}");
+			var cal = line.substring(i+6,i+end);
+			var res = MathUtils.simpleCalculation(cal,0,false);
+			to = String.valueOf((int)Math.rint(res));
+			line = line.replace(line.substring(i,i+end+1),to);
+		}
+		i = line.indexOf("{math:");
+		if( i !=-1 ){
+			int end = line.substring(i).indexOf("}");
+			var cal = line.substring(i+6,i+end);
+			to = String.valueOf(MathUtils.simpleCalculation(cal,0,false));
+			line = line.replace(line.substring(i,i+end+1),to);
+		}
+		i = line.indexOf("{utc:");
+		if( i!=-1 ){
+			int end = line.substring(i).indexOf("}");
+			var format = line.substring(i+5,i+end);
+			to = TimeTools.formatUTCNow(format);
+			line = line.replace(line.substring(i,i+end+1),to);
+		}
     	line = line.replace("[EOL]", "\r\n");
     	return line;
     }
