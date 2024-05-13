@@ -101,11 +101,13 @@ public class CommandLineInterface {
                     writeByte((byte)127);// do backspace
                     buffer.setByte(buffer.writerIndex(),0x00); // delete current value in buffer
                 }
-            }else if( b == 127){ // Backspace
+            }else if( b == 127 || b == 8){ // Backspace
                 if( buffer.getByte(buffer.writerIndex())!=0x00){
                     shiftLeft();
                 }else{
-                    writeByte((byte)127);
+                    writeByte((byte)8);
+                    writeByte((byte)' ');
+                    writeByte((byte)8);
                     buffer.setByte(buffer.writerIndex()-1,0x00);
                     buffer.setIndex( buffer.readerIndex(),buffer.writerIndex()-1);
                 }
