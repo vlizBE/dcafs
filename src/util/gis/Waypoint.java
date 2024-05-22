@@ -3,13 +3,11 @@ package util.gis;
 import io.telnet.TelnetCodes;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.tinylog.Logger;
-import util.math.MathUtils;
 import util.tools.FileTools;
 import util.tools.TimeTools;
 import util.tools.Tools;
 
 import java.nio.file.Path;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -17,7 +15,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 
 public class Waypoint implements Comparable<Waypoint>{
 	
@@ -64,10 +61,11 @@ public class Waypoint implements Comparable<Waypoint>{
 		this.range=range;
 		return this;
 	}
-	public boolean hasTracelCmd(){
-		for( var travel: travels )
-			if( !travel.cmds.isEmpty())
+	public boolean hasTravelCmd(){
+		for( var travel: travels ) {
+			if ( travel.cmds!=null && !travel.cmds.isEmpty())
 				return true;
+		}
 		return false;
 	}
 	public STATE currentState( OffsetDateTime when, double lat, double lon ){

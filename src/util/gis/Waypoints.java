@@ -55,7 +55,7 @@ public class Waypoints implements Commandable {
      * @param wp The waypoint to add
      */
     public Waypoint addWaypoint( String id, Waypoint wp ) {
-        if(wp.hasTracelCmd()&&checkTravel==null)
+        if(wp.hasTravelCmd()&&checkTravel==null)
             checkTravel = scheduler.scheduleAtFixedRate(this::checkWaypoints,5, CHECK_INTERVAL, TimeUnit.SECONDS);
         Logger.info("Adding waypoint: "+id);
     	wps.put(id,wp);
@@ -138,7 +138,7 @@ public class Waypoints implements Commandable {
                 Logger.error( "Invalid waypoint in the node");
             }
         }
-        if( wps.values().stream().anyMatch(Waypoint::hasTracelCmd) ) {
+        if( wps.values().stream().anyMatch(Waypoint::hasTravelCmd) ) {
             if( checkTravel == null) // If it doesn't exist yet
                 checkTravel =  scheduler.scheduleAtFixedRate(this::checkWaypoints, 5, CHECK_INTERVAL, TimeUnit.SECONDS);
         }
