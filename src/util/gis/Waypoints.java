@@ -314,7 +314,7 @@ public class Waypoints implements Commandable {
                 wps.put(id, new Waypoint(name));
                 return wps.get(id);
             }
-            Logger.error("No such waypoint "+id+" in list of "+wps.size());
+            Logger.error("No such waypoint "+id+" in list: "+String.join(",", wps.keySet())+".");
             return null;
         }else{
             return wp;
