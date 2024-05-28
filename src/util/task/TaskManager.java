@@ -265,11 +265,14 @@ public class TaskManager implements CollectorFuture {
 						Logger.tag(TINY_TAG).debug("[" + this.id + "] Taskset started " + id);
 						if (ts.getRunType() == RUNTYPE.ONESHOT) {
 							startTasks(ts.getTasks());
+							Logger.tag(TINY_TAG).info("["+this.id+"] Taskset oneshot started: "+id);
 							return "Taskset should be started: " + id;
 						} else if (ts.getRunType() == RUNTYPE.STEP) {
+							Logger.tag(TINY_TAG).info("["+this.id+"] Taskset stepped started: "+id);
 							startTask(ts.getTasks().get(0));
 							return "Started first task of taskset: " + id;
 						} else {
+							Logger.tag(TINY_TAG).info("["+this.id+"] Taskset not started: "+id);
 							return "Didn't start anything...! Runtype=" + ts.getRunType();
 						}
 					}
