@@ -178,7 +178,7 @@ public class IssuePool implements Commandable{
         if( clear ){
             issues.values().forEach( Issue::clear );
         }
-        return (html?"<b>Issues</b><br>":"Issues\r\n")+join+nl+join2;
+        return (html?"<b>Issues</b><br>":"Issues\r\n")+join+nl+nl+join2;
     }
     /**
      * Resets/Clears the issues of which the id starts with the given text
