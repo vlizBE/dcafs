@@ -21,7 +21,7 @@ That is in broad terms what it is capable of.
 * Make sure you have _at least_ java11 installed. If not, [download and install java 17](https://adoptium.net/)
 * Either download the most recent (pre)release [here](https://github.com/vlizBE/dcafs/releases)
   * Unpack to the working folder  
-* Or clone the repo and compile it in an IDE
+* Or clone the repo and build it with maven (mvn install) directly or through IDE.
   * copy the resulting dcafs*.jar and lib folder to a working dir
 
 ## Running it
