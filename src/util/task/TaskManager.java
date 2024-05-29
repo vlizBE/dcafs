@@ -59,7 +59,8 @@ public class TaskManager implements CollectorFuture {
 
 	boolean startOnLoad = true;
 	ArrayList<String> waitForRestore = new ArrayList<>();
-
+	boolean debug=false;
+	
 	/* ****************************** * C O N S T R U C T O R **************************************************/
 
 	public TaskManager(String id, RealtimeValues rtvals, CommandPool commandPool) {
@@ -113,7 +114,9 @@ public class TaskManager implements CollectorFuture {
 	public Path getXMLPath(){
 		return xmlPath;
 	}
-
+	public void setDebug( boolean debug ){
+		this.debug=debug;
+	}
 	/* ************************ * WAYS OF RETRIEVING TASKS ************************************************/
 	/**
 	 * Retrieve a task using its id
@@ -262,7 +265,6 @@ public class TaskManager implements CollectorFuture {
 			if (ts.getTaskCount() != 0) {
 				switch (runCheck(ts.getReqIndex())) {
 					case 1 -> {
-						Logger.tag(TINY_TAG).debug("[" + this.id + "] Taskset started " + id);
 						if (ts.getRunType() == RUNTYPE.ONESHOT) {
 							startTasks(ts.getTasks());
 							Logger.tag(TINY_TAG).info("["+this.id+"] Taskset oneshot started: "+id);
@@ -278,10 +280,12 @@ public class TaskManager implements CollectorFuture {
 					}
 					case 0 -> {
 						Logger.warn("Check failed for " + ts.getID() + " : " + ts.getReqIndex());
+						Logger.tag(TINY_TAG).warn("Check failed for " + ts.getID() + " : " + ts.getReqIndex());
 						return "Check failed for " + ts.getID() + " : " + ts.getReqIndex();
 					}
 					case -1 -> {
 						Logger.error("Error during check for " + ts.getID() + " : " + ts.getReqIndex());
+						Logger.tag(TINY_TAG).error("Error during check for " + ts.getID() + " : " + ts.getReqIndex());
 						return "Check not run for " + ts.getID() + " : " + ts.getReqIndex();
 					}
 					default -> {return "Invalid value";}
@@ -388,7 +392,8 @@ public class TaskManager implements CollectorFuture {
 			Logger.tag(TINY_TAG).error("[" + id + "] Trying to start a task that is still NULL (fe. end of taskset)");
 			return false;
 		}
-		Logger.tag(TINY_TAG).debug("[" + id + "] Trying to start task of type: " + task.triggerType + "(" + task.value + ")");
+		if( debug )
+			Logger.tag(TINY_TAG).info("[" + id + "] Trying to start task of type: " + task.triggerType + "(" + task.value + ")");
 		switch (task.triggerType) {
 			case CLOCK -> {
 				long min = calculateSeconds(task);
@@ -408,8 +413,9 @@ public class TaskManager implements CollectorFuture {
 				if (task.future != null) {
 					task.future.cancel(true);
 				}
-				Logger.tag(TINY_TAG).debug("[" + id + "] Scheduled sending '" + task.value + "' in "
-						+ TimeTools.convertPeriodtoString(task.startDelay, task.unit) + " and need " + (task.reply.isEmpty() ? "no reply" : ("'" + task.reply + "' as reply")));
+				if( debug )
+					Logger.tag(TINY_TAG).info("[" + id + "] Scheduled sending '" + task.value + "' in "
+							+ TimeTools.convertPeriodtoString(task.startDelay, task.unit) + " and need " + (task.reply.isEmpty() ? "no reply" : ("'" + task.reply + "' as reply")));
 				task.future = scheduler.schedule(new DelayedControl(task), task.startDelay, task.unit);
 			}
 			case EXECUTE -> doTask(task);
@@ -459,7 +465,7 @@ public class TaskManager implements CollectorFuture {
 			try {
 				executed = doTask(task);
 			} catch (Exception e) {
-				Logger.tag(TINY_TAG).error("Null pointer in doTask " + e.getMessage());
+				Logger.tag(TINY_TAG).error("[" + id + "] Null pointer in doTask " + e.getMessage());
 				return;
 			}
 
@@ -581,9 +587,10 @@ public class TaskManager implements CollectorFuture {
 				// Logger.tag(TINY_TAG).info("Trigger for while fired and ok")
 				return FAILREASON.NONE;
 			}
-			if (task.triggerType != TRIGGERTYPE.INTERVAL)
-				Logger.tag(TINY_TAG).debug("[" + id + "] Requirements met, executing task with " + task.value);
-
+			if (task.triggerType != TRIGGERTYPE.INTERVAL) {
+				if(debug)
+					Logger.tag(TINY_TAG).info("[" + id + "] Requirements met, executing task with " + task.value);
+			}
 			String response = "";
 			String header = "DCAFS Message"; // Standard email header, might get overriden
 			String fill = task.value; // The value of the task might need adjustments
@@ -780,7 +787,8 @@ public class TaskManager implements CollectorFuture {
 						if( task.triggerType != TRIGGERTYPE.INTERVAL){
 							if( response.endsWith("\r\n") )
 								response = response.substring(0,response.length()-2);
-							Logger.tag(TINY_TAG).debug("["+ id +"] " + response );
+							if( debug )
+								Logger.tag(TINY_TAG).info("["+ id +"] " + response );
 						}
 						break;	
 				}
@@ -820,7 +828,8 @@ public class TaskManager implements CollectorFuture {
 		}
 		if( task.value.startsWith("taskset:") || task.value.startsWith("task:")) {
 			String shortName = task.value.split(":")[1];
-			Logger.tag(TINY_TAG).debug( "["+ id +"] "+shortName+" -> "+executed+"\r\n");
+			if( debug )
+				Logger.tag(TINY_TAG).info( "["+ id +"] "+shortName+" -> "+executed+"\r\n");
 		}
 		
 		if( task.skipExecutions > 0)
@@ -1222,14 +1231,14 @@ public class TaskManager implements CollectorFuture {
 
 		switch (parts[0]) {
 			case "?" -> {
-				StringJoiner join = new StringJoiner("\r\n");
-				join.add(green + "reload" + reg + " -> Reloads this TaskManager");
-				join.add(green + "forcereload " + reg + "-> Reloads this TaskManager while ignoring interruptable");
-				join.add(green + "listtasks/tasks " + reg + "-> Returns a listing of all the loaded tasks");
-				join.add(green + "listsets/sets " + reg + "-> Returns a listing of all the loaded sets");
-				join.add(green + "stop " + reg + "-> Stop all running task(set)s");
-				join.add(green + "run,x " + reg + "-> Run taskset with the id x");
+				StringJoiner join = getStringJoiner(green, reg);
 				return join.toString();
+			}
+			case "debug" -> {
+				if( parts.length==1)
+					return "Not enough arguments";
+				debug = Tools.parseBool(parts[1],false);
+				return "Debug set to "+debug;
 			}
 			case "reload" -> {
 				return reloadTasks() ? "Reloaded tasks..." : "Reload Failed";
@@ -1263,6 +1272,18 @@ public class TaskManager implements CollectorFuture {
 			}
 		}
 	}
+
+	private static StringJoiner getStringJoiner(String green, String reg) {
+		StringJoiner join = new StringJoiner("\r\n");
+		join.add(green + "reload" + reg + " -> Reloads this TaskManager");
+		join.add(green + "forcereload " + reg + "-> Reloads this TaskManager while ignoring interruptable");
+		join.add(green + "listtasks/tasks " + reg + "-> Returns a listing of all the loaded tasks");
+		join.add(green + "listsets/sets " + reg + "-> Returns a listing of all the loaded sets");
+		join.add(green + "stop " + reg + "-> Stop all running task(set)s");
+		join.add(green + "run,x " + reg + "-> Run taskset with the id x");
+		return join;
+	}
+
 	/* ******************************************************************************************************* */
 	public String getLastError(){
 		return lastError;
