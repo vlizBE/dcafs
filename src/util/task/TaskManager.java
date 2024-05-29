@@ -1236,15 +1236,15 @@ public class TaskManager implements CollectorFuture {
 			}
 			case "debug" -> {
 				if( parts.length==1)
-					return "Not enough arguments";
+					return "Debug for "+id+" is "+debug;
 				debug = Tools.parseBool(parts[1],false);
-				return "Debug set to "+debug;
+				return "Debug for "+id+" set to "+debug;
 			}
 			case "reload" -> {
-				return reloadTasks() ? "Reloaded tasks..." : "Reload Failed";
+				return reloadTasks() ? "Reloaded tasks of "+id : "Reload Failed";
 			}
 			case "forcereload" -> {
-				return forceReloadTasks() ? "Reloaded tasks" : "Reload failed";
+				return forceReloadTasks() ? "Reloaded tasks of "+id : "Reload failed";
 			}
 			case "listtasks", "tasks" -> {
 				return getTaskListing(html ? "<br>" : "\r\n");
