@@ -7,9 +7,16 @@ Note: Version numbering: x.y.z
 ### To do/fix
 - back up path for sqlite db etc?
 
-## 1.2.8 (wip)
+## 1.2.9 (wip)
+- Some terminals use 0x08 for backspace instead of 0x7F, and don't support 0x7F to backspace. So
+replaced it with 0x08-0x20-0x08 which mimics it.
+
+## 1.2.8 (13/05/24)
 - Added {utc:format} as possible fill in value for a task value. This will get replaced with the current utc time
   according to the format (if valid).
+- Fixed, escaped strings worked fine as delimiter but not when putting stuff together with resplit etc.
+- Fixed, steps in a path that relied on a certain previous step couldn't be started if stopped.
+- Updated dependencies: Netty,postgresql,apache commons.
 
 ## 1.2.7 (22/04/2024)
 - Instead of using S<number> it's now possible to use id's instead. Note that you can't overlap with id's of taskmanagers.
