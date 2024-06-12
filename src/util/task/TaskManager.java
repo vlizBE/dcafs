@@ -1231,8 +1231,7 @@ public class TaskManager implements CollectorFuture {
 
 		switch (parts[0]) {
 			case "?" -> {
-				StringJoiner join = getStringJoiner(green, reg);
-				return join.toString();
+				return getCmdInfo(green, reg).toString();
 			}
 			case "debug" -> {
 				if( parts.length==1)
@@ -1273,7 +1272,7 @@ public class TaskManager implements CollectorFuture {
 		}
 	}
 
-	private static StringJoiner getStringJoiner(String green, String reg) {
+	private static StringJoiner getCmdInfo(String green, String reg) {
 		StringJoiner join = new StringJoiner("\r\n");
 		join.add(green + "reload" + reg + " -> Reloads this TaskManager");
 		join.add(green + "forcereload " + reg + "-> Reloads this TaskManager while ignoring interruptable");
