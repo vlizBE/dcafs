@@ -201,8 +201,8 @@ public class CommandPool {
 				result = cmdOpt.get().replyToCommand(split, wr, html);
 				if( result == null){
 					Logger.error("Got a null as response to "+question);
-				}else if( result.startsWith(UNKNOWN_CMD) ) {
-					Logger.warn("Found "+find+" but corresponding cmd to do: " + question);
+				}else if( result.toLowerCase().startsWith(UNKNOWN_CMD) ) {
+					Logger.warn("Found "+find+" but no corresponding cmd to do: " + question);
 				}
 			}else{
 				String res;
@@ -216,7 +216,7 @@ public class CommandPool {
 				}
 				if (!res.startsWith("No such") && !res.startsWith("Not "))
 					result = res;
-				if( result.startsWith(UNKNOWN_CMD) ) {
+				if( result.toLowerCase().startsWith(UNKNOWN_CMD) ) {
 					Logger.warn("Not defined:" + question + " because no method named " + find + ".");
 				}
 			}
