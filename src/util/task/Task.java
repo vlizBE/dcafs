@@ -521,8 +521,8 @@ public class Task implements Comparable<Task>{
 			case FILE -> "Writing '" + value + "' in " + outputFile + suffix;
 			case SMS -> "SMS " + value + " to " + outputRef + suffix;
 			case LOG -> "Logging: '" + value + "' to " + outputRef + suffix;
-			case MANAGER -> "Executing manager command: '" + value + "'  " + suffix;
-			case MQTT -> "Executing mqtt command: '" + value + "'  " + suffix;
+			case MANAGER -> "Executing manager command: '" + value + "' " + suffix;
+			case MQTT -> "Executing mqtt command: '" + value + "' " + suffix;
 			case I2C -> "Sending " + value + " to I2C device " + suffix;
 			case TELNET -> "Sending " + value + " to telnet sessions at level " + outputRef + suffix;
 			default -> "Executing '" + value + "'" + suffix;
