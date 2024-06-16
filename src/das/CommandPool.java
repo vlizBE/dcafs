@@ -55,6 +55,8 @@ public class CommandPool {
 			if( !stopCommandable.contains(cmdbl))
 				stopCommandable.add(cmdbl);
 		}else{
+			if( commandables.get(id)!=null)
+				Logger.error("Overwriting commandable with id "+id+", taskmanager name match?");
 			commandables.put(id,cmdbl);
 		}
 	}
