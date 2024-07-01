@@ -318,7 +318,6 @@ public class MathForward extends AbstractForward {
         if( badDataCount==1 && count) { // only need to do this the first time
             if(label.startsWith("generic"))
                 dQueue.add(Datagram.build("corrupt").label(label).writable(this));
-            targets.stream().filter( t -> t.getID().startsWith("editor")).forEach( t -> t.writeLine("corrupt:1"));
         }
         if( badDataCount < 6) {
             if( !error.isEmpty())
