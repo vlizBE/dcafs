@@ -11,6 +11,7 @@ Note: Version numbering: x.y.z
 - Some terminals use 0x08 for backspace instead of 0x7F, and don't support 0x7F to backspace. So
 replaced it with 0x08-0x20-0x08 which mimics it.
 - Fixed, editor didn't stop if a step failed but instead ignored it.
+- Math, send corrupt to targets on failure, no longer do this.
 
 ## 1.2.8 (13/05/24)
 - Added {utc:format} as possible fill in value for a task value. This will get replaced with the current utc time
