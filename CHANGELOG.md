@@ -12,6 +12,7 @@ Note: Version numbering: x.y.z
 replaced it with 0x08-0x20-0x08 which mimics it.
 - Fixed, editor didn't stop if a step failed but instead ignored it.
 - Math, send corrupt to targets on failure, no longer do this.
+- Filter, added minitems, maxitems and itemscount rule to filter on amount of items after split.
 
 ## 1.2.8 (13/05/24)
 - Added {utc:format} as possible fill in value for a task value. This will get replaced with the current utc time
@@ -44,7 +45,7 @@ replaced it with 0x08-0x20-0x08 which mimics it.
 
 ## 1.2.4 (04/06/23)
 - When reading a double attribute that uses , instead of . this wasn't recognized
-- More feedback for seasun
+- More feedback for sea&sun
 - Cmds can be added to a path with <cmd> node
 - Fixed, filecollector didn't add header to new file if the parent folder exists
 
