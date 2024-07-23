@@ -231,6 +231,9 @@ public class FilterForward extends AbstractForward {
             case "nmea" -> addNMEAcheck(Tools.parseBool(value, true));
             case "regex" -> addRegex(value);
             case "math" -> addCheckBlock(delimiter, value);
+            case "minitems" -> addMinItems( delimiter, Tools.parseInt(value, -1));
+            case "maxitems" -> addMaxItems( delimiter, Tools.parseInt(value, -1));
+            case "items" -> addItemCount( delimiter, Tools.parseInt(value, -1));
             default -> {
                 Logger.error(id + " -> Unknown type chosen " + type);
                 return -1;
@@ -265,6 +268,12 @@ public class FilterForward extends AbstractForward {
             .add("    fe. <filter type='regex'>\\s[a,A]</filter> --> The data must contain an empty character followed by a in any case");
         join.add("math -> Checks a mathematical comparison")
             .add("    fe. <filter type='math' delimiter=','>i1 below 2500 and i1 above 10</filter>" );
+        join.add("minitems -> Minimum amount of items after a split on delimiter")
+                .add("    fe. <filter type='minitems' delimiter=','>8</filter>" );
+        join.add("maxitems -> Maximum amount of items after a split on delimiter")
+                .add("    fe. <filter type='maxitems' delimiter=','>8</filter>" );
+        join.add("itemcount -> Amount of items after a split on delimiter")
+                .add("    fe. <filter type='itemcount' delimiter=','>8</filter>" );
         return join.toString();
     }
     /**
@@ -331,6 +340,9 @@ public class FilterForward extends AbstractForward {
     }
     public void addMinimumLength( int length ){ rules.add( p -> p.length() >= length); }
     public void addMaximumLength( int length ){ rules.add( p -> p.length() <= length); }
+    public void addMinItems( String delimiter, int cnt ){ rules.add( p -> p.split(delimiter).length>=cnt); }
+    public void addMaxItems( String delimiter, int cnt ){ rules.add( p -> p.split(delimiter).length<=cnt); }
+    public void addItemCount( String delimiter, int cnt ){ rules.add( p -> p.split(delimiter).length==cnt); }
 
     public void addNMEAcheck( boolean ok ){ rules.add( p -> (/*p.startsWith("$")&&*/MathUtils.doNMEAChecksum(p))==ok ); }
     /* Complicated ones? */
