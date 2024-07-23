@@ -185,13 +185,13 @@ public class Generic {
      * @param rtvals The RealtimeValues implementation to add the data to
      * @return an array with the data
      */
-    public Object[] apply(String line, Double[] doubles, RealtimeValues rtvals, QueryWriting queryWriting, MqttWriting mqtt){
+    public Optional<Object[]> apply(String line, Double[] doubles, RealtimeValues rtvals, QueryWriting queryWriting, MqttWriting mqtt){
         uses++;
 
         if( line.equals("corrupt")){
             Logger.error(id+"(gen) -> Received the corrupt command");
             entries.forEach( e->e.reset(rtvals));
-            return new Object[1];
+            return Optional.empty();
         }
 
         String[] split;
@@ -205,7 +205,7 @@ public class Generic {
 
         if( split.length <= maxIndex){
             Logger.warn("Generic '"+id+"' can't be applied, requires index ("+maxIndex+") higher than available elements ("+split.length+") -> "+line);
-            return new Object[0];
+            return Optional.empty();
         }
         if( macroIndex != -1 ){
             macro = split[macroIndex];
@@ -221,7 +221,6 @@ public class Generic {
             
             if( ref.contains("@macro") ) // If the ref contains @macro, replace it with the macro
                 ref = ref.replace("@macro", macro);
-
 
             try{
                //
@@ -330,9 +329,10 @@ public class Generic {
                     mqtt.sendToBroker(mqttID, entry.mqttDevice,ref,(double)data[a]);
             }catch( ArrayIndexOutOfBoundsException l ){
                 Logger.error("Invalid index given to process "+id+" index:"+entry.index);
+                return Optional.empty();
             }            
         }
-        return data;
+        return Optional.of(data);
     }
     public String getCommonGroups(){
         StringJoiner join = new StringJoiner(",");

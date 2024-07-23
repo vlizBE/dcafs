@@ -529,11 +529,11 @@ public class LabelWorker implements Runnable, Commandable {
 				generics.stream().forEach(
 						gen -> {
 							if ( mes.startsWith(gen.getStartsWith()) ) {
-								Object[] data = gen.apply( mes, doubles, rtvals, queryWriting,mqtt );
-								if (!gen.getTable().isEmpty() && gen.writesInDB()) {
+								var dataOpt = gen.apply( mes, doubles, rtvals, queryWriting,mqtt );
+								if (dataOpt.isPresent() && gen.writesInDB()) {
 									if (gen.isTableMatch()) {
 										for( String id : gen.getDBID() )
-											queryWriting.addDirectInsert( id, gen.getTable(), data);
+											queryWriting.addDirectInsert( id, gen.getTable(), dataOpt.get());
 									} else {
 										for( String id : gen.getDBID() ){
 											if (!queryWriting.buildInsert(id, gen.getTable(), gen.macro)) {
