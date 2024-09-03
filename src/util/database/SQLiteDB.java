@@ -175,7 +175,7 @@ public class SQLiteDB extends SQLDB{
             Logger.error(e);
         }     
         for( SqlTable table : tables.values() ){
-            if( table.isReadFromDB() ){// Don't overwrite existing info
+            if( !table.isReadFromDB() ){// Don't overwrite existing info
                 Logger.debug( getID() + " -> The table "+table.getName()+" has already been setup, not adding the columns");
                 continue;
             }
