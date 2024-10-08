@@ -535,10 +535,14 @@ public class LabelWorker implements Runnable, Commandable {
 										for( String id : gen.getDBID() )
 											queryWriting.addDirectInsert( id, gen.getTable(), dataOpt.get());
 									} else {
-										for( String id : gen.getDBID() ){
-											if (!queryWriting.buildInsert(id, gen.getTable(), gen.macro)) {
-												Logger.error("Failed to write record for " + gen.getTable()+ " in "+id);
+										if( gen.getDBID()!=null) {
+											for (String id : gen.getDBID()) {
+												if (!queryWriting.buildInsert(id, gen.getTable(), gen.macro)) {
+													Logger.error("Failed to write record for " + gen.getTable() + " in " + id);
+												}
 											}
+										}else{
+											Logger.warn("DBID is null for processing "+mes);
 										}
 									}
 								}
