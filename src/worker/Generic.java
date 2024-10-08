@@ -34,7 +34,7 @@ public class Generic {
     private String table="";
     private String startsWith="";
     private String mqttID="";
-    private boolean dbWrite = true;
+    private boolean dbWrite = false;
     private int maxIndex=-1;
     private boolean tableMatch=false;
 
@@ -143,6 +143,7 @@ public class Generic {
     public Generic storeInDB( String id, String table ){
         dbid=id.split(",");
         this.table=table;
+        dbWrite=true;
         return this;
     }
 
