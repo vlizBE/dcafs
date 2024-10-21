@@ -96,7 +96,7 @@
 	  <dependency>
 		  <groupId>org.json</groupId>
 		  <artifactId>json</artifactId>
-		  <version>20240205</version>
+		  <version>20240303</version>
 	  </dependency>
 	<!-- https://mvnrepository.com/artifact/com.sun.mail/javax.mail -->
 	  <dependency>
@@ -113,27 +113,27 @@
 	  <dependency>
 		  <groupId>io.netty</groupId>
 		  <artifactId>netty-common</artifactId>
-		  <version>4.1.111.Final</version>
+		  <version>4.1.114.Final</version>
 	  </dependency>
 	  <dependency>
 		  <groupId>io.netty</groupId>
 		  <artifactId>netty-buffer</artifactId>
-		  <version>4.1.111.Final</version>
+		  <version>4.1.114.Final</version>
 	  </dependency>
 	  <dependency>
 		  <groupId>io.netty</groupId>
 		  <artifactId>netty-transport</artifactId>
-		  <version>4.1.111.Final</version>
+		  <version>4.1.114.Final</version>
 	  </dependency>
 	  <dependency>
 		  <groupId>io.netty</groupId>
 		  <artifactId>netty-handler</artifactId>
-		  <version>4.1.111.Final</version>
+		  <version>4.1.114.Final</version>
 	  </dependency>
 	  <dependency>
 		  <groupId>io.netty</groupId>
 		  <artifactId>netty-codec</artifactId>
-		  <version>4.1.111.Final</version>
+		  <version>4.1.114.Final</version>
 	  </dependency>
 	  <!-- https://mvnrepository.com/artifact/com.microsoft.sqlserver/mssql-jdbc -->
 	  <dependency>
@@ -152,13 +152,13 @@
 	<dependency>
 		<groupId>com.fazecast</groupId>
 		<artifactId>jSerialComm</artifactId>
-		<version>2.10.5</version>
+		<version>2.11.0</version>
 	</dependency>
 	  <!-- https://mvnrepository.com/artifact/com.diozero/diozero-core -->
 	  <dependency>
 		  <groupId>com.diozero</groupId>
 		  <artifactId>diozero-core</artifactId>
-		  <version>1.4.0</version>
+		  <version>1.4.1</version>
 	  </dependency>
 	<!-- https://mvnrepository.com/artifact/org.tinylog/tinylog-api -->
 	<dependency>
@@ -170,7 +170,7 @@
 	<dependency>
 		<groupId>org.apache.commons</groupId>
 		<artifactId>commons-lang3</artifactId>
-		<version>3.14.0</version>
+		<version>3.17.0</version>
 	</dependency>
 	<!-- https://mvnrepository.com/artifact/org.mariadb.jdbc/mariadb-java-client -->
 	<dependency>
