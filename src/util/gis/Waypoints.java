@@ -57,12 +57,12 @@ public class Waypoints implements Commandable {
     public Waypoint addWaypoint( String id, Waypoint wp ) {
         if(wp.hasTravelCmd()&&checkTravel==null)
             checkTravel = scheduler.scheduleAtFixedRate(this::checkWaypoints,5, CHECK_INTERVAL, TimeUnit.SECONDS);
-        Logger.info("Adding waypoint: "+id);
-    	wps.put(id,wp);
+        Logger.info("Adding waypoint: <"+id+">");
+    	wps.put(id.trim(),wp);
     	return wp;
     }
     public void addWaypoint( String id, double lat, double lon, double range) {
-        wps.put( id, Waypoint.build(id).lat(lat).lon(lon).range(range) );
+        wps.put( id.trim(), Waypoint.build(id).lat(lat).lon(lon).range(range) );
     }
     public Collection<Waypoint> items(){
         return wps.values();
@@ -311,7 +311,7 @@ public class Waypoints implements Commandable {
         var wp = wps.get(id);
         if (wp == null){
             if (createIfNew) {
-                wps.put(id, new Waypoint(name));
+                wps.put(id, new Waypoint(name.trim()));
                 return wps.get(id);
             }
             Logger.error("No such waypoint "+id+" in list: "+String.join(",", wps.keySet())+".");
