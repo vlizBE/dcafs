@@ -7,7 +7,12 @@ Note: Version numbering: x.y.z
 ### To do/fix
 - back up path for sqlite db etc?
 
-## 1.2.10 (wip)
+## 1.2.11 (wip)
+
+## 1.2.10 (18/11/2024)
+- Waypoint name/id are now trimmed before stored.
+- Dep updated
+
 ## 1.2.9 (21/10/24)
 - Some terminals use 0x08 for backspace instead of 0x7F, and don't support 0x7F to backspace. So
 replaced it with 0x08-0x20-0x08 which mimics it.
