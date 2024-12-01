@@ -307,11 +307,11 @@ public class SQLDB extends Database{
                         if( tableType.equalsIgnoreCase("base table") && !tableName.startsWith("sym_") ){ // ignore symmetricsDS tables and don't overwrite
                             SqlTable table = tables.get(tableName); // look for it in the stored tables
                             if( table == null ){ // if not found, it's new
-                                table = new SqlTable(tableName); // so create it
+                                table = new SqlTable(tableName);
                                 tables.put(tableName, table); //and add it to the hashmap
+                                table.toggleServer();
+                                table.flagAsReadFromDB(); // either way, it's already present in the database
                             }
-                            table.toggleServer();
-                            table.flagAsReadFromDB(); // either way, it's already present in the database
                             Logger.debug(id+" (db) -> Found: "+tableName+" -> "+tableType);
                         }                        
                     }
