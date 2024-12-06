@@ -154,14 +154,39 @@ public class SQLiteDB extends SQLDB{
         if( clear )
             tables.clear();
 
+        try( Statement stmt = con.createStatement() ){
+            ResultSet rs = stmt.executeQuery(GET_SQLITE_TABLES);
+            if (rs != null) {
+                try {
+                    while (rs.next()) {
+                        String tableName = rs.getString(1);
+                        if( tables.get(tableName)==null) {//don't overwrite
+                            var t= new SqlTable(tableName);
+                            tables.put(tableName, t);
+                        }
+                        tables.get(tableName).flagAsReadFromDB();
+                    }
+                } catch (SQLException e) {
+                    Logger.error( getID() + " -> Error during table read: "+e.getErrorCode());
+                    return false;
+                }
+            }
+        }catch( SQLException e ){
+            Logger.error(e);
+        }
         for( SqlTable table : tables.values() ){
+            if( table.isReadFromDB() ){// Don't overwrite existing info
+                Logger.debug( getID() + " -> The table "+table.getName()+" has already been setup, not adding the columns");
+                continue;
+            }
+
             try( Statement stmt = con.createStatement() ){
                 ResultSet rs = stmt.executeQuery("PRAGMA table_info("+table.getName()+");");
                 if (rs != null) {
-                    try {                                        
-                        while (rs.next()) {                        
-                           String column = rs.getString(rs.findColumn("name"));
-                           String type = rs.getString(rs.findColumn("type"));
+                    try {
+                        while (rs.next()) {
+                            String column = rs.getString(rs.findColumn("name"));
+                            String type = rs.getString(rs.findColumn("type"));
 
                             switch (type.toLowerCase()) {
                                 case "integer" -> table.addInteger(column);
@@ -181,38 +206,19 @@ public class SQLiteDB extends SQLDB{
                             }catch (SQLException e) {
                                 Logger.error(e);
                                 return false;
-                            } 
+                            }
                         }
                     } catch (SQLException e) {
                         Logger.error( getID() + " -> Error during table read: "+e.getErrorCode());
                         return false;
-                    }  
+                    }
                 }
             }catch( SQLException e ){
                 Logger.error(e);
                 return false;
-            } 
-        }
-        try( Statement stmt = con.createStatement() ){
-            ResultSet rs = stmt.executeQuery(GET_SQLITE_TABLES);
-            if (rs != null) {
-                try {
-                    while (rs.next()) {
-                        String tableName = rs.getString(1);
-                        if( tables.get(tableName)==null) {//don't overwrite
-                            tables.put( tableName, new SqlTable(tableName) );
-                            tables.get(tableName).flagAsReadFromDB();
-                        }
-                    }
-                } catch (SQLException e) {
-                    Logger.error( getID() + " -> Error during table read: "+e.getErrorCode());
-                    return false;
-                }
             }
-        }catch( SQLException e ){
-            Logger.error(e);
         }
-        return true;  
+        return true;
     }
     /**
      * Read the rollover and table settings from the given xml element
