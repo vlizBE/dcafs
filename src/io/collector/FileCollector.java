@@ -17,7 +17,6 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.nio.file.attribute.PosixFilePermission;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -25,7 +24,6 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.stream.Stream;
 
 public class FileCollector extends AbstractCollector{
 
@@ -57,6 +55,10 @@ public class FileCollector extends AbstractCollector{
 
     /* Triggers */
     enum TRIGGERS {IDLE, ROLLOVER, MAXSIZE }
+
+    /* drop data */
+    private int skipCount=-1;
+    private int skipped=0;
 
     ArrayList<TriggeredCommand> trigCmds = new ArrayList<>();
 
@@ -142,6 +144,8 @@ public class FileCollector extends AbstractCollector{
 
         Logger.info("Trying to alter permissions");
         FileTools.setAllPermissions(getPath().getParent());
+        /* Drop interval */
+        skipCount = XMLtools.getIntAttribute(fcEle,"skipcount",-1);
 
         /* Headers */
         headers.clear();
@@ -177,6 +181,7 @@ public class FileCollector extends AbstractCollector{
                 setMaxFileSize(size.toLowerCase(),zip);
             }
         }
+
         /* Triggered */
         for( var ele : XMLtools.getChildElements(fcEle,"cmd") ){
             String cmd = ele.getTextContent();
@@ -346,6 +351,15 @@ public class FileCollector extends AbstractCollector{
 
     @Override
     protected synchronized boolean addData(String data) {
+
+        if( skipCount != -1 ){
+            if(skipped != skipCount) {
+                skipped++;
+                return true;
+            }
+            skipped=0; // Reset the count
+        }
+
         if( dataBuffer.isEmpty())
             firstData=Instant.now().getEpochSecond();
 
