@@ -397,7 +397,11 @@ public class PathForward {
 
         if( targets.size()==1 ){
             if( customs.isEmpty()){
-                dQueue.add( Datagram.system(src).writable(stepsForward.get(0)));
+                if( stepsForward.isEmpty() ) {
+                    Logger.error("pf -> Tried to have "+id+ " request first step, but doesn't exist.");
+                }else{
+                    dQueue.add(Datagram.system(src).writable(stepsForward.get(0)));
+                }
             }else{
                 customs.forEach(CustomSrc::start);
             }
