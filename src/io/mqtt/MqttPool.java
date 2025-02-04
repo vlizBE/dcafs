@@ -3,9 +3,11 @@ package io.mqtt;
 import io.Writable;
 import io.telnet.TelnetCodes;
 import das.Commandable;
+import org.json.XML;
 import util.data.RealtimeValues;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
+import util.xml.XMLdigger;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 import worker.Datagram;
@@ -191,6 +193,7 @@ public class MqttPool implements Commandable, MqttWriting {
                         .add( green+"   mqtt:brokers "+reg+"-> Get a listing of the current registered brokers")
                         .add( green+"   mqtt:reload,brokerid "+reg+"-> Reload the settings for the broker from the xml.")
                         .add( green+"   mqtt:store,brokerid"+reg+" -> Store the current settings of the broker to the xml.")
+                        .add( green+"   mqtt:alter,ip,brokerid,newip -> Change the ip of the broker")
                         .add( green+"   mqtt:?"+reg+" -> Show this message");
                 join.add(cyan+"Subscriptions"+reg)
                         .add( green+"   mqtt:subscribe,brokerid,label,topic "+reg+"-> Subscribe to a topic with given label on given broker")
@@ -239,6 +242,43 @@ public class MqttPool implements Commandable, MqttWriting {
                     return nl+"Settings updated";
                 }else{
                     return "Incorrect amount of cmd: mqtt:store,brokerid";
+                }
+            case "alter":
+                if( cmd.length == 4){
+                    if( mqttWorkers.get(cmd[2]) == null )
+                        return nl + "No such broker: "+cmd[2];
+                    var dig = XMLdigger.goIn(settingsFile,"dcafs");
+                    dig.goDown("mqtt");
+                    dig.goDown("broker","id",cmd[2]);
+                    if( dig.isInvalid() )
+                        return "Can't find the node.";
+
+                    var fabOpt = XMLfab.alterDigger(dig);
+                    if( fabOpt.isEmpty() )
+                        return "Failed to make fab";
+                    var fab = fabOpt.get();
+                    var addr = dig.goDown("address").value("");
+                    var newAdress="";
+                    switch(cmd[1]){
+                        case "ip":
+                            if( addr.isEmpty() )
+                                return "Couldn't find address node";
+                            newAdress = "tcp://"+cmd[3]+addr.substring(addr.indexOf(":"));
+                            fab.alterChild("address", newAdress);
+                            fab.build();
+                            reloadMQTTsettings(cmd[2]);
+                            return "Changed address to "+newAdress+" and reloaded.";
+                        case "port":
+                            if( addr.isEmpty() )
+                                return "Couldn't find address node";
+                            newAdress = addr.substring(addr.indexOf(":"))+":"+cmd[3];
+                            fab.alterChild("address", newAdress);
+                            fab.build();
+                            reloadMQTTsettings(cmd[2]);
+                            return "Changed address to "+newAdress +" and reloaded.";
+                    }
+                }else{
+                    return nl+"Incorrect amount of cmd: mqtt:alter,what,brokerid,newvalue";
                 }
             case "forward":
                 if( cmd.length == 2){
