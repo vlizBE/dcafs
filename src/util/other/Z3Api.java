@@ -31,6 +31,7 @@ public class Z3Api {
     ArrayList<String> overlay=new ArrayList<>();
     int retry=0;
     String ip="192.168.88.10";
+    String channel="2";
     boolean fix;
     RealtimeValues rtvals;
 
@@ -40,6 +41,10 @@ public class Z3Api {
         httpClient = HttpClient.newBuilder()
                 .executor(executorService)
                 .build();
+        if( testConnection() )
+            enableOverlay();
+
+        executorService.scheduleAtFixedRate(this::updateCustomOverlay, 0, 10, TimeUnit.SECONDS);
     }
 
     /**
@@ -76,6 +81,7 @@ public class Z3Api {
         digger.goDown("overlay");
         if( digger.isValid()){
             fontsize=digger.attr("fontsize",42);
+            channel=digger.attr("chn",channel);
             digger.goDown("line");
             while(digger.iterate() ){
                 var l = digger.value("");
@@ -88,7 +94,7 @@ public class Z3Api {
         HashMap<String,String> params = new HashMap<>();
         var p = new Param();
         p.add("action","Overlay");
-        p.add("chn","1");
+        p.add("chn",channel);
         p.add("rgn_idx",String.valueOf(index));
         p.add("source",txt);
         p.add("type","text");
@@ -100,7 +106,7 @@ public class Z3Api {
        // params.put("outline_enable","off");
        // params.put("outline_color","");
        // params.put("outline_stroke","");
-
+        Logger.info("POST: "+p.toString());
         asyncPOST( server, p.toString(),res -> {
             //Logger.info("Overlay => "+res.body());
             connected=true;
@@ -155,10 +161,10 @@ public class Z3Api {
         }
         if(!isConnected()){
             Logger.warn("No overlay updates because no connection to encoder!");
-            retry=30;
+            retry=3;
             return;
         }
-
+        Logger.info("Updating overlay...?");
         int index=1;
         for( int x=0;x<overlay.size();x++ ){
             var line = overlay.get(x);
