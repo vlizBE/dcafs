@@ -12,6 +12,7 @@ import io.mqtt.MqttPool;
 import io.stream.StreamManager;
 import io.forward.ForwardPool;
 import util.gis.Waypoints;
+import util.other.Z3Api;
 import util.tools.FileMonitor;
 import io.stream.tcp.TcpServer;
 import io.telnet.TelnetCodes;
@@ -63,6 +64,7 @@ public class DAS implements Commandable{
     private RealtimeValues rtvals;
     private CommandPool commandPool;
     private Waypoints waypoints; // waypoints
+    private Z3Api z3Api;
 
     /* Managers & Pools */
     private DatabaseManager dbManager;
@@ -225,6 +227,13 @@ public class DAS implements Commandable{
 
         /* TaskManagerPool */
         addTaskManager();
+
+        /* Z3 api */
+        if( XMLdigger.goIn(settingsPath,"dcafs").goDown("z3api").isValid() ) {
+            addZ3Api();
+        }else{
+            Logger.info("No z3api defined in settings.xml");
+        }
         nettyGroup.schedule(this::checkClock,1,TimeUnit.MINUTES);
         bootOK = true;
 
@@ -436,6 +445,11 @@ public class DAS implements Commandable{
         i2cWorker = new I2CWorker(settingsPath, dQueue);
         addCommandable("i2c",i2cWorker);
         addCommandable("stop",i2cWorker);
+    }
+    /* *************************************** Z 3 A P I **************************************************** */
+    public void addZ3Api(){
+        z3Api = new Z3Api(XMLdigger.goIn(settingsPath,"dcafs"),rtvals);
+
     }
     /* ******************************** R E A L T I M E  D A T A  ******************************************* */
     // Note: these are used when dcafs is used as a library
