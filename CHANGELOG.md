@@ -10,6 +10,8 @@ Note: Version numbering: x.y.z
 ## 1.2.11 (wip)
 - fix db bug added in 1.2.9
 - Added 'skipcount' attribute to skip data received for the filecollector. Effectivily reducing the datarate.
+- Added commands to alter mqtt broker ip or port
+- Added Z3 overlay api support
 
 ## 1.2.10 (18/11/2024)
 - Waypoint name/id are now trimmed before stored.
