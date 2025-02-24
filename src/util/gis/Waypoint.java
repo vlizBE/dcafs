@@ -109,7 +109,7 @@ public class Waypoint implements Comparable<Waypoint>{
 		switch( currentState( when , lat, lon ) ){
 			case ENTER:
 			case LEAVE:
-				if( getLastDistance() < 500 && getLastDistance() > 1) // Ignore abnormal movements
+				if( getLastDistance() < 5000 && getLastDistance() > 1) // Ignore abnormal movements
 					return checkTravel();
 				break;
 			case OUTSIDE:
