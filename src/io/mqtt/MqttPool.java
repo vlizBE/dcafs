@@ -248,10 +248,13 @@ public class MqttPool implements Commandable, MqttWriting {
                     if( mqttWorkers.get(cmd[2]) == null )
                         return nl + "No such broker: "+cmd[2];
                     var dig = XMLdigger.goIn(settingsFile,"dcafs");
+                    dig.goDown("settings");
                     dig.goDown("mqtt");
+                    if( dig.isInvalid() )
+                        return "Can't find the broker node.";
                     dig.goDown("broker","id",cmd[2]);
                     if( dig.isInvalid() )
-                        return "Can't find the node.";
+                        return "Can't find the node referring to the broker.";
 
                     var fabOpt = XMLfab.alterDigger(dig);
                     if( fabOpt.isEmpty() )
@@ -263,7 +266,7 @@ public class MqttPool implements Commandable, MqttWriting {
                         case "ip":
                             if( addr.isEmpty() )
                                 return "Couldn't find address node";
-                            newAdress = "tcp://"+cmd[3]+addr.substring(addr.indexOf(":"));
+                            newAdress = "tcp://"+cmd[3]+addr.substring(addr.lastIndexOf(":"));
                             fab.alterChild("address", newAdress);
                             fab.build();
                             reloadMQTTsettings(cmd[2]);
@@ -271,7 +274,7 @@ public class MqttPool implements Commandable, MqttWriting {
                         case "port":
                             if( addr.isEmpty() )
                                 return "Couldn't find address node";
-                            newAdress = addr.substring(addr.indexOf(":"))+":"+cmd[3];
+                            newAdress = addr.substring(addr.lastIndexOf(":"))+":"+cmd[3];
                             fab.alterChild("address", newAdress);
                             fab.build();
                             reloadMQTTsettings(cmd[2]);
@@ -303,11 +306,13 @@ public class MqttPool implements Commandable, MqttWriting {
                 getMqttWorker(cmd[1]).ifPresent( w -> w.addWork(topVal[0],""+val));
                 return "Data send to "+cmd[1];
             default:
-                if( getMqttWorker(cmd[1]).map( x -> {
-                    x.registerWritable(wr);
-                    return true;
-                }).orElse(false) ){
-                    return "Request added";
+                if( cmd.length>=2) {
+                    if (getMqttWorker(cmd[1]).map(x -> {
+                        x.registerWritable(wr);
+                        return true;
+                    }).orElse(false)) {
+                        return "Request added";
+                    }
                 }
                 return UNKNOWN_CMD+" +or id: "+cmd[0];
         }
