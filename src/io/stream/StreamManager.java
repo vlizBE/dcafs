@@ -550,7 +550,10 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 				int delay = retryDelayIncrement*(base.connectionAttempts+1);
 				if( delay > retryDelayMax )
 					delay = retryDelayMax;
-				Logger.error( "Failed to connect to "+base.getID()+", scheduling retry in "+delay+"s. ("+base.connectionAttempts+" attempts)" );				
+
+				if( isNthAttempt(base.connectionAttempts))
+					Logger.error( "Failed to connect to "+base.getID()+", scheduling retry in "+delay+"s. ("+base.connectionAttempts+" attempts)" );
+
 				String device = base.getID().replace(" ","").toLowerCase();
 				if( issues!=null )
 					issues.addIfNewAndStart(device+".conlost", "Connection lost to "+base.getID());
@@ -560,6 +563,23 @@ public class StreamManager implements StreamListener, CollectorFuture, Commandab
 				Logger.error( ex );
 			}
 		}
+	}
+	/**
+	 * Limits action based on event count.
+	 * Returns true if only one digit is non-zero (e.g. ,1,2,3...10,20....100,200)
+	 * @param count The number of attempts,events, etc.
+	 * @return true if only one digit is non-zero
+	 */
+	public static boolean isNthAttempt(int count) {
+		if (count <= 0) {
+			return false;
+		}
+		// Logarithm base 10 gives the number of digits minus one.
+		// Example: log10(123) = 2 → 10^2 = 100
+		// This calculates the closest lower power of 10 to group attempts (10, 100, 1000, ...).
+		// The count is divided by this power, showing the message only on exact multiples.
+		int divisor = (int)Math.pow(10, (int)Math.log10(count));
+		return count % divisor == 0;
 	}
 	/* ************************** * C H E C K I N G   S T R E A M S  ************************************/
 	/**
