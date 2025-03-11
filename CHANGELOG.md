@@ -7,8 +7,12 @@ Note: Version numbering: x.y.z
 ### To do/fix
 - back up path for sqlite db etc?
 
-## 1.2.11 (wip)
-- fix db bug added in 1.2.9
+## 1.2.12 (wip)
+- Fixed mqtt command to alter ip and port
+- Increased distance of waypoint check
+
+## 1.2.11 
+- Fix db bug added in 1.2.9
 - Added 'skipcount' attribute to skip data received for the filecollector. Effectivily reducing the datarate.
 - Added commands to alter mqtt broker ip or port
 - Added Z3 overlay api support
