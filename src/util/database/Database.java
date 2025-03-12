@@ -33,7 +33,7 @@ public abstract class Database{
 
     protected boolean tablesRetrieved = false;
     protected String lastError="";
-
+    protected boolean allowInserts = true;
     /* ************************************************************************************************* */
 
     /**
@@ -58,7 +58,9 @@ public abstract class Database{
         lastError="";
         return l;
     }
-
+    public void setAllowInserts( boolean allow ){
+        allowInserts=allow;
+    }
     /**
      * Read the part of the node that contains the information on records flushing
      * @param set The element that contains the info

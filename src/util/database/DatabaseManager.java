@@ -8,6 +8,7 @@ import util.data.RealtimeValues;
 import org.tinylog.Logger;
 import util.tools.FileTools;
 import util.tools.TimeTools;
+import util.tools.Tools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
 
@@ -420,6 +421,15 @@ public class DatabaseManager implements QueryWriting, Commandable {
                         .add(green+"  dbm:status "+reg+"-> Show the status of all managed database connections")
                         .add(green+"  st "+reg+"-> Show the current status of the databases (among other things)");
                 return join.toString();
+            case "allowinserts":
+                if( cmds.length<3)
+                    return "Not enough arguments, dbm:allowinserts,dbid,true/false";
+                var db = getDatabase(cmds[1]);
+                if( db.isEmpty())
+                    return "No such database "+cmds[1];
+                var bool = Tools.parseBool(cmds[2],true);
+                db.get().setAllowInserts(bool);
+                return "Changed allow inserts into "+cmds[1]+ " to "+bool;
             case "reload":
                 if( cmds.length<2)
                     return "No id given";

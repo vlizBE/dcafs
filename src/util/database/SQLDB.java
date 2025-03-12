@@ -648,6 +648,8 @@ public class SQLDB extends Database{
      * @return -2=No such table, -1=No such statement,0=bad amount of values,1=ok
      */
     public synchronized int addDirectInsert(String table, Object... values) {
+        if( !allowInserts )
+            return 0;
         if( values == null){
             Logger.error(id+" -> Tried to insert a null in "+table);
             return -3;
