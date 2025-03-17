@@ -316,7 +316,6 @@ public class TcpServer implements StreamListener, Commandable {
 		if( !active ) {
 			if(cmds[0].equalsIgnoreCase("start")&&cmds.length==2){
 				if( setServerPort(NumberUtils.toInt(cmds[1],-1)) )
-
 					return "Server started on "+cmds[1];
 				return "Invalid port number given.";
 			}else{

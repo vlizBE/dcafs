@@ -10,6 +10,8 @@ Note: Version numbering: x.y.z
 ## 1.2.12 (wip)
 - Fixed mqtt command to alter ip and port
 - Increased distance of waypoint check
+- Added `dbm:allowinsert,dbid,true/false` to disable or enable logging to database.
+- Added `dbm:rename,sqliteid,newname` to rename the filename of a sqlite database.
 
 ## 1.2.11 
 - Fix db bug added in 1.2.9
