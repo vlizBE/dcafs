@@ -414,7 +414,9 @@ public class DatabaseManager implements QueryWriting, Commandable {
                         .add(green+"  dbm:fetch,id "+reg+"-> Read the tables from the database directly, not overwriting stored ones.")
                         .add(green+"  dbm:store,dbId,tableid "+reg+"-> Trigger a insert for the database and table given")
                         .add("").add(cyan+"Other"+reg)
+                        .add(green+"  dbm:allowinserts,dbid,true/false -> Allow inserts into the given db or not.")
                         .add(green+"  dbm:addserver,id "+reg+"-> Adds a blank database server node to xml")
+                        .add(green+"  dbm:rename,sqliteid "+reg+"-> Change the name of the sqlite db file")
                         .add(green+"  dbm:addrollover,id,count,unit,pattern "+reg+"-> Add rollover to a SQLite database")
                         .add(green+"  dbm:alter,id,param:value "+reg+"-> Alter things like idle, flush and batch (still todo)")
                         .add(green+"  dbm:reload,id "+reg+"-> (Re)loads the database with the given id fe. after changing the xml")
@@ -442,6 +444,18 @@ public class DatabaseManager implements QueryWriting, Commandable {
             case "addserver":
                 DatabaseManager.addBlankServerToXML( XMLfab.withRoot(settingsPath, "databases"), "mysql", cmds.length>=2?cmds[1]:"" );
                 return "Added blank database server node to the settings.xml";
+            case "rename":
+                if( cmds.length<3)
+                    return "Not enough arguments, dbm:rename,sqliteid,newname";
+                var liteOpt = getDatabase(cmds[1]);
+                if( liteOpt.isEmpty())
+                    return "No such database "+cmds[1];
+                var lit = liteOpt.get();
+                if( !(liteOpt.get() instanceof SQLiteDB) )
+                    return "Not an SQLite database";
+                if( ((SQLiteDB) lit).changeFilename(cmds[2]) )
+                    return "Renamed and connected";
+                return "Failed to create new SQLite database";
             case "addmysql":
                 var mysql = SQLDB.asMYSQL(address,dbName,user,pass);
                 mysql.setID(id);

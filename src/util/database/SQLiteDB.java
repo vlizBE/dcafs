@@ -23,7 +23,7 @@ public class SQLiteDB extends SQLDB{
 
     static final String GET_SQLITE_TABLES = "SELECT name FROM sqlite_master WHERE type ='table' AND name NOT LIKE 'sqlite_%';";
    
-    private final Path dbPath;
+    private Path dbPath;
 
     /* Variables related to the rollover */
     private DateTimeFormatter format = null;
@@ -440,6 +440,22 @@ public class SQLiteDB extends SQLDB{
                 rollOverFuture = scheduler.schedule(new DoRollOver(true), next, TimeUnit.MILLISECONDS);
             }
         }
+    }
+    public boolean changeFilename( String newName ){
+        getTables().forEach(SqlTable::clearReadFromDB); // Otherwise they won't get generated
+        disconnect();// then disconnect, this also flushes the queries first
+        Logger.info("Disconnected to connect to new one...");
+
+        if( !newName.endsWith(".sqlite"))
+            newName=newName+".sqlite";
+
+        dbPath = dbPath.getParent().resolve(newName);
+
+        if( !createContent(true).isEmpty() ){
+            Logger.error(id+" -> Failed to create the database");
+            return false;
+        }
+        return true;
     }
     /**
      *

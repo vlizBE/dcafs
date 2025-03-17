@@ -482,6 +482,9 @@ public class SQLDB extends Database{
         if (!hasRecords())
             firstPrepStamp = Instant.now().toEpochMilli();
 
+        if(!allowInserts)
+            return true;
+
         if( getTable(table).isEmpty() ){
             Logger.error(id+"(db) ->  No such table "+table);
             return false;
