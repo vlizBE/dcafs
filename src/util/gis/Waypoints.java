@@ -8,6 +8,7 @@ import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.data.RealtimeValues;
 import util.gis.Waypoint.Travel;
+import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLfab;
 import util.xml.XMLtools;
@@ -39,6 +40,7 @@ public class Waypoints implements Commandable {
     final static int CHECK_INTERVAL = 20;
     BlockingQueue<Datagram> dQueue;
     ScheduledFuture<?> checkTravel;
+    long lastCheck=0;
 
     /* *************************** C O N S T R U C T O R *********************************/
     public Waypoints(Path settingsPath, ScheduledExecutorService scheduler, RealtimeValues rtvals, BlockingQueue<Datagram> dQueue){
@@ -236,6 +238,8 @@ public class Waypoints implements Commandable {
         }
     	for( Waypoint w : wps.values())
     		b.add( w.toString(coords, true, sog) );
+        long passed = Instant.now().toEpochMilli()-lastCheck;
+        b.add("Time since last check: "+ TimeTools.convertPeriodtoString(passed,TimeUnit.MILLISECONDS));
     	return b.toString();
     }
     public String getWaypointList(String newline ){
@@ -278,12 +282,17 @@ public class Waypoints implements Commandable {
      * Check the waypoints to see if any travel occurred, if so execute the commands associated with it
      */
     private void checkWaypoints(){
-        var now = OffsetDateTime.now(ZoneOffset.UTC);
-        wps.values().forEach( wp -> {
-            wp.checkIt(now, latitude.value(), longitude.value()).ifPresent(
-                    travel -> travel.getCmds().forEach(cmd -> dQueue.add(Datagram.system(cmd)))
-            );
-        });
+        try {
+            var now = OffsetDateTime.now(ZoneOffset.UTC);
+            wps.values().forEach(wp -> {
+                wp.checkIt(now, latitude.value(), longitude.value()).ifPresent(
+                        travel -> travel.getCmds().forEach(cmd -> dQueue.add(Datagram.system(cmd)))
+                );
+            });
+            lastCheck = Instant.now().toEpochMilli();
+        }catch( Exception e){
+            Logger.error(e);
+        }
     }
 
     /**

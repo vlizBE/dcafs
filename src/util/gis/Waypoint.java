@@ -71,7 +71,7 @@ public class Waypoint implements Comparable<Waypoint>{
 	public STATE currentState( OffsetDateTime when, double lat, double lon ){
 		lastDist = GisTools.roughDistanceBetween(lon, lat, this.lon, this.lat, 3)*1000;// From km to m				
 		bearing = GisTools.calcBearing( lon, lat, this.lon, this.lat, 2 );
-
+		var oldState = state;
 		switch( state ){
 			case INSIDE:
 				if( lastDist > range ){ // Was inside but went beyond the range
@@ -99,6 +99,8 @@ public class Waypoint implements Comparable<Waypoint>{
 			active = false;
 			movementReady=true;
 		}
+		if( oldState!=state)
+			Logger.info(id+" -> Changed from "+oldState+" to "+state );
 		return state;
 	}
 	public double getLastDistance( ) {
@@ -280,7 +282,7 @@ public class Waypoint implements Comparable<Waypoint>{
 		double maxBearing=360.0,minBearing=0.0;
 		STATE direction;		
 
-		ArrayList<String> cmds;
+		ArrayList<String> cmds=new ArrayList<>();
 		boolean valid = true;
 
 		public Travel( String name, String dir, String bearing ){
@@ -313,6 +315,7 @@ public class Waypoint implements Comparable<Waypoint>{
 			return state == direction && Double.compare(curBearing,minBearing) >=0 && Double.compare(curBearing,maxBearing)<=0;
 		}
 		public ArrayList<String> getCmds(){
+			Logger.info(id+" -> Cmds ("+cmds.size()+") requested for execution. ");
 			return cmds;
 		}
 		public String getDirection(){
