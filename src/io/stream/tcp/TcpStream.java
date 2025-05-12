@@ -16,6 +16,7 @@ import io.netty.handler.codec.bytes.ByteArrayDecoder;
 import io.netty.handler.codec.bytes.ByteArrayEncoder;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.concurrent.FutureListener;
+import io.stream.StreamManager;
 import org.tinylog.Logger;
 import org.w3c.dom.Element;
 import util.tools.TimeTools;
@@ -86,7 +87,8 @@ public class TcpStream extends BaseStream implements Writable {
             Logger.error("Event loop group still null, can't connect to "+id);
             return false;
         }
-        Logger.info("Trying to connect to tcp: "+id);
+        if(StreamManager.isNthAttempt(connectionAttempts))
+            Logger.info("Trying to connect to tcp: "+id);
 		if( bootstrap == null ){
 			bootstrap = new Bootstrap();
 			bootstrap.group(eventLoopGroup).channel(NioSocketChannel.class)
@@ -135,7 +137,7 @@ public class TcpStream extends BaseStream implements Writable {
         }
 		f = bootstrap.connect(ipsock).awaitUninterruptibly();
 		f.addListener((FutureListener<Void>) future -> {
-            if (!f.isSuccess()) {
+            if (!f.isSuccess() && StreamManager.isNthAttempt(connectionAttempts) ) {
                 String cause = ""+future.cause();
                 Logger.error( "Failed to connect to "+id+" : "+cause.substring(cause.indexOf(":")+1));
             }
@@ -143,7 +145,8 @@ public class TcpStream extends BaseStream implements Writable {
 		if (f.isCancelled()) {
 		    return false;
 		 } else if (!f.isSuccess()) {
-			Logger.error( "Failed to connect to "+id );
+            if(StreamManager.isNthAttempt(connectionAttempts))
+			    Logger.error( "Failed to connect to "+id );
 		 } else {
 		    return true;
 		 }
