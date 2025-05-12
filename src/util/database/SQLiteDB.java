@@ -441,6 +441,12 @@ public class SQLiteDB extends SQLDB{
             }
         }
     }
+
+    /**
+     * Disconnect from the current database file and connect to the new one
+     * @param newName The new name of the file. If not ending with .sqlite, this will be appended
+     * @return True if no errors occurred
+     */
     public boolean changeFilename( String newName ){
         getTables().forEach(SqlTable::clearReadFromDB); // Otherwise they won't get generated
         disconnect();// then disconnect, this also flushes the queries first
