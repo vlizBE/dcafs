@@ -514,7 +514,11 @@ public class CommandPool {
 					var last = list.filter( f -> !Files.isDirectory(f)).max( Comparator.comparingLong( f -> f.toFile().lastModified()));
 					if( last.isPresent() ){
 						var path = last.get();
-						sendEmail.sendEmail(Email.toAdminAbout("Taskmanager.log").subject("File attached (probably)").attachment(path));
+						if( cmd.length>1){
+							sendEmail.sendEmail(Email.to(cmd[1]).subject("Raw data file").content("Raw File attached (probably)").attachment(path));
+						}else {
+							sendEmail.sendEmail(Email.toAdminAbout("raw.log").content("File attached (probably)").attachment(path));
+						}
 						return "Tried sending " + path;
 					}
 					return "File not found";
