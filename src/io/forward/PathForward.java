@@ -497,6 +497,7 @@ public class PathForward {
         public void stop(){
             if( future!=null && !future.isCancelled())
                 future.cancel(true);
+            readOnce=false;
         }
         public void write(){
             targets.removeIf( x -> !x.isConnectionValid());

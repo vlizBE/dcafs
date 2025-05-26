@@ -989,10 +989,8 @@ public class ForwardPool implements Commandable {
                 cp.startCustoms();
                 return "Starting custom.";
             case "addfile":
-                if( cmds.length<2) {
+                if( cmds.length<2)
                     return "To few arguments, expected pf:addfile,id,src (src is optional)";
-                }
-
                 try {
                     Files.createDirectories( settingsPath.getParent().resolve("paths") );
                 } catch (IOException e) {
