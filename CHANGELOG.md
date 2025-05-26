@@ -7,6 +7,8 @@ Note: Version numbering: x.y.z
 ### To do/fix
 - back up path for sqlite db etc?
 
+## 1.2.13 (wip)
+
 ## 1.2.12 (26/05/25)
 - Fixed mqtt command to alter ip and port
 - Increased distance of waypoint check
