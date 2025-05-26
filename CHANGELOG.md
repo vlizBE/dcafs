@@ -7,11 +7,12 @@ Note: Version numbering: x.y.z
 ### To do/fix
 - back up path for sqlite db etc?
 
-## 1.2.12 (wip)
+## 1.2.12 (26/05/25)
 - Fixed mqtt command to alter ip and port
 - Increased distance of waypoint check
 - Added `dbm:allowinsert,dbid,true/false` to disable or enable logging to database.
 - Added `dbm:rename,sqliteid,newname` to rename the filename of a sqlite database.
+- Log feedback on reconnection attempts is now rated.
 
 ## 1.2.11 
 - Fix db bug added in 1.2.9

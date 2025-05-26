@@ -26,9 +26,9 @@ That is in broad terms what it is capable of.
 
 ## Running it
 ### Windows
-* If you have java11+ installed properly, just doubleclick the dcafs*.jar
-  * If extra folders and a settings.xml appear, this worked
-* If java 11+ isn't installed properly, check the installation step
+* If you have java17+ installed properly, just doubleclick the dcafs*.jar
+  * If extra folders and a settings.xml appear, this worked.
+* If java 17+ isn't installed properly, check the installation step.
    
 ### Linux
 * In a terminal
