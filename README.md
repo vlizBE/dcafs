@@ -18,7 +18,7 @@ That is in broad terms what it is capable of.
 * Update itself via email (linux only for now)
 
 ## Installation
-* Make sure you have _at least_ java11 installed. If not, [download and install java 17](https://adoptium.net/)
+* Make sure you have _at least_ java17 installed. If not, [download and install java 21](https://adoptium.net/)
 * Either download the most recent (pre)release [here](https://github.com/vlizBE/dcafs/releases)
   * Unpack to the working folder  
 * Or clone the repo and build it with maven (mvn install) directly or through IDE.
