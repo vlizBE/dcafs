@@ -429,6 +429,9 @@ public class PathForward {
         customs.forEach(CustomSrc::stop);
         customs.clear();
     }
+    public void startCustoms(){
+        customs.forEach(CustomSrc::start);
+    }
     private class CustomSrc{
         String pathOrData;
         String path;

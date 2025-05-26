@@ -980,6 +980,14 @@ public class ForwardPool implements Commandable {
             case "readfile":
 
                 return "File reading added (todo)";
+            case "startcustoms":
+                if( cmds.length<2)
+                    return "To few arguments, expected pf:startcustoms,id";
+                var cp = paths.get(cmds[1]);
+                if (cp == null)
+                    return "No such path: " + cmds[1];
+                cp.startCustoms();
+                return "Starting custom.";
             case "addfile":
                 if( cmds.length<2) {
                     return "To few arguments, expected pf:addfile,id,src (src is optional)";
