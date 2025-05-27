@@ -32,6 +32,7 @@ public class Waypoints implements Commandable {
     static final String XML_TRAVEL = "travel";
     static final String XML_CHILD_TAG = "waypoint";
 
+    RealtimeValues rtvals;
     RealVal latitude;
     RealVal longitude;
     RealVal sog;
@@ -47,6 +48,7 @@ public class Waypoints implements Commandable {
         this.settingsPath=settingsPath;
         this.scheduler=scheduler;
         this.dQueue=dQueue;
+        this.rtvals=rtvals;
 
         readFromXML(rtvals);
 
@@ -122,18 +124,17 @@ public class Waypoints implements Commandable {
                 Logger.debug("Checking for travel...");
 
                 for( Element travelEle : XMLtools.getChildElements(el,XML_TRAVEL)){
-                    if( travelEle != null ){ // Only try processing if valid
+                    if( travelEle != null &&  travelEle.hasChildNodes() ){
                         String idTravel = XMLtools.getStringAttribute(travelEle,"id",""); // The id of the travel
                         String dir = XMLtools.getStringAttribute(travelEle,"dir",""); // The direction (going in, going out)
                         String bearing = XMLtools.getStringAttribute(travelEle,"bearing","0 -> 360");// Which bearing used
-
                         wp.addTravel(idTravel,dir,bearing).ifPresent( // meaning travel parsed fin
-                                    t -> {
-                                        for (var cmd : XMLtools.getChildElements(travelEle, "cmd")) {
-                                            t.addCmd(cmd.getTextContent());
-                                        }
+                                t -> {
+                                    for (var cmd : XMLtools.getChildElements(travelEle, "cmd")) {
+                                        t.addCmd(cmd.getTextContent());
                                     }
-                                );
+                                }
+                            );
                     }
                 }
         	}else{
@@ -390,7 +391,7 @@ public class Waypoints implements Commandable {
                     return "Storing waypoints failed";
                 }
 			case "reload": 
-				if( readFromXML(null) ){
+				if( readFromXML(rtvals) ){
 					return "Reloaded stored waypoints";
 				}else{
 					return "Failed to reload waypoints";

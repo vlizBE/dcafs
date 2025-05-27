@@ -333,7 +333,7 @@ public class Waypoint implements Comparable<Waypoint>{
 			return (minBearing+" -> "+maxBearing).replace(".0","");
 		}
 		public Travel addCmd( String cmd ){
-			if( cmd==null) {
+			if( cmd==null||cmd.isEmpty()) {
 				Logger.error(name+" -> Invalid cmd given");
 				return this;
 			}
