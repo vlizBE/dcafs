@@ -14,6 +14,8 @@ Note: Version numbering: x.y.z
 - Increased distance of waypoint check
 - Added `dbm:allowinsert,dbid,true/false` to disable or enable logging to database.
 - Added `dbm:rename,sqliteid,newname` to rename the filename of a sqlite database.
+- Added extra debug info to waypoints and prevented potential nullpointer.
+- Altered getlastraw to allow setting the address admin:getlastraw<,email>
 - Log feedback on reconnection attempts is now rated.
 
 ## 1.2.11 
