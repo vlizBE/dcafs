@@ -2,8 +2,7 @@ dcafs
 =========
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)  
 
-> **Note: Because of reduction to possible worktime allocated to this project, this has been reduced to 'maintenance' 
-only. [Hobby Project active fork, not backwards compatible](https://github.com/michieltjampens/dcafs)**
+> **Note: This project has been reduced to 'maintenance' only.**
 
 A Java tool (or can also be used as a library) that takes care of all the nitty-gritty that needs to be done when a sensor has generated data and you want to find that data in a database. Hence _data collect alter forward store_. If the device needs to be interrogated or any other sort of control, that's also possible (hidden under _forward_).   
 That is in broad terms what it is capable of.
@@ -13,7 +12,7 @@ That is in broad terms what it is capable of.
 * Alter with string and math operations, or filter out lines
 * Forward back to source/origin, to any other source, a hosted TCP server or email (ie. create a serial to tcp converter)
 * Store processed data in SQLite (dcafs will create the db), MariaDB, MySQL, InfluxDB, PostgreSQL and MSSQL (dcafs can create/read the table structure) while additionally raw/altered data can be kept in (timestamped) .log files
-* XML based scheduling engine capabable of interacting with all connected sources and respond to realtime data
+* XML based scheduling engine capable of interacting with all connected sources and respond to realtime data
 * Single control pipeline that can be accessed via telnet, email or the earlier mentioned scheduling engine
 * Update itself via email (linux only for now)
 
