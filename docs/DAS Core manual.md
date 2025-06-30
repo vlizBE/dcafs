@@ -89,14 +89,11 @@
       * [4. Insert](#insert)  
 
 
-
-<div class="page"/>
-
 # Beginners Guide
 
 ## 1. Introduction
 
-### A. What is Dcafs <a name="whatisdcafs"></a>
+### A. What is Dcafs
 
 Shortest description possible would be a tool that does all the nitty-gritty between generating data and finding it in 
 a database. 
@@ -179,7 +176,7 @@ Major features not mentioned:
 
 All of the above will slowly be introduced in the manual.
 
-### B. The purpose of this guide <a name="purpose"></a>
+### B. The purpose of this guide
 
 The goal is to explain how to use dcafs either as a library, or a stand-alone application.
 
@@ -193,7 +190,7 @@ In all other cases, it's recommended to use it as a library. It's also recommend
 know how it works.
 
 ### C. Requirements & useful tools
-* Java11 eg. [AdoptOpenJDK](https://adoptopenjdk.net/releases.html) and select OpenJDK11 (or later), the appropriate OS
+* Java17 eg. [AdoptOpenJDK](https://adoptopenjdk.net/releases.html) and select OpenJDK17 (or later), the appropriate OS
     * download the JRE if you plan to use the binaries
     * download the JDK when building the binaries or using it as a library
 * Get the source/binaries
@@ -206,9 +203,6 @@ know how it works.
   * to view/edit SQLite files [DB Browser for SQLite](https://download.sqlitebrowser.org/DB.Browser.for.SQLite-3.12.0-win64.msi) 
   * to test tcp/udp connections [Yat](https://sourceforge.net/projects/y-a-terminal/) 
   * a java IDE [Intellij Idea Community Edition](https://download.jetbrains.com/idea/ideaIC-2020.3.2.exe) or [Visual studio code (VSC)](https://aka.ms/win32-x64-user-stable)
-
-
-<div class="page"/>
 
 ## 2. As a standalone application
 
@@ -341,9 +335,7 @@ second humidity and third pressure. To store these, we'll make a generic.
 
 That's it for the quickstart examples. For more (extensive) examples see the 'use case' section (todo).
 
-<div class="page"/>
-
-## 3. As a library <a name="install"></a>
+## 3. As a library
 
 ### A. Preparation
 

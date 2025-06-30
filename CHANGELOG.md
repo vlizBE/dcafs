@@ -8,6 +8,7 @@ Note: Version numbering: x.y.z
 - back up path for sqlite db etc?
 
 ## 1.2.13 (wip)
+- Fixed, real required name/id instead of reading content
 
 ## 1.2.12 (26/05/25)
 - Fixed mqtt command to alter ip and port
@@ -20,7 +21,7 @@ Note: Version numbering: x.y.z
 
 ## 1.2.11 
 - Fix db bug added in 1.2.9
-- Added 'skipcount' attribute to skip data received for the filecollector. Effectivily reducing the datarate.
+- Added 'skipcount' attribute to skip data received for the filecollector. Effectively reducing the data rate.
 - Added commands to alter mqtt broker ip or port
 - Added Z3 overlay api support
 
