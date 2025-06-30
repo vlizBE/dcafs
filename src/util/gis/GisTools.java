@@ -3,6 +3,7 @@ package util.gis;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import util.tools.TimeTools;
 import util.tools.Tools;
 import util.xml.XMLtools;
 
@@ -10,6 +11,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.StringJoiner;
 import java.util.function.Function;
 
 public class GisTools {
@@ -294,6 +296,26 @@ public class GisTools {
         lon = LAMBDA_0 + dlambda + (I * Math.pow(E_acc, 3));
 
         return new double[]{ Tools.roundDouble(Math.toDegrees(lat), 7), Tools.roundDouble(Math.toDegrees(lon), 7) };
+    }
+    public static String calcOffsetPosition(double heading,double lat, double lon, double lengthOffset,double widthOffset){
+        double cosh = Math.cos(Math.toRadians(heading));
+        double sinh = Math.sin(Math.toRadians(heading));
+
+        double dE = -widthOffset*cosh+lengthOffset*sinh;
+        double dN = lengthOffset*cosh + widthOffset*sinh;
+
+        double[] d = GisTools.GDC_To_UTM(lat, lon);
+        d[0] += Tools.roundDouble(dE,3);
+        d[1] += Tools.roundDouble(dN,3);
+
+        var response = new StringJoiner("\r\n");
+        response.add("Time:"+ TimeTools.formatLongUTCNow());
+        response.add("Current: "+lat +"\t"+lon+"\t"+heading+"°\r\n");
+        response.add("UTM:\t "+d[0]+"\t"+d[1]+"\r\n");
+        response.add("Offset:\t" +Tools.roundDouble(dE,3)+"\t\t"+Tools.roundDouble(dN,3)+"\r\n");
+        d = GisTools.UTM_To_GDC(d[0], d[1]);
+        response.add("Result:\t " + d[0]+"\t"+d[1]+"\r\n");
+        return response.toString();
     }
     public static Function<BigDecimal[],BigDecimal> procToGDC( String east, String northing, Integer[] indexes ){
         int eastIndex = east.startsWith("i")?  NumberUtils.toInt(east.substring(1), -1) : -1;
