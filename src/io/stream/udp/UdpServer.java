@@ -72,7 +72,9 @@ public class UdpServer extends BaseStream {
 
   @Override
   public boolean disconnect() {
-    return serverFuture.cancel(true);
+    if( serverFuture!=null)
+      return serverFuture.cancel(true);
+    return true;
   }
 
   @Override
