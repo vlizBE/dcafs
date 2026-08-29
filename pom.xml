@@ -162,7 +162,7 @@
 	<dependency>
 		<groupId>org.mariadb.jdbc</groupId>
 		<artifactId>mariadb-java-client</artifactId>
-		<version>3.0.11</version>
+		<version>3.3.5</version>
 		<!-- Sticking to this version till there's a reason to update, because latest adds 4MB to libs -->
 	</dependency>
 	<!-- https://mvnrepository.com/artifact/org.eclipse.paho/org.eclipse.paho.client.mqttv3 -->
